@@ -1,0 +1,25 @@
+
+{% extends 'base.html' %}
+
+{% block content %}
+<h1> PROJECTS</h1>
+<ul>
+    {% for project in projects %}
+    <li>
+
+        {% if project.project_status == 'pendiente' %}
+            <h1>{{project.name}}</h1>
+        {% elif project.project_status == 'en_progreso' %}
+            {{project.name}}
+        {% endif %}
+
+        <p>Estado: {{project.project_status}}</p>
+        <p>Tipo: {{project.project_type}}</p>
+
+    </li>
+    {% endfor %}
+</ul>
+
+
+{% endblock %}
+
