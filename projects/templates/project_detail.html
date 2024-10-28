@@ -1,0 +1,41 @@
+
+{% extends 'base.html' %}
+
+{% block content %}
+<!-- <h1>PROJECT DETAIL</h1> -->
+
+<!-- {% if project.project_status == 'pendiente' %}
+    <h1>{{project.name}}</h1>
+{% elif project.project_status == 'en_progreso' %}
+    {{project.name}}
+{% endif %} -->
+
+<!-- <p>Estado: {{project.project_status}}</p>
+<p>Tipo: {{project.project_type}}</p> -->
+
+<h1>{{project.name}}</h1>
+{{error}}
+
+<form method="POST">
+    {% csrf_token %}
+    {{form.as_p}}
+    <button  type="submit">
+        Update
+    </button>
+</form>
+
+<form action="{% url 'project_complete' project.id %}" method="POST">
+    {% csrf_token %}
+    <button  type="submit">
+        Complete
+    </button>
+</form>
+
+<form action="{% url 'project_delete' project.id %}" method="POST">
+    {% csrf_token %}
+    <button  type="submit">
+        Eliminar
+    </button>
+</form>
+
+{% endblock %}

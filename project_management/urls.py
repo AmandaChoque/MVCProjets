@@ -22,7 +22,12 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('signup/', views.signup, name='signup'),
     path('projects/', views.projects, name='projects'),
+    path('projects_completed/', views.projects_completed, name='projects_completed'),
     path('projects/create/', views.create_project, name='create_project'),
+    path('projects/<int:id_project>/', views.project_detail, name='project_detail'),
+
+    path('projects/<int:id_project>/complete/', views.project_complete, name='project_complete'),
+    path('projects/<int:id_project>/delete/', views.project_delete, name='project_delete'),
     path('logout/', views.signout, name='signout'),
     path('signin/', views.signin, name='signin')
 ]

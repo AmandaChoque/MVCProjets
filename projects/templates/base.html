@@ -11,15 +11,19 @@
             <li>
                 <a href="/">Home</a>
             </li>
+            
+            
+            {% if user.is_authenticated %}
             <li>
                 <a href="/projects">Projects</a>
             </li>
-            
-
-            {% if user.is_authenticated %}
+            <li>
+                <a href="/projects/create">Projects Create</a>
+            </li>
             <li>
                 <a href="/logout">Logout</a>
             </li>
+
             {% else %}
             <li>
                 <a href="/signup">Signup</a>

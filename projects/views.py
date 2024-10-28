@@ -1,5 +1,5 @@
 
-from django.shortcuts import render, redirect
+from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth.models import User
 from django.contrib.auth import login, logout, authenticate
@@ -52,6 +52,43 @@ def projects(request):
         'projects': projects
     })
 
+def projects_completed(request):
+    projects = Project.objects.filter(user= request.user, project_status__in =['completado'])
+    return render(request, 'projects.html', {
+        'projects': projects
+    })
+
+def project_detail(request, id_project):
+    # para que pueda ver sosl sus proyectos
+    if request.method == 'GET':
+        project = get_object_or_404(Project, pk = id_project, user=request.user)
+        form = ProjectForm(instance=project)
+        return render(request, 'project_detail.html', {
+            'project': project,
+            'form': form
+        })
+    else:
+        try:
+            project = get_object_or_404(Project, pk = id_project, user=request.user)
+            form = ProjectForm(request.POST, instance=project)
+            form.save()
+            return redirect('projects')
+        except ValueError:
+            return render(request, 'project_detail.html', {'project': project, 'form': form, 'error': "Error al actualizar el proyecto"})
+
+def project_complete(request, id_project):
+    project =get_object_or_404(Project, pk = id_project, user = request.user)
+    if request.method == 'POST':
+        project.project_status = 'Completado'
+        project.save()
+        return redirect('projects')
+    
+def project_delete(request, id_project):
+    project =get_object_or_404(Project, pk = id_project, user = request.user)
+    if request.method == 'POST':
+        project.delete()
+        return redirect('projects')
+  
 def create_project(request):
     if request.method =='GET':
         return render(request, 'create_project.html', {

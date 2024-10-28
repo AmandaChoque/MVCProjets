@@ -5,6 +5,6 @@ from projects.models import Project
 # Register your models here.
 class ProjectAdmin(admin.ModelAdmin):
     readonly_fields = ("created", )
-    list_display = ('name','start_date','end_date','project_status','project_type', 'user')
+    list_display = ('id', 'name','start_date','end_date','project_status','project_type', 'user')
     search_fields = ['name']
 admin.site.register(Project, ProjectAdmin)
