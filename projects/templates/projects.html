@@ -20,6 +20,8 @@
             <p>Estado: {{project.project_status}}</p>
             <p>Tipo: {{project.project_type}}</p>
 
+            <p>{{project.end_date|date:"M j, Y"}}</p>
+
         </a>
     </li>
     {% endfor %}

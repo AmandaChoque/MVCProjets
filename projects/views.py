@@ -9,6 +9,7 @@ from django.db import IntegrityError
 
 from .form import ProjectForm
 from .models import Project
+from django.contrib.auth.decorators import login_required
 # Create your views here.
 
 
@@ -45,6 +46,7 @@ def signup(request):
             'error': 'Password do not match'
         })
 
+@login_required
 def projects(request):
     # projects = Project.objects.all()
     projects = Project.objects.filter(user= request.user, project_status__in =['pendiente', 'en_progreso'])
@@ -52,12 +54,14 @@ def projects(request):
         'projects': projects
     })
 
+@login_required
 def projects_completed(request):
     projects = Project.objects.filter(user= request.user, project_status__in =['completado'])
     return render(request, 'projects.html', {
         'projects': projects
     })
 
+@login_required
 def project_detail(request, id_project):
     # para que pueda ver sosl sus proyectos
     if request.method == 'GET':
@@ -76,19 +80,22 @@ def project_detail(request, id_project):
         except ValueError:
             return render(request, 'project_detail.html', {'project': project, 'form': form, 'error': "Error al actualizar el proyecto"})
 
+@login_required
 def project_complete(request, id_project):
     project =get_object_or_404(Project, pk = id_project, user = request.user)
     if request.method == 'POST':
         project.project_status = 'Completado'
         project.save()
         return redirect('projects')
-    
+
+@login_required
 def project_delete(request, id_project):
     project =get_object_or_404(Project, pk = id_project, user = request.user)
     if request.method == 'POST':
         project.delete()
         return redirect('projects')
-  
+
+@login_required  
 def create_project(request):
     if request.method =='GET':
         return render(request, 'create_project.html', {
@@ -108,9 +115,10 @@ def create_project(request):
                 'form': ProjectForm,
                 'error': 'Please provide valida data'
             })
-            
+
+@login_required            
 def signout(request):
-    logout()
+    logout(request)
     return redirect('home')
 
 def signin(request):
