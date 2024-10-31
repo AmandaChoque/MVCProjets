@@ -1,15 +1,23 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<h1> CREATE PROJECTS</h1>
-{{error}}
-<form action="/projects/create/" method="POST">
-    {% csrf_token %}
-    {{form}}
 
-    <button>
-        Save
-    </button>
-</form>
+{{error}}
+<main class="container">
+    <div class="row">
+        <div class="col-md-4 offset-md-4 mt-5">
+            <form action="/projects/create/" method="POST" class="card card-body">
+                <h1> CREATE PROJECTS</h1>
+                {{error}}
+                {% csrf_token %}
+                {{form}}
+            
+                <button class="btn btn-primary mt-3">
+                    Save
+                </button>
+            </form>
+        </div>
+    </div>
+</main>
 {% endblock %}
 

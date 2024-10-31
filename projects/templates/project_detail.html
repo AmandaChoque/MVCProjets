@@ -13,29 +13,37 @@
 <!-- <p>Estado: {{project.project_status}}</p>
 <p>Tipo: {{project.project_type}}</p> -->
 
-<h1>{{project.name}}</h1>
-{{error}}
+<main class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <h1 class="text-secondary">{{project.name}}</h1>
+            {{error}}
 
-<form method="POST">
-    {% csrf_token %}
-    {{form.as_p}}
-    <button  type="submit">
-        Update
-    </button>
-</form>
-
-<form action="{% url 'project_complete' project.id %}" method="POST">
-    {% csrf_token %}
-    <button  type="submit">
-        Complete
-    </button>
-</form>
-
-<form action="{% url 'project_delete' project.id %}" method="POST">
-    {% csrf_token %}
-    <button  type="submit">
-        Eliminar
-    </button>
-</form>
+            <form method="POST">
+                {% csrf_token %}
+                {{form.as_p}}
+                <button class="btn btn-primary mx-2 my-2" type="submit">
+                    Update
+                </button>
+            </form>
+            <div class="d-flex">
+    
+                <form action="{% url 'project_complete' project.id %}" method="POST">
+                    {% csrf_token %}
+                    <button class="btn btn-secondary mx-2" type="submit">
+                        Complete
+                    </button>
+                </form>
+    
+                <form action="{% url 'project_delete' project.id %}" method="POST">
+                    {% csrf_token %}
+                    <button class="btn btn-danger mx-2" type="submit">
+                        Eliminar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</main>
 
 {% endblock %}
