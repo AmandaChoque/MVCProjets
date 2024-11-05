@@ -1,0 +1,23 @@
+{% extends 'base.html' %} {% block content %}
+<main class="container">
+  <div class="row">
+    <div class="col-md-6 offset-md-3">
+      <h1 class="text-center display-3 py-4">PROJECTS</h1>
+      <ul class="list-group">
+        {% for payment_history in payment_histories %}
+        <a class="list-group-item">
+          <header class="d-flex justify-content-between">
+            <h1 class="fw-bold">{{payment_history.modification_date}}</h1>
+          </header>
+          <p>Estado: {{payment_history.previous_amount}}</p>
+          <p>Tipo: {{payment_history.current_amount}}</p>
+          <p>Tipo: {{payment_history.change_reason}}</p>
+          <p>Tipo: {{payment_history.project.name}}</p>
+        </a>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</main>
+
+{% endblock %}

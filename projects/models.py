@@ -1,3 +1,5 @@
+from django.utils import timezone  # Asegúrate de importar timezone desde django.utils
+
 from django.db import models
 from django.contrib.auth.models import User
 # Create your models here.
@@ -79,7 +81,7 @@ class PaymentHistory(models.Model):
 
     # Relaciones
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='payment_histories', verbose_name="Project")  # Project (1 a N)
-
+    created =models.DateTimeField(default=timezone.now)
     class Meta:
         verbose_name = 'Payment History'
         verbose_name_plural = 'Payment Histories'
@@ -89,12 +91,11 @@ class PaymentHistory(models.Model):
 
 # EntidadPublica
 class PublicEntity(models.Model):
-
     legal_representative = models.CharField(max_length=200, verbose_name="Representante Legal")  # Representante Legal
     contact = models.CharField(max_length=100, verbose_name="Contacto")  # Contacto
     address = models.CharField(max_length=300, verbose_name="Direccion")  # Dirección
     entity_name = models.CharField(max_length=200, verbose_name="Nombre Entidad")  # Nombre Entidad
-
+    created =models.DateTimeField(default=timezone.now)
     class Meta:
         verbose_name = 'Public Entity'
         verbose_name_plural = 'Public Entities'
@@ -113,6 +114,7 @@ class Proposal(models.Model):
     public_entity = models.ForeignKey(PublicEntity, on_delete=models.CASCADE, related_name='proposals', verbose_name="Public Entity")  # Entidad pública (1 a N)
     project = models.OneToOneField(Project, on_delete=models.CASCADE, verbose_name="Project")  # Proyecto (1 a 1)
 
+    created =models.DateTimeField(default=timezone.now)
     class Meta:
         verbose_name = 'Proposal'
         verbose_name_plural = 'Proposals'
@@ -128,7 +130,7 @@ class Contractor(models.Model):
         ('personal', 'Personal'),
         ('public_entity', 'Entidad Pública'),
     ]
-
+    
     entity_place_representation = models.CharField(max_length=50, verbose_name="Entidad/Lugar/Representación")
     position = models.CharField(max_length=50, verbose_name="Cargo")  # e.g. President, Legal Representative
     nit_ci = models.CharField(max_length=20, verbose_name="NIT/CI")  # ID number
@@ -138,7 +140,7 @@ class Contractor(models.Model):
     phone_number = models.CharField(max_length=15, verbose_name="Número de Teléfono")
     address = models.CharField(max_length=255, verbose_name="Dirección")
     accountant_type = models.CharField(max_length=20, choices=ACCOUNTANT_TYPE_CHOICES, default='public_entity', verbose_name="Tipo Contratante")  # Valor predeterminado
-    
+    created =models.DateTimeField(default=timezone.now)
     class Meta:
         verbose_name = 'Contractor'
         verbose_name_plural = 'Contractors'
@@ -168,7 +170,7 @@ class Payment(models.Model):
     
     # Clave foránea a Project
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='payments', verbose_name="Project")  # Relación (1 a N)
-
+    created =models.DateTimeField(default=timezone.now)
     class Meta:
         verbose_name = 'Payment'
         verbose_name_plural = 'Payments'

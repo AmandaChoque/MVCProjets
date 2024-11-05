@@ -34,4 +34,9 @@ urlpatterns = [
     # Employees
     path('employees/', views.employees, name='employees'),
     path('employees/<int:id_employee>/', views.project_detail, name='employee_detail'),
+    
+
+    # Historial de Pagos
+    path('payment_histories/', views.payment_histories, name='payment_histories'),
+
 ]

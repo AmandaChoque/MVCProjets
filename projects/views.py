@@ -8,7 +8,7 @@ from django.http import HttpResponse
 from django.db import IntegrityError
 
 from .form import ProjectForm, EmployeeForm
-from .models import Project, Employee
+from .models import Project, Employee, Payment, PaymentHistory, Proposal, PublicEntity, Contractor
 from django.contrib.auth.decorators import login_required
 # Create your views here.
 
@@ -159,3 +159,13 @@ def employee_detail(request, id_employee):
             'employee': employee,
             'form': form
         })
+    
+
+# Historial de pagos
+@login_required
+def payment_histories(request):
+    payment_histories = PaymentHistory.objects.all()
+    # projects = Project.objects.filter(user= request.user)
+    return render(request, 'payment_histories.html', {
+        'payment_histories': payment_histories
+    })
