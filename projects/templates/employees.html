@@ -1,0 +1,30 @@
+
+{% extends 'base.html' %}
+
+{% block content %}
+<main class="container">
+    <div class="row">
+        <div class="col-md-6 offset-md-3">
+            <h1 class="text-center display-3 py-4"> EMPLEADOS</h1>
+            <ul class="list-group">
+                {% for employee in employees %}   
+                <a class="list-group-item" href="{% url 'employee_detail' employee.id %}">
+                    <header class="d-flex justify-content-between">
+                        
+                        <h1 class="fw-bold">{{employee.first_name}}</h1>
+                        
+                        <p>{{employee.phone_number}}</p>
+                    </header>
+                    <p>Estado: {{employee.ci}}</p>
+                    <!-- <p>Tipo: {{employee. }}</p>
+                    <p>{{employee.}}</p> -->
+                </a>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</main>
+
+
+{% endblock %}
+

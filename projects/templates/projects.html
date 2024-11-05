@@ -19,8 +19,8 @@
                         {% endif %}
                         <p>{{project.user.username}}</p>
                     </header>
-                    <p>Estado: {{project.project_status}}</p>
-                    <p>Tipo: {{project.project_type}}</p>
+                    <p>Estado: {{project.get_project_status_display}}</p>
+                    <p>Tipo: {{project.get_project_type_display }}</p>
                     <p>{{project.end_date|date:"M j, Y"}}</p>
                 </a>
                 {% endfor %}

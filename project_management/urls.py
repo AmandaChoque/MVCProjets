@@ -29,5 +29,9 @@ urlpatterns = [
     path('projects/<int:id_project>/complete/', views.project_complete, name='project_complete'),
     path('projects/<int:id_project>/delete/', views.project_delete, name='project_delete'),
     path('logout/', views.signout, name='signout'),
-    path('signin/', views.signin, name='signin')
+    path('signin/', views.signin, name='signin'),
+    
+    # Employees
+    path('employees/', views.employees, name='employees'),
+    path('employees/<int:id_employee>/', views.project_detail, name='employee_detail'),
 ]

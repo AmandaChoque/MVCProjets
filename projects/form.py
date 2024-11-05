@@ -1,6 +1,6 @@
 from django.forms import ModelForm
 from django import forms
-from .models import Project
+from .models import Project, Employee
 
 # class ProjectForm(ModelForm):
 #     class Meta:
@@ -22,4 +22,20 @@ class ProjectForm(forms.ModelForm):
             'project_type': forms.Select(attrs={'class':'form-control'}),
             'photo_signed_contract': forms.ClearableFileInput(attrs={'class':'form-control'}),
             'photo_proposed_contract': forms.ClearableFileInput(attrs={'class':'form-control'})
+        }
+
+
+class EmployeeForm(forms.ModelForm):
+    class Meta:
+        model = Employee
+        fields = ['first_name', 'last_name_father', 'last_name_mother', 'phone_number', 'hire_date', 'salary', 'position', 'ci']
+        widgets = {
+            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre'}),
+            'last_name_father': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Apellido Paterno'}),
+            'last_name_mother': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Apellido Materno'}),
+            'phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número de Teléfono'}),
+            'hire_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'placeholder': 'Fecha de Contratación'}),
+            'salary': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Salario'}),
+            'position': forms.Select(attrs={'class': 'form-control'}),
+            'ci': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Carnet de Identidad'}),
         }

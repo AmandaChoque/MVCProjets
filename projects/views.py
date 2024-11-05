@@ -7,8 +7,8 @@ from django.contrib.auth import login, logout, authenticate
 from django.http import HttpResponse
 from django.db import IntegrityError
 
-from .form import ProjectForm
-from .models import Project
+from .form import ProjectForm, EmployeeForm
+from .models import Project, Employee
 from django.contrib.auth.decorators import login_required
 # Create your views here.
 
@@ -138,4 +138,24 @@ def signin(request):
         else:
             login(request, user)
             return redirect('projects')
-        
+
+
+# employees
+@login_required
+def employees(request):
+    employees = Employee.objects.all()
+    # employess = Employee.objects.filter(user= request.user, project_status__in =['pendiente', 'en_progreso'])
+    return render(request, 'employees.html', {
+        'employees': employees
+    })
+
+@login_required
+def employee_detail(request, id_employee):
+    # para que pueda ver sosl sus proyectos
+    if request.method == 'GET':
+        employee = get_object_or_404(Employee, pk = id_employee, user=request.user)
+        form = EmployeeForm(instance=employee)
+        return render(request, 'employee_detail.html', {
+            'employee': employee,
+            'form': form
+        })
