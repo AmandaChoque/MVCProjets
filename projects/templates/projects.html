@@ -4,20 +4,20 @@
 {% block content %}
 <main class="container">
     <div class="row">
-        <div class="col-md-6 offset-md-3">
-            <h1 class="text-center display-3 py-4"> PROJECTS</h1>
+        <div class="col-md-8 offset-md-3">
+            <h1 class="text-center display-6 py-4"> PROJECTS</h1>
             <ul class="list-group">
                 {% for project in projects %}   
                 <a class="list-group-item" href="{% url 'project_detail' project.id %}">
                     <header class="d-flex justify-content-between">
                         {% if project.project_status == 'pendiente' %}
-                        <h1 class="fw-bold">{{project.name}}</h1>
+                        <h2 class="fw-bold">{{project.name}}</h2>
                         {% elif project.project_status == 'en_progreso' %}
-                            <h1 class="fw-bold text-success">{{project.name}}</h1>
+                            <h2 class="fw-bold text-success">{{project.name}}</h2>
                         {% else %}
-                            <h1 class="fw-bold text-success">{{project.name}}</h1>
+                            <h2 class="fw-bold text-success">{{project.name}}</h2>
                         {% endif %}
-                        <p>{{project.user.username}}</p>
+                        <!-- <p>{{project.user.username}}</p> -->
                     </header>
                     <p>Estado: {{project.get_project_status_display}}</p>
                     <p>Tipo: {{project.get_project_type_display }}</p>
