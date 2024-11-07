@@ -35,7 +35,7 @@
                     </button>
                 </form>
     
-                <form action="{% url 'project_delete' project.id %}" method="POST">
+                <form action="{% url 'project_deactivate' project.id %}" method="POST">
                     {% csrf_token %}
                     <button class="btn btn-danger mx-2" type="submit">
                         Eliminar

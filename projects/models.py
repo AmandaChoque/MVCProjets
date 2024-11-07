@@ -4,8 +4,18 @@ from django.db import models
 from django.contrib.auth.models import User
 # Create your models here.
 
+# Auditoria
+class AuditModel(models.Model):
+    created = models.DateTimeField(auto_now_add=True, verbose_name="Fecha Creación")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Fecha Actualización")
+    deleted_at = models.DateTimeField(null=True, blank=True, verbose_name="Fecha Eliminación")
+    is_active = models.BooleanField(default=True, verbose_name="Activo")
+
+    class Meta:
+        abstract = True
+
 # Proyecto
-class Project(models.Model):
+class Project(AuditModel):
 
     PROJECT_STATUS_CHOICES = [
         ('pendiente', 'Pendiente'),         # Pendiente
@@ -28,8 +38,9 @@ class Project(models.Model):
     photo_signed_contract = models.ImageField(upload_to="contrato_firmado",null = True, blank= True, verbose_name="Contrato Firmado")
     photo_proposed_contract = models.ImageField(upload_to="contrato_propueso",null = True, blank= True, verbose_name="Contrato Propuesto")
     
-    created =models.DateTimeField(auto_now_add=True)
+    # created =models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)# Empleado que herede de user
+    # is_active = models.BooleanField(default=True, verbose_name="Activo")
     
     def __str__(self):
         return self.name + ' - by '+ self.user.username

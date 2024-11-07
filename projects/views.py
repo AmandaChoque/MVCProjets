@@ -10,6 +10,8 @@ from django.db import IntegrityError
 from .form import ProjectForm, EmployeeForm
 from .models import Project, Employee, Payment, PaymentHistory, Proposal, PublicEntity, Contractor
 from django.contrib.auth.decorators import login_required
+
+from django.utils import timezone
 # Create your views here.
 
 
@@ -49,14 +51,24 @@ def signup(request):
 @login_required
 def projects(request):
     # projects = Project.objects.all()
-    projects = Project.objects.filter(user= request.user, project_status__in =['pendiente', 'en_progreso'])
+    projects = Project.objects.filter(user= request.user, project_status__in =['pendiente', 'en_progreso'],
+    is_active=True)
     return render(request, 'projects.html', {
         'projects': projects
     })
 
+
+@login_required
+def deactivate_project(request, id_project):
+    project = get_object_or_404(Project, id=id_project, user=request.user)
+    project.is_active = False
+    project.deleted_at = timezone.now()  # Registrar la fecha de eliminación
+    project.save()
+    return redirect('projects')
+
 @login_required
 def projects_completed(request):
-    projects = Project.objects.filter(user= request.user, project_status__in =['completado'])
+    projects = Project.objects.filter(user= request.user, project_status__in =['completado'], is_active=True)
     return render(request, 'projects.html', {
         'projects': projects
     })
