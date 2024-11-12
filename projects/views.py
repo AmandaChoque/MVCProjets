@@ -13,6 +13,21 @@ from django.contrib.auth.decorators import login_required
 
 from django.utils import timezone
 # Create your views here.
+from django.shortcuts import render
+from django.http import HttpResponse
+from django.template.loader import get_template
+from xhtml2pdf import pisa
+from .models import Project
+
+
+
+# views.py
+from django.shortcuts import render
+from django.http import HttpResponse
+from .models import Project
+import matplotlib.pyplot as plt
+import io
+import urllib, base64
 
 
 def home(request):
@@ -47,6 +62,57 @@ def signup(request):
             'form': UserCreationForm,
             'error': 'Password do not match'
         })
+
+@login_required
+def reporte_analisis_view(request):
+    # Obtén los conteos de proyectos según su estado
+    total_completados = Project.objects.filter(project_status='completado').count()
+    total_en_progreso = Project.objects.filter(project_status='en_progreso').count()
+    total_pendientes = Project.objects.filter(project_status='pendiente').count()
+
+    # Datos para el gráfico
+    labels = ['Completado', 'En Progreso', 'Pendiente']
+    sizes = [total_completados, total_en_progreso, total_pendientes]
+    colors = ['#4CAF50', '#FFEB3B', '#F44336']
+    explode = (0.1, 0, 0)
+
+    # Crear el gráfico de torta con un tamaño más pequeño
+    plt.figure(figsize=(4, 4))  # Cambia aquí el tamaño de la figura
+    plt.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=140, colors=colors, explode=explode)
+    plt.axis('equal')
+
+    # Convertir el gráfico a una imagen
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png', bbox_inches='tight')  # 'bbox_inches' ayuda a ajustar el espacio
+    buffer.seek(0)
+    image_png = buffer.getvalue()
+    buffer.close()
+    graphic = base64.b64encode(image_png)
+    graphic = graphic.decode('utf-8')
+
+    # Pasar el gráfico al template
+    context = {'graphic': graphic}
+    return render(request, 'reporte_analisis.html', context)
+
+
+@login_required
+def render_pdf_view(request):
+    projects = Project.objects.all()
+    template_path = 'reporte_proyectos.html'
+    context = {'projects': projects}
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="reporte_proyectos.pdf"'
+
+    template = get_template(template_path)
+    html = template.render(context)
+
+    pisa_status = pisa.CreatePDF(
+       html, dest=response)
+
+    if pisa_status.err:
+       return HttpResponse('Error al generar el reporte PDF', status=500)
+    return response
 
 @login_required
 def projects(request):

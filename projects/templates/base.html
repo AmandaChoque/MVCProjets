@@ -75,8 +75,14 @@
               </li>
               <li class="nav-item">
                 <a class="nav-link" href="{% url 'create_project' %}"
-                  >Create Project</a
-                >
+                  >Create Project</a>
+              </li>
+              <li>
+              <a href="{% url 'reporte_proyectos' %}" class="btn btn-primary">Descargar Reporte PDF</a>
+              </li> 
+              <li>
+                <a href="{% url 'reporte_analisis' %}" class="btn btn-primary">Ver Reporte de Análisis</a>
+
               </li>
             </ul>
           </div>
