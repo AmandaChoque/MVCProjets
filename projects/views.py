@@ -29,6 +29,18 @@ import matplotlib.pyplot as plt
 import io
 import urllib, base64
 
+from django.shortcuts import render
+from django.utils import timezone
+from .models import Project
+from django.db.models import Q
+
+import matplotlib.pyplot as plt
+import io
+import base64
+from django.shortcuts import render
+from django.utils import timezone
+from .models import Project
+from django.db.models import Count
 
 def home(request):
     return render(request, 'home.html')
@@ -94,25 +106,99 @@ def reporte_analisis_view(request):
     context = {'graphic': graphic}
     return render(request, 'reporte_analisis.html', context)
 
+@login_required
+
+def project_analysis(request):
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+
+    projects = Project.objects.all()
+
+    if start_date:
+        projects = projects.filter(start_date__gte=start_date)
+    if end_date:
+        projects = projects.filter(end_date__lte=end_date)
+
+    # Verificar si hay proyectos en el rango
+    if not projects.exists():
+        context = {
+            'message': "No existen proyectos en el rango de fechas seleccionado.",
+            'start_date': start_date,
+            'end_date': end_date,
+        }
+        return render(request, 'project_analysis.html', context)
+
+    # Contar proyectos por tipo
+    project_counts = projects.values('project_type').annotate(total=Count('project_type'))
+    licitacion_count = next((item['total'] for item in project_counts if item['project_type'] == 'licitacion'), 0)
+    contratacion_count = next((item['total'] for item in project_counts if item['project_type'] == 'contratacion_directa'), 0)
+
+    # Generar gráfico de torta
+    labels = ['Licitación', 'Contratación Directa']
+    sizes = [licitacion_count, contratacion_count]
+    colors = ['#66b3ff', '#99ff99']
+    explode = (0.1, 0)
+
+    plt.figure(figsize=(6, 6))
+    plt.pie(sizes, explode=explode, labels=labels, colors=colors, autopct='%1.1f%%', shadow=True, startangle=140)
+    plt.axis('equal')
+
+    buffer = io.BytesIO()
+    plt.savefig(buffer, format='png')
+    buffer.seek(0)
+    image_png = buffer.getvalue()
+    buffer.close()
+    graphic = base64.b64encode(image_png).decode('utf-8')
+
+    context = {
+        'graphic': graphic,
+        'start_date': start_date,
+        'end_date': end_date,
+        'licitacion_count': licitacion_count,
+        'contratacion_count': contratacion_count,
+    }
+
+    return render(request, 'project_analysis.html', context)
 
 @login_required
-def render_pdf_view(request):
+def project_report(request):
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    project_type = request.GET.get('project_type')
+    project_status = request.GET.get('project_status')  # Nuevo filtro por estado del proyecto
+
     projects = Project.objects.all()
-    template_path = 'reporte_proyectos.html'
-    context = {'projects': projects}
 
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = 'attachment; filename="reporte_proyectos.pdf"'
+    if start_date:
+        projects = projects.filter(start_date__gte=start_date)
+    if end_date:
+        projects = projects.filter(end_date__lte=end_date)
+    if project_type:
+        projects = projects.filter(project_type=project_type)
+    if project_status:
+        projects = projects.filter(project_status=project_status)
 
-    template = get_template(template_path)
-    html = template.render(context)
+    context = {
+        'projects': projects,
+        'start_date': start_date,
+        'end_date': end_date,
+        'project_type': project_type,
+        'project_status': project_status,
+        'now': timezone.now(),  # Fecha y hora actual
+    }
 
-    pisa_status = pisa.CreatePDF(
-       html, dest=response)
+    # Renderizado del PDF
+    if 'pdf' in request.GET:
+        template = get_template('project_report_pdf.html')
+        html = template.render(context)
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="reporte_proyectos.pdf"'
+        pisa_status = pisa.CreatePDF(html, dest=response)
+        if pisa_status.err:
+            return HttpResponse('Error al generar el PDF', status=500)
+        return response
 
-    if pisa_status.err:
-       return HttpResponse('Error al generar el reporte PDF', status=500)
-    return response
+    return render(request, 'project_report.html', context)
 
 @login_required
 def projects(request):

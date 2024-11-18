@@ -28,10 +28,11 @@ urlpatterns = [
     path('projects/<int:id_project>/complete/', views.project_complete, name='project_complete'),
     path('projects/<int:id_project>/delete/', views.project_delete, name='project_delete'),
     path('projects/<int:id_project>/deactivate/', views.deactivate_project, name='project_deactivate'),
-    path('reporte-proyectos/', views.render_pdf_view, name='reporte_proyectos'),
-    path('reporte-analisis/', views.reporte_analisis_view, name='reporte_analisis'),
-
     
+    path('reporte-analisis/', views.project_analysis, name='project_analysis'),
+    path('project_report/', views.project_report, name='project_report'),
+    # path('project-analysis/', project_analysis, name='project_analysis'),
+
     path('logout/', views.signout, name='signout'),
     path('signin/', views.signin, name='signin'),
     

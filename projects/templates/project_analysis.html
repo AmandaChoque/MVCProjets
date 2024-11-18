@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Análisis de Proyectos</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="container mt-5">
+    <h1>Análisis de Proyectos</h1>
+
+    <!-- Formulario de Filtro por Rango de Fechas -->
+    <form method="get" action="{% url 'project_analysis' %}" class="row g-3">
+        <div class="col-md-4">
+            <label for="start_date" class="form-label">Fecha Inicio:</label>
+            <input type="date" name="start_date" id="start_date" class="form-control" value="{{ start_date }}">
+        </div>
+        <div class="col-md-4">
+            <label for="end_date" class="form-label">Fecha Fin:</label>
+            <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date }}">
+        </div>
+        <div class="col-md-4 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+        </div>
+    </form>
+
+    {% if message %}
+        <!-- Mensaje amigable cuando no hay proyectos en el rango -->
+        <div class="alert alert-info mt-4" role="alert">
+            {{ message }}
+        </div>
+    {% else %}
+        <!-- Gráfico de Torta -->
+        <h2 class="mt-5">Distribución de Proyectos por Tipo</h2>
+        <img src="data:image/png;base64,{{ graphic }}" alt="Gráfico de Torta" class="img-fluid">
+
+        <!-- Tabla de Conteo de Proyectos -->
+        <h3 class="mt-4">Conteo de Proyectos</h3>
+        <div style="margin-left: 0;">
+            <table class="table table-bordered" style="width: 50%;">
+                <thead>
+                    <tr>
+                        <th style="width: 70%;">Tipo de Proyecto</th>
+                        <th style="width: 30%;">Cantidad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Licitación</td>
+                        <td>{{ licitacion_count }}</td>
+                    </tr>
+                    <tr>
+                        <td>Contratación Directa</td>
+                        <td>{{ contratacion_count }}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    {% endif %}
+</body>
+</html>

@@ -1,0 +1,36 @@
+<!-- templates/project_report_pdf.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Proyectos PDF</title>
+</head>
+<body>
+    <h1>Reporte de Proyectos</h1>
+    <p>Generado el {{ now }}</p>
+
+    <h2>Proyectos Filtrados</h2>
+    <table border="1" cellspacing="0" cellpadding="5">
+        <thead>
+            <tr>
+                <th>Nombre del Proyecto</th>
+                <th>Tipo</th>
+                <th>Estado</th>
+                <th>Fecha Inicio</th>
+                <th>Fecha Fin</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for project in projects %}
+                <tr>
+                    <td>{{ project.name }}</td>
+                    <td>{{ project.get_project_type_display }}</td>
+                    <td>{{ project.get_project_status_display }}</td>
+                    <td>{{ project.start_date }}</td>
+                    <td>{{ project.end_date }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+</html>

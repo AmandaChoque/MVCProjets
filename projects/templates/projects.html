@@ -5,7 +5,8 @@
 <main class="container">
     <div class="row">
         <div class="col-md-8 offset-md-3">
-            <h1 class="text-center display-6 py-4"> PROJECTS</h1>
+            <h1 class="text-center display-6 py-4"> PROYECTOS EN PROGRESO Y PENDIENTES
+            </h1>
             <ul class="list-group">
                 {% for project in projects %}   
                 <a class="list-group-item" href="{% url 'project_detail' project.id %}">
