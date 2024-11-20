@@ -55,10 +55,8 @@ class EmployeeForm(forms.ModelForm):
 class PaymentForm(forms.ModelForm):
     class Meta:
         model = Payment
-        fields = ['amount', 'date', 'status', 'payment_type']
+        fields = ['amount', 'date', 'status', 'payment_type', 'project', 'is_active']
         widgets = {
-            'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Monto'}),
-            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'placeholder': 'Fecha de Pago'}),
-            'status': forms.Select(attrs={'class': 'form-control'}),
-            'payment_type': forms.Select(attrs={'class': 'form-control'}),
+            'date': forms.DateInput(attrs={'type': 'date'}),
+            'amount': forms.NumberInput(attrs={'step': '0.01'}),
         }

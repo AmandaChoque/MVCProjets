@@ -42,6 +42,10 @@ from django.utils import timezone
 from .models import Project
 from django.db.models import Count
 
+
+from django.views.generic import ListView, CreateView
+
+
 def home(request):
     return render(request, 'home.html')
 
@@ -328,13 +332,11 @@ def create_employee(request):
 
 @login_required
 def deactivate_employee(request, id_employee):
-    employee = get_object_or_404(Employee, id=id_employee, user=request.user)
+    employee = get_object_or_404(Employee, id=id_employee)
     employee.is_active = False
     employee.deleted_at = timezone.now()  # Registrar la fecha de eliminación
     employee.save()
     return redirect('employees')
-
-
 
 @login_required
 def employee_detail(request, id_employee):
@@ -388,6 +390,39 @@ def payment_list(request, project_id):
     payments = Payment.objects.filter(project=project)
     return render(request, 'payment_list.html', {'payments': payments, 'project': project})
 
+# Vista para listar pagos con filtrado por proyecto
+# class PaymentListView(ListView):
+#     model = Payment
+#     template_name = "payment_list.html"
+#     context_object_name = "payments"
+
+#     def get_queryset(self):
+#         queryset = Payment.objects.all()
+#         project_id = self.request.GET.get("project_id")
+#         if project_id:
+#             queryset = queryset.filter(project_id=project_id)
+#         return queryset
+
+#     def get_context_data(self, **kwargs):
+#         context = super().get_context_data(**kwargs)
+#         context['projects'] = Project.objects.all()  # Para el filtro
+#         return context
+
+# Vista para crear un nuevo pago
+class PaymentCreateView(CreateView):
+    model = Payment
+    form_class = PaymentForm
+    template_name = "payment_form.html"
+
+    def form_valid(self, form):
+        form.save()
+        return redirect("payments:list")  # Cambiar por el nombre de tu URL
+    
+
+
+
+
+
 
 # @login_required
 # def list_payments(request):
@@ -409,22 +444,22 @@ def payment_list(request, project_id):
 #         'projects': Project.objects.all(),  # Para mostrar los proyectos en el filtro
 #     })
 
-@login_required
-def create_payment(request, project_id):
-    project = get_object_or_404(Project, pk=project_id, user=request.user)
+# @login_required
+# def create_payment(request, project_id):
+#     project = get_object_or_404(Project, pk=project_id, user=request.user)
     
-    if request.method == 'POST':
-        form = PaymentForm(request.POST)
-        if form.is_valid():
-            payment = form.save(commit=False)
-            payment.project = project  # Asigna el proyecto
-            payment.created = timezone.now()  # Establece la fecha de creación
-            payment.save()
-            return redirect('payment_list', project_id=project.id)  # Redirige a la lista de pagos
-    else:
-        form = PaymentForm()
+#     if request.method == 'POST':
+#         form = PaymentForm(request.POST)
+#         if form.is_valid():
+#             payment = form.save(commit=False)
+#             payment.project = project  # Asigna el proyecto
+#             payment.created = timezone.now()  # Establece la fecha de creación
+#             payment.save()
+#             return redirect('payment_list', project_id=project.id)  # Redirige a la lista de pagos
+#     else:
+#         form = PaymentForm()
 
-    return render(request, 'create_payment.html', {'form': form, 'project': project})
+#     return render(request, 'create_payment.html', {'form': form, 'project': project})
 
 # @login_required
 # def create_payment(request):

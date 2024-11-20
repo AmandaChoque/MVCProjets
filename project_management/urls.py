@@ -17,6 +17,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from projects import views
+
+
+
+
+
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.home, name='home'),
@@ -46,6 +52,8 @@ urlpatterns = [
     path('payment_histories/', views.payment_histories, name='payment_histories'),
 
     # # Payments
+    path("payment/", views.PaymentListView.as_view(), name="list"),
+    path("payment/create/", views.PaymentCreateView.as_view(), name="create"),
     # path('payments/<int:id_payment>/payments/', views.payment_list, name='payment_list'),
     # path('payments/<int:id_payment>/payments/create/', views.create_payment, name='create_payment'),
 

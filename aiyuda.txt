@@ -1,0 +1,10 @@
+python -m venv venv
+
+.\venv\Scripts\Activate
+
+python manage.py runserver
+
+
+python manage.py makemigrations
+
+python manage.py migrate
