@@ -87,9 +87,40 @@
             </ul>
           </div>
         </li>
+
+
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'employees' %}">Empleados</a>
+          <a
+            class="nav-link"
+            data-bs-toggle="collapse"
+            href="#employeeSubmenu"
+            role="button"
+            aria-expanded="false"
+            aria-controls="employeeSubmenu"
+          >
+          Empleados
+          </a>
+          <div class="collapse" id="employeeSubmenu">
+            <ul class="nav flex-column ms-3">
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'employees' %}">Listar Empleados</a>
+              </li>
+             
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'create_employee' %}"
+                  >Create Empleados</a>
+              </li>
+             
+            </ul>
+          </div>
         </li>
+
+
+       
+
+
+
+        
         <li class="nav-item">
           <a class="nav-link" href="{% url 'payment_histories' %}"
             >Historial de Pagos</a

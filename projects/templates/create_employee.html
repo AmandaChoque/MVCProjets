@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+{{error}}
+<main class="container">
+    <div class="row">
+        <div class="col-md-4 offset-md-4 mt-5">
+            <form action="/employees/create/" method="POST" class="card card-body">
+                <h2 class="text-center"> CREAR PROYECTO</h2>
+                {{error}}
+                {% csrf_token %}
+                {{form}}
+            
+                <button class="btn btn-primary mt-3">
+                    Save
+                </button>
+            </form>
+        </div>
+    </div>
+</main>
+{% endblock %}
+

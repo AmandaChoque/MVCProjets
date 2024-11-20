@@ -1,6 +1,8 @@
 from django.forms import ModelForm
 from django import forms
-from .models import Project, Employee
+from .models import Project, Employee, Payment
+
+from django.contrib.auth.models import User
 
 # class ProjectForm(ModelForm):
 #     class Meta:
@@ -8,6 +10,8 @@ from .models import Project, Employee
 #         fields = ['code', 'name', 'description', 'start_date', 'end_date', 'project_status', 'project_type', 'photo_signed_contract', 'photo_proposed_contract']
 
 class ProjectForm(forms.ModelForm):
+
+    
     class Meta:
         model = Project
         fields = ['code', 'name', 'description', 'start_date', 'end_date', 'project_status', 'project_type', 'photo_signed_contract', 'photo_proposed_contract']
@@ -26,9 +30,15 @@ class ProjectForm(forms.ModelForm):
 
 
 class EmployeeForm(forms.ModelForm):
+    user = forms.ModelChoiceField(
+        queryset=User.objects.all(),
+        widget=forms.Select(attrs={'class': 'form-control'}),
+        required=True,
+        label="Usuario Asociado"
+    )
     class Meta:
         model = Employee
-        fields = ['first_name', 'last_name_father', 'last_name_mother', 'phone_number', 'hire_date', 'salary', 'position', 'ci']
+        fields = ['user','first_name', 'last_name_father', 'last_name_mother', 'phone_number', 'hire_date', 'salary', 'position', 'ci']
         widgets = {
             'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre'}),
             'last_name_father': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Apellido Paterno'}),
@@ -38,4 +48,17 @@ class EmployeeForm(forms.ModelForm):
             'salary': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Salario'}),
             'position': forms.Select(attrs={'class': 'form-control'}),
             'ci': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Carnet de Identidad'}),
+        }
+
+
+
+class PaymentForm(forms.ModelForm):
+    class Meta:
+        model = Payment
+        fields = ['amount', 'date', 'status', 'payment_type']
+        widgets = {
+            'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Monto'}),
+            'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'placeholder': 'Fecha de Pago'}),
+            'status': forms.Select(attrs={'class': 'form-control'}),
+            'payment_type': forms.Select(attrs={'class': 'form-control'}),
         }

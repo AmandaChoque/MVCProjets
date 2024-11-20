@@ -21,6 +21,10 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', views.home, name='home'),
     path('signup/', views.signup, name='signup'),
+    path('logout/', views.signout, name='signout'),
+    path('signin/', views.signin, name='signin'),
+    
+    # Proyects
     path('projects/', views.projects, name='projects'),
     path('projects_completed/', views.projects_completed, name='projects_completed'),
     path('projects/create/', views.create_project, name='create_project'),
@@ -29,19 +33,25 @@ urlpatterns = [
     path('projects/<int:id_project>/delete/', views.project_delete, name='project_delete'),
     path('projects/<int:id_project>/deactivate/', views.deactivate_project, name='project_deactivate'),
     
-    path('reporte-analisis/', views.project_analysis, name='project_analysis'),
-    path('project_report/', views.project_report, name='project_report'),
-    # path('project-analysis/', project_analysis, name='project_analysis'),
 
-    path('logout/', views.signout, name='signout'),
-    path('signin/', views.signin, name='signin'),
     
     # Employees
     path('employees/', views.employees, name='employees'),
-    path('employees/<int:id_employee>/', views.project_detail, name='employee_detail'),
-    
+    path('employees/<int:id_employee>/', views.employee_detail, name='employee_detail'),
+    path('employees/create/', views.create_employee, name='create_employee'),
+    path('employees/<int:id_employee>/deactivate/', views.deactivate_employee, name='employee_deactivate'),
+
 
     # Historial de Pagos
     path('payment_histories/', views.payment_histories, name='payment_histories'),
 
+    # # Payments
+    # path('payments/<int:id_payment>/payments/', views.payment_list, name='payment_list'),
+    # path('payments/<int:id_payment>/payments/create/', views.create_payment, name='create_payment'),
+
+
+    # Analysis y Reporte
+    path('reporte-analisis/', views.project_analysis, name='project_analysis'),
+    path('project_report/', views.project_report, name='project_report'),
+    # path('project-analysis/', project_analysis, name='project_analysis'),
 ]

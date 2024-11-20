@@ -7,7 +7,7 @@ from django.contrib.auth import login, logout, authenticate
 from django.http import HttpResponse
 from django.db import IntegrityError
 
-from .form import ProjectForm, EmployeeForm
+from .form import ProjectForm, EmployeeForm, PaymentForm
 from .models import Project, Employee, Payment, PaymentHistory, Proposal, PublicEntity, Contractor
 from django.contrib.auth.decorators import login_required
 
@@ -75,6 +75,29 @@ def signup(request):
             'error': 'Password do not match'
         })
 
+@login_required            
+def signout(request):
+    logout(request)
+    return redirect('home')
+
+def signin(request):
+    if request.method == 'GET':
+        return render(request, 'signin.html', {
+            'form': AuthenticationForm
+        })
+    else:
+        print(request.POST)
+        user =authenticate(request, username=request.POST['username'], password=request.POST['password']) #son validos los datos que me envian
+        
+        if user is None:
+            return render(request, 'signin.html', {
+                'form': AuthenticationForm,
+                'error': 'Username or password is incorrect'
+            })
+        else:
+            login(request, user)
+            return redirect('projects')
+
 @login_required
 def reporte_analisis_view(request):
     # Obtén los conteos de proyectos según su estado
@@ -107,7 +130,6 @@ def reporte_analisis_view(request):
     return render(request, 'reporte_analisis.html', context)
 
 @login_required
-
 def project_analysis(request):
     start_date = request.GET.get('start_date')
     end_date = request.GET.get('end_date')
@@ -200,6 +222,7 @@ def project_report(request):
 
     return render(request, 'project_report.html', context)
 
+# proyects
 @login_required
 def projects(request):
     # projects = Project.objects.all()
@@ -208,7 +231,6 @@ def projects(request):
     return render(request, 'projects.html', {
         'projects': projects
     })
-
 
 @login_required
 def deactivate_project(request, id_project):
@@ -280,31 +302,59 @@ def create_project(request):
                 'error': 'Please provide valida data'
             })
 
-@login_required            
-def signout(request):
-    logout(request)
-    return redirect('home')
-
-def signin(request):
-    if request.method == 'GET':
-        return render(request, 'signin.html', {
-            'form': AuthenticationForm
+# employee
+@login_required  
+def create_employee(request):
+    if request.method =='GET':
+        return render(request, 'create_employee.html', {
+            'form': EmployeeForm
         })
     else:
-        print(request.POST)
-        user =authenticate(request, username=request.POST['username'], password=request.POST['password']) #son validos los datos que me envian
+        try:
+            print(request.POST)
+            form = EmployeeForm(request.POST)
+            new_project =form.save(commit=False)
+            #new_project.user = User.objects.first()
+            #  employee.user = form.cleaned_data['user']  # Asegúrate de que 'user' está en el formulario
+            # new_project.user = request.user
+            new_project.save()
+            return redirect('employees')
         
-        if user is None:
-            return render(request, 'signin.html', {
-                'form': AuthenticationForm,
-                'error': 'Username or password is incorrect'
+        except ValueError:
+            return render(request, 'create_employee.html', {
+                'form': EmployeeForm,
+                'error': 'Please provide valida data'
             })
-        else:
-            login(request, user)
-            return redirect('projects')
+
+@login_required
+def deactivate_employee(request, id_employee):
+    employee = get_object_or_404(Employee, id=id_employee, user=request.user)
+    employee.is_active = False
+    employee.deleted_at = timezone.now()  # Registrar la fecha de eliminación
+    employee.save()
+    return redirect('employees')
 
 
-# employees
+
+@login_required
+def employee_detail(request, id_employee):
+    # para que pueda ver sosl sus proyectos
+    if request.method == 'GET':
+        employee = get_object_or_404(Employee, pk = id_employee)
+        form = EmployeeForm(instance=employee)
+        return render(request, 'employee_detail.html', {
+            'employee': employee,
+            'form': form
+        })
+    else:
+        try:
+            employee = get_object_or_404(Employee, pk = id_employee)
+            form = EmployeeForm(request.POST, instance=employee)
+            form.save()
+            return redirect('employees')
+        except ValueError:
+            return render(request, 'employee_detail.html', {'employee': employee, 'form': form, 'error': "Error al actualizar el empleado"})
+
 @login_required
 def employees(request):
     employees = Employee.objects.all()
@@ -313,17 +363,6 @@ def employees(request):
         'employees': employees
     })
 
-@login_required
-def employee_detail(request, id_employee):
-    # para que pueda ver sosl sus proyectos
-    if request.method == 'GET':
-        employee = get_object_or_404(Employee, pk = id_employee, user=request.user)
-        form = EmployeeForm(instance=employee)
-        return render(request, 'employee_detail.html', {
-            'employee': employee,
-            'form': form
-        })
-    
 
 # Historial de pagos
 @login_required
@@ -333,3 +372,71 @@ def payment_histories(request):
     return render(request, 'payment_histories.html', {
         'payment_histories': payment_histories
     })
+
+# PAYMENTS
+
+# @login_required
+# def list_payments(request):
+#     payments = Payment.objects.all()
+#     return render(request, 'list_payments.html', {'payments': payments})
+
+@login_required
+def payment_list(request, project_id):
+    # Obtiene el proyecto (solo si el usuario tiene acceso)
+    project = get_object_or_404(Project, pk=project_id, user=request.user)
+    # Filtra los pagos asociados al proyecto
+    payments = Payment.objects.filter(project=project)
+    return render(request, 'payment_list.html', {'payments': payments, 'project': project})
+
+
+# @login_required
+# def list_payments(request):
+#     payments = Payment.objects.all()  # Obtiene todos los pagos
+
+#     # Filtrar por proyecto
+#     project_id = request.GET.get('project')
+#     if project_id:
+#         payments = payments.filter(project_id=project_id)
+
+#     # Filtrar por rango de fechas
+#     start_date = request.GET.get('start_date')
+#     end_date = request.GET.get('end_date')
+#     if start_date and end_date:
+#         payments = payments.filter(date__range=[start_date, end_date])
+
+#     return render(request, 'list_payments.html', {
+#         'payments': payments,
+#         'projects': Project.objects.all(),  # Para mostrar los proyectos en el filtro
+#     })
+
+@login_required
+def create_payment(request, project_id):
+    project = get_object_or_404(Project, pk=project_id, user=request.user)
+    
+    if request.method == 'POST':
+        form = PaymentForm(request.POST)
+        if form.is_valid():
+            payment = form.save(commit=False)
+            payment.project = project  # Asigna el proyecto
+            payment.created = timezone.now()  # Establece la fecha de creación
+            payment.save()
+            return redirect('payment_list', project_id=project.id)  # Redirige a la lista de pagos
+    else:
+        form = PaymentForm()
+
+    return render(request, 'create_payment.html', {'form': form, 'project': project})
+
+# @login_required
+# def create_payment(request):
+#     if request.method == 'POST':
+#         form = PaymentForm(request.POST)
+#         if form.is_valid():
+#             form.save()
+#             return redirect('list_payments')  # Redirige a la lista de pagos después de crear
+#     else:
+#         form = PaymentForm()
+
+#     return render(request, 'payments/create_payment.html', {
+#         'form': form
+#     })
+

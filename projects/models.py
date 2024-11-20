@@ -40,7 +40,7 @@ class Project(AuditModel):
     
     # created =models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)# Empleado que herede de user
-    # is_active = models.BooleanField(default=True, verbose_name="Activo")
+    is_active = models.BooleanField(default=True, verbose_name="Activo")
     
     def __str__(self):
         return self.name + ' - by '+ self.user.username
@@ -49,6 +49,7 @@ class Project(AuditModel):
 class Employee(models.Model):
     # Opciones para el campo "cargo"
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="employee_profile")  # Relación uno a uno con User
+    is_active = models.BooleanField(default=True, verbose_name="Activo")
     
     POSITION_CHOICES = [
         ('gerente_general', 'Gerente General'),
@@ -182,9 +183,17 @@ class Payment(models.Model):
     # Clave foránea a Project
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='payments', verbose_name="Project")  # Relación (1 a N)
     created =models.DateTimeField(default=timezone.now)
+    is_active = models.BooleanField(default=True, verbose_name="Activo")
+    
     class Meta:
         verbose_name = 'Payment'
         verbose_name_plural = 'Payments'
 
     def __str__(self):
         return f"Payment of {self.amount} on {self.date} - Status: {self.status}"
+
+    # Ejemplo de método adicional para verificar si el pago es suficiente
+    def is_payment_complete(self):
+        if self.payment_type == 'completo' and self.status == 'pagado':
+            return self.amount >= self.project.total_amount  # Asumiendo que tu modelo Project tiene un campo total_amount
+        return False
