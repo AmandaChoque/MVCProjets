@@ -39,24 +39,23 @@ urlpatterns = [
     path('projects/<int:id_project>/delete/', views.project_delete, name='project_delete'),
     path('projects/<int:id_project>/deactivate/', views.deactivate_project, name='project_deactivate'),
     
-
-    
     # Employees
     path('employees/', views.employees, name='employees'),
-    path('employees/<int:id_employee>/', views.employee_detail, name='employee_detail'),
     path('employees/create/', views.create_employee, name='create_employee'),
+    path('employees/<int:id_employee>/', views.employee_detail, name='employee_detail'),
     path('employees/<int:id_employee>/deactivate/', views.deactivate_employee, name='employee_deactivate'),
-
 
     # Historial de Pagos
     path('payment_histories/', views.payment_histories, name='payment_histories'),
 
     # # Payments
-    path("payment/", views.PaymentListView.as_view(), name="list"),
-    path("payment/create/", views.PaymentCreateView.as_view(), name="create"),
+    path("payments/", views.payment_list, name="payments"),
+    path("payments/create/", views.PaymentCreateView.as_view(), name="create_payment"),
+    path('payments/<int:id_payment>/', views.payment_detail, name='payment_detail'),
+    path('payments/<int:id_payment>/deactivate/', views.deactivate_payment, name='payment_deactivate'),
+
     # path('payments/<int:id_payment>/payments/', views.payment_list, name='payment_list'),
     # path('payments/<int:id_payment>/payments/create/', views.create_payment, name='create_payment'),
-
 
     # Analysis y Reporte
     path('reporte-analisis/', views.project_analysis, name='project_analysis'),

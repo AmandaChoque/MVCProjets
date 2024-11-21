@@ -383,12 +383,42 @@ def payment_histories(request):
 #     return render(request, 'list_payments.html', {'payments': payments})
 
 @login_required
-def payment_list(request, project_id):
-    # Obtiene el proyecto (solo si el usuario tiene acceso)
-    project = get_object_or_404(Project, pk=project_id, user=request.user)
-    # Filtra los pagos asociados al proyecto
-    payments = Payment.objects.filter(project=project)
-    return render(request, 'payment_list.html', {'payments': payments, 'project': project})
+def payment_list(request):
+
+    payments = PaymentHistory.objects.all()
+    # projects = Project.objects.filter(user= request.user)
+    return render(request, 'payments.html', {
+        'payments': payments
+    })
+
+@login_required
+def payment_detail(request, id_payment):
+    # para que pueda ver sosl sus proyectos
+    if request.method == 'GET':
+        payment = get_object_or_404(Payment, pk = id_payment)
+        form = PaymentForm(instance=payment)
+        return render(request, 'payment_detail.html', {
+            'payment': payment,
+            'form': form
+        })
+    else:
+        try:
+            payment = get_object_or_404(Payment, pk = id_payment)
+            form = PaymentForm(request.POST, instance=payment)
+            form.save()
+            return redirect('payments')
+        except ValueError:
+            return render(request, 'payment_detail.html', {'payment': payment, 'form': form, 'error': "Error al actualizar el proyecto"})
+
+@login_required
+def deactivate_payment(request, id_payment):
+    payment = get_object_or_404(Payment, id=id_payment)
+    payment.is_active = False
+    payment.deleted_at = timezone.now()  # Registrar la fecha de eliminación
+    payment.save()
+    return redirect('payments')
+
+
 
 # Vista para listar pagos con filtrado por proyecto
 # class PaymentListView(ListView):

@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<main class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-3">
+            <h1 class="text-center display-6 py-4"> PAGOS</h1>
+            <ul class="list-group">
+                {% for payment in payments %}   
+                <a class="list-group-item" href="{% url 'payment_detail' payment.id %}">
+                    <header class="d-flex justify-content-between">
+                        
+                        <h2 class="fw-bold">{{payment.amount}}</h2>
+                        
+                        <p>{{payment.amount}}</p>
+                    </header>
+                    <p>Estado: {{payment.amount}}</p>
+                    <!-- <p>Tipo: {{employee. }}</p>
+                    <p>{{employee.}}</p> -->
+                </a>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</main>
+
+
+{% endblock %}
