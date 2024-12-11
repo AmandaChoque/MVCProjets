@@ -10,9 +10,9 @@
             <h2 class="fw-bold">{{payment_history.modification_date}}</h2>
           </header>
           <p>Estado: {{payment_history.previous_amount}}</p>
-          <p>Tipo: {{payment_history.current_amount}}</p>
-          <p>Tipo: {{payment_history.change_reason}}</p>
-          <p>Tipo: {{payment_history.project.name}}</p>
+          <p>Monto: {{payment_history.current_amount}}</p>
+          <p>Razón: {{payment_history.change_reason}}</p>
+          <p>Nombre proyecto: {{payment_history.project.name}}</p>
         </a>
         {% endfor %}
       </ul>

@@ -4,17 +4,18 @@
 <main class="container">
     <div class="row">
         <div class="col-md-8 offset-md-3">
-            <h1 class="text-center display-6 py-4"> PAGOS</h1>
+            <h1 class="text-center display-6 py-4 fw-bold"> PAGOS</h1>
             <ul class="list-group">
                 {% for payment in payments %}   
                 <a class="list-group-item" href="{% url 'payment_detail' payment.id %}">
                     <header class="d-flex justify-content-between">
                         
-                        <h2 class="fw-bold">{{payment.amount}}</h2>
+                        <h2 class="fw-bold">{{payment.project.name}}</h2>
                         
-                        <p>{{payment.amount}}</p>
+                        <p>{{payment.date}}</p>
                     </header>
-                    <p>Estado: {{payment.amount}}</p>
+                    <p>Monto: {{payment.amount}}</p>
+                    <p>Estado: {{payment.status}}</p>
                     <!-- <p>Tipo: {{employee. }}</p>
                     <p>{{employee.}}</p> -->
                 </a>

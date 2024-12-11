@@ -1,12 +1,9 @@
 <!-- templates/project_report.html -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Reporte de Proyectos</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-</head>
-<body class="container mt-5">
+{% extends 'base.html' %}
+
+{% block content %}
+<body class="container mt-5" style="margin-left: 1.8cm;"></body>
+
     <h1 class="mb-4">Reporte de Proyectos</h1>
 
     <!-- Formulario de Filtro -->
@@ -69,5 +66,6 @@
             {% endfor %}
         </tbody>
     </table>
-</body>
-</html>
+
+
+{% endblock %}

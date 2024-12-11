@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <h2>Pagos para el proyecto: {{ project.name }}</h2>
+    
+    <!-- Formulario para filtrar pagos -->
+    <form method="GET">
+        <div class="form-group">
+            <label for="status">Estado del pago:</label>
+            <select name="status" id="status" class="form-control">
+                <option value="">Todos</option>
+                <option value="pagado" {% if request.GET.status == 'pagado' %}selected{% endif %}>Pagado</option>
+                <option value="pendiente" {% if request.GET.status == 'pendiente' %}selected{% endif %}>Pendiente</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label for="payment_type">Tipo de pago:</label>
+            <select name="payment_type" id="payment_type" class="form-control">
+                <option value="">Todos</option>
+                <option value="parcial" {% if request.GET.payment_type == 'parcial' %}selected{% endif %}>Parcial</option>
+                <option value="completo" {% if request.GET.payment_type == 'completo' %}selected{% endif %}>Completo</option>
+            </select>
+        </div>
+        
+        <button type="submit" class="btn btn-primary">Filtrar</button>
+    </form>
+    
+    <h3>Pagos:</h3>
+    
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Monto</th>
+                <th>Fecha</th>
+                <th>Estado</th>
+                <th>Tipo de Pago</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for payment in payments %}
+                <tr>
+                    <td>{{ payment.amount }}</td>
+                    <td>{{ payment.date }}</td>
+                    <td>{{ payment.status }}</td>
+                    <td>{{ payment.payment_type }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="4">No hay pagos para este proyecto.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

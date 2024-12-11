@@ -1,23 +1,23 @@
-
 {% extends 'base.html' %}
 
 {% block content %}
-
 <main class="container">
     <div class="row">
         <div class="col-md-8 offset-md-2">
-            <h1 class="text-secondary">{{employee.first_name}}</h1>
-            {{error}}
-
+            <h1 class="text-secondary">Propuesta para {{ proposal.public_entity.entity_name }}</h1>
+            {% if error %}
+                <div class="alert alert-danger">{{ error }}</div>
+            {% endif %}
+            
             <form method="POST">
                 {% csrf_token %}
-                {{form.as_p}}
+                {{ form.as_p }}
                 <button class="btn btn-primary mx-2 my-2" type="submit">
                     Actualizar
                 </button>
             </form>
             <div class="d-flex">    
-                <form action="{% url 'employee_deactivate' employee.id %}" method="POST">
+                <form action="{% url 'proposal_deactivate' proposal.id %}" method="POST">
                     {% csrf_token %}
                     <button class="btn btn-danger mx-2" type="submit">
                         Inhabilitar
@@ -27,5 +27,4 @@
         </div>
     </div>
 </main>
-
 {% endblock %}

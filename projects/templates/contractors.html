@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<main class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-3">
+            <h1 class="text-center display-6 py-4 fw-bold"> CONTRATANTES</h1>
+            <ul class="list-group">
+                {% for contractor in contractors %}
+                <a class="list-group-item" href="{% url 'contractor_detail' contractor.id %}">
+                    <header class="d-flex justify-content-between">
+                        <h2 class="fw-bold">{{ contractor.first_name }} {{ contractor.paternal_last_name }}</h2>
+                        <p>Teléfono: {{ contractor.phone_number }}</p>
+                    </header>
+                    <p>Cargo: {{ contractor.position }}</p>
+                    <p>Entidad: {{ contractor.entity_place_representation }}</p>
+                </a>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</main>
+{% endblock %}

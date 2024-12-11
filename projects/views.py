@@ -7,8 +7,8 @@ from django.contrib.auth import login, logout, authenticate
 from django.http import HttpResponse
 from django.db import IntegrityError
 
-from .form import ProjectForm, EmployeeForm, PaymentForm
-from .models import Project, Employee, Payment, PaymentHistory, Proposal, PublicEntity, Contractor
+from .form import ProjectForm, EmployeeForm, PaymentForm, PublicEntityForm, ProposalForm, ContractorForm
+from .models import Project, Employee, Payment, PublicEntity, Proposal, Contractor
 from django.contrib.auth.decorators import login_required
 
 from django.utils import timezone
@@ -46,6 +46,16 @@ from django.db.models import Count
 from django.views.generic import ListView, CreateView
 
 
+from django.utils.timezone import now
+
+
+from django.shortcuts import render, get_object_or_404
+from django.http import HttpResponse
+from .models import Payment, Project
+from io import BytesIO
+from reportlab.pdfgen import canvas
+from reportlab.lib.pagesizes import letter
+from datetime import datetime
 def home(request):
     return render(request, 'home.html')
 
@@ -247,15 +257,15 @@ def deactivate_project(request, id_project):
 @login_required
 def projects_completed(request):
     projects = Project.objects.filter(user= request.user, project_status__in =['completado'], is_active=True)
-    return render(request, 'projects.html', {
+    return render(request, 'projects_completes.html', {
         'projects': projects
     })
 
 @login_required
 def project_detail(request, id_project):
     # para que pueda ver sosl sus proyectos
+    project = get_object_or_404(Project, pk = id_project, user=request.user)
     if request.method == 'GET':
-        project = get_object_or_404(Project, pk = id_project, user=request.user)
         form = ProjectForm(instance=project)
         return render(request, 'project_detail.html', {
             'project': project,
@@ -263,7 +273,6 @@ def project_detail(request, id_project):
         })
     else:
         try:
-            project = get_object_or_404(Project, pk = id_project, user=request.user)
             form = ProjectForm(request.POST, instance=project)
             form.save()
             return redirect('projects')
@@ -293,7 +302,7 @@ def create_project(request):
         })
     else:
         try:
-            print(request.POST)
+            #print(request.POST)
             form = ProjectForm(request.POST)
             new_project =form.save(commit=False)
             new_project.user = request.user
@@ -365,16 +374,6 @@ def employees(request):
         'employees': employees
     })
 
-
-# Historial de pagos
-@login_required
-def payment_histories(request):
-    payment_histories = PaymentHistory.objects.all()
-    # projects = Project.objects.filter(user= request.user)
-    return render(request, 'payment_histories.html', {
-        'payment_histories': payment_histories
-    })
-
 # PAYMENTS
 
 # @login_required
@@ -385,7 +384,7 @@ def payment_histories(request):
 @login_required
 def payment_list(request):
 
-    payments = PaymentHistory.objects.all()
+    payments = Payment.objects.all()
     # projects = Project.objects.filter(user= request.user)
     return render(request, 'payments.html', {
         'payments': payments
@@ -394,8 +393,9 @@ def payment_list(request):
 @login_required
 def payment_detail(request, id_payment):
     # para que pueda ver sosl sus proyectos
+    payment = get_object_or_404(Payment, pk = id_payment)
+    
     if request.method == 'GET':
-        payment = get_object_or_404(Payment, pk = id_payment)
         form = PaymentForm(instance=payment)
         return render(request, 'payment_detail.html', {
             'payment': payment,
@@ -403,7 +403,6 @@ def payment_detail(request, id_payment):
         })
     else:
         try:
-            payment = get_object_or_404(Payment, pk = id_payment)
             form = PaymentForm(request.POST, instance=payment)
             form.save()
             return redirect('payments')
@@ -418,90 +417,286 @@ def deactivate_payment(request, id_payment):
     payment.save()
     return redirect('payments')
 
+@login_required
+def create_payment(request):
+    if request.method =='GET':
+        return render(request, 'create_payment.html', {
+            'form': PaymentForm
+        })
+    else:
+        try:
+            print(request.POST)
+            form = PaymentForm(request.POST)
+            new_project =form.save(commit=False)
+            #new_project.user = User.objects.first()
+            #  payment.user = form.cleaned_data['user']  # Asegúrate de que 'user' está en el formulario
+            # new_project.user = request.user
+            new_project.save()
+            return redirect('payments')
+        
+        except ValueError:
+            return render(request, 'create_payment.html', {
+                'form': PaymentForm,
+                'error': 'Please provide valida data'
+            })
 
+@login_required
+def filter_payments_by_project_name(request):
+    # Recuperar los parámetros de filtro desde la URL
+    project_name = request.GET.get('project_name', '')
+    start_date = request.GET.get('start_date', '')
+    end_date = request.GET.get('end_date', '')
 
-# Vista para listar pagos con filtrado por proyecto
-# class PaymentListView(ListView):
-#     model = Payment
-#     template_name = "payment_list.html"
-#     context_object_name = "payments"
+    # Obtener todos los proyectos con nombres únicos
+    projects = Project.objects.values('name').distinct()
 
-#     def get_queryset(self):
-#         queryset = Payment.objects.all()
-#         project_id = self.request.GET.get("project_id")
-#         if project_id:
-#             queryset = queryset.filter(project_id=project_id)
-#         return queryset
+    # Filtrar pagos por nombre de proyecto y fechas
+    payments = Payment.objects.all()
 
-#     def get_context_data(self, **kwargs):
-#         context = super().get_context_data(**kwargs)
-#         context['projects'] = Project.objects.all()  # Para el filtro
-#         return context
+    if project_name:
+        payments = payments.filter(project__name__icontains=project_name)
 
-# Vista para crear un nuevo pago
-class PaymentCreateView(CreateView):
-    model = Payment
-    form_class = PaymentForm
-    template_name = "payment_form.html"
+    if start_date:
+        payments = payments.filter(date__gte=start_date)  # Cambié payment_date por date
 
-    def form_valid(self, form):
-        form.save()
-        return redirect("payments:list")  # Cambiar por el nombre de tu URL
-    
+    if end_date:
+        payments = payments.filter(date__lte=end_date)  # Cambié payment_date por date
 
+    context = {
+        'payments': payments,
+        'projects': projects,  # Pasar los proyectos al contexto
+        'project_name': project_name,
+        'start_date': start_date,
+        'end_date': end_date,
+        'now': timezone.now(),  # Fecha y hora actual
+    }
+    # Renderizado del PDF
+    if 'pdf' in request.GET:
+        template = get_template('payments_report_pdf.html')
+        html = template.render(context)
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename="reporte_pagos.pdf"'
+        pisa_status = pisa.CreatePDF(html, dest=response)
+        if pisa_status.err:
+            return HttpResponse('Error al generar el PDF', status=500)
+        return response
 
+    return render(request, 'payments_by_project_name.html', context)
 
+@login_required
+def payment_analysis(request):
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
 
+    # Filtrar pagos según fechas
+    payments = Payment.objects.all()
 
+    # Filtramos por fecha de inicio
+    if start_date:
+        try:
+            # Convertimos la fecha de inicio al formato datetime.date
+            start_date = datetime.strptime(start_date, "%Y-%m-%d").date()
+            payments = payments.filter(date__gte=start_date)  # Filtrar por fecha de pago mayor o igual
+        except ValueError:
+            pass  # Si el formato es incorrecto, no se aplica el filtro
 
-# @login_required
-# def list_payments(request):
-#     payments = Payment.objects.all()  # Obtiene todos los pagos
+    # Filtramos por fecha de fin
+    if end_date:
+        try:
+            # Convertimos la fecha de fin al formato datetime.date
+            end_date = datetime.strptime(end_date, "%Y-%m-%d").date()
+            payments = payments.filter(date__lte=end_date)  # Filtrar por fecha de pago menor o igual
+        except ValueError:
+            pass  # Si el formato es incorrecto, no se aplica el filtro
 
-#     # Filtrar por proyecto
-#     project_id = request.GET.get('project')
-#     if project_id:
-#         payments = payments.filter(project_id=project_id)
+    # Contar pagos por estado y tipo
+    payment_status_counts = payments.values('status').annotate(count=Count('status'))
+    payment_type_counts = payments.values('payment_type').annotate(count=Count('payment_type'))
 
-#     # Filtrar por rango de fechas
-#     start_date = request.GET.get('start_date')
-#     end_date = request.GET.get('end_date')
-#     if start_date and end_date:
-#         payments = payments.filter(date__range=[start_date, end_date])
+    # Crear gráfico de torta para estado de pago
+    status_labels = [status['status'] for status in payment_status_counts]
+    status_values = [status['count'] for status in payment_status_counts]
 
-#     return render(request, 'list_payments.html', {
-#         'payments': payments,
-#         'projects': Project.objects.all(),  # Para mostrar los proyectos en el filtro
-#     })
+    fig, ax = plt.subplots()
+    ax.pie(status_values, labels=status_labels, autopct='%1.1f%%', startangle=90)
+    ax.axis('equal')  # Equal aspect ratio ensures that pie is drawn as a circle.
 
-# @login_required
-# def create_payment(request, project_id):
-#     project = get_object_or_404(Project, pk=project_id, user=request.user)
-    
-#     if request.method == 'POST':
-#         form = PaymentForm(request.POST)
-#         if form.is_valid():
-#             payment = form.save(commit=False)
-#             payment.project = project  # Asigna el proyecto
-#             payment.created = timezone.now()  # Establece la fecha de creación
-#             payment.save()
-#             return redirect('payment_list', project_id=project.id)  # Redirige a la lista de pagos
-#     else:
-#         form = PaymentForm()
+    # Convertir gráfico a imagen base64
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    graphic = base64.b64encode(buf.getvalue()).decode('utf-8')
 
-#     return render(request, 'create_payment.html', {'form': form, 'project': project})
+    # Enviar contexto a la plantilla
+    context = {
+        'graphic': graphic,
+        'payment_status_counts': payment_status_counts,
+        'payment_type_counts': payment_type_counts,
+        'start_date': start_date,
+        'end_date': end_date,
+        'message': None if payments.exists() else 'No hay pagos en este rango de fechas.',
+    }
 
-# @login_required
-# def create_payment(request):
-#     if request.method == 'POST':
-#         form = PaymentForm(request.POST)
-#         if form.is_valid():
-#             form.save()
-#             return redirect('list_payments')  # Redirige a la lista de pagos después de crear
-#     else:
-#         form = PaymentForm()
+    return render(request, 'payment_analysis.html', context)
+   
+# Public Entity
+@login_required  
+def create_public_entity(request):
+    if request.method == 'GET':
+        return render(request, 'create_public_entity.html', {
+            'form': PublicEntityForm()
+        })
+    else:
+        try:
+            form = PublicEntityForm(request.POST)
+            new_entity = form.save(commit=False)
+            new_entity.save()
+            return redirect('public_entities')  # Cambiar según el nombre de la vista que muestra las entidades públicas
+        except ValueError:
+            return render(request, 'create_public_entity.html', {
+                'form': PublicEntityForm(),
+                'error': 'Por favor, proporcione datos válidos'
+            })
 
-#     return render(request, 'payments/create_payment.html', {
-#         'form': form
-#     })
+@login_required
+def deactivate_public_entity(request, id_public_entity):
+    public_entity = get_object_or_404(PublicEntity, id=id_public_entity)
+    public_entity.delete()
+    return redirect('public_entities')
 
+@login_required
+def public_entity_detail(request, id_public_entity):
+    if request.method == 'GET':
+        public_entity = get_object_or_404(PublicEntity, pk=id_public_entity)
+        form = PublicEntityForm(instance=public_entity)
+        return render(request, 'public_entity_detail.html', {
+            'public_entity': public_entity,
+            'form': form
+        })
+    else:
+        try:
+            public_entity = get_object_or_404(PublicEntity, pk=id_public_entity)
+            form = PublicEntityForm(request.POST, instance=public_entity)
+            form.save()
+            return redirect('public_entities')
+        except ValueError:
+            return render(request, 'public_entity_detail.html', {
+                'public_entity': public_entity,
+                'form': form,
+                'error': "Error al actualizar la entidad pública"
+            })
+
+@login_required
+def public_entities(request):
+    public_entities = PublicEntity.objects.all()
+    return render(request, 'public_entities.html', {
+        'public_entities': public_entities
+    })
+
+# Proporsal
+@login_required  
+def create_proposal(request):
+    if request.method == 'GET':
+        return render(request, 'create_proposal.html', {
+            'form': ProposalForm()
+        })
+    else:
+        try:
+            form = ProposalForm(request.POST)
+            new_proposal = form.save(commit=False)
+            new_proposal.save()
+            return redirect('proposals')  # Cambiar según el nombre de la vista que muestra las propuestas
+        except ValueError:
+            return render(request, 'create_proposal.html', {
+                'form': ProposalForm(),
+                'error': 'Por favor, proporcione datos válidos'
+            })
+
+@login_required
+def proposal_detail(request, id_proposal):
+    if request.method == 'GET':
+        proposal = get_object_or_404(Proposal, pk=id_proposal)
+        form = ProposalForm(instance=proposal)
+        return render(request, 'proposal_detail.html', {
+            'proposal': proposal,
+            'form': form
+        })
+    else:
+        try:
+            proposal = get_object_or_404(Proposal, pk=id_proposal)
+            form = ProposalForm(request.POST, instance=proposal)
+            form.save()
+            return redirect('proposals')
+        except ValueError:
+            return render(request, 'proposal_detail.html', {
+                'proposal': proposal,
+                'form': form,
+                'error': "Error al actualizar la propuesta"
+            })
+
+@login_required
+def proposals(request):
+    proposals = Proposal.objects.all()
+    return render(request, 'proposals.html', {
+        'proposals': proposals
+    })
+
+@login_required
+def deactivate_proposal(request, id_proposal):
+    proposal = get_object_or_404(Proposal, id=id_proposal)
+    proposal.delete()
+    return redirect('proposals')
+
+# Contractor
+@login_required  
+def create_contractor(request):
+    if request.method == 'GET':
+        return render(request, 'create_contractor.html', {
+            'form': ContractorForm()
+        })
+    else:
+        try:
+            form = ContractorForm(request.POST)
+            new_contractor = form.save(commit=False)
+            new_contractor.save()
+            return redirect('contractors')  # Cambiar según el nombre de la vista que muestra los contratantes
+        except ValueError:
+            return render(request, 'create_contractor.html', {
+                'form': ContractorForm(),
+                'error': 'Por favor, proporcione datos válidos'
+            })
+
+@login_required
+def contractor_detail(request, id_contractor):
+    if request.method == 'GET':
+        contractor = get_object_or_404(Contractor, pk=id_contractor)
+        form = ContractorForm(instance=contractor)
+        return render(request, 'contractor_detail.html', {
+            'contractor': contractor,
+            'form': form
+        })
+    else:
+        try:
+            contractor = get_object_or_404(Contractor, pk=id_contractor)
+            form = ContractorForm(request.POST, instance=contractor)
+            form.save()
+            return redirect('contractors')
+        except ValueError:
+            return render(request, 'contractor_detail.html', {
+                'contractor': contractor,
+                'form': form,
+                'error': "Error al actualizar el contratante"
+            })
+
+@login_required
+def contractors(request):
+    contractors = Contractor.objects.all()
+    return render(request, 'contractors.html', {
+        'contractors': contractors
+    })
+
+@login_required
+def deactivate_contractor(request, id_contractor):
+    contractor = get_object_or_404(Contractor, id=id_contractor)
+    contractor.delete()
+    return redirect('contractors')

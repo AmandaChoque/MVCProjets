@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<body class="container mt-5">
+    <h1 class="mb-4">Filtrar Pagos por Proyecto</h1>
+
+    <!-- Formulario de Filtro -->
+    <form method="get" action="{% url 'filter_payments_by_project_name' %}" class="row g-3">
+        <div class="col-md-3">
+            <label for="project_name" class="form-label">Proyecto:</label>
+            <select name="project_name" id="project_name" class="form-select">
+                <option value="">Seleccione un Proyecto</option>
+                {% for project in projects %}
+                    <option value="{{ project.name }}" {% if project.name == project_name %}selected{% endif %}>{{ project.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-3">
+            <label for="start_date" class="form-label">Fecha Inicio:</label>
+            <input type="date" name="start_date" id="start_date" class="form-control" value="{{ start_date }}">
+        </div>
+        
+        <div class="col-md-3">
+            <label for="end_date" class="form-label">Fecha Fin:</label>
+            <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date }}">
+        </div>
+    
+        <div class="col-12">
+            <button type="submit" class="btn btn-primary">Filtrar</button>
+            <a href="?pdf=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-secondary">Generar PDF</a>
+        </div>
+    </form>
+    
+
+    <h2 class="mt-5">Pagos Filtrados</h2>
+    <table class="table table-bordered mt-3">
+        <thead class="table-light">
+            <tr>
+                <th>Proyecto</th>
+                <th>Monto</th>
+                <th>Fecha de Pago</th>
+                <th>Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for payment in payments %}
+                <tr>
+                    <td>{{ payment.project.name }}</td>
+                    <td>{{ payment.amount }}</td>
+                    <td>{{ payment.date }}</td>
+                    <td>{{ payment.status }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="4">No se encontraron pagos con los filtros seleccionados.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</body>
+{% endblock %}

@@ -16,7 +16,6 @@ class AuditModel(models.Model):
 
 # Proyecto
 class Project(AuditModel):
-
     PROJECT_STATUS_CHOICES = [
         ('pendiente', 'Pendiente'),         # Pendiente
         ('en_progreso', 'En Progreso'), # En Proceso
@@ -42,9 +41,16 @@ class Project(AuditModel):
     user = models.ForeignKey(User, on_delete=models.CASCADE)# Empleado que herede de user
     is_active = models.BooleanField(default=True, verbose_name="Activo")
     
+
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Monto Total del Proyecto")
+    
     def __str__(self):
         return self.name + ' - by '+ self.user.username
-
+    
+    def is_fully_paid(self):
+        total_paid = self.payments.filter(status='pagado').aggregate(total_paid=Sum('amount'))['total_paid'] or 0
+        return total_paid >= self.total_amount
+    
 # Empleado
 class Employee(models.Model):
     # Opciones para el campo "cargo"
@@ -57,13 +63,14 @@ class Employee(models.Model):
         ('analista', 'Analista'),
         ('desarrollador', 'Desarrollador'),
     ]
-    first_name = models.CharField(max_length=100)
-    last_name_father = models.CharField(max_length=100)
-    last_name_mother = models.CharField(max_length=100, blank=True, null=True)
-    phone_number = models.CharField(max_length=15, blank=True)
+
+    first_name = models.CharField(max_length=100, verbose_name="Nombre")
+    last_name_father = models.CharField(max_length=100, verbose_name="Apellido Paterno")
+    last_name_mother = models.CharField(max_length=100, blank=True, null=True, verbose_name="Apellido Materno")
+    phone_number = models.CharField(max_length=15, blank=True, verbose_name="Numero Celular")
     
-    hire_date = models.DateField(null=True, blank=True)  # No obligatorio
-    salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)  # No obligatorio
+    hire_date = models.DateField(null=True, blank=True, verbose_name="Fecha Contratación")  # No obligatorio
+    salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Salario")  # No obligatorio
     position = models.CharField(
         max_length=50,
         choices=POSITION_CHOICES,  # Diccionario de opciones
@@ -83,26 +90,9 @@ class Employee(models.Model):
         #return f"{self.first_name} {self.last_name}"
         #return f"{self.first_name} {self.last_name}"
 
-# HistorialPagos
-class PaymentHistory(models.Model):
-    # Campos del historial de pagos
-    modification_date = models.DateTimeField(auto_now=True, verbose_name="Modification Date")  # Fecha de modificación
-    previous_amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Previous Amount")  # Monto anterior
-    current_amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Current Amount")  # Monto actual
-    change_reason = models.TextField(verbose_name="Change Reason")  # Motivo del cambio
-
-    # Relaciones
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='payment_histories', verbose_name="Project")  # Project (1 a N)
-    created =models.DateTimeField(default=timezone.now)
-    class Meta:
-        verbose_name = 'Payment History'
-        verbose_name_plural = 'Payment Histories'
-
-    def __str__(self):
-        return f"Payment History - Modified on {self.modification_date}"
-
 # EntidadPublica
 class PublicEntity(models.Model):
+    is_active = models.BooleanField(default=True, verbose_name="Activo")
     legal_representative = models.CharField(max_length=200, verbose_name="Representante Legal")  # Representante Legal
     contact = models.CharField(max_length=100, verbose_name="Contacto")  # Contacto
     address = models.CharField(max_length=300, verbose_name="Direccion")  # Dirección
@@ -118,6 +108,7 @@ class PublicEntity(models.Model):
 # Propuesta
 class Proposal(models.Model):
     # Campos de la propuesta
+    is_active = models.BooleanField(default=True, verbose_name="Activo")
     submission_date = models.DateField(verbose_name="Submission Date")  # Fecha de presentación
     budget_amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Budget Amount")  # Monto presupuesto
     requirements = models.TextField(verbose_name="Requirements")  # Requerimientos
@@ -142,7 +133,7 @@ class Contractor(models.Model):
         ('personal', 'Personal'),
         ('public_entity', 'Entidad Pública'),
     ]
-    
+    is_active = models.BooleanField(default=True, verbose_name="Activo")
     entity_place_representation = models.CharField(max_length=50, verbose_name="Entidad/Lugar/Representación")
     position = models.CharField(max_length=50, verbose_name="Cargo")  # e.g. President, Legal Representative
     nit_ci = models.CharField(max_length=20, verbose_name="NIT/CI")  # ID number
@@ -175,13 +166,13 @@ class Payment(models.Model):
     ]
 
     # Campos del modelo Payment
-    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Amount")  # Monto
+    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Monto")  # Monto
     date = models.DateField(verbose_name="Payment Date")  # Fecha
-    status = models.CharField(max_length=10,  choices=PAYMENT_STATUS_CHOICES, default='pendiente', verbose_name="Payment Status")  # Estado del pago
-    payment_type = models.CharField(max_length=10, choices=PAYMENT_TYPE_CHOICES, default='parcial', verbose_name="Payment Type")  # Tipo de pago
+    status = models.CharField(max_length=10,  choices=PAYMENT_STATUS_CHOICES, default='pendiente', verbose_name="Estado Pago")  # Estado del pago
+    payment_type = models.CharField(max_length=10, choices=PAYMENT_TYPE_CHOICES, default='parcial', verbose_name="Tipo Pago")  # Tipo de pago
     
     # Clave foránea a Project
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='payments', verbose_name="Project")  # Relación (1 a N)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='payments', verbose_name="Proyecto")  # Relación (1 a N)
     created =models.DateTimeField(default=timezone.now)
     is_active = models.BooleanField(default=True, verbose_name="Activo")
     
@@ -192,8 +183,32 @@ class Payment(models.Model):
     def __str__(self):
         return f"Payment of {self.amount} on {self.date} - Status: {self.status}"
 
-    # Ejemplo de método adicional para verificar si el pago es suficiente
     def is_payment_complete(self):
         if self.payment_type == 'completo' and self.status == 'pagado':
-            return self.amount >= self.project.total_amount  # Asumiendo que tu modelo Project tiene un campo total_amount
+            return self.amount >= self.project.total_amount
         return False
+
+    def update_payment_status(self):
+        if self.amount >= self.project.total_amount:
+            self.status = 'pagado'
+        else:
+            self.status = 'pendiente'
+        self.save()
+
+# HistorialPagos
+class PaymentHistory(models.Model):
+    # Campos del historial de pagos
+    modification_date = models.DateTimeField(auto_now=True, verbose_name="Modification Date")  # Fecha de modificación
+    previous_amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Previous Amount")  # Monto anterior
+    current_amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Current Amount")  # Monto actual
+    change_reason = models.TextField(verbose_name="Change Reason")  # Motivo del cambio
+
+    # Relaciones
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='payment_histories', verbose_name="Project")  # Project (1 a N)
+    created =models.DateTimeField(default=timezone.now)
+    class Meta:
+        verbose_name = 'Payment History'
+        verbose_name_plural = 'Payment Histories'
+
+    def __str__(self):
+        return f"Payment History - Modified on {self.modification_date}"

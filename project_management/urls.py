@@ -45,20 +45,39 @@ urlpatterns = [
     path('employees/<int:id_employee>/', views.employee_detail, name='employee_detail'),
     path('employees/<int:id_employee>/deactivate/', views.deactivate_employee, name='employee_deactivate'),
 
-    # Historial de Pagos
-    path('payment_histories/', views.payment_histories, name='payment_histories'),
-
-    # # Payments
+    # Payments
     path("payments/", views.payment_list, name="payments"),
-    path("payments/create/", views.PaymentCreateView.as_view(), name="create_payment"),
+    path("payments/create/", views.create_payment, name="create_payment"),
     path('payments/<int:id_payment>/', views.payment_detail, name='payment_detail'),
     path('payments/<int:id_payment>/deactivate/', views.deactivate_payment, name='payment_deactivate'),
 
-    # path('payments/<int:id_payment>/payments/', views.payment_list, name='payment_list'),
-    # path('payments/<int:id_payment>/payments/create/', views.create_payment, name='create_payment'),
+    # Public Entities
+    path('public_entities/', views.public_entities, name='public_entities'),
+    path('public_entities/<int:id_public_entity>/', views.public_entity_detail, name='public_entity_detail'),
+    path('public_entities/<int:id_public_entity>/deactivate/', views.deactivate_public_entity, name='public_entity_deactivate'),
+    path('public_entity/create/', views.create_public_entity, name='create_public_entity'),
+
+    # Proposals
+    path('proposals/', views.proposals, name='proposals'),
+    path('proposals/<int:id_proposal>/', views.proposal_detail, name='proposal_detail'),
+    path('proposals/<int:id_proposal>/deactivate/', views.deactivate_proposal, name='proposal_deactivate'),
+    path('proposal/create/', views.create_proposal, name='create_proposal'),
+
+
+    # Contractors
+    path('contractors/', views.contractors, name='contractors'),
+    path('contractors/<int:id_contractor>/', views.contractor_detail, name='contractor_detail'),
+    path('contractors/<int:id_contractor>/deactivate/', views.deactivate_contractor, name='contractor_deactivate'),
+    path('contractor/create/', views.create_contractor, name='create_contractor'),
 
     # Analysis y Reporte
     path('reporte-analisis/', views.project_analysis, name='project_analysis'),
     path('project_report/', views.project_report, name='project_report'),
+    path('payments/filter/', views.filter_payments_by_project_name, name='filter_payments_by_project_name'),
+    path('payment-analysis/', views.payment_analysis, name='payment_analysis'),
+
+    # path('project/<int:id_project>/payments/', views.filter_payments_by_project, name='filter_payments_by_project'),
+    # path('project/<int:project_id>/payments/', views.project_payment_history, name='project_payment_history'),
+    # path('project/<int:project_id>/payments/pdf/', views.generate_payment_pdf, name='generate_payment_pdf'),
     # path('project-analysis/', project_analysis, name='project_analysis'),
 ]

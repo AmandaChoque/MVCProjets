@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<main class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-3">
+            <h1 class="text-center display-6 py-4 fw-bold"> PROPUESTAS</h1>
+            <ul class="list-group">
+                {% for proposal in proposals %}
+                <a class="list-group-item" href="{% url 'proposal_detail' proposal.id %}">
+                    <header class="d-flex justify-content-between">
+                        <h2 class="fw-bold">Proyecto: {{ proposal.project.name }}</h2>
+                        <p>Fecha de Presentación: {{ proposal.submission_date }}</p>
+                    </header>
+                    <p>Entidad Pública: {{ proposal.public_entity.entity_name }}</p>
+                    <p>Monto Presupuesto: {{ proposal.budget_amount }}</p>
+                </a>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</main>
+{% endblock %}

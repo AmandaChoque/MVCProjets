@@ -1,0 +1,23 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<main class="container">
+    <div class="row">
+        <div class="col-md-8 offset-md-3">
+            <h1 class="text-center display-6 py-4 fw-bold"> ENTIDADES PÚBLICAS</h1>
+            <ul class="list-group">
+                {% for entity in public_entities %}
+                <a class="list-group-item" href="{% url 'public_entity_detail' entity.id %}">
+                    <header class="d-flex justify-content-between">
+                        <h2 class="fw-bold">{{ entity.entity_name }}</h2>
+                        <p>Contacto: {{ entity.contact }}</p>
+                    </header>
+                    <p>Representante Legal: {{ entity.legal_representative }}</p>
+                    <p>Dirección: {{ entity.address }}</p>
+                </a>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</main>
+{% endblock %}

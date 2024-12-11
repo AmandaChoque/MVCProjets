@@ -5,17 +5,14 @@
 <main class="container">
     <div class="row">
         <div class="col-md-8 offset-md-3">
-            <h1 class="text-center display-6 py-4 fw-bold"> PROYECTOS EN PROGRESO Y PENDIENTES
+            <h1 class="text-center display-6 py-4 fw-bold"> PROYECTOS COMPLETADOS
             </h1>
             <ul class="list-group">
                 {% for project in projects %}   
                 <a class="list-group-item" href="{% url 'project_detail' project.id %}">
                     <header class="d-flex justify-content-between">
-                        {% if project.project_status == 'pendiente' %}
-                        <h2 class="fw-bold">{{project.name}}</h2>
-                        {% elif project.project_status == 'en_progreso' %}
-                            <h2 class="fw-bold text-success">{{project.name}}</h2>
-                        
+                        {% if project.project_status == 'completado' %}
+                        <h2 class="fw-bold text-success">{{project.name}}</h2>
                         {% endif %}
                         <!-- <p>{{project.user.username}}</p> -->
                     </header>

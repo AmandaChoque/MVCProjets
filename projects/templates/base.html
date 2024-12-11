@@ -48,9 +48,9 @@
       
         {% if user.is_authenticated %}
 
-        <p class="text-white">    ¡¡¡ Bienvenid@ ... {{ user.username }} !!!</p>
+        <p class="text-white">    ¡ Bienvenid@ ... {{ user.username }} !</p>
         <li class="nav-item">
-          <a class="nav-link" href="/">Home</a>
+          <a class="nav-link" href="/">Inicio</a>
         </li>
         <li class="nav-item">
           <a
@@ -61,7 +61,7 @@
             aria-expanded="false"
             aria-controls="projectSubmenu"
           >
-            Projects
+            Proyectos
           </a>
           <div class="collapse" id="projectSubmenu">
             <ul class="nav flex-column ms-3">
@@ -75,15 +75,16 @@
               </li>
               <li class="nav-item">
                 <a class="nav-link" href="{% url 'create_project' %}"
-                  >Create Project</a>
+                  >Crear Proyectos</a>
               </li>
+
               <li>
               <a href="{% url 'project_report' %}" class="nav-link">Generar Reporte</a>
               </li> 
               <li>
-                <a href="{% url 'project_analysis' %}" class="btn btn-primary">Ver Reporte de Análisis</a>
-
+                <a href="{% url 'project_analysis' %}" class="nav-link">Ver Análisis</a>
               </li>
+
             </ul>
           </div>
         </li>
@@ -108,40 +109,132 @@
              
               <li class="nav-item">
                 <a class="nav-link" href="{% url 'create_employee' %}"
-                  >Create Empleados</a>
+                  >Crear Empleados</a>
               </li>
              
             </ul>
           </div>
         </li>
 
-
-       
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            data-bs-toggle="collapse"
+            href="#contractorSubmenu"
+            role="button"
+            aria-expanded="false"
+            aria-controls="contractorSubmenu"
+          >
+          Contratista
+          </a>
+          <div class="collapse" id="contractorSubmenu">
+            <ul class="nav flex-column ms-3">
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'contractors' %}">Listar Contratista</a>
+              </li>     
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'create_contractor' %}">Crear Contratista</a>
+              </li>        
+            </ul>
+          </div>
+        </li>
 
 
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'payments' %}"
-            >Pagos</a
+          <a
+            class="nav-link"
+            data-bs-toggle="collapse"
+            href="#public_entitieSubmenu"
+            role="button"
+            aria-expanded="false"
+            aria-controls="public_entitieSubmenu"
           >
+          Entidad Pública
+          </a>
+          <div class="collapse" id="public_entitieSubmenu">
+            <ul class="nav flex-column ms-3">
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'public_entities' %}">Listar Entidad Pública</a>
+              </li>         
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'create_public_entity' %}">Crear Entidad Pública</a>
+              </li>   
+            </ul>
+          </div>
         </li>
+
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            data-bs-toggle="collapse"
+            href="#proposalSubmenu"
+            role="button"
+            aria-expanded="false"
+            aria-controls="proposalSubmenu"
+          >
+          Propuesta
+          </a>
+          <div class="collapse" id="proposalSubmenu">
+            <ul class="nav flex-column ms-3">
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'proposals' %}">Listar Propuesta</a>
+              </li>      
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'create_proposal' %}">Crear Propuesta</a>
+              </li>      
+            </ul>
+          </div>
+        </li>
+
+
+        <li class="nav-item">
+          <a
+            class="nav-link"
+            data-bs-toggle="collapse"
+            href="#paymentSubmenu"
+            role="button"
+            aria-expanded="false"
+            aria-controls="paymentSubmenu"
+          >
+          Pagos
+          </a>
+          <div class="collapse" id="paymentSubmenu">
+            <ul class="nav flex-column ms-3">
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'payments' %}">Listar Pagos</a>
+              </li>
+             
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'create_payment' %}"
+                  >Crear Pagos</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'filter_payments_by_project_name' %}"
+                  >Generar Reporte Pagos</a>
+              </li>
+              <li class="nav-item">
+                <a class="nav-link" href="{% url 'payment_analysis' %}"
+                  >Ver Análisis</a>
+              </li>
+              
+             
+            </ul>
+          </div>
+        </li>
+
         
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'payment_histories' %}"
-            >Historial de Pagos</a
-          >
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'signout' %}">Logout</a>
+          <a class="nav-link" href="{% url 'signout' %}">Salir</a>
         </li>
         {% else %}
         <li class="nav-item">
-          <a class="nav-link" href="/">Home</a>
+          <a class="nav-link" href="/">Inicio</a>
         </li>
-        <li class="nav-item">
+        <!-- <li class="nav-item">
           <a class="nav-link" href="{% url 'signup' %}">Signup</a>
-        </li>
+        </li> -->
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'signin' %}">Signin</a>
+          <a class="nav-link" href="{% url 'signin' %}">Iniciar Sesión</a>
         </li>
         {% endif %}
       </ul>

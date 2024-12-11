@@ -1,0 +1,19 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<main class="container">
+    <div class="row">
+        <div class="col-md-4 offset-md-4 mt-5">
+            <form action="{% url 'create_public_entity' %}" method="POST" class="card card-body">
+                <h2 class="text-center">Crear Entidad Pública</h2>
+                {% csrf_token %}
+                {{ form.as_p }}
+                {% if error %}
+                    <div class="alert alert-danger mt-2">{{ error }}</div>
+                {% endif %}
+                <button class="btn btn-primary mt-3">Guardar</button>
+            </form>
+        </div>
+    </div>
+</main>
+{% endblock %}
