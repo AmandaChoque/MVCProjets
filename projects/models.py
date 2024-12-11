@@ -2,6 +2,12 @@ from django.utils import timezone  # Asegúrate de importar timezone desde djang
 
 from django.db import models
 from django.contrib.auth.models import User
+
+# Señal para actualizar automáticamente el estado del proyecto
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+from django.db.models import Sum
 # Create your models here.
 
 # Auditoria
@@ -26,6 +32,12 @@ class Project(AuditModel):
         ('licitacion', 'Licitación'),            # Licitación
         ('contratacion_directa', 'Contratación Directa'),  # Contratación directa
     ]
+    # Opciones para el estado del pago
+    PAYMENT_STATE_CHOICES = [
+        ('no_pagado', 'No Pagado'),
+        ('parcial', 'Pago Parcial'),
+        ('pagado', 'Pagado Completo'),
+    ]
     # Fields
     code = models.CharField(max_length=20, unique=True, verbose_name="Proyecto Codigo")
     name = models.CharField(max_length=200, unique=True, verbose_name="Proyecto Nombre")
@@ -36,7 +48,8 @@ class Project(AuditModel):
     project_type = models.CharField(max_length=30, choices=PROJECT_TYPE_CHOICES, default='contratacion_directa', verbose_name="Proyecto Tipo")
     photo_signed_contract = models.ImageField(upload_to="contrato_firmado",null = True, blank= True, verbose_name="Contrato Firmado")
     photo_proposed_contract = models.ImageField(upload_to="contrato_propueso",null = True, blank= True, verbose_name="Contrato Propuesto")
-    
+    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATE_CHOICES, default='no_pagado', verbose_name="Estado de Pago")
+
     # created =models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)# Empleado que herede de user
     is_active = models.BooleanField(default=True, verbose_name="Activo")
@@ -47,10 +60,26 @@ class Project(AuditModel):
     def __str__(self):
         return self.name + ' - by '+ self.user.username
     
-    def is_fully_paid(self):
+    # def is_fully_paid(self):
+    #     total_paid = self.payments.filter(status='pagado').aggregate(total_paid=Sum('amount'))['total_paid'] or 0
+    #     return total_paid >= self.total_amount
+    def update_payment_status(self):
+        """
+        Actualiza el estado de pago del proyecto basado en los pagos realizados.
+        """
         total_paid = self.payments.filter(status='pagado').aggregate(total_paid=Sum('amount'))['total_paid'] or 0
-        return total_paid >= self.total_amount
-    
+
+        if total_paid >= self.total_amount:
+            self.payment_status = 'pagado'
+        elif total_paid > 0:
+            self.payment_status = 'parcial'
+        else:
+            self.payment_status = 'no_pagado'
+
+        self.save()
+
+
+
 # Empleado
 class Employee(models.Model):
     # Opciones para el campo "cargo"
@@ -168,7 +197,7 @@ class Payment(models.Model):
     # Campos del modelo Payment
     amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Monto")  # Monto
     date = models.DateField(verbose_name="Payment Date")  # Fecha
-    status = models.CharField(max_length=10,  choices=PAYMENT_STATUS_CHOICES, default='pendiente', verbose_name="Estado Pago")  # Estado del pago
+    status = models.CharField(max_length=10,  choices=PAYMENT_STATUS_CHOICES, default='pagado', verbose_name="Estado Pago")  # Estado del pago
     payment_type = models.CharField(max_length=10, choices=PAYMENT_TYPE_CHOICES, default='parcial', verbose_name="Tipo Pago")  # Tipo de pago
     
     # Clave foránea a Project
@@ -188,12 +217,25 @@ class Payment(models.Model):
             return self.amount >= self.project.total_amount
         return False
 
+    # def update_payment_status(self):
+    #     if self.amount >= self.project.total_amount:
+    #         self.status = 'pagado'
+    #     else:
+    #         self.status = 'pendiente'
+    #     self.save()
     def update_payment_status(self):
+        """
+        Actualiza el estado del pago y sincroniza el estado de pago del proyecto.
+        """
+        # Actualizar estado del pago
         if self.amount >= self.project.total_amount:
             self.status = 'pagado'
         else:
             self.status = 'pendiente'
         self.save()
+
+        # Actualizar estado de pago del proyecto
+        self.project.update_payment_status()
 
 # HistorialPagos
 class PaymentHistory(models.Model):
@@ -212,3 +254,11 @@ class PaymentHistory(models.Model):
 
     def __str__(self):
         return f"Payment History - Modified on {self.modification_date}"
+
+@receiver(post_save, sender=Payment)
+def update_project_payment_status(sender, instance, **kwargs):
+    """
+    Actualiza el estado de pago del proyecto cuando se guarda un pago.
+    """
+    instance.project.update_payment_status()
+    

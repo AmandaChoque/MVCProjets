@@ -20,8 +20,10 @@
                         <!-- <p>{{project.user.username}}</p> -->
                     </header>
                     <p>Estado: {{project.get_project_status_display}}</p>
+                    <p>Total proyecto: {{project.get_payment_status_display }}</p>
                     <p>Tipo: {{project.get_project_type_display }}</p>
-                    <p>{{project.end_date|date:"M j, Y"}}</p>
+                    <p>Fecha inicio: {{project.start_date|date:"M j, Y"}}</p>
+                    <p>Fecha final: {{project.end_date|date:"M j, Y"}}</p>
                 </a>
                 {% endfor %}
             </ul>

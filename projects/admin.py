@@ -5,7 +5,7 @@ from projects.models import Project, Employee, PaymentHistory, Payment, Proposal
 # Register your models here.
 class ProjectAdmin(admin.ModelAdmin):
     readonly_fields = ("created", )
-    list_display = ('id', 'name','start_date','end_date','project_status','project_type', 'is_active','created',
+    list_display = ('id', 'name','payment_status','start_date','end_date','project_status','project_type', 'is_active','created',
 'updated_at',
 'deleted_at', 'user')
     search_fields = ['name']
