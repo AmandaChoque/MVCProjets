@@ -12,7 +12,7 @@ from django.contrib.auth.models import User
 class ProjectForm(forms.ModelForm):
     class Meta:
         model = Project
-        fields = ['code', 'name', 'description', 'start_date', 'end_date', 'project_status', 'project_type', 'photo_signed_contract', 'photo_proposed_contract', 'total_amount']
+        fields = ['code', 'name', 'description', 'start_date', 'end_date', 'project_status', 'project_type', 'photo_signed_contract', 'total_amount', 'assigned_employee', 'contractor']
         widgets = {
             'code': forms.TextInput(attrs={'class':'form-control', 'placeholder': 'Escribe el codigo'}),
             'name': forms.TextInput(attrs={'class':'form-control', 'placeholder': 'Escribe el codigo'}),
@@ -22,8 +22,9 @@ class ProjectForm(forms.ModelForm):
             'project_status': forms.Select(attrs={'class':'form-control'}),
             'project_type': forms.Select(attrs={'class':'form-control'}),
             'photo_signed_contract': forms.ClearableFileInput(attrs={'class':'form-control'}),
-            'photo_proposed_contract': forms.ClearableFileInput(attrs={'class':'form-control'}),
-            'total_amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Monto total del proyecto', 'min': '0'})
+            'total_amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Monto total del proyecto', 'min': '0'}),
+            'assigned_employee': forms.Select(attrs={'class': 'form-control', 'style': 'width: 200px;'}),
+            'contractor': forms.Select(attrs={'class': 'form-control', 'style': 'width: 200px;'})
         }
 
 class EmployeeForm(forms.ModelForm):
@@ -75,13 +76,13 @@ class PublicEntityForm(forms.ModelForm):
 class ProposalForm(forms.ModelForm):
     class Meta:
         model = Proposal
-        fields = ['submission_date', 'budget_amount', 'requirements', 'public_entity', 'project']
+        fields = ['submission_date', 'budget_amount', 'requirements', 'public_entity']
         widgets = {
             'submission_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'budget_amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el monto presupuestado', 'min': '0'}),
             'requirements': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Escribe los requisitos'}),
             'public_entity': forms.Select(attrs={'class': 'form-control'}),
-            'project': forms.Select(attrs={'class': 'form-control'}),
+            
         }
 
 class ContractorForm(forms.ModelForm):

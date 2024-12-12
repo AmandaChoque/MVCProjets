@@ -1,32 +1,41 @@
-
 {% extends 'base.html' %}
 
 {% block content %}
-<main class="container py-5 col-md-12 offset-md-2">
-
+<main class="container py-5">
     <h2 class="display-5 text-center fw-bold">SOBOTEC S.R.L.</h2>
-    <section class="card card-body">
-        <h2 class="display-5 text-center fw-bold">Misión</h2>
-        <p>
+
+    <section class="card card-body mb-4">
+        <h2 class="h4 text-center fw-bold">Misión</h2>
+        <p class="text-justify">
             Ser un socio estratégico en el desarrollo de proyectos de seguridad, construcción y tecnología, ofreciendo soluciones integrales e innovadoras que cumplan con los más altos estándares de calidad, eficiencia y sostenibilidad. Buscamos contribuir al progreso de nuestros clientes y del país mediante la provisión de servicios especializados, productos de alta calidad e importaciones que respondan a las necesidades del mercado boliviano.
         </p>
-        
     </section>
-    <section class="card card-body">
-        <h2 class="display-5 text-center fw-bold">Visión
-        </h2>
-        <p>
+
+    <section class="card card-body mb-4">
+        <h2 class="h4 text-center fw-bold">Visión</h2>
+        <p class="text-justify">
             Consolidarnos como líderes en el mercado nacional en servicios de sistemas de seguridad, construcción e importación de tecnología avanzada para el 2030, destacándonos por nuestra capacidad de innovación, compromiso con la excelencia y expansión a nivel nacional, promoviendo el desarrollo sostenible y el fortalecimiento de la industria en Bolivia.
         </p>
     </section>
+
     <div class="text-center">
-        <a class="btn btn-secondary" href="/signin/">
+        <a class="btn btn-secondary me-2" href="/signin/">
             Iniciar Sesión
         </a>
         <!-- <a class="btn btn-dark" href="/signup/">
-            Signup
+            Registrarse
         </a> -->
     </div>
 </main>
 
+<style>
+    @media (max-width: 768px) {
+        main {
+            padding: 1rem;
+        }
+        .card-body {
+            padding: 1rem;
+        }
+    }
+</style>
 {% endblock %}
