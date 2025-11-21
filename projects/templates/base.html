@@ -68,7 +68,8 @@
     <!-- Sidebar -->
     <div class="sidebar bg-dark collapse show" id="sidebar">
       <h4 class="text-center text-white">SOBOTEC S.R.L.</h4>
-      <img src="{% static 'common/logo.png' %}" alt="Logo de la empresa" />
+      <img src="/static/common/logo.png" alt="Logo de la empresa">
+      
       <ul class="nav flex-column">
         {% if user.is_authenticated %}
         <p class="text-white"> Bienvenid@ ... {{ user.username }} !</p>
