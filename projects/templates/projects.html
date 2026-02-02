@@ -1,36 +1,97 @@
-
 {% extends 'base.html' %}
 
 {% block content %}
-<main class="container">
-    <div class="row">
-        <div class="col-md-8 offset-md-3">
-            <h1 class="text-center display-6 py-4 fw-bold"> PROYECTOS EN PROGRESO Y PENDIENTES
-            </h1>
-            <ul class="list-group">
-                {% for project in projects %}   
-                <a class="list-group-item" href="{% url 'project_detail' project.id %}">
-                    <header class="d-flex justify-content-between">
+<main class="container py-5">
+
+    <!-- Título principal -->
+    <h1 class="text-center display-5 fw-bold mb-5" style="color:#264653; text-shadow: 1px 1px 2px rgba(0,0,0,0.1);">
+        PROYECTOS EN PROGRESO Y PENDIENTES
+    </h1>
+
+    <div class="row g-4">
+        {% for project in projects %}
+        <div class="col-md-6 col-lg-4">
+            <div class="card shadow-sm rounded-4 h-100 border-0 hover-card">
+                <div class="card-body">
+                    <!-- Nombre y estado -->
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title fw-bold mb-0">{{ project.name }}</h5>
                         {% if project.project_status == 'pendiente' %}
-                        <h2 class="fw-bold">{{project.name}}</h2>
+                            <span class="badge bg-warning text-dark">Pendiente</span>
                         {% elif project.project_status == 'en_progreso' %}
-                            <h2 class="fw-bold text-success">{{project.name}}</h2>
-                        
+                            <span class="badge bg-info text-dark">En Progreso</span>
+                        {% else %}
+                            <span class="badge bg-success">Completado</span>
                         {% endif %}
-                        <!-- <p>{{project.user.username}}</p> -->
-                    </header>
-                    <p>Estado: {{project.get_project_status_display}}</p>
-                    <p>Total proyecto: {{project.get_payment_status_display }}</p>
-                    <p>Tipo: {{project.get_project_type_display }}</p>
-                    <p>Fecha inicio: {{project.start_date|date:"M j, Y"}}</p>
-                    <p>Fecha final: {{project.end_date|date:"M j, Y"}}</p>
-                </a>
-                {% endfor %}
-            </ul>
+                    </div>
+
+                    <!-- Detalles del proyecto -->
+                    <p class="mb-1"><strong>Pago:</strong> {{ project.get_payment_status_display }}</p>
+                    <p class="mb-1"><strong>Tipo:</strong> {{ project.get_project_type_display }}</p>
+                    <p class="mb-1"><strong>Inicio:</strong> {{ project.start_date|date:"M j, Y" }}</p>
+                    <p class="mb-1"><strong>Fin:</strong> {{ project.end_date|date:"M j, Y" }}</p>
+
+                    <!-- Botón para ver detalles -->
+                    <div class="text-end mt-3">
+                        <a href="{% url 'project_detail' project.id %}" class="btn btn-primary btn-sm px-4 shadow-sm">
+                            Ver Detalles
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
+        {% endfor %}
     </div>
+
 </main>
 
+<style>
+/* Hover card elegante */
+.hover-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+    transition: all 0.3s ease-in-out;
+}
 
+/* Tipografía y color */
+.card-title {
+    font-size: 1.2rem;
+    color: #1d3557;
+}
+
+.card-body p {
+    font-size: 0.95rem;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* Badges */
+.badge {
+    font-size: 0.85rem;
+    padding: 0.4em 0.7em;
+    border-radius: 0.5rem;
+}
+
+/* Botón detalles */
+.btn-primary {
+    border-radius: 50px;
+    transition: all 0.2s;
+}
+
+.btn-primary:hover {
+    background-color: #1d3557;
+    border-color: #1d3557;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .col-md-6, .col-lg-4 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    .card-body {
+        padding: 1.5rem;
+    }
+}
+</style>
 {% endblock %}
-

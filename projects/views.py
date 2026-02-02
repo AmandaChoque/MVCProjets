@@ -7,8 +7,8 @@ from django.contrib.auth import login, logout, authenticate
 from django.http import HttpResponse
 from django.db import IntegrityError
 
-from .form import ProjectForm, EmployeeForm, PaymentForm, PublicEntityForm, ProposalForm, ContractorForm
-from .models import Project, Employee, Payment, PublicEntity, Proposal, Contractor
+from .form import ProjectForm, EmpleadoForm, PaymentForm, PublicEntityForm, ProposalForm, ClienteForm
+from .models import Project, Empleado, Payment, PublicEntity, Proposal, Cliente
 from django.contrib.auth.decorators import login_required
 
 from django.utils import timezone
@@ -18,8 +18,6 @@ from django.http import HttpResponse
 from django.template.loader import get_template
 from xhtml2pdf import pisa
 from .models import Project
-
-
 
 # views.py
 from django.shortcuts import render
@@ -42,12 +40,9 @@ from django.utils import timezone
 from .models import Project
 from django.db.models import Count
 
-
 from django.views.generic import ListView, CreateView
 
-
 from django.utils.timezone import now
-
 
 from django.shortcuts import render, get_object_or_404
 from django.http import HttpResponse
@@ -56,6 +51,9 @@ from io import BytesIO
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from datetime import datetime
+
+from .models import Cliente
+
 def home(request):
     return render(request, 'home.html')
 
@@ -83,16 +81,15 @@ def signup(request):
                     'error': 'Username already exists'
                 })
 
-
         return render(request, 'signup.html', {
             'form': UserCreationForm,
             'error': 'Password do not match'
         })
 
-@login_required            
+@login_required
 def signout(request):
     logout(request)
-    return redirect('home')
+    return redirect('landing')
 
 def signin(request):
     if request.method == 'GET':
@@ -241,7 +238,7 @@ def project_report(request):
 def projects(request):
     # projects = Project.objects.all()
     projects = Project.objects.filter(user= request.user, project_status__in =['pendiente', 'en_progreso'],
-    is_active=True)
+    activo=True)
     return render(request, 'projects.html', {
         'projects': projects
     })
@@ -249,14 +246,14 @@ def projects(request):
 @login_required
 def deactivate_project(request, id_project):
     project = get_object_or_404(Project, id=id_project, user=request.user)
-    project.is_active = False
+    project.activo = False
     project.deleted_at = timezone.now()  # Registrar la fecha de eliminación
     project.save()
     return redirect('projects')
 
 @login_required
 def projects_completed(request):
-    projects = Project.objects.filter(user= request.user, project_status__in =['completado'], is_active=True)
+    projects = Project.objects.filter(user= request.user, project_status__in =['completado'], activo=True)
     return render(request, 'projects_completes.html', {
         'projects': projects
     })
@@ -315,71 +312,66 @@ def create_project(request):
                 'error': 'Please provide valida data'
             })
 
-# employee
+# empleado
 @login_required  
 def create_employee(request):
     if request.method =='GET':
         return render(request, 'create_employee.html', {
-            'form': EmployeeForm
+            'form': EmpleadoForm
         })
     else:
         try:
             print(request.POST)
-            form = EmployeeForm(request.POST)
+            form = EmpleadoForm(request.POST)
             new_project =form.save(commit=False)
             #new_project.user = User.objects.first()
-            #  employee.user = form.cleaned_data['user']  # Asegúrate de que 'user' está en el formulario
+            #  empleado.user = form.cleaned_data['user']  # Asegúrate de que 'user' está en el formulario
             # new_project.user = request.user
             new_project.save()
             return redirect('employees')
         
         except ValueError:
             return render(request, 'create_employee.html', {
-                'form': EmployeeForm,
+                'form': EmpleadoForm,
                 'error': 'Please provide valida data'
             })
 
 @login_required
 def deactivate_employee(request, id_employee):
-    employee = get_object_or_404(Employee, id=id_employee)
-    employee.is_active = False
-    employee.deleted_at = timezone.now()  # Registrar la fecha de eliminación
-    employee.save()
+    empleado = get_object_or_404(Empleado, id=id_employee)
+    empleado.activo = False
+    empleado.deleted_at = timezone.now()  # Registrar la fecha de eliminación
+    empleado.save()
     return redirect('employees')
 
 @login_required
 def employee_detail(request, id_employee):
     # para que pueda ver sosl sus proyectos
     if request.method == 'GET':
-        employee = get_object_or_404(Employee, pk = id_employee)
-        form = EmployeeForm(instance=employee)
+        empleado = get_object_or_404(Empleado, pk = id_employee)
+        form = EmpleadoForm(instance=empleado)
         return render(request, 'employee_detail.html', {
-            'employee': employee,
+            'employee': empleado,
             'form': form
         })
     else:
         try:
-            employee = get_object_or_404(Employee, pk = id_employee)
-            form = EmployeeForm(request.POST, instance=employee)
+            empleado = get_object_or_404(Empleado, pk = id_employee)
+            form = EmpleadoForm(request.POST, instance=empleado)
             form.save()
             return redirect('employees')
         except ValueError:
-            return render(request, 'employee_detail.html', {'employee': employee, 'form': form, 'error': "Error al actualizar el empleado"})
+            return render(request, 'employee_detail.html', {'employee': empleado, 'form': form, 'error': "Error al actualizar el empleado"})
 
 @login_required
 def employees(request):
-    employees = Employee.objects.all()
-    # employess = Employee.objects.filter(user= request.user, project_status__in =['pendiente', 'en_progreso'])
+    empleados = Empleado.objects.all()
+    # empleados = Empleado.objects.filter(user= request.user, project_status__in =['pendiente', 'en_progreso'])
     return render(request, 'employees.html', {
-        'employees': employees
+        'employees': empleados
     })
 
 # PAYMENTS
-
-# @login_required
-# def list_payments(request):
-#     payments = Payment.objects.all()
-#     return render(request, 'list_payments.html', {'payments': payments})
 
 @login_required
 def payment_list(request):
@@ -412,7 +404,7 @@ def payment_detail(request, id_payment):
 @login_required
 def deactivate_payment(request, id_payment):
     payment = get_object_or_404(Payment, id=id_payment)
-    payment.is_active = False
+    payment.activo = False
     payment.deleted_at = timezone.now()  # Registrar la fecha de eliminación
     payment.save()
     return redirect('payments')
@@ -647,56 +639,64 @@ def deactivate_proposal(request, id_proposal):
     proposal.delete()
     return redirect('proposals')
 
-# Contractor
+# cliente
 @login_required  
-def create_contractor(request):
+def create_cliente(request):
     if request.method == 'GET':
-        return render(request, 'create_contractor.html', {
-            'form': ContractorForm()
+        return render(request, 'crear_cliente.html', {
+            'form': ClienteForm()
         })
     else:
         try:
-            form = ContractorForm(request.POST)
-            new_contractor = form.save(commit=False)
-            new_contractor.save()
-            return redirect('contractors')  # Cambiar según el nombre de la vista que muestra los contratantes
+            form = ClienteForm(request.POST)
+            new_cliente = form.save(commit=False)
+            new_cliente.save()
+            return redirect('clientes')  # Cambiar según el nombre de la vista que muestra los contratantes
         except ValueError:
-            return render(request, 'create_contractor.html', {
-                'form': ContractorForm(),
+            return render(request, 'create_cliente.html', {
+                'form': ClienteForm(),
                 'error': 'Por favor, proporcione datos válidos'
             })
 
 @login_required
-def contractor_detail(request, id_contractor):
+def cliente_detail(request, id_cliente):
+    cliente_obj = get_object_or_404(Cliente, pk=id_cliente)
+
     if request.method == 'GET':
-        contractor = get_object_or_404(Contractor, pk=id_contractor)
-        form = ContractorForm(instance=contractor)
-        return render(request, 'contractor_detail.html', {
-            'contractor': contractor,
+        form = ClienteForm(instance=cliente_obj)
+        return render(request, 'cliente_detalle.html', {
+            'cliente': cliente_obj,
             'form': form
         })
+
     else:
-        try:
-            contractor = get_object_or_404(Contractor, pk=id_contractor)
-            form = ContractorForm(request.POST, instance=contractor)
+        form = ClienteForm(request.POST, instance=cliente_obj)
+        if form.is_valid():
             form.save()
-            return redirect('contractors')
-        except ValueError:
-            return render(request, 'contractor_detail.html', {
-                'contractor': contractor,
-                'form': form,
-                'error': "Error al actualizar el contratante"
-            })
+            return redirect('clientes')
+
+        return render(request, 'cliente_detail.html', {
+            'cliente': cliente_obj,
+            'form': form,
+            'error': "Error al actualizar el contratante"
+        })
 
 @login_required
-def contractors(request):
-    contractors = Contractor.objects.all()
-    return render(request, 'contractors.html', {
-        'contractors': contractors
+def clientes(request):
+    clientes = Cliente.objects.all()
+    return render(request, 'clientes.html', {
+        'clientes': clientes
     })
 
 @login_required
-def deactivate_contractor(request, id_contractor):
-    contractor = get_object_or_404(Contractor, id=id_contractor)
-    contractor.delete()
-    return redirect('contractors')
+def deactivate_cliente(request, id_cliente):
+    cliente = get_object_or_404(Cliente, id=id_cliente)
+    cliente.delete()
+    return redirect('clientes')
+
+def landing_view(request):
+    return render(request, 'landing.html')
+
+@login_required
+def dashboard_home(request):
+    return render(request, 'home.html')

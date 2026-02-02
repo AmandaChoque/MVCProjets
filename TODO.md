@@ -1,0 +1,9 @@
+- [x] Rename Employee class to Empleado in models.py
+- [x] Update field names in Empleado model to Spanish
+- [x] Update Meta verbose_name in Empleado
+- [x] Update **str** method in Empleado
+- [x] Update admin.py to use Empleado and new field names
+- [x] Update form.py to use Empleado and new field names
+- [x] Update views.py to use Empleado
+- [x] Update urls.py comments if needed
+- [x] Run makemigrations and migrate

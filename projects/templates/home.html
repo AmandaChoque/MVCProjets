@@ -1,41 +1,92 @@
-{% extends 'base.html' %}
-
-{% block content %}
+{% extends 'base.html' %} {% block content %}
 <main class="container py-5">
-    <h2 class="display-5 text-center fw-bold">SOBOTEC S.R.L.</h2>
+  <!-- Título principal -->
+  <h1
+    class="display-4 text-center fw-bold mb-5"
+    style="color: #264653; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1)"
+  >
+    SOBOTEC S.R.L.
+  </h1>
 
-    <section class="card card-body mb-4">
-        <h2 class="h4 text-center fw-bold">Misión</h2>
-        <p class="text-justify">
-            Ser un socio estratégico en el desarrollo de proyectos de seguridad, construcción y tecnología, ofreciendo soluciones integrales e innovadoras que cumplan con los más altos estándares de calidad, eficiencia y sostenibilidad. Buscamos contribuir al progreso de nuestros clientes y del país mediante la provisión de servicios especializados, productos de alta calidad e importaciones que respondan a las necesidades del mercado boliviano.
-        </p>
-    </section>
+  <!-- Sección Misión -->
+  <section
+    class="card shadow-lg rounded-4 mb-4 border-0"
+    style="background-color: #f8f9fa"
+  >
+    <div class="card-body p-5">
+      <h2 class="h4 text-center fw-bold mb-4" style="color: #264653">Misión</h2>
+      <p
+        class="text-justify"
+        style="color: #333; line-height: 1.8; font-size: 1.05rem"
+      >
+        Ser un socio estratégico en el desarrollo de proyectos de seguridad,
+        construcción y tecnología, ofreciendo soluciones integrales e
+        innovadoras que cumplan con los más altos estándares de calidad,
+        eficiencia y sostenibilidad. Buscamos contribuir al progreso de nuestros
+        clientes y del país mediante la provisión de servicios especializados,
+        productos de alta calidad e importaciones que respondan a las
+        necesidades del mercado boliviano.
+      </p>
+    </div>
+  </section>
 
-    <section class="card card-body mb-4">
-        <h2 class="h4 text-center fw-bold">Visión</h2>
-        <p class="text-justify">
-            Consolidarnos como líderes en el mercado nacional en servicios de sistemas de seguridad, construcción e importación de tecnología avanzada para el 2030, destacándonos por nuestra capacidad de innovación, compromiso con la excelencia y expansión a nivel nacional, promoviendo el desarrollo sostenible y el fortalecimiento de la industria en Bolivia.
-        </p>
-    </section>
+  <!-- Sección Visión -->
+  <section
+    class="card shadow-lg rounded-4 mb-4 border-0"
+    style="background-color: #f8f9fa"
+  >
+    <div class="card-body p-5">
+      <h2 class="h4 text-center fw-bold mb-4" style="color: #264653">Visión</h2>
+      <p
+        class="text-justify"
+        style="color: #333; line-height: 1.8; font-size: 1.05rem"
+      >
+        Consolidarnos como líderes en el mercado nacional en servicios de
+        sistemas de seguridad, construcción e importación de tecnología avanzada
+        para el 2030, destacándonos por nuestra capacidad de innovación,
+        compromiso con la excelencia y expansión a nivel nacional, promoviendo
+        el desarrollo sostenible y el fortalecimiento de la industria en
+        Bolivia.
+      </p>
+    </div>
+  </section>
 
-    <div class="text-center">
-        <a class="btn btn-secondary me-2" href="/signin/">
-            Iniciar Sesión
-        </a>
-        <!-- <a class="btn btn-dark" href="/signup/">
+  <!-- Botones -->
+  <div class="text-center mt-5">
+    <a
+      class="btn btn-primary btn-lg shadow-sm me-3 px-5"
+      href="/signin/"
+      style="border-radius: 50px"
+    >
+      Iniciar Sesión
+    </a>
+    <!-- <a class="btn btn-outline-primary btn-lg shadow-sm px-5" href="/signup/" style="border-radius: 50px;">
             Registrarse
         </a> -->
-    </div>
+  </div>
 </main>
 
 <style>
-    @media (max-width: 768px) {
-        main {
-            padding: 1rem;
-        }
-        .card-body {
-            padding: 1rem;
-        }
+  /* Responsive y espaciado */
+  @media (max-width: 768px) {
+    main {
+      padding: 2rem 1rem;
     }
+    .card-body {
+      padding: 2rem 1.5rem;
+    }
+  }
+
+  /* Hover en botones */
+  .btn-primary:hover {
+    background-color: #1d3557;
+    border-color: #1d3557;
+    transition: all 0.2s;
+  }
+
+  /* Mejor lectura en párrafos */
+  p.text-justify {
+    text-align: justify;
+  }
 </style>
 {% endblock %}

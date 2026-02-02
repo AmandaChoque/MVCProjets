@@ -24,8 +24,10 @@ from projects import views
 
 
 urlpatterns = [
+    path('', views.landing_view, name='landing'),
+    path('dashboard/', views.dashboard_home, name='dashboard'),
     path('admin/', admin.site.urls),
-    path('', views.home, name='home'),
+    # path('', views.home, name='home'),
     path('signup/', views.signup, name='signup'),
     path('logout/', views.signout, name='signout'),
     path('signin/', views.signin, name='signin'),
@@ -64,11 +66,11 @@ urlpatterns = [
     path('proposal/create/', views.create_proposal, name='create_proposal'),
 
 
-    # Contractors
-    path('contractors/', views.contractors, name='contractors'),
-    path('contractors/<int:id_contractor>/', views.contractor_detail, name='contractor_detail'),
-    path('contractors/<int:id_contractor>/deactivate/', views.deactivate_contractor, name='contractor_deactivate'),
-    path('contractor/create/', views.create_contractor, name='create_contractor'),
+    # clientes
+    path('clientes/', views.clientes, name='clientes'),
+    path('clientes/<int:id_cliente>/', views.cliente_detail, name='cliente_detail'),
+    path('clientes/<int:id_cliente>/deactivate/', views.deactivate_cliente, name='cliente_deactivate'),
+    path('cliente/create/', views.create_cliente, name='create_cliente'),
 
     # Analysis y Reporte
     path('reporte-analisis/', views.project_analysis, name='project_analysis'),

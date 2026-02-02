@@ -1,0 +1,461 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>SOBOTEC | Seguridad Electrónica</title>
+
+    <!-- Bootstrap CSS -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* ===== NAVBAR ===== */
+      .navbar {
+        /*min-height: 90px; /* ← altura total del navbar */
+        min-height: 90px;
+        background-color: rgba(0, 0, 0, 0.85);
+        padding-top: 12px;
+        padding-bottom: 12px;
+        backdrop-filter: blur(6px);
+      }
+
+      :root {
+        --nav-height: 90px;
+      }
+      section {
+        scroll-margin-top: var(--nav-height);
+      }
+
+      .navbar-nav .nav-link {
+        padding-top: 14px;
+        padding-bottom: 14px;
+        font-size: 1.05rem; /* opcional, se ve más premium */
+      }
+
+      .navbar-brand {
+        font-weight: 700;
+        letter-spacing: 1px;
+      }
+      .navbar-brand {
+        font-size: 1.6rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+      }
+
+      body {
+        padding-top: 90px; /* evita que navbar tape el carrusel */
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+
+      /* ===== HERO CAROUSEL ===== */
+      .hero-carousel,
+      .carousel-item {
+        height: 90vh;
+        min-height: 520px;
+      }
+
+      .carousel-item {
+        position: relative;
+      }
+
+      .slide-bg {
+        position: absolute;
+        inset: 0;
+        background-size: cover;
+        background-position: center;
+        filter: brightness(0.55);
+      }
+
+      .carousel-caption {
+        bottom: 30%;
+        text-align: left;
+      }
+
+      .carousel-caption h1 {
+        font-size: 3.2rem;
+        font-weight: 700;
+      }
+
+      .carousel-caption p {
+        font-size: 1.2rem;
+        max-width: 600px;
+      }
+
+      @media (max-width: 768px) {
+        .carousel-caption {
+          bottom: 20%;
+        }
+
+        .carousel-caption h1 {
+          font-size: 2.2rem;
+        }
+        .ventaja-icon {
+          width: 220px; /* tamaño fijo y uniforme */
+          height: 220px; /* mantiene proporción cuadrada */
+          /* mantiene la imagen completa sin recortar */
+        }
+        /* Opcional: tamaño más pequeño en móviles */
+
+        .ventaja-icon {
+          width: 90px;
+          height: 90px;
+        }
+
+        /* Opcional: efecto hover para hacer la sección más moderna */
+        .card:hover {
+          transform: translateY(-5px);
+          transition: transform 0.3s ease;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ===== NAVBAR SUPERIOR ===== -->
+    <nav class="navbar navbar-expand-lg navbar-dark fixed-top">
+      <div class="container">
+        <a class="navbar-brand" href="/">SOBOTEC S.R.L.</a>
+
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#mainNavbar"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="mainNavbar">
+          <ul class="navbar-nav ms-auto align-items-lg-center">
+            <li class="nav-item">
+              <a class="nav-link" href="#securityCarouselSection">Servicios</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#ventajasSection">Ventajas</a>
+            </li>
+            <!-- <li class="nav-item"><a class="nav-link" href="#">Servicios</a></li>
+            <li class="nav-item"><a class="nav-link" href="#">Ventajas</a></li> -->
+            <li class="nav-item">
+              <a class="nav-link" href="#sucursalesSection">Sucursales</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#contactoSection">Contacto</a>
+            </li>
+
+            {% if user.is_authenticated %}
+            <li class="nav-item ms-lg-3">
+              <a href="{% url 'dashboard' %}" class="btn btn-outline-light">
+                Ingresar
+              </a>
+            </li>
+            {% else %}
+            <li class="nav-item ms-lg-3">
+              <a href="{% url 'signin' %}" class="btn btn-primary">
+                Iniciar sesión
+              </a>
+            </li>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ===== CARRUSEL HERO ===== -->
+
+    <section
+      id="securityCarouselSection"
+      class="carousel slide carousel-fade hero-carousel"
+      data-bs-ride="carousel"
+      data-bs-interval="5000"
+      data-bs-pause="false"
+    >
+    <!-- <div
+      id="securityCarouselSection"
+      class="carousel slide carousel-fade hero-carousel"
+      data-bs-ride="carousel"
+      data-bs-interval="5000"
+      data-bs-pause="false"
+    > -->
+      <div class="carousel-indicators">
+        <button
+          type="button"
+          data-bs-target="#securityCarouselSection"
+          data-bs-slide-to="0"
+          class="active"
+        ></button>
+        <button
+          type="button"
+          data-bs-target="#securityCarouselSection"
+          data-bs-slide-to="1"
+        ></button>
+        <button
+          type="button"
+          data-bs-target="#securityCarouselSection"
+          data-bs-slide-to="2"
+        ></button>
+      </div>
+
+      <div class="carousel-inner">
+        <!-- SLIDE 1 -->
+        <div class="carousel-item active">
+          <div
+            class="slide-bg"
+            style="background-image: url('{% static 'public/camara2.png' %}')"
+          ></div>
+
+          <div class="carousel-caption">
+            <h1>Cámaras de Seguridad</h1>
+            <p>
+              Soluciones profesionales en videovigilancia para empresas,
+              instituciones y hogares con IA.
+            </p>
+            <!-- <a href="#" class="btn btn-primary btn-lg">Nuestros servicios</a> -->
+          </div>
+        </div>
+
+        <!-- SLIDE 2 -->
+        <div class="carousel-item">
+          <div
+            class="slide-bg"
+            style="background-image: url('{% static 'public/alarma1.png' %}')"
+          ></div>
+
+          <div class="carousel-caption">
+            <h1>Alarmas Vecinales</h1>
+            <p>
+              Protección comunitaria con respuesta inmediata y tecnología
+              confiable.
+            </p>
+            <!-- <a href="#" class="btn btn-outline-light btn-lg">Ver ventajas</a> -->
+          </div>
+        </div>
+
+        <!-- SLIDE 3 -->
+        <div class="carousel-item">
+          <div
+            class="slide-bg"
+            style="background-image: url('{% static 'public/camara1.png' %}')"
+          ></div>
+
+          <div class="carousel-caption">
+            <h1>Cámaras de Seguridad</h1>
+            <p>
+              Soluciones profesionales en videovigilancia para empresas,
+              instituciones y hogares.
+            </p>
+            <!-- <a href="#" class="btn btn-outline-light btn-lg">Ver ventajas</a> -->
+          </div>
+        </div>
+      </div>
+
+      <button
+        class="carousel-control-prev"
+        type="button"
+        data-bs-target="#securityCarouselSection"
+        data-bs-slide="prev"
+      >
+        <span class="carousel-control-prev-icon"></span>
+      </button>
+
+      <button
+        class="carousel-control-next"
+        type="button"
+        data-bs-target="#securityCarouselSection"
+        data-bs-slide="next"
+      >
+        <span class="carousel-control-next-icon"></span>
+      </button>
+    </div>
+
+    <!-- ===== SECCIÓN VENTAJAS ===== -->
+    <section id="ventajasSection" class="py-5 bg-light">
+      <div class="container">
+        <div class="text-center mb-5">
+          <h2 class="fw-bold">Nuestras Ventajas</h2>
+          <p class="text-muted fs-5">
+            Descubre por qué SOBOTEC es la mejor opción para proteger tu hogar o
+            empresa.
+          </p>
+        </div>
+
+        <div class="row g-4">
+          <!-- VENTAJA 1 -->
+          <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0 text-center">
+              <div class="card-body">
+                <div class="mb-3">
+                  <img
+                    src="{% static 'public/icon_seguridad.png' %}"
+                    alt="Seguridad"
+                    width="60"
+                    class="ventaja-icon"
+                  />
+                </div>
+                <h5 class="card-title fw-bold">Seguridad Garantizada</h5>
+                <p class="card-text text-muted">
+                  Protección confiable y continua para tu hogar, negocio o
+                  comunidad, con sistemas de última tecnología.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- VENTAJA 2 -->
+          <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0 text-center">
+              <div class="card-body">
+                <div class="mb-3">
+                  <img
+                    src="{% static 'public/icon_tecnologia.png' %}"
+                    alt="Tecnología"
+                    width="60"
+                    class="ventaja-icon"
+                  />
+                </div>
+                <h5 class="card-title fw-bold">Tecnología Avanzada</h5>
+                <p class="card-text text-muted">
+                  Cámaras y alarmas con Inteligencia Artificial que permiten
+                  monitoreo en tiempo real y alertas inmediatas.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- VENTAJA 3 -->
+          <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0 text-center">
+              <div class="card-body">
+                <div class="mb-3">
+                  <img
+                    src="{% static 'public/icon_respuesta.png' %}"
+                    alt="Respuesta Inmediata"
+                    width="60"
+                    class="ventaja-icon"
+                  />
+                </div>
+                <h5 class="card-title fw-bold">Respuesta Inmediata</h5>
+                <p class="card-text text-muted">
+                  Nuestro equipo de seguridad es facil y practica para alertar rápidamente ante cualquier amenaza.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== SECCIÓN SUCURSALES ===== -->
+        <section id="sucursalesSection" class="py-5">
+          <div class="container">
+            <div class="text-center mb-5">
+              <h2 class="fw-bold">Nuestras Sucursales</h2>
+              <p class="text-muted fs-5">
+                Estamos presentes en la ciudad de La Paz para brindarte atención
+                rápida y personalizada.
+              </p>
+            </div>
+
+            <div class="row g-4">
+              <!-- SUCURSAL 1 -->
+              <div class="col-md-5">
+                <div class="card h-100 shadow-sm border-0">
+                  <div class="card-body">
+                    <h5 class="fw-bold">Sucursal Central</h5>
+                    <p class="text-muted mb-1">📍 La Paz, Bolivia</p>
+                    <p class="text-muted mb-1">📞 +591 75210441</p>
+                    <p class="text-muted mb-1">🕘 Lun – Vie: 08:00 – 18:00</p>
+                  </div>
+                </div>
+              </div>
+<!-- 
+              
+              <div class="col-md-5">
+                <div class="card h-100 shadow-sm border-0">
+                  <div class="card-body">
+                    <h5 class="fw-bold">Sucursal El Alto</h5>
+                    <p class="text-muted mb-1">📍 El Alto, Bolivia</p>
+                    <p class="text-muted mb-1">📞 +591 71111111</p>
+                    <p class="text-muted mb-1">🕘 Lun – Vie: 08:30 – 17:30</p>
+                  </div>
+                </div>
+              </div>
+
+              
+              <div class="col-md-5">
+                <div class="card h-100 shadow-sm border-0">
+                  <div class="card-body">
+                    <h5 class="fw-bold">Sucursal Cochabamba</h5>
+                    <p class="text-muted mb-1">📍 Cochabamba, Bolivia</p>
+                    <p class="text-muted mb-1">📞 +591 72222222</p>
+                    <p class="text-muted mb-1">🕘 Lun – Vie: 09:00 – 18:00</p>
+                  </div>
+                </div>
+              </div>
+               -->
+            </div>
+          </div>
+        </section>
+
+        <!-- ===== SECCIÓN CONTACTO ===== -->
+        <section id="contactoSection" class="py-4 bg-dark text-light">
+          <div class="container">
+            <div class="text-center mb-4">
+              <h2 class="fw-bold">Contáctanos</h2>
+              <p class="text-muted fs-5">
+                Estamos listos para ayudarte y brindarte la mejor solución en
+                seguridad electrónica.
+              </p>
+            </div>
+
+            <div class="row align-items-center g-4">
+              <!-- INFORMACIÓN DE CONTACTO -->
+              <div class="col-md-6">
+                <h5 class="fw-bold mb-4">Información de contacto</h5>
+
+                <p class="mb-2">
+                  📍 <strong>Dirección:</strong> La Paz – Bolivia
+                </p>
+                <p class="mb-2">📞 <strong>Teléfono:</strong> +591 75210441</p>
+                <p class="mb-2">
+                  ✉️ <strong>Correo:</strong> sobotec@gmail .com
+                </p>
+                <p class="mb-2">
+                  🕘 <strong>Horario:</strong> Lunes a Viernes, 08:00 – 18:00
+                </p>
+
+                <div class="mt-4">
+                  <a href="tel:+59170000000" class="btn btn-outline-light me-2">
+                    Llamar ahora
+                  </a>
+                  <a href="mailto:contacto@sobotec.com" class="btn btn-primary">
+                    Enviar correo
+                  </a>
+                </div>
+              </div>
+
+              <!-- IMAGEN -->
+              <div class="col-md-6 text-center">
+                <img
+                  src="{% static 'public/contacto_seguridad.png' %}"
+                  alt="Contacto SOBOTEC"
+                  class="img-fluid rounded shadow"
+                />
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- <div class="text-center mt-5">
+          <a href="#contactoSection" class="btn btn-primary btn-lg"
+            >Contáctanos</a
+          >
+        </div> -->
+      </div>
+    </section>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

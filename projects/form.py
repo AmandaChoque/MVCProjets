@@ -1,6 +1,6 @@
 from django.forms import ModelForm
 from django import forms
-from .models import Project, Employee, Payment, PublicEntity, Contractor, Proposal
+from .models import Project, Empleado, Payment, PublicEntity, Cliente, Proposal
 
 from django.contrib.auth.models import User
 
@@ -12,7 +12,7 @@ from django.contrib.auth.models import User
 class ProjectForm(forms.ModelForm):
     class Meta:
         model = Project
-        fields = ['code', 'name', 'description', 'start_date', 'end_date', 'project_status', 'project_type', 'photo_signed_contract', 'total_amount', 'assigned_employee', 'contractor']
+        fields = ['code', 'name', 'description', 'start_date', 'end_date', 'project_status', 'project_type', 'photo_signed_contract', 'total_amount', 'assigned_employee', 'cliente']
         widgets = {
             'code': forms.TextInput(attrs={'class':'form-control', 'placeholder': 'Escribe el codigo'}),
             'name': forms.TextInput(attrs={'class':'form-control', 'placeholder': 'Escribe el codigo'}),
@@ -24,10 +24,10 @@ class ProjectForm(forms.ModelForm):
             'photo_signed_contract': forms.ClearableFileInput(attrs={'class':'form-control'}),
             'total_amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Monto total del proyecto', 'min': '0'}),
             'assigned_employee': forms.Select(attrs={'class': 'form-control', 'style': 'width: 200px;'}),
-            'contractor': forms.Select(attrs={'class': 'form-control', 'style': 'width: 200px;'})
+            'cliente': forms.Select(attrs={'class': 'form-control', 'style': 'width: 200px;'})
         }
 
-class EmployeeForm(forms.ModelForm):
+class EmpleadoForm(forms.ModelForm):
     user = forms.ModelChoiceField(
         queryset=User.objects.all(),
         widget=forms.Select(attrs={'class': 'form-control'}),
@@ -35,30 +35,29 @@ class EmployeeForm(forms.ModelForm):
         label="Usuario Asociado"
     )
     class Meta:
-        model = Employee
-        fields = ['user','first_name', 'last_name_father', 'last_name_mother', 'phone_number', 'hire_date', 'salary', 'position', 'ci']
+        model = Empleado
+        fields = ['user','nombre', 'apellido_paterno', 'apellido_materno', 'numero_celular', 'fecha_contratacion', 'salario', 'cargo', 'carnet_identidad']
         widgets = {
-            'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre'}),
-            'last_name_father': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Apellido Paterno'}),
-            'last_name_mother': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Apellido Materno'}),
-            'phone_number': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número de Teléfono'}),
-            'hire_date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'placeholder': 'Fecha de Contratación'}),
-            'salary': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Salario'}),
-            'position': forms.Select(attrs={'class': 'form-control'}),
-            'ci': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Carnet de Identidad'}),
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre'}),
+            'apellido_paterno': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Apellido Paterno'}),
+            'apellido_materno': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Apellido Materno'}),
+            'numero_celular': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número de Teléfono'}),
+            'fecha_contratacion': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'placeholder': 'Fecha de Contratación'}),
+            'salario': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Salario'}),
+            'cargo': forms.Select(attrs={'class': 'form-control'}),
+            'carnet_identidad': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Carnet de Identidad'}),
         }
-
 class PaymentForm(forms.ModelForm):
     class Meta:
         model = Payment
-        fields = ['amount', 'date', 'status', 'payment_type', 'project', 'is_active']
+        fields = ['amount', 'date', 'status', 'payment_type', 'project', 'activo']
         widgets = {
             'amount': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Monto del pago', 'min': '0'}),
             'date': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
             'payment_type': forms.Select(attrs={'class': 'form-control'}),
             'project': forms.Select(attrs={'class': 'form-control'}),  # Esto permite seleccionar el proyecto desde el formulario
-            # 'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'})  # Para el campo de estado activo
+            # 'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'})  # Para el campo de estado activo
         }
 
 
@@ -85,12 +84,11 @@ class ProposalForm(forms.ModelForm):
             
         }
 
-class ContractorForm(forms.ModelForm):
+class ClienteForm(forms.ModelForm):
     class Meta:
-        model = Contractor
-        fields = ['entity_place_representation', 'position', 'nit_ci', 'first_name', 'paternal_last_name', 'maternal_last_name', 'phone_number', 'address', 'accountant_type']
+        model = Cliente
+        fields = ['position', 'nit_ci', 'first_name', 'paternal_last_name', 'maternal_last_name', 'phone_number', 'address', 'accountant_type']
         widgets = {
-            'entity_place_representation': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe la entidad/lugar/representación'}),
             'position': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el cargo'}),
             'nit_ci': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el NIT/CI'}),
             'first_name': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el nombre'}),

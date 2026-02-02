@@ -15,22 +15,21 @@ class AuditModel(models.Model):
     created = models.DateTimeField(auto_now_add=True, verbose_name="Fecha Creación")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Fecha Actualización")
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name="Fecha Eliminación")
-    is_active = models.BooleanField(default=True, verbose_name="Activo")
+    activo = models.BooleanField(default=True, verbose_name="Activo")
 
     class Meta:
         abstract = True
 
 
 # Contratante
-class Contractor(models.Model):
-    
+class Cliente(models.Model):
+
     ACCOUNTANT_TYPE_CHOICES = [
         ('company', 'Empresa'),
         ('personal', 'Personal'),
         ('public_entity', 'Entidad Pública'),
     ]
-    is_active = models.BooleanField(default=True, verbose_name="Activo")
-    entity_place_representation = models.CharField(max_length=50, verbose_name="Entidad/Lugar/Representación")
+    activo = models.BooleanField(default=True, verbose_name="Activo")
     position = models.CharField(max_length=50, verbose_name="Cargo")  # e.g. President, Legal Representative
     nit_ci = models.CharField(max_length=20, verbose_name="NIT/CI")  # ID number
     first_name = models.CharField(max_length=50, verbose_name="Nombre")
@@ -41,19 +40,19 @@ class Contractor(models.Model):
     accountant_type = models.CharField(max_length=20, choices=ACCOUNTANT_TYPE_CHOICES, default='public_entity', verbose_name="Tipo Contratante")  # Valor predeterminado
     created =models.DateTimeField(default=timezone.now)
     class Meta:
-        verbose_name = 'Contractor'
-        verbose_name_plural = 'Contractors'
+        verbose_name = 'Cliente'
+        verbose_name_plural = 'Clientes'
 
     def __str__(self):
-        return f"{self.first_name} {self.paternal_last_name} ({self.entity_place_representation})"
-    
+        return f"{self.first_name} {self.paternal_last_name}"
+
 
 # Empleado
-class Employee(models.Model):
+class Empleado(models.Model):
     # Opciones para el campo "cargo"
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="employee_profile")  # Relación uno a uno con User
-    is_active = models.BooleanField(default=True, verbose_name="Activo")
-    
+    activo = models.BooleanField(default=True, verbose_name="Activo")
+
     POSITION_CHOICES = [
         ('gerente_general', 'Gerente General'),
         ('tecnico', 'Técnico'),
@@ -61,35 +60,35 @@ class Employee(models.Model):
         ('desarrollador', 'Desarrollador'),
     ]
 
-    first_name = models.CharField(max_length=100, verbose_name="Nombre")
-    last_name_father = models.CharField(max_length=100, verbose_name="Apellido Paterno")
-    last_name_mother = models.CharField(max_length=100, blank=True, null=True, verbose_name="Apellido Materno")
-    phone_number = models.CharField(max_length=15, blank=True, verbose_name="Numero Celular")
-    
-    hire_date = models.DateField(null=True, blank=True, verbose_name="Fecha Contratación")  # No obligatorio
-    salary = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Salario")  # No obligatorio
-    position = models.CharField(
+    nombre = models.CharField(max_length=100, verbose_name="Nombre")
+    apellido_paterno = models.CharField(max_length=100, verbose_name="Apellido Paterno")
+    apellido_materno = models.CharField(max_length=100, blank=True, null=True, verbose_name="Apellido Materno")
+    numero_celular = models.CharField(max_length=15, blank=True, verbose_name="Numero Celular")
+
+    fecha_contratacion = models.DateField(null=True, blank=True, verbose_name="Fecha Contratación")  # No obligatorio
+    salario = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Salario")  # No obligatorio
+    cargo = models.CharField(
         max_length=50,
         choices=POSITION_CHOICES,  # Diccionario de opciones
         default='gerente_general',  # Valor predeterminado
         verbose_name="Cargo"
     )
     # New CI field
-    ci = models.CharField(max_length=20, unique=True, verbose_name="Carnet de Identidad")
+    carnet_identidad = models.CharField(max_length=20, unique=True, verbose_name="Carnet de Identidad")
     created =models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
-        verbose_name = 'Employee'
-        verbose_name_plural = 'Employees'
+        verbose_name = 'Empleado'
+        verbose_name_plural = 'Empleados'
 
     def __str__(self):
-        return f"{self.first_name} {self.last_name_father} {self.last_name_mother or ''} - CI: {self.ci}"
-        #return f"{self.first_name} {self.last_name}"
-        #return f"{self.first_name} {self.last_name}"
+        return f"{self.nombre} {self.apellido_paterno} {self.apellido_materno or ''} - CI: {self.carnet_identidad}"
+        #return f"{self.nombre} {self.apellido_paterno}"
+        #return f"{self.nombre} {self.apellido_paterno}"
 
 # EntidadPublica
 class PublicEntity(models.Model):
-    is_active = models.BooleanField(default=True, verbose_name="Activo")
+    activo = models.BooleanField(default=True, verbose_name="Activo")
     legal_representative = models.CharField(max_length=200, verbose_name="Representante Legal")  # Representante Legal
     contact = models.CharField(max_length=100, verbose_name="Contacto")  # Contacto
     address = models.CharField(max_length=300, verbose_name="Direccion")  # Dirección
@@ -105,7 +104,7 @@ class PublicEntity(models.Model):
 # Propuesta
 class Proposal(models.Model):
     # Campos de la propuesta
-    is_active = models.BooleanField(default=True, verbose_name="Activo")
+    activo = models.BooleanField(default=True, verbose_name="Activo")
     submission_date = models.DateField(verbose_name="Fecha de presentación")  # Fecha de presentación
     budget_amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto presupuesto")  # Monto presupuesto
     requirements = models.TextField(verbose_name="Requerimientos")  # Requerimientos
@@ -129,7 +128,7 @@ class Project(AuditModel):
         ('en_progreso', 'En Progreso'), # En Proceso
         ('completado', 'Completado'),     # Terminado
     ]
-    
+
     PROJECT_TYPE_CHOICES = [
         ('licitacion', 'Licitación'),            # Licitación
         ('contratacion_directa', 'Contratación Directa'),  # Contratación directa
@@ -154,18 +153,18 @@ class Project(AuditModel):
 
     # created =models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)# Empleado que herede de user
-    assigned_employee = models.ForeignKey(Employee, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Empleado Asignado")
-    contractor = models.ForeignKey(Contractor, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Contratista")
+    assigned_employee = models.ForeignKey(Empleado, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Empleado Asignado")
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Contratista")
     proposal = models.OneToOneField(Proposal, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Propuesta")
 
-    is_active = models.BooleanField(default=True, verbose_name="Activo")
-    
+    activo = models.BooleanField(default=True, verbose_name="Activo")
+
 
     total_amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Monto Total del Proyecto")
-    
+
     def __str__(self):
         return self.name + ' - by '+ self.user.username
-    
+
     # def is_fully_paid(self):
     #     total_paid = self.payments.filter(status='pagado').aggregate(total_paid=Sum('amount'))['total_paid'] or 0
     #     return total_paid >= self.total_amount
@@ -191,7 +190,7 @@ class Payment(models.Model):
         ('pagado', 'Pagado'),  # Pagado
         ('pendiente', 'Pendiente'),  # Pendiente
     ]
-    
+
     # Opciones para el tipo de pago
     PAYMENT_TYPE_CHOICES = [
         ('parcial', 'Parcial'),  # Parcial
@@ -203,12 +202,12 @@ class Payment(models.Model):
     date = models.DateField(verbose_name="Fecha Pago")  # Fecha
     status = models.CharField(max_length=10,  choices=PAYMENT_STATUS_CHOICES, default='pagado', verbose_name="Estado Pago")  # Estado del pago
     payment_type = models.CharField(max_length=10, choices=PAYMENT_TYPE_CHOICES, default='parcial', verbose_name="Tipo Pago")  # Tipo de pago
-    
+
     # Clave foránea a Project
     project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='payments', verbose_name="Proyecto")  # Relación (1 a N)
     created =models.DateTimeField(default=timezone.now)
-    is_active = models.BooleanField(default=True, verbose_name="Activo")
-    
+    activo = models.BooleanField(default=True, verbose_name="Activo")
+
     class Meta:
         verbose_name = 'Payment'
         verbose_name_plural = 'Payments'
@@ -265,4 +264,3 @@ def update_project_payment_status(sender, instance, **kwargs):
     Actualiza el estado de pago del proyecto cuando se guarda un pago.
     """
     instance.project.update_payment_status()
-    

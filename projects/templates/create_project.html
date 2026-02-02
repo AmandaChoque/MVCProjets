@@ -1,23 +1,96 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %} {% block content %}
+<main class="container-fluid px-5 py-4">
+  <!-- ENCABEZADO -->
+  <div class="mb-4">
+    <h4 class="fw-semibold mb-1">Proyectos</h4>
+    <span class="text-muted">Nuevo proyecto</span>
+  </div>
 
-{% block content %}
+  <!-- TARJETA -->
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-4">
+      <form
+        action="/projects/create/"
+        method="POST"
+        enctype="multipart/form-data"
+      >
+        {% csrf_token %}
 
-{{error}}
-<main class="container">
-    <div class="row">
-        <div class="col-md-4 offset-md-4 mt-5">
-            <form action="/projects/create/" method="POST" class="card card-body">
-                <h2 class="text-center"> CREAR PROYECTO</h2>
-                {{error}}
-                {% csrf_token %}
-                {{form}}
-            
-                <button class="btn btn-primary mt-3">
-                    Guardar
-                </button>
-            </form>
+        <div class="row g-4">
+          <!-- COLUMNA IZQUIERDA -->
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label">Código del proyecto</label>
+              {{ form.code }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Nombre del proyecto</label>
+              {{ form.name }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Descripción</label>
+              {{ form.description }}
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Fecha inicio</label>
+                {{ form.start_date }}
+              </div>
+
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Fecha final</label>
+                {{ form.end_date }}
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Monto total del proyecto</label>
+              {{ form.total_amount }}
+            </div>
+          </div>
+
+          <!-- COLUMNA DERECHA -->
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label">Estado del proyecto</label>
+              {{ form.project_status }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Tipo de proyecto</label>
+              {{ form.project_type }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Cliente / Contratante</label>
+              {{ form.cliente }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Empleado asignado</label>
+              {{ form.assigned_employee }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Contrato firmado (PDF / Imagen)</label>
+              {{ form.photo_signed_contract }}
+            </div>
+          </div>
         </div>
+
+        {% if error %}
+        <div class="alert alert-danger mt-3">{{ error }}</div>
+        {% endif %}
+
+        <!-- BOTÓN -->
+        <div class="d-flex justify-content-end mt-4">
+          <button class="btn btn-primary px-4">Guardar proyecto</button>
+        </div>
+      </form>
     </div>
+  </div>
 </main>
 {% endblock %}
-
