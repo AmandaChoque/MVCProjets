@@ -1,43 +1,48 @@
 from django.contrib import admin
 
-from projects.models import Project, Empleado, PaymentHistory, Payment, Proposal, PublicEntity, Cliente
+from projects.models import Proyecto, Empleado, HistorialPago, Pago, Propuesta, EntidadPublica, Cliente
 
 # Register your models here.
-class ProjectAdmin(admin.ModelAdmin):
+class ProyectoAdmin(admin.ModelAdmin):
     readonly_fields = ("created", )
-    list_display = ('id', 'name','payment_status','start_date','end_date','project_status','project_type', 'activo','created',
+    list_display = ('id', 'nombre','estado_pago','fecha_inicio','fecha_fin','estado_proyecto','tipo_proyecto', 'activo','created',
 'updated_at',
 'deleted_at', 'user')
-    search_fields = ['name']
-admin.site.register(Project, ProjectAdmin)
+    search_fields = ['nombre']
+admin.site.register(Proyecto, ProyectoAdmin)
 
 class EmpleadoAdmin(admin.ModelAdmin):
     list_display = ('id', 'nombre','apellido_paterno','apellido_materno','numero_celular','fecha_contratacion', 'salario', 'cargo', 'carnet_identidad')
     search_fields = ['apellido_paterno']
 admin.site.register(Empleado, EmpleadoAdmin)
 
-class PaymentHistoryAdmin(admin.ModelAdmin):
-    list_display = ('id', 'modification_date','previous_amount','current_amount','change_reason')
-    search_fields = ['last_name_father']
-admin.site.register(PaymentHistory, PaymentHistoryAdmin)
+class HistorialPagoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'fecha_modificacion','monto_anterior','monto_actual','motivo_cambio')
+    search_fields = ['motivo_cambio']
+admin.site.register(HistorialPago, HistorialPagoAdmin)
 
-class PublicEntityAdmin(admin.ModelAdmin):
-    list_display = ('id', 'legal_representative','contact','address','entity_name')
-    search_fields = ['last_name_father']
-admin.site.register(PublicEntity, PublicEntityAdmin)
+class EntidadPublicaAdmin(admin.ModelAdmin):
+    list_display = ('id', 'representante_legal','contacto','direccion','nombre_entidad')
+    search_fields = ['nombre_entidad']
+admin.site.register(EntidadPublica, EntidadPublicaAdmin)
 
 
-class ProposalAdmin(admin.ModelAdmin):
-    list_display = ('id', 'submission_date','budget_amount','requirements','public_entity', 'project')
-    search_fields = ['last_name_father']
-admin.site.register(Proposal, ProposalAdmin)
+class PropuestaAdmin(admin.ModelAdmin):
+    list_display = ('id', 'fecha_presentacion','monto_presupuesto','requisitos','entidad_publica', 'proyecto')
+    search_fields = ['requisitos']
+admin.site.register(Propuesta, PropuestaAdmin)
 
 class ClienteAdmin(admin.ModelAdmin):
-    list_display = ('id','position','nit_ci','first_name')
-    search_fields = ['last_name_father']
+    list_display = ('id','nombre','cargo','nit_ci','nombre', 'activo')
+    search_fields = ['nombre']
+    list_filter = ['activo']
+
+    def get_queryset(self, _request):
+        return Cliente.all_objects.all()
+
 admin.site.register(Cliente, ClienteAdmin)
 
-class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('id', 'amount','date','status','payment_type', 'project')
-    search_fields = ['last_name_father']
-admin.site.register(Payment, PaymentAdmin)
+class PagoAdmin(admin.ModelAdmin):
+    list_display = ('id', 'monto','fecha','estado','tipo_pago', 'proyecto')
+    search_fields = ['estado']
+admin.site.register(Pago, PagoAdmin)

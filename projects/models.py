@@ -22,29 +22,45 @@ class AuditModel(models.Model):
 
 
 # Contratante
+# custom manager to return only active clients by default
+class ActiveClienteManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(activo=True)
+
+
 class Cliente(models.Model):
 
-    ACCOUNTANT_TYPE_CHOICES = [
-        ('company', 'Empresa'),
+    TIPO_CONTRATANTE_CHOICES = [
+        ('empresa', 'Empresa'),
         ('personal', 'Personal'),
-        ('public_entity', 'Entidad Pública'),
+        ('entidad_publica', 'Entidad Pública'),
     ]
     activo = models.BooleanField(default=True, verbose_name="Activo")
-    position = models.CharField(max_length=50, verbose_name="Cargo")  # e.g. President, Legal Representative
-    nit_ci = models.CharField(max_length=20, verbose_name="NIT/CI")  # ID number
-    first_name = models.CharField(max_length=50, verbose_name="Nombre")
-    paternal_last_name = models.CharField(max_length=50, verbose_name="Apellido Paterno")
-    maternal_last_name = models.CharField(max_length=50, verbose_name="Apellido Materno")
-    phone_number = models.CharField(max_length=15, verbose_name="Número de Teléfono")
-    address = models.CharField(max_length=255, verbose_name="Dirección")
-    accountant_type = models.CharField(max_length=20, choices=ACCOUNTANT_TYPE_CHOICES, default='public_entity', verbose_name="Tipo Contratante")  # Valor predeterminado
-    created =models.DateTimeField(default=timezone.now)
+    cargo = models.CharField(max_length=50, verbose_name="Cargo")
+    nit_ci = models.CharField(max_length=20, verbose_name="NIT/CI")
+    nombre = models.CharField(max_length=50, verbose_name="Nombre")
+    apellido_paterno = models.CharField(max_length=50, verbose_name="Apellido Paterno")
+    apellido_materno = models.CharField(max_length=50, verbose_name="Apellido Materno")
+    telefono = models.CharField(max_length=15, verbose_name="Número de Teléfono")
+    direccion = models.CharField(max_length=255, verbose_name="Dirección")
+    tipo_contratante = models.CharField(max_length=20, choices=TIPO_CONTRATANTE_CHOICES, default='entidad_publica', verbose_name="Tipo Contratante")
+    created = models.DateTimeField(default=timezone.now)
+
+    # managers
+    objects = ActiveClienteManager()           # default manager filters activo=True
+    all_objects = models.Manager()             # explicit manager returning all rows
+
     class Meta:
         verbose_name = 'Cliente'
         verbose_name_plural = 'Clientes'
 
     def __str__(self):
-        return f"{self.first_name} {self.paternal_last_name}"
+        return f"{self.nombre} {self.apellido_paterno}"
+
+    def delete(self, using=None, keep_parents=False):
+        """Soft-delete: mark the client inactive instead of removing from DB."""
+        self.activo = False
+        self.save()
 
 
 # Empleado
@@ -83,46 +99,44 @@ class Empleado(models.Model):
 
     def __str__(self):
         return f"{self.nombre} {self.apellido_paterno} {self.apellido_materno or ''} - CI: {self.carnet_identidad}"
-        #return f"{self.nombre} {self.apellido_paterno}"
-        #return f"{self.nombre} {self.apellido_paterno}"
+
 
 # EntidadPublica
-class PublicEntity(models.Model):
+class EntidadPublica(models.Model):
     activo = models.BooleanField(default=True, verbose_name="Activo")
-    legal_representative = models.CharField(max_length=200, verbose_name="Representante Legal")  # Representante Legal
-    contact = models.CharField(max_length=100, verbose_name="Contacto")  # Contacto
-    address = models.CharField(max_length=300, verbose_name="Direccion")  # Dirección
-    entity_name = models.CharField(max_length=200, verbose_name="Nombre Entidad")  # Nombre Entidad
-    created =models.DateTimeField(default=timezone.now)
+    representante_legal = models.CharField(max_length=200, verbose_name="Representante Legal")
+    contacto = models.CharField(max_length=100, verbose_name="Contacto")
+    direccion = models.CharField(max_length=300, verbose_name="Dirección")
+    nombre_entidad = models.CharField(max_length=200, verbose_name="Nombre Entidad")
+    created = models.DateTimeField(default=timezone.now)
+
     class Meta:
-        verbose_name = 'Public Entity'
-        verbose_name_plural = 'Public Entities'
+        verbose_name = 'Entidad Pública'
+        verbose_name_plural = 'Entidades Públicas'
 
     def __str__(self):
-        return self.entity_name
+        return self.nombre_entidad
 
 # Propuesta
-class Proposal(models.Model):
-    # Campos de la propuesta
+class Propuesta(models.Model):
     activo = models.BooleanField(default=True, verbose_name="Activo")
-    submission_date = models.DateField(verbose_name="Fecha de presentación")  # Fecha de presentación
-    budget_amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto presupuesto")  # Monto presupuesto
-    requirements = models.TextField(verbose_name="Requerimientos")  # Requerimientos
+    fecha_presentacion = models.DateField(verbose_name="Fecha de Presentación")
+    monto_presupuesto = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto Presupuestado")
+    requisitos = models.TextField(verbose_name="Requisitos")
 
-    # Relaciones
-    public_entity = models.ForeignKey(PublicEntity, on_delete=models.CASCADE, related_name='proposals', verbose_name="Entidad pública")  # Entidad pública (1 a N)
-    # project = models.OneToOneField(Project, on_delete=models.CASCADE, verbose_name="Project")  # Proyecto (1 a 1)
+    entidad_publica = models.ForeignKey(EntidadPublica, on_delete=models.CASCADE, related_name='propuestas', verbose_name="Entidad Pública")
 
-    created =models.DateTimeField(default=timezone.now)
+    created = models.DateTimeField(default=timezone.now)
+
     class Meta:
-        verbose_name = 'Proposal'
-        verbose_name_plural = 'Proposals'
+        verbose_name = 'Propuesta'
+        verbose_name_plural = 'Propuestas'
 
     def __str__(self):
-        return f"Proposal for {self.public_entity} - Project: {self.project}"
+        return f"Propuesta para {self.entidad_publica}"
 
 # Proyecto
-class Project(AuditModel):
+class Proyecto(AuditModel):
     PROJECT_STATUS_CHOICES = [
         ('pendiente', 'Pendiente'),         # Pendiente
         ('en_progreso', 'En Progreso'), # En Proceso
@@ -139,52 +153,52 @@ class Project(AuditModel):
         ('parcial', 'Pago Parcial'),
         ('pagado', 'Pagado Completo'),
     ]
-    # Fields
-    code = models.CharField(max_length=20, unique=True, verbose_name="Proyecto Codigo")
-    name = models.CharField(max_length=200, unique=True, verbose_name="Proyecto Nombre")
-    description = models.TextField(blank=True, verbose_name="Proyecto Descripcion")
-    start_date = models.DateField(verbose_name="Fecha Inicio Proyecto")
-    end_date = models.DateField(null=True, blank=True, verbose_name="Fecha Final Proyecto")
-    project_status = models.CharField(max_length=20, choices=PROJECT_STATUS_CHOICES, default='pendiente', verbose_name="Proyecto Estado")
-    project_type = models.CharField(max_length=30, choices=PROJECT_TYPE_CHOICES, default='contratacion_directa', verbose_name="Proyecto Tipo")
-    photo_signed_contract = models.ImageField(upload_to="contrato_firmado",null = True, blank= True, verbose_name="Contrato Firmado")
+    codigo = models.CharField(max_length=20, unique=True, verbose_name="Código Proyecto")
+    nombre = models.CharField(max_length=200, unique=True, verbose_name="Nombre Proyecto")
+    descripcion = models.TextField(blank=True, verbose_name="Descripción Proyecto")
+    fecha_inicio = models.DateField(verbose_name="Fecha Inicio Proyecto")
+    fecha_fin = models.DateField(null=True, blank=True, verbose_name="Fecha Final Proyecto")
+    estado_proyecto = models.CharField(max_length=20, choices=PROJECT_STATUS_CHOICES, default='pendiente', verbose_name="Estado Proyecto")
+    tipo_proyecto = models.CharField(max_length=30, choices=PROJECT_TYPE_CHOICES, default='contratacion_directa', verbose_name="Tipo Proyecto")
+    foto_contrato_firmado = models.ImageField(upload_to="contrato_firmado", null=True, blank=True, verbose_name="Contrato Firmado")
     # photo_proposed_contract = models.ImageField(upload_to="contrato_propueso",null = True, blank= True, verbose_name="Contrato Propuesto")
-    payment_status = models.CharField(max_length=20, choices=PAYMENT_STATE_CHOICES, default='no_pagado', verbose_name="Estado de Pago")
+    estado_pago = models.CharField(max_length=20, choices=PAYMENT_STATE_CHOICES, default='no_pagado', verbose_name="Estado de Pago")
 
     # created =models.DateTimeField(auto_now_add=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)# Empleado que herede de user
-    assigned_employee = models.ForeignKey(Empleado, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Empleado Asignado")
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    empleado_asignado = models.ForeignKey(Empleado, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Empleado Asignado")
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Contratista")
-    proposal = models.OneToOneField(Proposal, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Propuesta")
+    propuesta = models.OneToOneField(Propuesta, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Propuesta")
 
     activo = models.BooleanField(default=True, verbose_name="Activo")
 
-
-    total_amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Monto Total del Proyecto")
+    monto_total = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Monto Total del Proyecto")
 
     def __str__(self):
-        return self.name + ' - by '+ self.user.username
+        return self.nombre + ' - by ' + self.user.username
 
-    # def is_fully_paid(self):
-    #     total_paid = self.payments.filter(status='pagado').aggregate(total_paid=Sum('amount'))['total_paid'] or 0
-    #     return total_paid >= self.total_amount
+    class Meta:
+        verbose_name = 'Proyecto'
+        verbose_name_plural = 'Proyectos'
+        db_table = 'projects_project'
+
     def update_payment_status(self):
         """
         Actualiza el estado de pago del proyecto basado en los pagos realizados.
         """
-        total_paid = self.payments.filter(status='pagado').aggregate(total_paid=Sum('amount'))['total_paid'] or 0
+        total_pagado = self.pagos.filter(estado='pagado').aggregate(total_pagado=Sum('monto'))['total_pagado'] or 0
 
-        if total_paid >= self.total_amount:
-            self.payment_status = 'pagado'
-        elif total_paid > 0:
-            self.payment_status = 'parcial'
+        if total_pagado >= self.monto_total:
+            self.estado_pago = 'pagado'
+        elif total_pagado > 0:
+            self.estado_pago = 'parcial'
         else:
-            self.payment_status = 'no_pagado'
+            self.estado_pago = 'no_pagado'
 
         self.save()
 
 # Pago
-class Payment(models.Model):
+class Pago(models.Model):
     # Opciones para el estado del pago
     PAYMENT_STATUS_CHOICES = [
         ('pagado', 'Pagado'),  # Pagado
@@ -198,69 +212,59 @@ class Payment(models.Model):
     ]
 
     # Campos del modelo Payment
-    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Monto")  # Monto
-    date = models.DateField(verbose_name="Fecha Pago")  # Fecha
-    status = models.CharField(max_length=10,  choices=PAYMENT_STATUS_CHOICES, default='pagado', verbose_name="Estado Pago")  # Estado del pago
-    payment_type = models.CharField(max_length=10, choices=PAYMENT_TYPE_CHOICES, default='parcial', verbose_name="Tipo Pago")  # Tipo de pago
+    monto = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Monto")
+    fecha = models.DateField(verbose_name="Fecha Pago")
+    estado = models.CharField(max_length=10, choices=PAYMENT_STATUS_CHOICES, default='pagado', verbose_name="Estado Pago")
+    tipo_pago = models.CharField(max_length=10, choices=PAYMENT_TYPE_CHOICES, default='parcial', verbose_name="Tipo Pago")
 
-    # Clave foránea a Project
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='payments', verbose_name="Proyecto")  # Relación (1 a N)
-    created =models.DateTimeField(default=timezone.now)
+    proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='pagos', verbose_name="Proyecto")
+    created = models.DateTimeField(default=timezone.now)
     activo = models.BooleanField(default=True, verbose_name="Activo")
 
     class Meta:
-        verbose_name = 'Payment'
-        verbose_name_plural = 'Payments'
+
+        verbose_name_plural = 'Pagos'
 
     def __str__(self):
-        return f"Payment of {self.amount} on {self.date} - Status: {self.status}"
+        return f"Pago de {self.monto} - {self.estado}"
 
     def is_payment_complete(self):
-        if self.payment_type == 'completo' and self.status == 'pagado':
-            return self.amount >= self.project.total_amount
-        return False
+        return self.monto >= self.proyecto.monto_total
 
-    # def update_payment_status(self):
-    #     if self.amount >= self.project.total_amount:
-    #         self.status = 'pagado'
-    #     else:
-    #         self.status = 'pendiente'
-    #     self.save()
     def update_payment_status(self):
         """
         Actualiza el estado del pago y sincroniza el estado de pago del proyecto.
         """
         # Actualizar estado del pago
-        if self.amount >= self.project.total_amount:
-            self.status = 'pagado'
+        if self.monto >= self.proyecto.monto_total:
+            self.estado = 'pagado'
         else:
-            self.status = 'pendiente'
+            self.estado = 'pendiente'
         self.save()
 
         # Actualizar estado de pago del proyecto
-        self.project.update_payment_status()
+        self.proyecto.update_payment_status()
 
 # HistorialPagos
-class PaymentHistory(models.Model):
-    # Campos del historial de pagos
-    modification_date = models.DateTimeField(auto_now=True, verbose_name="Modification Date")  # Fecha de modificación
-    previous_amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Previous Amount")  # Monto anterior
-    current_amount = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Current Amount")  # Monto actual
-    change_reason = models.TextField(verbose_name="Change Reason")  # Motivo del cambio
+class HistorialPago(models.Model):
+    fecha_modificacion = models.DateTimeField(auto_now=True, verbose_name="Fecha Modificación")
+    monto_anterior = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto Anterior")
+    monto_actual = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto Actual")
+    motivo_cambio = models.TextField(verbose_name="Motivo del Cambio")
 
-    # Relaciones
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='payment_histories', verbose_name="Project")  # Project (1 a N)
-    created =models.DateTimeField(default=timezone.now)
+    proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='historial_pagos', verbose_name="Proyecto")
+    created = models.DateTimeField(default=timezone.now)
+
     class Meta:
-        verbose_name = 'Payment History'
-        verbose_name_plural = 'Payment Histories'
+        verbose_name = 'Historial Pago'
+        verbose_name_plural = 'Historiales de Pagos'
 
     def __str__(self):
-        return f"Payment History - Modified on {self.modification_date}"
+        return f"Historial de Pago - Modificado en {self.fecha_modificacion}"
 
-@receiver(post_save, sender=Payment)
+@receiver(post_save, sender=Pago)
 def update_project_payment_status(sender, instance, **kwargs):
     """
     Actualiza el estado de pago del proyecto cuando se guarda un pago.
     """
-    instance.project.update_payment_status()
+    instance.proyecto.update_payment_status()

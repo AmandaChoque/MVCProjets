@@ -1,29 +1,25 @@
-{% extends 'base.html' %}
-
-{% block content %}
+{% extends 'base.html' %} {% block content %}
 <main class="container">
-    <div class="row">
-        <div class="col-md-8 offset-md-3">
-            <h1 class="text-center display-6 py-4 fw-bold"> PAGOS</h1>
-            <ul class="list-group">
-                {% for payment in payments %}   
-                <a class="list-group-item" href="{% url 'payment_detail' payment.id %}">
-                    <header class="d-flex justify-content-between">
-                        
-                        <h2 class="fw-bold">{{payment.project.name}}</h2>
-                        
-                        <p>{{payment.date}}</p>
-                    </header>
-                    <p>Monto: {{payment.amount}}</p>
-                    <p>Estado: {{payment.status}}</p>
-                    <!-- <p>Tipo: {{employee. }}</p>
-                    <p>{{employee.}}</p> -->
-                </a>
-                {% endfor %}
-            </ul>
-        </div>
-    </div>
-</main>
+  <div class="row">
+    <div class="col-md-8 offset-md-3">
+      <h1 class="text-center display-6 py-4 fw-bold">PAGOS</h1>
+      <ul class="list-group">
+        {% for payment in payments %}
+        <a class="list-group-item" href="{% url 'payment_detail' payment.id %}">
+          <header class="d-flex justify-content-between">
+            <h2 class="fw-bold">{{payment.proyecto.nombre}}</h2>
 
+            <p>{{payment.fecha}}</p>
+          </header>
+          <p>Monto: {{payment.monto}}</p>
+          <p>Estado: {{payment.estado}}</p>
+          <!-- <p>Tipo: {{employee. }}</p>
+                    <p>{{employee.}}</p> -->
+        </a>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+</main>
 
 {% endblock %}

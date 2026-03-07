@@ -1,19 +1,69 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %} {% block content %}
+<main class="container-fluid px-5 py-4">
+  <!-- ENCABEZADO -->
+  <div class="mb-4">
+    <h4 class="fw-semibold mb-1">Entidades Públicas</h4>
+    <span class="text-muted">Nueva entidad</span>
+  </div>
 
-{% block content %}
-<main class="container">
-    <div class="row">
-        <div class="col-md-4 offset-md-4 mt-5">
-            <form action="{% url 'create_public_entity' %}" method="POST" class="card card-body">
-                <h2 class="text-center">Crear Entidad Pública</h2>
-                {% csrf_token %}
-                {{ form.as_p }}
-                {% if error %}
-                    <div class="alert alert-danger mt-2">{{ error }}</div>
-                {% endif %}
-                <button class="btn btn-primary mt-3">Guardar</button>
-            </form>
+  <!-- TARJETA -->
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-4">
+      <form
+        action="{% url 'create_public_entity' %}"
+        method="POST"
+        enctype="multipart/form-data"
+      >
+        {% csrf_token %}
+
+        <div class="row g-4">
+          <!-- COLUMNA IZQUIERDA -->
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label"
+                >Nombre de Entidad <span class="text-danger">*</span></label
+              >
+              {{ form.nombre_entidad }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label"
+                >Representante Legal <span class="text-danger">*</span></label
+              >
+              {{ form.representante_legal }}
+            </div>
+          </div>
+
+          <!-- COLUMNA DERECHA -->
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label"
+                >Contacto <span class="text-danger">*</span></label
+              >
+              {{ form.contacto }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Dirección</label>
+              {{ form.direccion }}
+            </div>
+          </div>
         </div>
+
+        <div class="text-muted small mt-2 mb-3">
+          <span class="text-danger">*</span> Campos obligatorios
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger mt-3">{{ error }}</div>
+        {% endif %}
+
+        <!-- BOTÓN -->
+        <div class="d-flex justify-content-end mt-4">
+          <button class="btn btn-primary px-4">Guardar entidad</button>
+        </div>
+      </form>
     </div>
+  </div>
 </main>
 {% endblock %}

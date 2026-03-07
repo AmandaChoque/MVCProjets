@@ -1,4 +1,3 @@
-
 {% extends 'base.html' %}
 
 {% block content %}
@@ -10,21 +9,14 @@
                 {% for employee in employees %}   
                 <a class="list-group-item" href="{% url 'employee_detail' employee.id %}">
                     <header class="d-flex justify-content-between">
-                        
-                        <h2 class="fw-bold">{{employee.first_name}}</h2>
-                        
-                        <!-- <p>{{employee.phone_number}}</p> -->
+                        <h2 class="fw-bold">{{ employee.nombre }} {{ employee.apellido_paterno }}</h2>
                     </header>
-                    <p>CI: {{employee.ci}}</p>
-                    <!-- <p>Tipo: {{employee. }}</p>
-                    <p>{{employee.}}</p> -->
-                </a>
+                    <p>CI: {{ employee.carnet_identidad }}</p>
+                    <p>Cargo: {{ employee.get_cargo_display }}</p>
+                    <p>Teléfono: {{ employee.numero_celular }}</p>
                 {% endfor %}
             </ul>
         </div>
     </div>
 </main>
-
-
 {% endblock %}
-

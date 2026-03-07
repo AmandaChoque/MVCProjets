@@ -58,15 +58,24 @@
       }
       .sidebar img {
         display: block;
-        margin: 15px auto;
-        width: 60%;
-        border-radius: 10px;
+        margin: 10px auto;
+        width: 45%;
+        max-width: 80px;
+        border-radius: 8px;
       }
       .sidebar h4 {
         color: #fff;
         text-align: center;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
         font-weight: 600;
+        font-size: 1rem;
+      }
+      .sidebar .nav-link {
+        padding: 8px 12px;
+        font-size: 0.9rem;
+      }
+      .sidebar .nav-link i {
+        font-size: 1rem;
       }
       .sidebar a {
         color: #fff !important;
@@ -106,6 +115,19 @@
           padding: 1rem;
         }
       }
+
+      /* Collapse indicator styles */
+      .collapse-indicator {
+        margin-left: auto;
+        font-size: 0.8rem;
+        transition: transform 0.3s ease;
+      }
+      .collapse-indicator.expanded {
+        transform: rotate(180deg);
+      }
+      .nav-link .collapse-indicator {
+        color: rgba(255, 255, 255, 0.7);
+      }
     </style>
   </head>
 
@@ -142,11 +164,8 @@
     <div class="sidebar collapse show" id="sidebar">
       <img src="/static/common/logo.png" alt="Logo de la empresa" />
       <h4>SOBOTEC S.R.L.</h4>
-      <ul class="nav flex-column">
+      <ul class="nav flex-column" id="sidebarNav">
         {% if user.is_authenticated %}
-        <li class="nav-item text-center text-white mb-2">
-          Bienvenid@, {{ user.username }}!
-        </li>
 
         <li class="nav-item">
           <a class="nav-link d-flex align-items-center" href="/"
@@ -162,8 +181,12 @@
             href="#projectSubmenu"
           >
             <i class="bi bi-folder2-open me-2"></i>Proyectos
+            <span class="collapse-indicator">></span>
           </a>
-          <div class="collapse" id="projectSubmenu">
+          <div
+            class="collapse {% if '/projects' in request.path %}show{% endif %}"
+            id="projectSubmenu"
+          >
             <ul class="nav flex-column ms-3">
               <li>
                 <a class="nav-link" href="{% url 'projects' %}"
@@ -203,8 +226,12 @@
             href="#employeeSubmenu"
           >
             <i class="bi bi-people-fill me-2"></i>Empleados
+            <span class="collapse-indicator">></span>
           </a>
-          <div class="collapse" id="employeeSubmenu">
+          <div
+            class="collapse {% if '/employees' in request.path %}show{% endif %}"
+            id="employeeSubmenu"
+          >
             <ul class="nav flex-column ms-3">
               <li>
                 <a class="nav-link" href="{% url 'employees' %}"
@@ -220,7 +247,7 @@
           </div>
         </li>
 
-        <!-- Contratante -->
+        <!-- Cliente -->
         <li class="nav-item">
           <a
             class="nav-link d-flex align-items-center"
@@ -228,8 +255,12 @@
             href="#clienteSubmenu"
           >
             <i class="bi bi-people-fill me-2"></i>Cliente
+            <span class="collapse-indicator">></span>
           </a>
-          <div class="collapse" id="clienteSubmenu">
+          <div
+            class="collapse {% if '/clientes' in request.path %}show{% endif %}"
+            id="clienteSubmenu"
+          >
             <ul class="nav flex-column ms-3">
               <li>
                 <a class="nav-link" href="{% url 'clientes' %}"
@@ -253,8 +284,12 @@
             href="#paymentSubmenu"
           >
             <i class="bi bi-cash-stack me-2"></i>Pagos
+            <span class="collapse-indicator">></span>
           </a>
-          <div class="collapse" id="paymentSubmenu">
+          <div
+            class="collapse {% if '/payments' in request.path %}show{% endif %}"
+            id="paymentSubmenu"
+          >
             <ul class="nav flex-column ms-3">
               <li>
                 <a class="nav-link" href="{% url 'payments' %}"
@@ -322,6 +357,101 @@
             ? "0"
             : "260px";
         });
+
+      // Collapse indicator logic - using Bootstrap events
+      document.addEventListener("DOMContentLoaded", function () {
+        const collapseElements = document.querySelectorAll(".collapse");
+
+        // Handle Bootstrap collapse events for indicators
+        collapseElements.forEach((collapse) => {
+          // Skip the main sidebar collapse
+          if (collapse.id === "sidebar") return;
+
+          collapse.addEventListener("shown.bs.collapse", function () {
+            const link = document.querySelector(`[href="#${this.id}"]`);
+            const indicator = link
+              ? link.querySelector(".collapse-indicator")
+              : null;
+            if (indicator) {
+              indicator.innerHTML = "v";
+              indicator.classList.add("expanded");
+            }
+          });
+
+          collapse.addEventListener("hidden.bs.collapse", function () {
+            const link = document.querySelector(`[href="#${this.id}"]`);
+            const indicator = link
+              ? link.querySelector(".collapse-indicator")
+              : null;
+            if (indicator) {
+              indicator.innerHTML = ">";
+              indicator.classList.remove("expanded");
+            }
+          });
+        });
+      });
     </script>
+
+    {% if user.is_authenticated %}
+    <script>
+      // Session timeout configuration
+      const SESSION_TIMEOUT = 1800000; // 30 minutes in milliseconds
+      const WARNING_TIME = 300000; // 5 minutes before timeout
+      let sessionTimer;
+      let warningTimer;
+      let warningShown = false;
+
+      function resetSessionTimer() {
+        clearTimeout(sessionTimer);
+        clearTimeout(warningTimer);
+        warningShown = false;
+
+        // Set timer to show warning
+        warningTimer = setTimeout(
+          showSessionWarning,
+          SESSION_TIMEOUT - WARNING_TIME,
+        );
+
+        // Set timer to logout
+        sessionTimer = setTimeout(forceLogout, SESSION_TIMEOUT);
+      }
+
+      function showSessionWarning() {
+        warningShown = true;
+        const response = confirm(
+          "Tu sesión está por expirar. ¿Deseas continuar trabajando?\n\nPresiona 'Aceptar' para continuar o 'Cancelar' para cerrar sesión.",
+        );
+
+        if (response) {
+          // User wants to continue - extend session
+          fetch("/extend-session/", {
+            method: "GET",
+            credentials: "same-origin",
+          }).then(() => {
+            resetSessionTimer();
+          });
+        } else {
+          // User wants to logout
+          window.location.href = "/signout/";
+        }
+      }
+
+      function forceLogout() {
+        alert(
+          "Tu sesión ha expirado. Serás redirigido a la página de inicio de sesión.",
+        );
+        window.location.href = "/signout/";
+      }
+
+      // Reset timer on user activity
+      const activityEvents = ["mousedown", "keydown", "scroll", "touchstart"];
+      activityEvents.forEach((event) => {
+        document.addEventListener(event, resetSessionTimer, { passive: true });
+      });
+
+      // Initialize timer when page loads
+      resetSessionTimer();
+    </script>
+    {% endif %}
   </body>
 </html>

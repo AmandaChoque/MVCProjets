@@ -1,18 +1,76 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %} {% block content %}
+<main class="container-fluid px-5 py-4">
+  <!-- ENCABEZADO -->
+  <div class="mb-4">
+    <h4 class="fw-semibold mb-1">Pagos</h4>
+    <span class="text-muted"
+      >Nuevo pago{% if project %} - {{ project.name }}{% endif %}</span
+    >
+  </div>
 
-{% block content %}
-<main class="container">
-    <div class="row">
-        <div class="col-md-4 offset-md-4 mt-5">
-            <h1>Crear Pago: {{ project.name }}</h1>
+  <!-- TARJETA -->
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-4">
+      <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
 
-            <form method="POST">
-                {% csrf_token %}
-                {{ form.as_p }}
-                <button class="btn btn-primary" type="submit">Crear Pago</button>
-            </form>
+        <div class="row g-4">
+          <!-- COLUMNA IZQUIERDA -->
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label"
+                >Monto <span class="text-danger">*</span></label
+              >
+              {{ form.monto }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label"
+                >Fecha <span class="text-danger">*</span></label
+              >
+              {{ form.fecha }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label"
+                >Estado <span class="text-danger">*</span></label
+              >
+              {{ form.estado }}
+            </div>
+          </div>
+
+          <!-- COLUMNA DERECHA -->
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label"
+                >Tipo de Pago <span class="text-danger">*</span></label
+              >
+              {{ form.tipo_pago }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label"
+                >Proyecto <span class="text-danger">*</span></label
+              >
+              {{ form.proyecto }}
+            </div>
+          </div>
         </div>
+
+        <div class="text-muted small mt-2 mb-3">
+          <span class="text-danger">*</span> Campos obligatorios
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger mt-3">{{ error }}</div>
+        {% endif %}
+
+        <!-- BOTÓN -->
+        <div class="d-flex justify-content-end mt-4">
+          <button class="btn btn-primary px-4">Guardar pago</button>
+        </div>
+      </form>
     </div>
+  </div>
 </main>
 {% endblock %}
-

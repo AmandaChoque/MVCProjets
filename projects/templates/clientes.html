@@ -1,49 +1,331 @@
-{% extends 'base.html' %} {% block content %}
-<div class="container-fluid py-4">
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container-fluid py-3">
+
+  {% if messages %}
   <div class="mb-3">
-    <h4 class="fw-bold mb-0">Contratantes</h4>
-    <small class="text-muted">{{ clientes|length }} registrados</small>
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ======================= ENCABEZADO ======================= -->
+  <div class="mb-2 d-flex justify-content-between align-items-center">
+    <a href="{% url 'create_cliente' %}" 
+      class="btn btn-primary btn-sm">
+      + Nuevo Cliente
+    </a>
+    <h5 class="fw-semibold text-secondary mb-0">
+      Gestión de Contratantes
+    </h5>
+
+    <div class="d-flex align-items-center gap-3">
+
+      <!-- Mostrar cantidad por página -->
+      <form method="GET" action="{% url 'clientes' %}" class="d-flex align-items-center">
+
+        <!-- Mantener filtros -->
+        <input type="hidden" name="search_nombre" value="{{ search_nombre }}">
+        <input type="hidden" name="search_nit_ci" value="{{ search_nit_ci }}">
+        <input type="hidden" name="filter_tipo" value="{{ filter_tipo }}">
+        <!-- 🔥 Reiniciar siempre a página 1 -->
+        <input type="hidden" name="page" value="1">
+        
+        <span class="small text-muted me-2">Mostrar:</span>
+
+        <select name="per_page"
+                class="form-select form-select-sm"
+                style="width: 80px;"
+                onchange="this.form.submit()">
+
+          <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+          <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+          <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+          <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+
+        </select>
+
+      </form>
+
+      <!-- Texto de registros -->
+      <div class="text-muted small">
+        Mostrando {{ clientes.start_index }} –
+        {{ clientes.end_index }}
+        de {{ clientes.paginator.count }} registros
+      </div>
+
+    </div>
   </div>
 
+
+  <!-- ======================= FILTROS ======================= -->
+  <div class="card mb-3">
+    <div class="card-body py-2">
+
+      <form method="GET" action="{% url 'clientes' %}" class="row g-2">
+
+        <div class="col-md-3">
+          <input
+            type="text"
+            class="form-control form-control-sm"
+            name="search_nombre"
+            value="{{ search_nombre|default:'' }}"
+            placeholder="Nombre o Apellido"
+          />
+        </div>
+
+        <div class="col-md-3">
+          <input
+            type="text"
+            class="form-control form-control-sm"
+            name="search_nit_ci"
+            value="{{ search_nit_ci|default:'' }}"
+            placeholder="NIT / CI"
+          />
+        </div>
+
+        <div class="col-md-3">
+          <select class="form-select form-select-sm" name="filter_tipo">
+            <option value="">Tipo</option>
+
+            <option value="empresa"
+              {% if filter_tipo == "empresa" %}selected{% endif %}>
+              Empresa
+            </option>
+
+            <option value="personal"
+              {% if filter_tipo == "personal" %}selected{% endif %}>
+              Personal
+            </option>
+
+            <option value="entidad_publica"
+              {% if filter_tipo == "entidad_publica" %}selected{% endif %}>
+              Entidad Pública
+            </option>
+          </select>
+        </div>
+
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-dark btn-sm w-100">
+            Filtrar
+          </button>
+        </div>
+
+        <div class="col-md-1">
+          <a href="{% url 'clientes' %}"
+             class="btn btn-outline-secondary btn-sm w-100">
+            Limpiar
+          </a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+
+  <!-- ======================= TABLA ======================= -->
   <div class="table-responsive">
-    <table class="table table-hover align-middle">
-      <thead class="table-light">
+    <table class="table table-sm table-hover align-middle small">
+
+      <thead class="table-light small text-uppercase fw-semibold">
         <tr>
-          <th>CLIENTE</th>
-          <th>CARGO</th>
-          <th>ENTIDAD</th>
-          <th>CONTACTO</th>
+          <th>Cliente</th>
+          <th>NIT/CI:</th>
+          <th>Cargo</th>
+          <th>Tipo</th>
+          <th>Contacto</th>
+          <th class="text-end" style="width: 60px;">Acciones</th>
         </tr>
       </thead>
 
       <tbody>
+
         {% for cliente in clientes %}
-        <tr
-          style="cursor: pointer"
-          onclick="window.location='{% url 'cliente_detail' cliente.id %}'"
-        >
-          <td>
+        <tr>
+
+          <!-- <td>
             <div class="fw-semibold">
-              {{ cliente.first_name }} {{ cliente.paternal_last_name }}
+              {{ cliente.nombre }} {{ cliente.apellido_paterno }}
             </div>
-            <small class="text-muted">Responsable</small>
+            <div class="text-muted small">
+              NIT/CI: {{ cliente.nit_ci }}
+            </div>
+          </td> -->
+          <td class="small">{{ cliente.nombre }} {{ cliente.apellido_paterno }}</td>
+          <td class="small">{{ cliente.nit_ci }}</td>
+          <td class="small">{{ cliente.cargo }}</td>
+
+          <td>
+            <span class="badge bg-primary small">
+              {{ cliente.get_tipo_contratante_display }}
+            </span>
           </td>
 
-          <td>{{ cliente.position }}</td>
+          <td class="small">{{ cliente.telefono }}</td>
 
-          <td>
-            <span class="badge bg-primary"> {{ cliente.phone_number }} </span>
+          <td class="text-end">
+            
+            <div class="dropdown">
+              
+              <button class="btn btn-sm btn-light"
+              type="button"
+              data-bs-toggle="dropdown">
+              ⋮
+              </button>
+            
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+              
+              <li>
+                <a class="dropdown-item"
+                href="{% url 'cliente_view' cliente.id %}">
+                Ver
+              </a>
+              </li>
+              
+              <li>
+                <a class="dropdown-item"
+                href="{% url 'cliente_detail' cliente.id %}">
+                Editar
+              </a>
+              </li>
+            
+              <li><hr class="dropdown-divider"></li>
+              
+              <li>
+                <button class="dropdown-item text-danger"
+                data-bs-toggle="modal"
+                data-bs-target="#deleteModal"
+                data-id="{{ cliente.id }}"
+                data-nombre="{{ cliente.nombre }} {{ cliente.apellido_paterno }}">
+                Inhabilitar
+                </button>
+              </li>
+        
+            </ul>
+      
+           </div>
+    
           </td>
         </tr>
+
         {% empty %}
         <tr>
-          <td colspan="4" class="text-center text-muted py-4">
+          <td colspan="6" class="text-center text-muted py-3 small">
             No existen contratantes registrados.
           </td>
         </tr>
         {% endfor %}
+
       </tbody>
     </table>
   </div>
+
+
+  <!-- ======================= PAGINACIÓN ======================= -->
+  <nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center mb-0">
+
+      {% if clientes.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ clientes.previous_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&search_nit_ci={{ search_nit_ci }}&filter_tipo={{ filter_tipo }}">
+          Anterior
+        </a>
+      </li>
+      {% else %}
+      <li class="page-item disabled">
+        <span class="page-link">Anterior</span>
+      </li>
+      {% endif %}
+
+      {% for num in clientes.paginator.page_range %}
+        {% if clientes.number == num %}
+          <li class="page-item active">
+            <span class="page-link">{{ num }}</span>
+          </li>
+        {% elif num > clientes.number|add:'-3' and num < clientes.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&search_nit_ci={{ search_nit_ci }}&filter_tipo={{ filter_tipo }}">
+              {{ num }}
+            </a>
+          </li>
+        {% endif %}
+      {% endfor %}
+
+      {% if clientes.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ clientes.next_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&search_nit_ci={{ search_nit_ci }}&filter_tipo={{ filter_tipo }}">
+          Siguiente
+        </a>
+      </li>
+      {% else %}
+      <li class="page-item disabled">
+        <span class="page-link">Siguiente</span>
+      </li>
+      {% endif %}
+
+    </ul>
+  </nav>
+
 </div>
+<!-- Modal Confirmar Inhabilitación -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h6 class="modal-title">Confirmar Inhabilitación</h6>
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        ¿Está seguro que desea inhabilitar a
+        <strong id="clienteNombre"></strong>?
+      </div>
+
+      <div class="modal-footer">
+
+        <form method="POST" id="deleteForm">
+          {% csrf_token %}
+
+          <button type="button"
+                  class="btn btn-secondary btn-sm"
+                  data-bs-dismiss="modal">
+            Cancelar
+          </button>
+
+          <button type="submit"
+                  class="btn btn-danger btn-sm">
+            Inhabilitar
+          </button>
+
+        </form>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+<script>
+  const deleteModal = document.getElementById('deleteModal');
+
+  deleteModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+
+    const clienteId = button.getAttribute('data-id');
+    const clienteNombre = button.getAttribute('data-nombre');
+
+    document.getElementById('clienteNombre').textContent = clienteNombre;
+
+    const form = document.getElementById('deleteForm');
+    form.action = `/clientes/${clienteId}/deactivate/`;
+  });
+</script>
+
 {% endblock %}

@@ -66,7 +66,7 @@ ROOT_URLCONF = 'project_management.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'projects' / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -146,3 +146,8 @@ LOGIN_URL = '/signin'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/'
+
+# Session configuration
+SESSION_COOKIE_AGE = 1800  # 30 minutes in seconds (30 * 60)
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Keep session even when browser is closed
+SESSION_SAVE_EVERY_REQUEST = True  # Save session on every request to reset timeout

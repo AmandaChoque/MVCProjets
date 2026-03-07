@@ -1,23 +1,96 @@
-{% extends 'base.html' %}
+{% extends 'base.html' %} {% block content %} {{error}}
+<main class="container-fluid px-5 py-4">
+  <!-- ENCABEZADO -->
+  <div class="mb-4">
+    <h4 class="fw-semibold mb-1">Empleados</h4>
+    <span class="text-muted">Nuevo empleado</span>
+  </div>
 
-{% block content %}
+  <!-- TARJETA -->
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-4">
+      <form
+        action="/employees/create/"
+        method="POST"
+        enctype="multipart/form-data"
+      >
+        {% csrf_token %}
 
-{{error}}
-<main class="container">
-    <div class="row">
-        <div class="col-md-4 offset-md-4 mt-5">
-            <form action="/employees/create/" method="POST" class="card card-body">
-                <h2 class="text-center"> CREAR EMPLEADO</h2>
-                {{error}}
-                {% csrf_token %}
-                {{form}}
-            
-                <button class="btn btn-primary mt-3">
-                    Guardar
-                </button>
-            </form>
+        <div class="row g-4">
+          <!-- COLUMNA IZQUIERDA -->
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label"
+                >Usuario Asociado <span class="text-danger">*</span></label
+              >
+              {{ form.user }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label"
+                >Nombre <span class="text-danger">*</span></label
+              >
+              {{ form.nombre }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label"
+                >Apellido Paterno <span class="text-danger">*</span></label
+              >
+              {{ form.apellido_paterno }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Apellido Materno</label>
+              {{ form.apellido_materno }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Número de Celular</label>
+              {{ form.numero_celular }}
+            </div>
+          </div>
+
+          <!-- COLUMNA DERECHA -->
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label">Fecha de Contratación</label>
+              {{ form.fecha_contratacion }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Salario</label>
+              {{ form.salario }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Cargo</label>
+              {{ form.cargo }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label"
+                >Carnet de Identidad <span class="text-danger">*</span></label
+              >
+              {{ form.carnet_identidad }}
+            </div>
+          </div>
         </div>
+
+        <div class="text-muted small mt-2 mb-3">
+          <span class="text-danger">*</span> Campos obligatorios
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger mt-3">{{ error }}</div>
+        {% endif %}
+
+        <!-- BOTÓN -->
+        <div class="d-flex justify-content-end mt-4">
+          <button class="btn btn-primary px-4">Guardar empleado</button>
+        </div>
+      </form>
     </div>
+  </div>
 </main>
 {% endblock %}
-

@@ -29,8 +29,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # path('', views.home, name='home'),
     path('signup/', views.signup, name='signup'),
-    path('logout/', views.signout, name='signout'),
+    path('signout/', views.signout, name='signout'),
     path('signin/', views.signin, name='signin'),
+    path('extend-session/', views.extend_session, name='extend_session'),
     
     # Proyects
     path('projects/', views.projects, name='projects'),
@@ -68,7 +69,9 @@ urlpatterns = [
 
     # clientes
     path('clientes/', views.clientes, name='clientes'),
+    path('clientes/nuevo/', views.create_cliente, name='create_cliente'),
     path('clientes/<int:id_cliente>/', views.cliente_detail, name='cliente_detail'),
+    path('clientes/<int:id_cliente>/ver/', views.cliente_view, name='cliente_view'),
     path('clientes/<int:id_cliente>/deactivate/', views.deactivate_cliente, name='cliente_deactivate'),
     path('cliente/create/', views.create_cliente, name='create_cliente'),
 
