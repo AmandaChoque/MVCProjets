@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{% block content %}
+<main class="container-fluid px-5 py-4">
+  <!-- ENCABEZADO -->
+  <div class="mb-4">
+    <h4 class="fw-semibold mb-1">Proyectos</h4>
+    <span class="text-muted">Ver registro</span>
+  </div>
+
+  <!-- TARJETA PRINCIPAL -->
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-4">
+
+      <!-- INFORMACIÓN GENERAL -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 fw-semibold">Información General</h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Código:</strong></div>
+                <div class="col-sm-7 text-muted">{{ project.codigo }}</div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Nombre:</strong></div>
+                <div class="col-sm-7">{{ project.nombre }}</div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Descripción:</strong></div>
+                <div class="col-sm-7">{{ project.descripcion|default:"—" }}</div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Registrado:</strong></div>
+                <div class="col-sm-7 text-muted small">{{ project.created|date:"d/m/Y" }}</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Tipo:</strong></div>
+                <div class="col-sm-7">
+                  {% if project.tipo_proyecto == 'licitacion' %}
+                    <span class="badge bg-secondary">Licitación</span>
+                  {% else %}
+                    <span class="badge bg-dark">Contrat. Directa</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Estado:</strong></div>
+                <div class="col-sm-7">
+                  {% if project.estado_proyecto == 'completado' %}
+                    <span class="badge bg-success">Completado</span>
+                  {% elif project.estado_proyecto == 'en_progreso' %}
+                    <span class="badge bg-primary">En Progreso</span>
+                  {% else %}
+                    <span class="badge bg-warning text-dark">Pendiente</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Estado de pago:</strong></div>
+                <div class="col-sm-7">
+                  {% if project.estado_pago == 'pagado' %}
+                    <span class="badge bg-success">Pagado</span>
+                  {% elif project.estado_pago == 'parcial' %}
+                    <span class="badge bg-info text-dark">Pago Parcial</span>
+                  {% else %}
+                    <span class="badge bg-danger">No Pagado</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FECHAS Y MONTO -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 fw-semibold">Fechas y Monto</h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Fecha inicio:</strong></div>
+                <div class="col-sm-7">{{ project.fecha_inicio|date:"d/m/Y" }}</div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Fecha fin:</strong></div>
+                <div class="col-sm-7">{{ project.fecha_fin|date:"d/m/Y"|default:"—" }}</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Monto total (Bs.):</strong></div>
+                <div class="col-sm-7 fw-semibold">{{ project.monto_total|floatformat:2 }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ASIGNACIONES -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 fw-semibold">Asignaciones</h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Contratante:</strong></div>
+                <div class="col-sm-7">
+                  {% if project.cliente %}
+                    {{ project.cliente.nombre }} {{ project.cliente.apellido_paterno }}
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Tipo contratante:</strong></div>
+                <div class="col-sm-7">
+                  {% if project.cliente %}
+                    {{ project.cliente.get_tipo_contratante_display }}
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Empleado asignado:</strong></div>
+                <div class="col-sm-7">
+                  {% if project.empleado_asignado %}
+                    {{ project.empleado_asignado.nombre }} {{ project.empleado_asignado.apellido_paterno }}
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Propuesta:</strong></div>
+                <div class="col-sm-7">
+                  {% if project.propuesta %}
+                    {{ project.propuesta }}
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTONES -->
+      <div class="d-flex justify-content-between mt-4">
+        <a href="{% url 'projects' %}" class="btn btn-outline-secondary">Volver</a>
+        <a href="{% url 'project_detail' project.id %}" class="btn btn-primary">Editar</a>
+      </div>
+
+    </div>
+  </div>
+</main>
+{% endblock %}

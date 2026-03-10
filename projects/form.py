@@ -1,13 +1,9 @@
 from django.forms import ModelForm
 from django import forms
 from .models import Proyecto, Empleado, Pago, EntidadPublica, Cliente, Propuesta
+import re
+from decimal import Decimal, InvalidOperation
 
-from django.contrib.auth.models import User
-
-# class ProjectForm(ModelForm):
-#     class Meta:
-#         model =Project
-#         fields = ['code', 'name', 'description', 'start_date', 'end_date', 'project_status', 'project_type', 'photo_signed_contract', 'photo_proposed_contract']
 
 class ProjectForm(forms.ModelForm):
     class Meta:
@@ -28,38 +24,124 @@ class ProjectForm(forms.ModelForm):
         }
 
 class EmpleadoForm(forms.ModelForm):
-    user = forms.ModelChoiceField(
-        queryset=User.objects.all(),
-        widget=forms.Select(attrs={'class': 'form-select'}),
+    cargo = forms.ChoiceField(
+        choices=[('', 'Seleccionar cargo')] + Empleado.POSITION_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-select', 'required': 'required'}),
         required=True,
-        label="Usuario Asociado"
+        label="Cargo"
     )
+    numero_celular = forms.CharField(
+        required=True,
+        label="Número de Celular",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Número de Celular',
+            'inputmode': 'numeric',
+            'pattern': '[0-9]+',
+            'title': 'Ingrese solo números',
+            'required': 'required',
+            'minlength': '7',
+        })
+    )
+    salario = forms.CharField(
+        required=False,
+        label="Salario",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Salario Ej: 1500 o 1500.50',
+        })
+    )
+
     class Meta:
         model = Empleado
-        fields = ['user','nombre', 'apellido_paterno', 'apellido_materno', 'numero_celular', 'fecha_contratacion', 'salario', 'cargo', 'carnet_identidad']
+        fields = ['nombre', 'apellido_paterno', 'apellido_materno', 'numero_celular', 'fecha_contratacion', 'salario', 'cargo', 'carnet_identidad']
         widgets = {
-            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre'}),
-            'apellido_paterno': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Apellido Paterno'}),
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre', 'required': 'required'}),
+            'apellido_paterno': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Apellido Paterno', 'required': 'required'}),
             'apellido_materno': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Apellido Materno'}),
-            'numero_celular': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número de Teléfono'}),
-            'fecha_contratacion': forms.DateInput(attrs={'class': 'form-control', 'type': 'date', 'placeholder': 'Fecha de Contratación'}),
-            'salario': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Salario'}),
-            'cargo': forms.Select(attrs={'class': 'form-select'}),
-            'carnet_identidad': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Carnet de Identidad'}),
+            'fecha_contratacion': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'carnet_identidad': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Carnet de Identidad',
+                'inputmode': 'numeric',
+                'pattern': '[0-9]+',
+                'title': 'Ingrese solo números',
+                'required': 'required',
+                'minlength': '6',
+            }),
         }
 
+    def clean_carnet_identidad(self):
+        ci = self.cleaned_data.get('carnet_identidad', '')
+        if not ci:
+            return ci
+        ci_digits = ci.replace(' ', '')
+        if not ci_digits.isdigit():
+            raise forms.ValidationError('El carnet debe contener solo números.')
+        if len(ci_digits) < 6:
+            raise forms.ValidationError('El carnet debe tener al menos 6 dígitos.')
+        return ci_digits
+
+    def clean_salario(self):
+        valor = self.cleaned_data.get('salario')
+        if valor is None or valor == '':
+            return None
+        valor_str = str(valor).strip()
+        if not re.fullmatch(r'\d+(\.\d{1,2})?', valor_str):
+            raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 1500 o 1500.50). No use separadores de miles ni comas.')
+        try:
+            resultado = Decimal(valor_str)
+        except InvalidOperation:
+            raise forms.ValidationError('Ingrese un número válido.')
+        if resultado < 0:
+            raise forms.ValidationError('El salario no puede ser negativo.')
+        return resultado
+
+    def clean_numero_celular(self):
+        celular = self.cleaned_data.get('numero_celular', '')
+        if not celular:
+            return celular
+        celular_digits = celular.replace(' ', '')
+        if not celular_digits.isdigit():
+            raise forms.ValidationError('El celular debe contener solo números.')
+        if len(celular_digits) < 7:
+            raise forms.ValidationError('El celular debe tener al menos 7 dígitos.')
+        return celular_digits
+
 class PaymentForm(forms.ModelForm):
+    monto = forms.CharField(
+        required=True,
+        label="Monto",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ej: 1500 o 1500.50',
+        })
+    )
+
     class Meta:
         model = Pago
-        fields = ['monto', 'fecha', 'estado', 'tipo_pago', 'proyecto', 'activo']
+        fields = ['monto', 'fecha', 'estado', 'tipo_pago', 'proyecto']
         widgets = {
-            'monto': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Monto del pago', 'min': '0'}),
             'fecha': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'estado': forms.Select(attrs={'class': 'form-select'}),
             'tipo_pago': forms.Select(attrs={'class': 'form-select'}),
             'proyecto': forms.Select(attrs={'class': 'form-select'}),
-            # 'activo': forms.CheckboxInput(attrs={'class': 'form-check-input'})  # Para el campo de estado activo
         }
+
+    def clean_monto(self):
+        valor = self.cleaned_data.get('monto')
+        if not valor:
+            raise forms.ValidationError('El monto es obligatorio.')
+        valor_str = str(valor).strip()
+        if not re.fullmatch(r'\d+(\.\d{1,2})?', valor_str):
+            raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 1500 o 1500.50). No use comas ni separadores de miles.')
+        try:
+            resultado = Decimal(valor_str)
+        except InvalidOperation:
+            raise forms.ValidationError('Ingrese un número válido.')
+        if resultado <= 0:
+            raise forms.ValidationError('El monto debe ser mayor a cero.')
+        return resultado
 
 class PublicEntityForm(forms.ModelForm):
     class Meta:
@@ -87,7 +169,7 @@ class ProposalForm(forms.ModelForm):
 class ClienteForm(forms.ModelForm):
     class Meta:
         model = Cliente
-        fields = ['cargo', 'nit_ci', 'nombre', 'apellido_paterno', 'apellido_materno', 'telefono', 'direccion', 'tipo_contratante']
+        fields = ['cargo', 'nit_ci', 'nombre', 'apellido_paterno', 'apellido_materno', 'telefono', 'correo', 'direccion', 'tipo_contratante']
         widgets = {
             'cargo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el cargo'}),
             'nit_ci': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el NIT/CI', 'inputmode': 'numeric', 'pattern': '[0-9]+', 'title': 'Ingrese solo números', 'required': 'required', 'minlength': '6'}),
@@ -95,7 +177,8 @@ class ClienteForm(forms.ModelForm):
             'apellido_paterno': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el apellido paterno', 'required': 'required'}),
             'apellido_materno': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el apellido materno'}),
             'telefono': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el número de teléfono', 'inputmode': 'numeric', 'pattern': '[0-9]+', 'title': 'Ingrese solo números', 'required': 'required', 'minlength': '7'}),
-            'direccion': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Escribe la dirección', 'required': 'required'}),
+            'correo': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'ejemplo@correo.com'}),
+            'direccion': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Escribe la dirección', 'required': 'required', 'rows': 3}),
             'tipo_contratante': forms.Select(attrs={'class': 'form-select', 'required': 'required'}),
         }
 

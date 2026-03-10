@@ -1,40 +1,66 @@
-{% extends 'base.html' %} {% block content %}
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+  .was-validated .form-control:valid,
+  .was-validated .form-select:valid {
+    border-color: #dee2e6;
+    background-image: none;
+    padding-right: calc(1.5em + 0.75rem);
+  }
+  .was-validated .form-control:valid:focus,
+  .was-validated .form-select:valid:focus {
+    border-color: #dee2e6;
+    box-shadow: 0 0 0 0.25rem rgba(39, 128, 227, 0.25);
+  }
+  .valid-feedback { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
 <main class="container-fluid px-5 py-4">
   <!-- ENCABEZADO -->
   <div class="mb-4">
     <h4 class="fw-semibold mb-1">Pagos</h4>
-    <span class="text-muted"
-      >Nuevo pago{% if project %} - {{ project.name }}{% endif %}</span
-    >
+    <span class="text-muted">Nuevo pago{% if project %} - {{ project.name }}{% endif %}</span>
   </div>
 
   <!-- TARJETA -->
   <div class="card border-0 shadow-sm rounded-3">
     <div class="card-body p-4">
-      <form method="POST" enctype="multipart/form-data">
+      <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
         {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger mt-2">
+          {% for err in form.non_field_errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
 
         <div class="row g-4">
           <!-- COLUMNA IZQUIERDA -->
           <div class="col-lg-6">
             <div class="mb-3">
-              <label class="form-label"
-                >Monto <span class="text-danger">*</span></label
-              >
+              <label class="form-label">Monto (Bs.) <span class="text-danger">*</span></label>
               {{ form.monto }}
+              {% if form.monto.errors %}
+              <div class="text-danger small mt-1">
+                {% for err in form.monto.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </div>
+              {% endif %}
             </div>
 
             <div class="mb-3">
-              <label class="form-label"
-                >Fecha <span class="text-danger">*</span></label
-              >
+              <label class="form-label">Fecha <span class="text-danger">*</span></label>
               {{ form.fecha }}
+              {% if form.fecha.errors %}
+              <div class="text-danger small mt-1">
+                {% for err in form.fecha.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </div>
+              {% endif %}
             </div>
 
             <div class="mb-3">
-              <label class="form-label"
-                >Estado <span class="text-danger">*</span></label
-              >
+              <label class="form-label">Estado <span class="text-danger">*</span></label>
               {{ form.estado }}
             </div>
           </div>
@@ -42,17 +68,18 @@
           <!-- COLUMNA DERECHA -->
           <div class="col-lg-6">
             <div class="mb-3">
-              <label class="form-label"
-                >Tipo de Pago <span class="text-danger">*</span></label
-              >
+              <label class="form-label">Tipo de Pago <span class="text-danger">*</span></label>
               {{ form.tipo_pago }}
             </div>
 
             <div class="mb-3">
-              <label class="form-label"
-                >Proyecto <span class="text-danger">*</span></label
-              >
+              <label class="form-label">Proyecto <span class="text-danger">*</span></label>
               {{ form.proyecto }}
+              {% if form.proyecto.errors %}
+              <div class="text-danger small mt-1">
+                {% for err in form.proyecto.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </div>
+              {% endif %}
             </div>
           </div>
         </div>
@@ -65,12 +92,42 @@
         <div class="alert alert-danger mt-3">{{ error }}</div>
         {% endif %}
 
-        <!-- BOTÓN -->
-        <div class="d-flex justify-content-end mt-4">
-          <button class="btn btn-primary px-4">Guardar pago</button>
+        <!-- BOTONES -->
+        <div class="d-flex justify-content-between mt-4">
+          <a href="{% url 'payments' %}" class="btn btn-outline-secondary">Cancelar</a>
+          <button class="btn btn-primary px-4" type="submit">Guardar pago</button>
         </div>
       </form>
     </div>
   </div>
 </main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Pintar de rojo los campos con errores del servidor
+  document.querySelectorAll('.text-danger.small.mt-1').forEach(function (errorDiv) {
+    var prev = errorDiv.previousElementSibling;
+    if (prev && (prev.tagName === 'INPUT' || prev.tagName === 'SELECT' || prev.tagName === 'TEXTAREA')) {
+      prev.classList.add('is-invalid');
+    }
+  });
+</script>
+<script>
+  (function () {
+    'use strict'
+    window.addEventListener('load', function () {
+      var forms = document.getElementsByClassName('needs-validation')
+      Array.prototype.filter.call(forms, function (form) {
+        form.addEventListener('submit', function (event) {
+          if (!form.checkValidity()) {
+            event.preventDefault()
+            event.stopPropagation()
+          }
+          form.classList.add('was-validated')
+        }, false)
+      })
+    }, false)
+  })()
+</script>
 {% endblock %}

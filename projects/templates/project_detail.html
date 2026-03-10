@@ -1,49 +1,251 @@
-
 {% extends 'base.html' %}
 
+{% block extra_css %}
+<style>
+  .was-validated .form-control:valid,
+  .was-validated .form-select:valid {
+    border-color: #dee2e6;
+    background-image: none;
+    padding-right: calc(1.5em + 0.75rem);
+  }
+  .was-validated .form-control:valid:focus,
+  .was-validated .form-select:valid:focus {
+    border-color: #dee2e6;
+    box-shadow: 0 0 0 0.25rem rgba(39, 128, 227, 0.25);
+  }
+  .valid-feedback { display: none; }
+</style>
+{% endblock %}
+
 {% block content %}
-<!-- <h1>PROJECT DETAIL</h1> -->
+<main class="container-fluid px-5 py-4">
+  <!-- ENCABEZADO -->
+  <div class="mb-4">
+    <h4 class="fw-semibold mb-1">Proyectos</h4>
+    <span class="text-muted">Editar registro — {{ project.nombre }}</span>
+  </div>
 
-<!-- {% if project.project_status == 'pendiente' %}
-    <h1>{{project.name}}</h1>
-{% elif project.project_status == 'en_progreso' %}
-    {{project.name}}
-{% endif %} -->
-
-<!-- <p>Estado: {{project.project_status}}</p>
-<p>Tipo: {{project.project_type}}</p> -->
-
-<main class="container">
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <h1 class="text-secondary">{{project.name}}</h1>
-            {{error}}
-
-            <form method="POST">
-                {% csrf_token %}
-                {{form.as_p}}
-                <button class="btn btn-primary mx-2 my-2" type="submit">
-                    Actualizar
-                </button>
-            </form>
-            <div class="d-flex">
-    
-                <form action="{% url 'project_complete' project.id %}" method="POST">
-                    {% csrf_token %}
-                    <button class="btn btn-secondary mx-2" type="submit">
-                        Completo
-                    </button>
-                </form>
-    
-                <form action="{% url 'project_deactivate' project.id %}" method="POST">
-                    {% csrf_token %}
-                    <button class="btn btn-danger mx-2" type="submit">
-                        Inhabilitar
-                    </button>
-                </form>
-            </div>
+  <!-- TARJETA -->
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-4">
+      <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger mt-2">
+          {% for err in form.non_field_errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
         </div>
+        {% endif %}
+
+        <div class="row g-4">
+          <!-- COLUMNA IZQUIERDA -->
+          <div class="col-lg-6">
+
+            <div class="mb-3">
+              <label class="form-label">Código del proyecto <span class="text-danger">*</span></label>
+              {{ form.codigo }}
+              {% if form.codigo.errors %}
+              <div class="text-danger small mt-1">
+                {% for err in form.codigo.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Nombre del proyecto <span class="text-danger">*</span></label>
+              {{ form.nombre }}
+              {% if form.nombre.errors %}
+              <div class="text-danger small mt-1">
+                {% for err in form.nombre.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Descripción</label>
+              {{ form.descripcion }}
+              {% if form.descripcion.errors %}
+              <div class="text-danger small mt-1">
+                {% for err in form.descripcion.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </div>
+              {% endif %}
+            </div>
+
+            <div class="row">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Fecha inicio <span class="text-danger">*</span></label>
+                {{ form.fecha_inicio }}
+                {% if form.fecha_inicio.errors %}
+                <div class="text-danger small mt-1">
+                  {% for err in form.fecha_inicio.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                </div>
+                {% endif %}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Fecha final</label>
+                {{ form.fecha_fin }}
+                {% if form.fecha_fin.errors %}
+                <div class="text-danger small mt-1">
+                  {% for err in form.fecha_fin.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                </div>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Monto total (Bs.) <span class="text-danger">*</span></label>
+              {{ form.monto_total }}
+              {% if form.monto_total.errors %}
+              <div class="text-danger small mt-1">
+                {% for err in form.monto_total.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </div>
+              {% endif %}
+            </div>
+
+          </div>
+
+          <!-- COLUMNA DERECHA -->
+          <div class="col-lg-6">
+
+            <div class="mb-3">
+              <label class="form-label">Estado del proyecto <span class="text-danger">*</span></label>
+              {{ form.estado_proyecto }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Tipo de proyecto <span class="text-danger">*</span></label>
+              {{ form.tipo_proyecto }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Cliente / Contratante <span class="text-danger">*</span></label>
+              {{ form.cliente }}
+              {% if form.cliente.errors %}
+              <div class="text-danger small mt-1">
+                {% for err in form.cliente.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Empleado asignado</label>
+              {{ form.empleado_asignado }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Contrato firmado (PDF / Imagen)</label>
+              {{ form.foto_contrato_firmado }}
+              {% if form.foto_contrato_firmado.errors %}
+              <div class="text-danger small mt-1">
+                {% for err in form.foto_contrato_firmado.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </div>
+              {% endif %}
+            </div>
+
+          </div>
+        </div>
+
+        <div class="text-muted small mt-2 mb-3">
+          <span class="text-danger">*</span> Campos obligatorios
+        </div>
+
+        {% if error %}
+        <div class="alert alert-danger mt-3">{{ error }}</div>
+        {% endif %}
+
+        <!-- BOTONES -->
+        <div class="d-flex justify-content-between align-items-center mt-4">
+          <a href="{% url 'projects' %}" class="btn btn-outline-secondary">Cancelar</a>
+          <div class="d-flex gap-2">
+            {% if project.estado_proyecto != 'completado' %}
+            <button type="button" class="btn btn-outline-success btn-sm px-3"
+                    data-bs-toggle="modal" data-bs-target="#completeModal">
+              Marcar como completado
+            </button>
+            {% endif %}
+            <button type="button" class="btn btn-outline-danger btn-sm px-3"
+                    data-bs-toggle="modal" data-bs-target="#deactivateModal">
+              Inhabilitar
+            </button>
+            <button class="btn btn-primary px-4" type="submit">Actualizar</button>
+          </div>
+        </div>
+      </form>
     </div>
+  </div>
 </main>
 
+<!-- Modal: Marcar como Completado -->
+<div class="modal fade" id="completeModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Confirmar</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        ¿Desea marcar el proyecto <strong>{{ project.nombre }}</strong> como completado?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <form action="{% url 'project_complete' project.id %}" method="POST" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-success btn-sm">Sí, marcar como completado</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Inhabilitar -->
+<div class="modal fade" id="deactivateModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Confirmar Inhabilitación</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        ¿Está seguro que desea inhabilitar el proyecto <strong>{{ project.nombre }}</strong>?
+        Esta acción no se puede deshacer fácilmente.
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <form action="{% url 'project_deactivate' project.id %}" method="POST" style="display:inline;">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-sm">Inhabilitar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Pintar de rojo los campos con errores del servidor
+  document.querySelectorAll('.text-danger.small.mt-1').forEach(function (errorDiv) {
+    var prev = errorDiv.previousElementSibling;
+    if (prev && (prev.tagName === 'INPUT' || prev.tagName === 'SELECT' || prev.tagName === 'TEXTAREA')) {
+      prev.classList.add('is-invalid');
+    }
+  });
+</script>
+<script>
+  (function () {
+    'use strict'
+    window.addEventListener('load', function () {
+      var forms = document.getElementsByClassName('needs-validation')
+      Array.prototype.filter.call(forms, function (form) {
+        form.addEventListener('submit', function (event) {
+          if (!form.checkValidity()) {
+            event.preventDefault()
+            event.stopPropagation()
+          }
+          form.classList.add('was-validated')
+        }, false)
+      })
+    }, false)
+  })()
+</script>
 {% endblock %}

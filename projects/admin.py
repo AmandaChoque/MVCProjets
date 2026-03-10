@@ -1,48 +1,69 @@
 from django.contrib import admin
-
 from projects.models import Proyecto, Empleado, HistorialPago, Pago, Propuesta, EntidadPublica, Cliente
 
-# Register your models here.
+
+@admin.register(Proyecto)
 class ProyectoAdmin(admin.ModelAdmin):
-    readonly_fields = ("created", )
-    list_display = ('id', 'nombre','estado_pago','fecha_inicio','fecha_fin','estado_proyecto','tipo_proyecto', 'activo','created',
-'updated_at',
-'deleted_at', 'user')
-    search_fields = ['nombre']
-admin.site.register(Proyecto, ProyectoAdmin)
+    readonly_fields = ('created', 'updated_at', 'deleted_at')
+    list_display = ('codigo', 'nombre', 'estado_proyecto', 'tipo_proyecto', 'estado_pago', 'monto_total', 'activo', 'fecha_inicio', 'user')
+    list_filter = ('activo', 'estado_proyecto', 'tipo_proyecto', 'estado_pago')
+    search_fields = ('nombre', 'codigo', 'cliente__nombre', 'cliente__apellido_paterno')
+    ordering = ('-created',)
+    list_per_page = 20
 
+
+@admin.register(Empleado)
 class EmpleadoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'nombre','apellido_paterno','apellido_materno','numero_celular','fecha_contratacion', 'salario', 'cargo', 'carnet_identidad')
-    search_fields = ['apellido_paterno']
-admin.site.register(Empleado, EmpleadoAdmin)
-
-class HistorialPagoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'fecha_modificacion','monto_anterior','monto_actual','motivo_cambio')
-    search_fields = ['motivo_cambio']
-admin.site.register(HistorialPago, HistorialPagoAdmin)
-
-class EntidadPublicaAdmin(admin.ModelAdmin):
-    list_display = ('id', 'representante_legal','contacto','direccion','nombre_entidad')
-    search_fields = ['nombre_entidad']
-admin.site.register(EntidadPublica, EntidadPublicaAdmin)
+    list_display = ('nombre', 'apellido_paterno', 'apellido_materno', 'cargo', 'carnet_identidad', 'numero_celular', 'activo')
+    list_filter = ('activo', 'cargo')
+    search_fields = ('nombre', 'apellido_paterno', 'carnet_identidad')
+    ordering = ('apellido_paterno', 'nombre')
+    list_per_page = 20
 
 
-class PropuestaAdmin(admin.ModelAdmin):
-    list_display = ('id', 'fecha_presentacion','monto_presupuesto','requisitos','entidad_publica', 'proyecto')
-    search_fields = ['requisitos']
-admin.site.register(Propuesta, PropuestaAdmin)
-
+@admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
-    list_display = ('id','nombre','cargo','nit_ci','nombre', 'activo')
-    search_fields = ['nombre']
-    list_filter = ['activo']
+    list_display = ('nombre', 'apellido_paterno', 'cargo', 'nit_ci', 'tipo_contratante', 'telefono', 'activo')
+    list_filter = ('activo', 'tipo_contratante')
+    search_fields = ('nombre', 'apellido_paterno', 'nit_ci', 'cargo')
+    ordering = ('apellido_paterno', 'nombre')
+    list_per_page = 20
 
-    def get_queryset(self, _request):
+    def get_queryset(self, request):
         return Cliente.all_objects.all()
 
-admin.site.register(Cliente, ClienteAdmin)
 
+@admin.register(Pago)
 class PagoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'monto','fecha','estado','tipo_pago', 'proyecto')
-    search_fields = ['estado']
-admin.site.register(Pago, PagoAdmin)
+    list_display = ('id', 'monto', 'fecha', 'estado', 'tipo_pago', 'proyecto', 'activo', 'created')
+    list_filter = ('activo', 'estado', 'tipo_pago')
+    search_fields = ('proyecto__nombre', 'proyecto__codigo')
+    ordering = ('-fecha',)
+    list_per_page = 20
+
+
+@admin.register(EntidadPublica)
+class EntidadPublicaAdmin(admin.ModelAdmin):
+    list_display = ('nombre_entidad', 'representante_legal', 'contacto', 'direccion', 'activo')
+    list_filter = ('activo',)
+    search_fields = ('nombre_entidad', 'representante_legal', 'contacto')
+    ordering = ('nombre_entidad',)
+    list_per_page = 20
+
+
+@admin.register(Propuesta)
+class PropuestaAdmin(admin.ModelAdmin):
+    list_display = ('id', 'entidad_publica', 'fecha_presentacion', 'monto_presupuesto', 'activo', 'created')
+    list_filter = ('activo', 'entidad_publica')
+    search_fields = ('entidad_publica__nombre_entidad', 'requisitos')
+    ordering = ('-fecha_presentacion',)
+    list_per_page = 20
+
+
+@admin.register(HistorialPago)
+class HistorialPagoAdmin(admin.ModelAdmin):
+    list_display = ('proyecto', 'monto_anterior', 'monto_actual', 'motivo_cambio', 'fecha_modificacion')
+    list_filter = ('proyecto',)
+    search_fields = ('proyecto__nombre', 'motivo_cambio')
+    ordering = ('-fecha_modificacion',)
+    list_per_page = 20

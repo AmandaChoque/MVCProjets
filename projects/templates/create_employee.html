@@ -1,4 +1,23 @@
-{% extends 'base.html' %} {% block content %} {{error}}
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+  .was-validated .form-control:valid,
+  .was-validated .form-select:valid {
+    border-color: #dee2e6;
+    background-image: none;
+    padding-right: calc(1.5em + 0.75rem);
+  }
+  .was-validated .form-control:valid:focus,
+  .was-validated .form-select:valid:focus {
+    border-color: #dee2e6;
+    box-shadow: 0 0 0 0.25rem rgba(39, 128, 227, 0.25);
+  }
+  .valid-feedback { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
 <main class="container-fluid px-5 py-4">
   <!-- ENCABEZADO -->
   <div class="mb-4">
@@ -9,35 +28,35 @@
   <!-- TARJETA -->
   <div class="card border-0 shadow-sm rounded-3">
     <div class="card-body p-4">
-      <form
-        action="/employees/create/"
-        method="POST"
-        enctype="multipart/form-data"
-      >
+      <form action="/employees/create/" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
         {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger mt-2">
+          {% for err in form.non_field_errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
 
         <div class="row g-4">
           <!-- COLUMNA IZQUIERDA -->
           <div class="col-lg-6">
             <div class="mb-3">
-              <label class="form-label"
-                >Usuario Asociado <span class="text-danger">*</span></label
-              >
-              {{ form.user }}
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label"
-                >Nombre <span class="text-danger">*</span></label
-              >
+              <label class="form-label">Nombre <span class="text-danger">*</span></label>
               {{ form.nombre }}
+              {% if form.nombre.errors %}
+              <div class="text-danger small mt-1">
+                {% for err in form.nombre.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </div>
+              {% endif %}
             </div>
 
             <div class="mb-3">
-              <label class="form-label"
-                >Apellido Paterno <span class="text-danger">*</span></label
-              >
+              <label class="form-label">Apellido Paterno <span class="text-danger">*</span></label>
               {{ form.apellido_paterno }}
+              {% if form.apellido_paterno.errors %}
+              <div class="text-danger small mt-1">
+                {% for err in form.apellido_paterno.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </div>
+              {% endif %}
             </div>
 
             <div class="mb-3">
@@ -46,8 +65,16 @@
             </div>
 
             <div class="mb-3">
-              <label class="form-label">Número de Celular</label>
+              <label class="form-label">Número de Celular <span class="text-danger">*</span></label>
               {{ form.numero_celular }}
+              {% if form.numero_celular.errors %}
+              <div class="text-danger small mt-1">
+                {% for err in form.numero_celular.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </div>
+              {% endif %}
+              <div class="invalid-feedback">
+                El celular debe contener solo números y al menos 7 dígitos.
+              </div>
             </div>
           </div>
 
@@ -59,20 +86,36 @@
             </div>
 
             <div class="mb-3">
-              <label class="form-label">Salario</label>
+              <label class="form-label">Salario (Bs.)</label>
               {{ form.salario }}
+              {% if form.salario.errors %}
+              <div class="text-danger small mt-1">
+                {% for err in form.salario.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </div>
+              {% endif %}
             </div>
 
             <div class="mb-3">
-              <label class="form-label">Cargo</label>
+              <label class="form-label">Cargo <span class="text-danger">*</span></label>
               {{ form.cargo }}
+              {% if form.cargo.errors %}
+              <div class="text-danger small mt-1">
+                {% for err in form.cargo.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </div>
+              {% endif %}
             </div>
 
             <div class="mb-3">
-              <label class="form-label"
-                >Carnet de Identidad <span class="text-danger">*</span></label
-              >
+              <label class="form-label">Carnet de Identidad <span class="text-danger">*</span></label>
               {{ form.carnet_identidad }}
+              {% if form.carnet_identidad.errors %}
+              <div class="text-danger small mt-1">
+                {% for err in form.carnet_identidad.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </div>
+              {% endif %}
+              <div class="invalid-feedback">
+                El carnet debe contener solo números y al menos 6 dígitos.
+              </div>
             </div>
           </div>
         </div>
@@ -85,12 +128,42 @@
         <div class="alert alert-danger mt-3">{{ error }}</div>
         {% endif %}
 
-        <!-- BOTÓN -->
-        <div class="d-flex justify-content-end mt-4">
-          <button class="btn btn-primary px-4">Guardar empleado</button>
+        <!-- BOTONES -->
+        <div class="d-flex justify-content-between mt-4">
+          <a href="{% url 'employees' %}" class="btn btn-outline-secondary">Cancelar</a>
+          <button class="btn btn-primary px-4" type="submit">Guardar empleado</button>
         </div>
       </form>
     </div>
   </div>
 </main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Pintar de rojo los campos con errores del servidor
+  document.querySelectorAll('.text-danger.small.mt-1').forEach(function (errorDiv) {
+    var prev = errorDiv.previousElementSibling;
+    if (prev && (prev.tagName === 'INPUT' || prev.tagName === 'SELECT' || prev.tagName === 'TEXTAREA')) {
+      prev.classList.add('is-invalid');
+    }
+  });
+</script>
+<script>
+  (function () {
+    'use strict'
+    window.addEventListener('load', function () {
+      var forms = document.getElementsByClassName('needs-validation')
+      Array.prototype.filter.call(forms, function (form) {
+        form.addEventListener('submit', function (event) {
+          if (!form.checkValidity()) {
+            event.preventDefault()
+            event.stopPropagation()
+          }
+          form.classList.add('was-validated')
+        }, false)
+      })
+    }, false)
+  })()
+</script>
 {% endblock %}

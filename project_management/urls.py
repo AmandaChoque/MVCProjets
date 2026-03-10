@@ -35,9 +35,9 @@ urlpatterns = [
     
     # Proyects
     path('projects/', views.projects, name='projects'),
-    path('projects_completed/', views.projects_completed, name='projects_completed'),
     path('projects/create/', views.create_project, name='create_project'),
     path('projects/<int:id_project>/', views.project_detail, name='project_detail'),
+    path('projects/<int:id_project>/view/', views.project_view, name='project_view'),
     path('projects/<int:id_project>/complete/', views.project_complete, name='project_complete'),
     path('projects/<int:id_project>/delete/', views.project_delete, name='project_delete'),
     path('projects/<int:id_project>/deactivate/', views.deactivate_project, name='project_deactivate'),
@@ -46,12 +46,14 @@ urlpatterns = [
     path('employees/', views.employees, name='employees'),
     path('employees/create/', views.create_employee, name='create_employee'),
     path('employees/<int:id_employee>/', views.employee_detail, name='employee_detail'),
+    path('employees/<int:id_employee>/view/', views.employee_view, name='employee_view'),
     path('employees/<int:id_employee>/deactivate/', views.deactivate_employee, name='employee_deactivate'),
 
     # Payments
     path("payments/", views.payment_list, name="payments"),
     path("payments/create/", views.create_payment, name="create_payment"),
     path('payments/<int:id_payment>/', views.payment_detail, name='payment_detail'),
+    path('payments/<int:id_payment>/view/', views.payment_view, name='payment_view'),
     path('payments/<int:id_payment>/deactivate/', views.deactivate_payment, name='payment_deactivate'),
 
     # Public Entities
@@ -73,7 +75,6 @@ urlpatterns = [
     path('clientes/<int:id_cliente>/', views.cliente_detail, name='cliente_detail'),
     path('clientes/<int:id_cliente>/ver/', views.cliente_view, name='cliente_view'),
     path('clientes/<int:id_cliente>/deactivate/', views.deactivate_cliente, name='cliente_deactivate'),
-    path('cliente/create/', views.create_cliente, name='create_cliente'),
 
     # Analysis y Reporte
     path('reporte-analisis/', views.project_analysis, name='project_analysis'),
@@ -81,8 +82,4 @@ urlpatterns = [
     path('payments/filter/', views.filter_payments_by_project_name, name='filter_payments_by_project_name'),
     path('payment-analysis/', views.payment_analysis, name='payment_analysis'),
 
-    # path('project/<int:id_project>/payments/', views.filter_payments_by_project, name='filter_payments_by_project'),
-    # path('project/<int:project_id>/payments/', views.project_payment_history, name='project_payment_history'),
-    # path('project/<int:project_id>/payments/pdf/', views.generate_payment_pdf, name='generate_payment_pdf'),
-    # path('project-analysis/', project_analysis, name='project_analysis'),
 ]

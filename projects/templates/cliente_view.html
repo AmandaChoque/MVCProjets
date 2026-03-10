@@ -60,6 +60,20 @@
                 <div class="col-sm-4"><strong>Teléfono:</strong></div>
                 <div class="col-sm-8">{{ cliente.telefono }}</div>
               </div>
+              <div class="row mb-2">
+                <div class="col-sm-4"><strong>Correo:</strong></div>
+                <div class="col-sm-8">
+                  {% if cliente.correo %}
+                    <a href="mailto:{{ cliente.correo }}">{{ cliente.correo }}</a>
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-sm-4"><strong>Registrado:</strong></div>
+                <div class="col-sm-8 text-muted small">{{ cliente.created|date:"d/m/Y" }}</div>
+              </div>
             </div>
             <div class="col-md-6">
               <div class="row mb-2">

@@ -68,6 +68,7 @@
     <div class="card-body py-2">
 
       <form method="GET" action="{% url 'clientes' %}" class="row g-2">
+        <input type="hidden" name="per_page" value="{{ per_page }}">
 
         <div class="col-md-3">
           <input
@@ -161,9 +162,13 @@
           <td class="small">{{ cliente.cargo }}</td>
 
           <td>
-            <span class="badge bg-primary small">
-              {{ cliente.get_tipo_contratante_display }}
-            </span>
+            {% if cliente.tipo_contratante == 'empresa' %}
+              <span class="badge bg-primary small">{{ cliente.get_tipo_contratante_display }}</span>
+            {% elif cliente.tipo_contratante == 'personal' %}
+              <span class="badge bg-success small">{{ cliente.get_tipo_contratante_display }}</span>
+            {% else %}
+              <span class="badge bg-warning text-dark small">{{ cliente.get_tipo_contratante_display }}</span>
+            {% endif %}
           </td>
 
           <td class="small">{{ cliente.telefono }}</td>

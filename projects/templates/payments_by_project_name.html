@@ -1,62 +1,227 @@
 {% extends 'base.html' %}
-
 {% block content %}
-<body class="container mt-5">
-    <h1 class="mb-4">Filtrar Pagos por Proyecto</h1>
 
-    <!-- Formulario de Filtro -->
-    <form method="get" action="{% url 'filter_payments_by_project_name' %}" class="row g-3">
-        <div class="col-md-3">
-            <label for="project_name" class="form-label">Proyecto:</label>
-            <select name="project_name" id="project_name" class="form-select">
-                <option value="">Seleccione un Proyecto</option>
-                {% for project in projects %}
-                    <option value="{{ project.name }}" {% if project.name == project_name %}selected{% endif %}>{{ project.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        
-        <div class="col-md-3">
-            <label for="start_date" class="form-label">Fecha Inicio:</label>
-            <input type="date" name="start_date" id="start_date" class="form-control" value="{{ start_date }}">
-        </div>
-        
-        <div class="col-md-3">
-            <label for="end_date" class="form-label">Fecha Fin:</label>
-            <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date }}">
-        </div>
-    
-        <div class="col-12">
-            <button type="submit" class="btn btn-primary">Filtrar</button>
-            <a href="?pdf=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}" class="btn btn-secondary">Generar PDF</a>
-        </div>
-    </form>
-    
+<div class="container-fluid py-3">
 
-    <h2 class="mt-5">Pagos Filtrados</h2>
-    <table class="table table-bordered mt-3">
-        <thead class="table-light">
-            <tr>
-                <th>Proyecto</th>
-                <th>Monto</th>
-                <th>Fecha de Pago</th>
-                <th>Estado</th>
-            </tr>
+  <!-- ======================= ENCABEZADO ======================= -->
+  <div class="mb-2 d-flex justify-content-between align-items-center">
+    <h5 class="fw-semibold text-secondary mb-0">Reporte de Pagos</h5>
+    <div class="d-flex gap-2">
+      <a href="?pdf=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}"
+         target="_blank"
+         class="btn btn-outline-secondary btn-sm">
+        Vista previa PDF
+      </a>
+      <a href="?pdf=1&download=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}"
+         class="btn btn-outline-danger btn-sm">
+        ↓ Descargar PDF
+      </a>
+    </div>
+  </div>
+
+
+  <!-- ======================= FILTROS ======================= -->
+  <div class="card mb-3">
+    <div class="card-body py-2">
+      <form method="get" action="{% url 'filter_payments_by_project_name' %}" class="row g-2 align-items-end">
+
+        <div class="col-md-3">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Proyecto</label>
+          <select name="project_name" class="form-select form-select-sm">
+            <option value="">Todos los proyectos</option>
+            {% for project in projects %}
+            <option value="{{ project.nombre }}"
+              {% if project.nombre == project_name %}selected{% endif %}>
+              {{ project.nombre }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Fecha inicio</label>
+          <input type="date" name="start_date" class="form-control form-control-sm"
+                 value="{{ start_date }}">
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Fecha fin</label>
+          <input type="date" name="end_date" class="form-control form-control-sm"
+                 value="{{ end_date }}">
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Estado del pago</label>
+          <select class="form-select form-select-sm" name="filter_estado">
+            <option value="">Todos</option>
+            <option value="pagado" {% if filter_estado == "pagado" %}selected{% endif %}>Pagado</option>
+            <option value="pendiente" {% if filter_estado == "pendiente" %}selected{% endif %}>Pendiente</option>
+          </select>
+        </div>
+
+        <div class="col-md-1">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Tipo de pago</label>
+          <select class="form-select form-select-sm" name="filter_tipo">
+            <option value="">Todos</option>
+            <option value="parcial" {% if filter_tipo == "parcial" %}selected{% endif %}>Parcial</option>
+            <option value="completo" {% if filter_tipo == "completo" %}selected{% endif %}>Completo</option>
+          </select>
+        </div>
+
+        <div class="col-md-1">
+          <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
+        </div>
+
+        <div class="col-md-1">
+          <a href="{% url 'filter_payments_by_project_name' %}"
+             class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+
+  <!-- ======================= TARJETAS RESUMEN ======================= -->
+  <div class="row g-3 mb-3">
+
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body py-3">
+          <div class="text-muted small text-uppercase fw-semibold mb-1">Total Registros</div>
+          <div class="fs-4 fw-bold">{{ payments|length }}</div>
+          <div class="small text-muted">pagos encontrados</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body py-3">
+          <div class="text-muted small text-uppercase fw-semibold mb-1">Monto Total</div>
+          <div class="fs-4 fw-bold">Bs. {{ total_monto|floatformat:2 }}</div>
+          <div class="small text-muted">suma de todos los pagos</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body py-3">
+          <div class="text-muted small text-uppercase fw-semibold mb-1">Monto Pagado</div>
+          <div class="fs-4 fw-bold text-success">Bs. {{ monto_pagado|floatformat:2 }}</div>
+          <div class="small text-muted">{{ count_pagado }} pago(s) confirmados</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body py-3">
+          <div class="text-muted small text-uppercase fw-semibold mb-1">Monto Pendiente</div>
+          <div class="fs-4 fw-bold text-warning">Bs. {{ monto_pendiente|floatformat:2 }}</div>
+          <div class="small text-muted">{{ count_pendiente }} pago(s) pendientes</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+
+  <!-- ======================= TABLA ======================= -->
+  <div class="card mb-3">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+      <span class="fw-semibold small">Detalle de Pagos</span>
+      <span class="text-muted small">{{ payments|length }} registro(s)</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle small mb-0">
+        <thead class="table-light small text-uppercase fw-semibold">
+          <tr>
+            <th>Proyecto</th>
+            <th>Contratante</th>
+            <th>Tipo Proyecto</th>
+            <th>Estado Proyecto</th>
+            <th>Monto Total Proy. (Bs.)</th>
+            <th>Monto Pago (Bs.)</th>
+            <th>Fecha</th>
+            <th>Estado Pago</th>
+            <th>Tipo Pago</th>
+          </tr>
         </thead>
         <tbody>
-            {% for payment in payments %}
-                <tr>
-                    <td>{{ payment.project.name }}</td>
-                    <td>{{ payment.amount }}</td>
-                    <td>{{ payment.date }}</td>
-                    <td>{{ payment.status }}</td>
-                </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="4">No se encontraron pagos con los filtros seleccionados.</td>
-                </tr>
-            {% endfor %}
+          {% for payment in payments %}
+          <tr>
+            <td class="fw-semibold">{{ payment.proyecto.nombre }}</td>
+
+            <td>
+              {% if payment.proyecto.cliente %}
+                {{ payment.proyecto.cliente.nombre }} {{ payment.proyecto.cliente.apellido_paterno }}
+              {% else %}
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if payment.proyecto.tipo_proyecto == 'licitacion' %}
+                <span class="badge bg-secondary">Licitación</span>
+              {% else %}
+                <span class="badge bg-dark">Contrat. Directa</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if payment.proyecto.estado_proyecto == 'completado' %}
+                <span class="badge bg-success">Completado</span>
+              {% elif payment.proyecto.estado_proyecto == 'en_progreso' %}
+                <span class="badge bg-primary">En Progreso</span>
+              {% else %}
+                <span class="badge bg-warning text-dark">Pendiente</span>
+              {% endif %}
+            </td>
+
+            <td class="text-end">{{ payment.proyecto.monto_total|floatformat:2 }}</td>
+            <td class="text-end fw-semibold">{{ payment.monto|floatformat:2 }}</td>
+            <td>{{ payment.fecha|date:"d/m/Y" }}</td>
+
+            <td>
+              {% if payment.estado == 'pagado' %}
+                <span class="badge bg-success">Pagado</span>
+              {% else %}
+                <span class="badge bg-warning text-dark">Pendiente</span>
+              {% endif %}
+            </td>
+
+            <td>
+              {% if payment.tipo_pago == 'completo' %}
+                <span class="badge bg-primary">Completo</span>
+              {% else %}
+                <span class="badge bg-info text-dark">Parcial</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="9" class="text-center text-muted py-3 small">
+              No se encontraron pagos con los filtros seleccionados.
+            </td>
+          </tr>
+          {% endfor %}
         </tbody>
-    </table>
-</body>
+
+        {% if payments %}
+        <tfoot class="table-light fw-semibold small">
+          <tr>
+            <td colspan="5" class="text-end text-muted">Totales:</td>
+            <td class="text-end">Bs. {{ total_monto|floatformat:2 }}</td>
+            <td colspan="3"></td>
+          </tr>
+        </tfoot>
+        {% endif %}
+
+      </table>
+    </div>
+  </div>
+
+</div>
 {% endblock %}

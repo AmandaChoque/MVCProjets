@@ -1,36 +1,177 @@
-<!-- templates/project_report_pdf.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Reporte de Proyectos PDF</title>
+  <meta charset="UTF-8">
+  <title>Reporte de Proyectos</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 11px;
+      margin: 30px;
+      color: #333;
+    }
+    .summary {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+    }
+    .summary td {
+      width: 20%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      text-align: center;
+      background-color: #f9f9f9;
+    }
+    .summary .label {
+      font-size: 9px;
+      text-transform: uppercase;
+      color: #666;
+      letter-spacing: 0.04em;
+    }
+    .summary .value {
+      font-size: 15px;
+      font-weight: bold;
+      margin-top: 3px;
+    }
+    .value.completado { color: #2e7d32; }
+    .value.progreso   { color: #1565c0; }
+    .value.pendiente  { color: #f57c00; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+    thead { background-color: #f0f0f0; }
+    th {
+      padding: 6px 8px;
+      text-align: left;
+      font-size: 9px;
+      text-transform: uppercase;
+      border-bottom: 1px solid #ccc;
+    }
+    td {
+      padding: 5px 8px;
+      border-bottom: 1px solid #eee;
+      font-size: 10px;
+    }
+    tr:nth-child(even) td { background-color: #fafafa; }
+    tfoot td {
+      font-weight: bold;
+      border-top: 2px solid #333;
+      background-color: #f0f0f0;
+    }
+    .footer {
+      margin-top: 20px;
+      font-size: 9px;
+      color: #888;
+      text-align: right;
+    }
+  </style>
 </head>
 <body>
-    <h1>Reporte de Proyectos</h1>
-    <p>Generado el {{ now }}</p>
 
-    <h2>Proyectos Filtrados</h2>
-    <table border="1" cellspacing="0" cellpadding="5">
-        <thead>
-            <tr>
-                <th>Nombre del Proyecto</th>
-                <th>Tipo</th>
-                <th>Estado</th>
-                <th>Fecha Inicio</th>
-                <th>Fecha Fin</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for project in projects %}
-                <tr>
-                    <td>{{ project.name }}</td>
-                    <td>{{ project.get_project_type_display }}</td>
-                    <td>{{ project.get_project_status_display }}</td>
-                    <td>{{ project.start_date }}</td>
-                    <td>{{ project.end_date }}</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+  <!-- ENCABEZADO -->
+  <table width="100%" bgcolor="#1a1a2e" style="margin-bottom:16px;">
+    <tr>
+      <td style="padding:14px 18px; vertical-align:middle;">
+        <div style="font-size:20px; font-weight:bold; color:#ffffff; margin-bottom:2px;">Reporte de Proyectos</div>
+        <div style="font-size:10px; color:#aab0c0;">Sistema de Gestión de Proyectos</div>
+        {% if start_date or project_type or project_status %}
+        <div style="margin-top:8px; padding-top:8px; border-top:1px solid #3a3a5c; font-size:9px; color:#aab0c0;">
+          {% if start_date %}Período: <b style="color:#ffffff;">{{ start_date }} — {{ end_date|default:"hoy" }}</b>{% endif %}
+          {% if project_type %}&nbsp;&nbsp;|&nbsp;&nbsp;Tipo: <b style="color:#ffffff;">{{ project_type }}</b>{% endif %}
+          {% if project_status %}&nbsp;&nbsp;|&nbsp;&nbsp;Estado: <b style="color:#ffffff;">{{ project_status }}</b>{% endif %}
+        </div>
+        {% endif %}
+      </td>
+      <td style="padding:14px 18px; vertical-align:middle; text-align:right; width:140px;">
+        <div style="font-size:9px; color:#aab0c0;">Generado el</div>
+        <div style="font-size:14px; font-weight:bold; color:#ffffff;">{{ now|date:"d/m/Y" }}</div>
+        <div style="font-size:9px; color:#aab0c0;">{{ now|date:"H:i" }} hrs</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- RESUMEN -->
+  <table class="summary">
+    <tr>
+      <td>
+        <div class="label">Total Proyectos</div>
+        <div class="value">{{ projects|length }}</div>
+      </td>
+      <td>
+        <div class="label">Monto Total</div>
+        <div class="value">Bs. {{ monto_total|floatformat:2 }}</div>
+      </td>
+      <td>
+        <div class="label">Completados</div>
+        <div class="value completado">{{ count_completado }}</div>
+      </td>
+      <td>
+        <div class="label">En Progreso</div>
+        <div class="value progreso">{{ count_en_progreso }}</div>
+      </td>
+      <td>
+        <div class="label">Pendientes</div>
+        <div class="value pendiente">{{ count_pendiente }}</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- TABLA -->
+  <table>
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Nombre del Proyecto</th>
+        <th>Contratante</th>
+        <th>Tipo</th>
+        <th>Estado</th>
+        <th>Estado Pago</th>
+        <th>Monto Total (Bs.)</th>
+        <th>Fecha Inicio</th>
+        <th>Fecha Fin</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for project in projects %}
+      <tr>
+        <td>{{ project.codigo }}</td>
+        <td><strong>{{ project.nombre }}</strong></td>
+        <td>
+          {% if project.cliente %}
+            {{ project.cliente.nombre }} {{ project.cliente.apellido_paterno }}
+          {% else %}—{% endif %}
+        </td>
+        <td>{{ project.get_tipo_proyecto_display }}</td>
+        <td>{{ project.get_estado_proyecto_display }}</td>
+        <td>{{ project.get_estado_pago_display }}</td>
+        <td>{{ project.monto_total|floatformat:2 }}</td>
+        <td>{{ project.fecha_inicio|date:"d/m/Y" }}</td>
+        <td>{{ project.fecha_fin|date:"d/m/Y"|default:"—" }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="9" style="text-align:center; color:#888; padding:12px;">
+          No se encontraron proyectos con los filtros seleccionados.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    {% if projects %}
+    <tfoot>
+      <tr>
+        <td colspan="6" style="text-align:right;">TOTAL:</td>
+        <td>{{ monto_total|floatformat:2 }}</td>
+        <td colspan="2"></td>
+      </tr>
+    </tfoot>
+    {% endif %}
+  </table>
+
+  <div class="footer">
+    Reporte generado por el Sistema de Gestión de Proyectos — {{ now|date:"d/m/Y H:i" }}
+  </div>
+
 </body>
 </html>

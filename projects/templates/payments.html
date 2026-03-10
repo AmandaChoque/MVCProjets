@@ -1,25 +1,245 @@
-{% extends 'base.html' %} {% block content %}
-<main class="container">
-  <div class="row">
-    <div class="col-md-8 offset-md-3">
-      <h1 class="text-center display-6 py-4 fw-bold">PAGOS</h1>
-      <ul class="list-group">
-        {% for payment in payments %}
-        <a class="list-group-item" href="{% url 'payment_detail' payment.id %}">
-          <header class="d-flex justify-content-between">
-            <h2 class="fw-bold">{{payment.proyecto.nombre}}</h2>
+{% extends 'base.html' %}
+{% block content %}
 
-            <p>{{payment.fecha}}</p>
-          </header>
-          <p>Monto: {{payment.monto}}</p>
-          <p>Estado: {{payment.estado}}</p>
-          <!-- <p>Tipo: {{employee. }}</p>
-                    <p>{{employee.}}</p> -->
-        </a>
-        {% endfor %}
-      </ul>
+<div class="container-fluid py-3">
+
+  {% if messages %}
+  <div class="mb-3">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ======================= ENCABEZADO ======================= -->
+  <div class="mb-2 d-flex justify-content-between align-items-center">
+    <a href="{% url 'create_payment' %}" class="btn btn-primary btn-sm">
+      + Nuevo Pago
+    </a>
+    <h5 class="fw-semibold text-secondary mb-0">Gestión de Pagos</h5>
+
+    <div class="d-flex align-items-center gap-3">
+      <form method="GET" action="{% url 'payments' %}" class="d-flex align-items-center">
+        <input type="hidden" name="search_proyecto" value="{{ search_proyecto }}">
+        <input type="hidden" name="filter_estado" value="{{ filter_estado }}">
+        <input type="hidden" name="filter_tipo" value="{{ filter_tipo }}">
+        <input type="hidden" name="page" value="1">
+
+        <span class="small text-muted me-2">Mostrar:</span>
+        <select name="per_page"
+                class="form-select form-select-sm"
+                style="width: 80px;"
+                onchange="this.form.submit()">
+          <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+          <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+          <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+          <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+        </select>
+      </form>
+
+      <div class="text-muted small">
+        Mostrando {{ payments.start_index }} –
+        {{ payments.end_index }}
+        de {{ payments.paginator.count }} registros
+      </div>
     </div>
   </div>
-</main>
+
+
+  <!-- ======================= FILTROS ======================= -->
+  <div class="card mb-3">
+    <div class="card-body py-2">
+      <form method="GET" action="{% url 'payments' %}" class="row g-2">
+        <input type="hidden" name="per_page" value="{{ per_page }}">
+
+        <div class="col-md-4">
+          <input
+            type="text"
+            class="form-control form-control-sm"
+            name="search_proyecto"
+            value="{{ search_proyecto|default:'' }}"
+            placeholder="Nombre del proyecto"
+          />
+        </div>
+
+        <div class="col-md-3">
+          <select class="form-select form-select-sm" name="filter_estado">
+            <option value="">Estado</option>
+            <option value="pagado" {% if filter_estado == "pagado" %}selected{% endif %}>Pagado</option>
+            <option value="pendiente" {% if filter_estado == "pendiente" %}selected{% endif %}>Pendiente</option>
+          </select>
+        </div>
+
+        <div class="col-md-2">
+          <select class="form-select form-select-sm" name="filter_tipo">
+            <option value="">Tipo</option>
+            <option value="parcial" {% if filter_tipo == "parcial" %}selected{% endif %}>Parcial</option>
+            <option value="completo" {% if filter_tipo == "completo" %}selected{% endif %}>Completo</option>
+          </select>
+        </div>
+
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
+        </div>
+
+        <div class="col-md-1">
+          <a href="{% url 'payments' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- ======================= TABLA ======================= -->
+  <div class="table-responsive" style="overflow: visible;">
+    <table class="table table-sm table-hover align-middle small">
+      <thead class="table-light small text-uppercase fw-semibold">
+        <tr>
+          <th>Proyecto</th>
+          <th>Monto (Bs.)</th>
+          <th>Fecha</th>
+          <th>Estado</th>
+          <th>Tipo</th>
+          <th class="text-end" style="width: 60px;">Acciones</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for payment in payments %}
+        <tr>
+          <td class="small fw-semibold">{{ payment.proyecto.nombre }}</td>
+          <td class="small">{{ payment.monto }}</td>
+          <td class="small">{{ payment.fecha|date:"d/m/Y" }}</td>
+
+          <td>
+            {% if payment.estado == 'pagado' %}
+              <span class="badge bg-success small">Pagado</span>
+            {% else %}
+              <span class="badge bg-warning text-dark small">Pendiente</span>
+            {% endif %}
+          </td>
+
+          <td>
+            {% if payment.tipo_pago == 'completo' %}
+              <span class="badge bg-primary small">Completo</span>
+            {% else %}
+              <span class="badge bg-info text-dark small">Parcial</span>
+            {% endif %}
+          </td>
+
+          <td class="text-end">
+            <div class="dropdown">
+              <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
+              <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                <li>
+                  <a class="dropdown-item" href="{% url 'payment_view' payment.id %}">Ver</a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'payment_detail' payment.id %}">Editar</a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <button class="dropdown-item text-danger"
+                    data-bs-toggle="modal"
+                    data-bs-target="#deleteModal"
+                    data-id="{{ payment.id }}"
+                    data-nombre="{{ payment.proyecto.nombre }} — Bs. {{ payment.monto }}">
+                    Inhabilitar
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </td>
+        </tr>
+
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-3 small">
+            No existen pagos registrados.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+
+  <!-- ======================= PAGINACIÓN ======================= -->
+  <nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center mb-0">
+
+      {% if payments.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ payments.previous_page_number }}&per_page={{ per_page }}&search_proyecto={{ search_proyecto }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}">
+          Anterior
+        </a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+      {% endif %}
+
+      {% for num in payments.paginator.page_range %}
+        {% if payments.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > payments.number|add:'-3' and num < payments.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&search_proyecto={{ search_proyecto }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}">
+              {{ num }}
+            </a>
+          </li>
+        {% endif %}
+      {% endfor %}
+
+      {% if payments.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ payments.next_page_number }}&per_page={{ per_page }}&search_proyecto={{ search_proyecto }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}">
+          Siguiente
+        </a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+      {% endif %}
+
+    </ul>
+  </nav>
+
+</div>
+
+<!-- Modal Confirmar Inhabilitación -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Confirmar Inhabilitación</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        ¿Está seguro que desea inhabilitar el pago de
+        <strong id="pagoNombre"></strong>?
+      </div>
+      <div class="modal-footer">
+        <form method="POST" id="deleteForm">
+          {% csrf_token %}
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger btn-sm">Inhabilitar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const deleteModal = document.getElementById('deleteModal');
+  deleteModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const pagoId = button.getAttribute('data-id');
+    const pagoNombre = button.getAttribute('data-nombre');
+    document.getElementById('pagoNombre').textContent = pagoNombre;
+    document.getElementById('deleteForm').action = `/payments/${pagoId}/deactivate/`;
+  });
+</script>
 
 {% endblock %}

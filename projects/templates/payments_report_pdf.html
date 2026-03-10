@@ -1,56 +1,250 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <title>Reporte de Pagos</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        table, th, td {
-            border: 1px solid black;
-        }
-        th, td {
-            padding: 8px;
-            text-align: left;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <title>Reporte de Pagos</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 11px;
+      margin: 30px;
+      color: #333;
+    }
+    .header {
+      background-color: #1a1a2e;
+      color: #fff;
+      padding: 14px 18px;
+      margin-bottom: 16px;
+    }
+    .header table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 0;
+    }
+    .header td {
+      border: none;
+      background: none;
+      padding: 0;
+    }
+    .header .titulo {
+      font-size: 20px;
+      font-weight: bold;
+      color: #fff;
+      margin: 0 0 2px 0;
+    }
+    .header .subtitulo {
+      font-size: 10px;
+      color: #aab0c0;
+      margin: 0;
+    }
+    .header .fecha {
+      font-size: 9px;
+      color: #aab0c0;
+      text-align: right;
+    }
+    .header .fecha strong {
+      display: block;
+      font-size: 12px;
+      color: #fff;
+    }
+    .summary {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+    }
+    .summary td {
+      width: 25%;
+      padding: 10px 12px;
+      border: 1px solid #ddd;
+      text-align: center;
+      background-color: #f9f9f9;
+    }
+    .summary .label {
+      font-size: 9px;
+      text-transform: uppercase;
+      color: #666;
+      letter-spacing: 0.04em;
+    }
+    .summary .value {
+      font-size: 15px;
+      font-weight: bold;
+      margin-top: 3px;
+    }
+    .value.pagado { color: #2e7d32; }
+    .value.pendiente { color: #f57c00; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+    thead {
+      background-color: #f0f0f0;
+    }
+    th {
+      padding: 6px 8px;
+      text-align: left;
+      font-size: 9px;
+      text-transform: uppercase;
+      border-bottom: 1px solid #ccc;
+    }
+    td {
+      padding: 5px 8px;
+      border-bottom: 1px solid #eee;
+      font-size: 10px;
+    }
+    tr:nth-child(even) td {
+      background-color: #fafafa;
+    }
+    tfoot td {
+      font-weight: bold;
+      border-top: 2px solid #333;
+      background-color: #f0f0f0;
+    }
+    .badge-pagado {
+      color: #fff;
+      background-color: #2e7d32;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 9px;
+    }
+    .badge-pendiente {
+      color: #333;
+      background-color: #ffc107;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 9px;
+    }
+    .badge-completo {
+      color: #fff;
+      background-color: #1565c0;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 9px;
+    }
+    .badge-parcial {
+      color: #333;
+      background-color: #0dcaf0;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 9px;
+    }
+    .footer {
+      margin-top: 20px;
+      font-size: 9px;
+      color: #888;
+      text-align: right;
+    }
+  </style>
 </head>
 <body>
-    <h1>Reporte de Pagos</h1>
-    <p><strong>Generado el:</strong> {{ now }}</p>
 
-    <h2>Pagos Filtrados</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Proyecto</th>
-                <th>Monto</th>
-                <th>Fecha de Pago</th>
-                <th>Estado del Pago</th>
-                <th>Tipo de Pago</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for payment in payments %}
-                <tr>
-                    <td>{{ payment.project.name }}</td>
-                    <td>{{ payment.amount }}</td>
-                    <td>{{ payment.date }}</td>
-                    <td>{{ payment.get_status_display }}</td>
-                    <td>{{ payment.get_payment_type_display }}</td>
-                </tr>
-            {% empty %}
-                <tr>
-                    <td colspan="5">No se encontraron pagos con los filtros seleccionados.</td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+  <!-- ENCABEZADO -->
+  <table width="100%" bgcolor="#1a1a2e" style="margin-bottom:16px;">
+    <tr>
+      <td style="padding:14px 18px; vertical-align:middle;">
+        <div style="font-size:20px; font-weight:bold; color:#ffffff; margin-bottom:2px;">Reporte de Pagos</div>
+        <div style="font-size:10px; color:#aab0c0;">Sistema de Gestión de Proyectos</div>
+        {% if project_name or start_date %}
+        <div style="margin-top:8px; padding-top:8px; border-top:1px solid #3a3a5c; font-size:9px; color:#aab0c0;">
+          {% if project_name %}Proyecto: <b style="color:#ffffff;">{{ project_name }}</b>{% endif %}
+          {% if start_date %}&nbsp;&nbsp;|&nbsp;&nbsp;Período: <b style="color:#ffffff;">{{ start_date }} — {{ end_date|default:"hoy" }}</b>{% endif %}
+        </div>
+        {% endif %}
+      </td>
+      <td style="padding:14px 18px; vertical-align:middle; text-align:right; width:140px;">
+        <div style="font-size:9px; color:#aab0c0;">Generado el</div>
+        <div style="font-size:14px; font-weight:bold; color:#ffffff;">{{ now|date:"d/m/Y" }}</div>
+        <div style="font-size:9px; color:#aab0c0;">{{ now|date:"H:i" }} hrs</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- RESUMEN -->
+  <table class="summary">
+    <tr>
+      <td>
+        <div class="label">Total Registros</div>
+        <div class="value">{{ payments|length }}</div>
+      </td>
+      <td>
+        <div class="label">Monto Total</div>
+        <div class="value">Bs. {{ total_monto|floatformat:2 }}</div>
+      </td>
+      <td>
+        <div class="label">Monto Pagado</div>
+        <div class="value pagado">Bs. {{ monto_pagado|floatformat:2 }}</div>
+      </td>
+      <td>
+        <div class="label">Monto Pendiente</div>
+        <div class="value pendiente">Bs. {{ monto_pendiente|floatformat:2 }}</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- TABLA -->
+  <table>
+    <thead>
+      <tr>
+        <th>Proyecto</th>
+        <th>Contratante</th>
+        <th>Estado Proyecto</th>
+        <th>Monto Total Proy. (Bs.)</th>
+        <th>Monto Pago (Bs.)</th>
+        <th>Fecha</th>
+        <th>Estado Pago</th>
+        <th>Tipo Pago</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for payment in payments %}
+      <tr>
+        <td><strong>{{ payment.proyecto.nombre }}</strong></td>
+        <td>
+          {% if payment.proyecto.cliente %}
+            {{ payment.proyecto.cliente.nombre }} {{ payment.proyecto.cliente.apellido_paterno }}
+          {% else %}—{% endif %}
+        </td>
+        <td>{{ payment.proyecto.get_estado_proyecto_display }}</td>
+        <td>{{ payment.proyecto.monto_total|floatformat:2 }}</td>
+        <td>{{ payment.monto|floatformat:2 }}</td>
+        <td>{{ payment.fecha|date:"d/m/Y" }}</td>
+        <td>
+          {% if payment.estado == 'pagado' %}
+            <span class="badge-pagado">Pagado</span>
+          {% else %}
+            <span class="badge-pendiente">Pendiente</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if payment.tipo_pago == 'completo' %}
+            <span class="badge-completo">Completo</span>
+          {% else %}
+            <span class="badge-parcial">Parcial</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="8" style="text-align:center; color:#888; padding:12px;">
+          No se encontraron pagos con los filtros seleccionados.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    {% if payments %}
+    <tfoot>
+      <tr>
+        <td colspan="4" style="text-align:right;">TOTAL:</td>
+        <td>{{ total_monto|floatformat:2 }}</td>
+        <td colspan="3"></td>
+      </tr>
+    </tfoot>
+    {% endif %}
+  </table>
+
+  <div class="footer">
+    Reporte generado por el Sistema de Gestión de Proyectos — {{ now|date:"d/m/Y H:i" }}
+  </div>
+
 </body>
 </html>

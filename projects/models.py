@@ -42,6 +42,7 @@ class Cliente(models.Model):
     apellido_paterno = models.CharField(max_length=50, verbose_name="Apellido Paterno")
     apellido_materno = models.CharField(max_length=50, verbose_name="Apellido Materno")
     telefono = models.CharField(max_length=15, verbose_name="Número de Teléfono")
+    correo = models.EmailField(max_length=100, blank=True, null=True, verbose_name="Correo Electrónico")
     direccion = models.CharField(max_length=255, verbose_name="Dirección")
     tipo_contratante = models.CharField(max_length=20, choices=TIPO_CONTRATANTE_CHOICES, default='entidad_publica', verbose_name="Tipo Contratante")
     created = models.DateTimeField(default=timezone.now)
@@ -66,7 +67,7 @@ class Cliente(models.Model):
 # Empleado
 class Empleado(models.Model):
     # Opciones para el campo "cargo"
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="employee_profile")  # Relación uno a uno con User
+    user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="employee_profile")  # Relación uno a uno con User
     activo = models.BooleanField(default=True, verbose_name="Activo")
 
     POSITION_CHOICES = [
@@ -161,10 +162,7 @@ class Proyecto(AuditModel):
     estado_proyecto = models.CharField(max_length=20, choices=PROJECT_STATUS_CHOICES, default='pendiente', verbose_name="Estado Proyecto")
     tipo_proyecto = models.CharField(max_length=30, choices=PROJECT_TYPE_CHOICES, default='contratacion_directa', verbose_name="Tipo Proyecto")
     foto_contrato_firmado = models.ImageField(upload_to="contrato_firmado", null=True, blank=True, verbose_name="Contrato Firmado")
-    # photo_proposed_contract = models.ImageField(upload_to="contrato_propueso",null = True, blank= True, verbose_name="Contrato Propuesto")
     estado_pago = models.CharField(max_length=20, choices=PAYMENT_STATE_CHOICES, default='no_pagado', verbose_name="Estado de Pago")
-
-    # created =models.DateTimeField(auto_now_add=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     empleado_asignado = models.ForeignKey(Empleado, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Empleado Asignado")
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Contratista")

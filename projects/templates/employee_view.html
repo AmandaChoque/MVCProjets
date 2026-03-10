@@ -1,0 +1,86 @@
+{% extends 'base.html' %} {% block content %}
+<main class="container-fluid px-5 py-4">
+  <!-- ENCABEZADO -->
+  <div class="mb-4">
+    <h4 class="fw-semibold mb-1">Empleados</h4>
+    <span class="text-muted">Ver registro</span>
+  </div>
+
+  <!-- TARJETA -->
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-4">
+      <!-- INFORMACIÓN PERSONAL -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 fw-semibold">Información Personal</h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Nombre:</strong></div>
+                <div class="col-sm-7">{{ employee.nombre }}</div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Apellido paterno:</strong></div>
+                <div class="col-sm-7">{{ employee.apellido_paterno }}</div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Apellido materno:</strong></div>
+                <div class="col-sm-7">{{ employee.apellido_materno|default:"—" }}</div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Registrado:</strong></div>
+                <div class="col-sm-7 text-muted small">{{ employee.created|date:"d/m/Y" }}</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Cargo:</strong></div>
+                <div class="col-sm-7">{{ employee.get_cargo_display }}</div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Carnet de Identidad:</strong></div>
+                <div class="col-sm-7">{{ employee.carnet_identidad }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- INFORMACIÓN LABORAL -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 fw-semibold">Información Laboral</h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Celular:</strong></div>
+                <div class="col-sm-7">{{ employee.numero_celular|default:"—" }}</div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Fecha de contratación:</strong></div>
+                <div class="col-sm-7">{{ employee.fecha_contratacion|date:"d/m/Y"|default:"—" }}</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Salario (Bs.):</strong></div>
+                <div class="col-sm-7">{{ employee.salario|default:"—" }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTONES -->
+      <div class="d-flex justify-content-between mt-4">
+        <a href="{% url 'employees' %}" class="btn btn-outline-secondary">Volver</a>
+        <a href="{% url 'employee_detail' employee.id %}" class="btn btn-primary">Editar</a>
+      </div>
+    </div>
+  </div>
+</main>
+{% endblock %}

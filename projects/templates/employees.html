@@ -1,22 +1,238 @@
 {% extends 'base.html' %}
-
 {% block content %}
-<main class="container">
-    <div class="row">
-        <div class="col-md-8 offset-md-3">
-            <h1 class="text-center display-6 py-4 fw-bold"> EMPLEADOS</h1>
-            <ul class="list-group">
-                {% for employee in employees %}   
-                <a class="list-group-item" href="{% url 'employee_detail' employee.id %}">
-                    <header class="d-flex justify-content-between">
-                        <h2 class="fw-bold">{{ employee.nombre }} {{ employee.apellido_paterno }}</h2>
-                    </header>
-                    <p>CI: {{ employee.carnet_identidad }}</p>
-                    <p>Cargo: {{ employee.get_cargo_display }}</p>
-                    <p>Teléfono: {{ employee.numero_celular }}</p>
-                {% endfor %}
-            </ul>
-        </div>
+
+<div class="container-fluid py-3">
+
+  {% if messages %}
+  <div class="mb-3">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
-</main>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ======================= ENCABEZADO ======================= -->
+  <div class="mb-2 d-flex justify-content-between align-items-center">
+    <a href="{% url 'create_employee' %}" class="btn btn-primary btn-sm">
+      + Nuevo Empleado
+    </a>
+    <h5 class="fw-semibold text-secondary mb-0">Gestión de Empleados</h5>
+
+    <div class="d-flex align-items-center gap-3">
+      <form method="GET" action="{% url 'employees' %}" class="d-flex align-items-center">
+        <input type="hidden" name="search_nombre" value="{{ search_nombre }}">
+        <input type="hidden" name="filter_cargo" value="{{ filter_cargo }}">
+        <input type="hidden" name="page" value="1">
+
+        <span class="small text-muted me-2">Mostrar:</span>
+        <select name="per_page"
+                class="form-select form-select-sm"
+                style="width: 80px;"
+                onchange="this.form.submit()">
+          <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+          <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+          <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+          <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+        </select>
+      </form>
+
+      <div class="text-muted small">
+        Mostrando {{ employees.start_index }} –
+        {{ employees.end_index }}
+        de {{ employees.paginator.count }} registros
+      </div>
+    </div>
+  </div>
+
+
+  <!-- ======================= FILTROS ======================= -->
+  <div class="card mb-3">
+    <div class="card-body py-2">
+      <form method="GET" action="{% url 'employees' %}" class="row g-2">
+        <input type="hidden" name="per_page" value="{{ per_page }}">
+
+        <div class="col-md-5">
+          <input
+            type="text"
+            class="form-control form-control-sm"
+            name="search_nombre"
+            value="{{ search_nombre|default:'' }}"
+            placeholder="Buscar por nombre o apellido"
+          />
+        </div>
+
+        <div class="col-md-3">
+          <select class="form-select form-select-sm" name="filter_cargo">
+            <option value="">Cargo</option>
+            <option value="gerente_general" {% if filter_cargo == "gerente_general" %}selected{% endif %}>Gerente General</option>
+            <option value="tecnico" {% if filter_cargo == "tecnico" %}selected{% endif %}>Técnico</option>
+            <option value="analista" {% if filter_cargo == "analista" %}selected{% endif %}>Analista</option>
+            <option value="desarrollador" {% if filter_cargo == "desarrollador" %}selected{% endif %}>Desarrollador</option>
+          </select>
+        </div>
+
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
+        </div>
+
+        <div class="col-md-2">
+          <a href="{% url 'employees' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+
+  <!-- ======================= TABLA ======================= -->
+  <div class="table-responsive" style="overflow: visible;">
+    <table class="table table-sm table-hover align-middle small">
+      <thead class="table-light small text-uppercase fw-semibold">
+        <tr>
+          <th>Empleado</th>
+          <th>Cargo</th>
+          <th>Carnet de Identidad</th>
+          <th>Celular</th>
+          <th>Fecha Contratación</th>
+          <th class="text-end" style="width: 60px;">Acciones</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for employee in employees %}
+        <tr>
+          <td class="small fw-semibold">{{ employee.nombre }} {{ employee.apellido_paterno }}{% if employee.apellido_materno %} {{ employee.apellido_materno }}{% endif %}</td>
+
+          <td>
+            {% if employee.cargo == 'gerente_general' %}
+              <span class="badge bg-primary small">Gerente General</span>
+            {% elif employee.cargo == 'tecnico' %}
+              <span class="badge bg-info text-dark small">Técnico</span>
+            {% elif employee.cargo == 'analista' %}
+              <span class="badge bg-warning text-dark small">Analista</span>
+            {% elif employee.cargo == 'desarrollador' %}
+              <span class="badge bg-success small">Desarrollador</span>
+            {% else %}
+              <span class="badge bg-secondary small">{{ employee.get_cargo_display }}</span>
+            {% endif %}
+          </td>
+
+          <td class="small">{{ employee.carnet_identidad }}</td>
+          <td class="small">{{ employee.numero_celular|default:"—" }}</td>
+          <td class="small">{{ employee.fecha_contratacion|date:"d/m/Y"|default:"—" }}</td>
+
+          <td class="text-end">
+            <div class="dropdown">
+              <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
+              <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                <li>
+                  <a class="dropdown-item" href="{% url 'employee_view' employee.id %}">Ver</a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'employee_detail' employee.id %}">Editar</a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <button class="dropdown-item text-danger"
+                    data-bs-toggle="modal"
+                    data-bs-target="#deleteModal"
+                    data-id="{{ employee.id }}"
+                    data-nombre="{{ employee.nombre }} {{ employee.apellido_paterno }}">
+                    Inhabilitar
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </td>
+        </tr>
+
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-3 small">
+            No existen empleados registrados.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+
+  <!-- ======================= PAGINACIÓN ======================= -->
+  <nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center mb-0">
+
+      {% if employees.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ employees.previous_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_cargo={{ filter_cargo }}">
+          Anterior
+        </a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+      {% endif %}
+
+      {% for num in employees.paginator.page_range %}
+        {% if employees.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > employees.number|add:'-3' and num < employees.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_cargo={{ filter_cargo }}">
+              {{ num }}
+            </a>
+          </li>
+        {% endif %}
+      {% endfor %}
+
+      {% if employees.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ employees.next_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_cargo={{ filter_cargo }}">
+          Siguiente
+        </a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+      {% endif %}
+
+    </ul>
+  </nav>
+
+</div>
+
+<!-- Modal Confirmar Inhabilitación -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Confirmar Inhabilitación</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        ¿Está seguro que desea inhabilitar al empleado
+        <strong id="empleadoNombre"></strong>?
+      </div>
+      <div class="modal-footer">
+        <form method="POST" id="deleteForm">
+          {% csrf_token %}
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger btn-sm">Inhabilitar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const deleteModal = document.getElementById('deleteModal');
+  deleteModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const empleadoId = button.getAttribute('data-id');
+    const empleadoNombre = button.getAttribute('data-nombre');
+    document.getElementById('empleadoNombre').textContent = empleadoNombre;
+    document.getElementById('deleteForm').action = `/employees/${empleadoId}/deactivate/`;
+  });
+</script>
+
 {% endblock %}

@@ -17,7 +17,7 @@ from xhtml2pdf import pisa
 import matplotlib.pyplot as plt
 import io
 import urllib, base64
-from django.db.models import Q, Count
+from django.db.models import Q, Count, Sum
 
 from django.views.generic import ListView, CreateView
 from django.utils.timezone import now
@@ -34,13 +34,11 @@ def home(request):
 
 def signup(request):
     if request.method == 'GET':
-        print("Entra al metodo GET ---------")
         return render(request, 'signup.html', {
             'form': UserCreationForm
         })
     else:
         if request.POST['password1'] == request.POST['password2']:
-            print(request.POST)
             try:
                 user = User.objects.create_user(
                     username=request.POST['username'], password=request.POST['password1'])
@@ -70,7 +68,6 @@ def signin(request):
             'form': AuthenticationForm
         })
     else:
-        print(request.POST)
         user = authenticate(request, username=request.POST['username'], password=request.POST['password'])
         if user is None:
             return render(request, 'signin.html', {
@@ -169,12 +166,12 @@ def project_analysis(request):
 
 @login_required
 def project_report(request):
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-    project_type = request.GET.get('project_type')
-    project_status = request.GET.get('project_status')
+    start_date = request.GET.get('start_date') or None
+    end_date = request.GET.get('end_date') or None
+    project_type = request.GET.get('project_type') or None
+    project_status = request.GET.get('project_status') or None
 
-    projects = Proyecto.objects.all()
+    projects = Proyecto.objects.filter(activo=True).select_related('cliente', 'empleado_asignado')
 
     if start_date:
         projects = projects.filter(fecha_inicio__gte=start_date)
@@ -185,12 +182,21 @@ def project_report(request):
     if project_status:
         projects = projects.filter(estado_proyecto=project_status)
 
+    monto_total = projects.aggregate(total=Sum('monto_total'))['total'] or 0
+    count_completado = projects.filter(estado_proyecto='completado').count()
+    count_en_progreso = projects.filter(estado_proyecto='en_progreso').count()
+    count_pendiente = projects.filter(estado_proyecto='pendiente').count()
+
     context = {
         'projects': projects,
         'start_date': start_date,
         'end_date': end_date,
         'project_type': project_type,
         'project_status': project_status,
+        'monto_total': monto_total,
+        'count_completado': count_completado,
+        'count_en_progreso': count_en_progreso,
+        'count_pendiente': count_pendiente,
         'now': timezone.now(),
     }
 
@@ -198,7 +204,10 @@ def project_report(request):
         template = get_template('project_report_pdf.html')
         html = template.render(context)
         response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="reporte_proyectos.pdf"'
+        if 'download' in request.GET:
+            response['Content-Disposition'] = 'attachment; filename="reporte_proyectos.pdf"'
+        else:
+            response['Content-Disposition'] = 'inline; filename="reporte_proyectos.pdf"'
         pisa_status = pisa.CreatePDF(html, dest=response)
         if pisa_status.err:
             return HttpResponse('Error al generar el PDF', status=500)
@@ -209,8 +218,55 @@ def project_report(request):
 
 @login_required
 def projects(request):
-    projects = Proyecto.objects.filter(user=request.user, estado_proyecto__in=['pendiente', 'en_progreso'], activo=True)
-    return render(request, 'projects.html', {'projects': projects})
+    search_nombre = request.GET.get('search_nombre', '')
+    filter_estado = request.GET.get('filter_estado', '')
+    filter_tipo = request.GET.get('filter_tipo', '')
+    filter_pago = request.GET.get('filter_pago', '')
+    page = request.GET.get('page', 1)
+    per_page = request.GET.get('per_page', 10)
+
+    try:
+        page = int(page)
+        if page < 1:
+            page = 1
+    except ValueError:
+        page = 1
+
+    try:
+        per_page = int(per_page)
+        if per_page not in [10, 20, 50, 100]:
+            per_page = 10
+    except ValueError:
+        per_page = 10
+
+    qs = Proyecto.objects.filter(activo=True).select_related('cliente').order_by('-created')
+
+    if search_nombre:
+        qs = qs.filter(nombre__icontains=search_nombre)
+    if filter_estado:
+        qs = qs.filter(estado_proyecto=filter_estado)
+    if filter_tipo:
+        qs = qs.filter(tipo_proyecto=filter_tipo)
+    if filter_pago:
+        qs = qs.filter(estado_pago=filter_pago)
+
+    paginator = Paginator(qs, per_page)
+    try:
+        projects_page = paginator.page(page)
+    except PageNotAnInteger:
+        projects_page = paginator.page(1)
+    except EmptyPage:
+        projects_page = paginator.page(paginator.num_pages)
+
+    context = {
+        'projects': projects_page,
+        'search_nombre': search_nombre,
+        'filter_estado': filter_estado,
+        'filter_tipo': filter_tipo,
+        'filter_pago': filter_pago,
+        'per_page': per_page,
+    }
+    return render(request, 'projects.html', context)
 
 
 @login_required
@@ -221,11 +277,6 @@ def deactivate_project(request, id_project):
     project.save()
     return redirect('projects')
 
-
-@login_required
-def projects_completed(request):
-    projects = Proyecto.objects.filter(user=request.user, estado_proyecto__in=['completado'], activo=True)
-    return render(request, 'projects_completes.html', {'projects': projects})
 
 
 @login_required
@@ -241,6 +292,12 @@ def project_detail(request, id_project):
             return redirect('projects')
         except ValueError:
             return render(request, 'project_detail.html', {'project': project, 'form': form, 'error': "Error al actualizar el proyecto"})
+
+
+@login_required
+def project_view(request, id_project):
+    project = get_object_or_404(Proyecto, pk=id_project, user=request.user)
+    return render(request, 'project_view.html', {'project': project})
 
 
 @login_required
@@ -283,102 +340,188 @@ def create_project(request):
 @login_required
 def create_employee(request):
     if request.method == 'GET':
-        return render(request, 'create_employee.html', {
-            'form': EmpleadoForm()
-        })
+        return render(request, 'create_employee.html', {'form': EmpleadoForm()})
     else:
-        try:
-            print(request.POST)
-            form = EmpleadoForm(request.POST)
-            new_employee = form.save(commit=False)
-            new_employee.save()
+        form = EmpleadoForm(request.POST)
+        if form.is_valid():
+            employee = form.save()
+            messages.success(request, f"El empleado {employee.nombre} {employee.apellido_paterno} fue registrado exitosamente.")
             return redirect('employees')
-        except ValueError:
-            return render(request, 'create_employee.html', {
-                'form': EmpleadoForm(),
-                'error': 'Please provide valid data'
-            })
+        return render(request, 'create_employee.html', {
+            'form': form,
+            'error': 'Por favor, proporcione datos válidos'
+        })
 
 
 @login_required
 def deactivate_employee(request, id_employee):
-    empleado = get_object_or_404(Empleado, id=id_employee)
+    empleado = get_object_or_404(Empleado, id=id_employee, activo=True)
     empleado.activo = False
-    empleado.deleted_at = timezone.now()
     empleado.save()
+    messages.success(request, f"El empleado {empleado.nombre} {empleado.apellido_paterno} fue inhabilitado.")
     return redirect('employees')
 
 
 @login_required
+def employee_view(request, id_employee):
+    empleado = get_object_or_404(Empleado, pk=id_employee)
+    return render(request, 'employee_view.html', {'employee': empleado})
+
+
+@login_required
 def employee_detail(request, id_employee):
+    empleado = get_object_or_404(Empleado, pk=id_employee)
     if request.method == 'GET':
-        empleado = get_object_or_404(Empleado, pk=id_employee)
         form = EmpleadoForm(instance=empleado)
         return render(request, 'employee_detail.html', {'employee': empleado, 'form': form})
     else:
-        try:
-            empleado = get_object_or_404(Empleado, pk=id_employee)
-            form = EmpleadoForm(request.POST, instance=empleado)
+        form = EmpleadoForm(request.POST, instance=empleado)
+        if form.is_valid():
             form.save()
+            messages.success(request, f"El empleado {empleado.nombre} {empleado.apellido_paterno} fue actualizado exitosamente.")
             return redirect('employees')
-        except ValueError:
-            return render(request, 'employee_detail.html', {'employee': empleado, 'form': form, 'error': "Error al actualizar el empleado"})
+        return render(request, 'employee_detail.html', {'employee': empleado, 'form': form})
 
 
 @login_required
 def employees(request):
-    empleados = Empleado.objects.all()
-    return render(request, 'employees.html', {'employees': empleados})
+    search_nombre = request.GET.get('search_nombre', '')
+    filter_cargo = request.GET.get('filter_cargo', '')
+    page = request.GET.get('page', 1)
+    per_page = request.GET.get('per_page', 10)
+
+    try:
+        page = int(page)
+        if page < 1:
+            page = 1
+    except ValueError:
+        page = 1
+
+    try:
+        per_page = int(per_page)
+        if per_page not in [10, 20, 50, 100]:
+            per_page = 10
+    except ValueError:
+        per_page = 10
+
+    empleados = Empleado.objects.filter(activo=True).order_by('-id')
+
+    if search_nombre:
+        empleados = empleados.filter(
+            Q(nombre__icontains=search_nombre) |
+            Q(apellido_paterno__icontains=search_nombre) |
+            Q(apellido_materno__icontains=search_nombre)
+        )
+    if filter_cargo:
+        empleados = empleados.filter(cargo=filter_cargo)
+
+    paginator = Paginator(empleados, per_page)
+    employees_page = paginator.get_page(page)
+
+    return render(request, 'employees.html', {
+        'employees': employees_page,
+        'search_nombre': search_nombre,
+        'filter_cargo': filter_cargo,
+        'per_page': per_page,
+    })
 
 
 @login_required
 def payment_list(request):
-    payments = Pago.objects.all()
-    return render(request, 'payments.html', {'payments': payments})
+    search_proyecto = request.GET.get('search_proyecto', '')
+    filter_estado = request.GET.get('filter_estado', '')
+    filter_tipo = request.GET.get('filter_tipo', '')
+    page = request.GET.get('page', 1)
+    per_page = request.GET.get('per_page', 10)
+
+    try:
+        page = int(page)
+        if page < 1:
+            page = 1
+    except ValueError:
+        page = 1
+
+    try:
+        per_page = int(per_page)
+        if per_page not in [10, 20, 50, 100]:
+            per_page = 10
+    except ValueError:
+        per_page = 10
+
+    payments = Pago.objects.filter(activo=True).order_by('-id')
+
+    if search_proyecto:
+        payments = payments.filter(proyecto__nombre__icontains=search_proyecto)
+    if filter_estado:
+        payments = payments.filter(estado=filter_estado)
+    if filter_tipo:
+        payments = payments.filter(tipo_pago=filter_tipo)
+
+    total_payments = payments.count()
+
+    paginator = Paginator(payments, per_page)
+    try:
+        payments_page = paginator.page(page)
+    except PageNotAnInteger:
+        payments_page = paginator.page(1)
+    except EmptyPage:
+        payments_page = paginator.page(paginator.num_pages)
+
+    context = {
+        'payments': payments_page,
+        'total_payments': total_payments,
+        'search_proyecto': search_proyecto,
+        'filter_estado': filter_estado,
+        'filter_tipo': filter_tipo,
+        'per_page': per_page,
+    }
+    return render(request, 'payments.html', context)
+
+
+@login_required
+def payment_view(request, id_payment):
+    payment = get_object_or_404(Pago, pk=id_payment, activo=True)
+    return render(request, 'payment_view.html', {'payment': payment})
 
 
 @login_required
 def payment_detail(request, id_payment):
-    payment = get_object_or_404(Pago, pk=id_payment)
+    payment = get_object_or_404(Pago, pk=id_payment, activo=True)
     if request.method == 'GET':
         form = PaymentForm(instance=payment)
         return render(request, 'payment_detail.html', {'payment': payment, 'form': form})
     else:
-        try:
-            form = PaymentForm(request.POST, instance=payment)
+        form = PaymentForm(request.POST, instance=payment)
+        if form.is_valid():
             form.save()
+            messages.success(request, f"El pago del proyecto '{payment.proyecto.nombre}' fue actualizado exitosamente.")
             return redirect('payments')
-        except ValueError:
-            return render(request, 'payment_detail.html', {'payment': payment, 'form': form, 'error': "Error al actualizar el pago"})
+        return render(request, 'payment_detail.html', {'payment': payment, 'form': form, 'error': "Error al actualizar el pago"})
 
 
 @login_required
 def deactivate_payment(request, id_payment):
-    payment = get_object_or_404(Pago, id=id_payment)
+    payment = get_object_or_404(Pago, id=id_payment, activo=True)
     payment.activo = False
-    payment.deleted_at = timezone.now()
     payment.save()
+    messages.success(request, f"El pago de Bs. {payment.monto} del proyecto '{payment.proyecto.nombre}' ha sido inhabilitado.")
     return redirect('payments')
 
 
 @login_required
 def create_payment(request):
     if request.method == 'GET':
-        return render(request, 'create_payment.html', {
-            'form': PaymentForm()
-        })
+        return render(request, 'create_payment.html', {'form': PaymentForm()})
     else:
-        try:
-            print(request.POST)
-            form = PaymentForm(request.POST)
-            new_payment = form.save(commit=False)
-            new_payment.save()
+        form = PaymentForm(request.POST)
+        if form.is_valid():
+            payment = form.save()
+            messages.success(request, f"El pago de Bs. {payment.monto} fue registrado exitosamente.")
             return redirect('payments')
-        except ValueError:
-            return render(request, 'create_payment.html', {
-                'form': PaymentForm(),
-                'error': 'Please provide valid data'
-            })
+        return render(request, 'create_payment.html', {
+            'form': form,
+            'error': 'Por favor, proporcione datos válidos'
+        })
 
 
 @login_required
@@ -386,9 +529,11 @@ def filter_payments_by_project_name(request):
     project_name = request.GET.get('project_name', '')
     start_date = request.GET.get('start_date', '')
     end_date = request.GET.get('end_date', '')
+    filter_estado = request.GET.get('filter_estado', '')
+    filter_tipo = request.GET.get('filter_tipo', '')
 
     projects = Proyecto.objects.values('nombre').distinct()
-    payments = Pago.objects.all()
+    payments = Pago.objects.filter(activo=True).select_related('proyecto', 'proyecto__cliente')
 
     if project_name:
         payments = payments.filter(proyecto__nombre__icontains=project_name)
@@ -396,6 +541,16 @@ def filter_payments_by_project_name(request):
         payments = payments.filter(fecha__gte=start_date)
     if end_date:
         payments = payments.filter(fecha__lte=end_date)
+    if filter_estado:
+        payments = payments.filter(estado=filter_estado)
+    if filter_tipo:
+        payments = payments.filter(tipo_pago=filter_tipo)
+
+    total_monto = payments.aggregate(total=Sum('monto'))['total'] or 0
+    monto_pagado = payments.filter(estado='pagado').aggregate(total=Sum('monto'))['total'] or 0
+    monto_pendiente = payments.filter(estado='pendiente').aggregate(total=Sum('monto'))['total'] or 0
+    count_pagado = payments.filter(estado='pagado').count()
+    count_pendiente = payments.filter(estado='pendiente').count()
 
     context = {
         'payments': payments,
@@ -403,6 +558,13 @@ def filter_payments_by_project_name(request):
         'project_name': project_name,
         'start_date': start_date,
         'end_date': end_date,
+        'filter_estado': filter_estado,
+        'filter_tipo': filter_tipo,
+        'total_monto': total_monto,
+        'monto_pagado': monto_pagado,
+        'monto_pendiente': monto_pendiente,
+        'count_pagado': count_pagado,
+        'count_pendiente': count_pendiente,
         'now': timezone.now(),
     }
 
@@ -410,7 +572,10 @@ def filter_payments_by_project_name(request):
         template = get_template('payments_report_pdf.html')
         html = template.render(context)
         response = HttpResponse(content_type='application/pdf')
-        response['Content-Disposition'] = 'attachment; filename="reporte_pagos.pdf"'
+        if 'download' in request.GET:
+            response['Content-Disposition'] = 'attachment; filename="reporte_pagos.pdf"'
+        else:
+            response['Content-Disposition'] = 'inline; filename="reporte_pagos.pdf"'
         pisa_status = pisa.CreatePDF(html, dest=response)
         if pisa_status.err:
             return HttpResponse('Error al generar el PDF', status=500)
@@ -487,7 +652,8 @@ def create_public_entity(request):
 @login_required
 def deactivate_public_entity(request, id_public_entity):
     public_entity = get_object_or_404(EntidadPublica, id=id_public_entity)
-    public_entity.delete()
+    public_entity.activo = False
+    public_entity.save()
     return redirect('public_entities')
 
 
@@ -557,7 +723,8 @@ def proposals(request):
 @login_required
 def deactivate_proposal(request, id_proposal):
     proposal = get_object_or_404(Propuesta, id=id_proposal)
-    proposal.delete()
+    proposal.activo = False
+    proposal.save()
     return redirect('proposals')
 
 
@@ -568,16 +735,15 @@ def create_cliente(request):
             'form': ClienteForm()
         })
     else:
-        try:
-            form = ClienteForm(request.POST)
-            new_cliente = form.save(commit=False)
-            new_cliente.save()
+        form = ClienteForm(request.POST)
+        if form.is_valid():
+            cliente = form.save()
+            messages.success(request, f"El contratante {cliente.nombre} {cliente.apellido_paterno} fue registrado exitosamente.")
             return redirect('clientes')
-        except ValueError:
-            return render(request, 'crear_cliente.html', {
-                'form': ClienteForm(),
-                'error': 'Por favor, proporcione datos válidos'
-            })
+        return render(request, 'crear_cliente.html', {
+            'form': form,
+            'error': 'Por favor, proporcione datos válidos'
+        })
 
 
 @login_required
@@ -596,6 +762,7 @@ def cliente_detail(request, id_cliente):
         form = ClienteForm(request.POST, instance=cliente_obj)
         if form.is_valid():
             form.save()
+            messages.success(request, f"El contratante {cliente_obj.nombre} {cliente_obj.apellido_paterno} fue actualizado exitosamente.")
             return redirect('clientes')
         return render(request, 'cliente_detalle.html', {'cliente': cliente_obj, 'form': form, 'error': "Error al actualizar el contratante"})
 
@@ -627,7 +794,7 @@ def clientes(request):
     
     # Start with all clients
     # clientes = Cliente.objects.all()
-    clientes = Cliente.objects.filter(activo=True).order_by('id')
+    clientes = Cliente.objects.filter(activo=True).order_by('-id')
     # Apply name/apellido search filter
     if search_nombre:
         clientes = clientes.filter(
@@ -647,8 +814,6 @@ def clientes(request):
     # Total count before pagination
     total_clientes = clientes.count()
     
-    # print("TOTAL QUERYSET:", clientes.count())
-    # print("PER PAGE:", per_page)
     # Pagination with configurable per_page
     paginator = Paginator(clientes, per_page)
     try:

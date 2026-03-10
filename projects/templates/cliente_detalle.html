@@ -1,24 +1,23 @@
-{% extends 'base.html' %} {% block content %}
+{% extends 'base.html' %}
+
+{% block extra_css %}
 <style>
-  /* Desabilitar feedback visual de validez (verde y checkmark) */
   .was-validated .form-control:valid,
   .was-validated .form-select:valid {
     border-color: #dee2e6;
     background-image: none;
     padding-right: calc(1.5em + 0.75rem);
   }
-
   .was-validated .form-control:valid:focus,
   .was-validated .form-select:valid:focus {
     border-color: #dee2e6;
     box-shadow: 0 0 0 0.25rem rgba(39, 128, 227, 0.25);
   }
-
-  /* Solo mostrar feedback para campos inválidos */
-  .valid-feedback {
-    display: none;
-  }
+  .valid-feedback { display: none; }
 </style>
+{% endblock %}
+
+{% block content %}
 <main class="container-fluid px-5 py-4">
   <!-- ENCABEZADO -->
   <div class="mb-4">
@@ -68,6 +67,22 @@
               >
               {{ form.tipo_contratante }}
             </div>
+
+            <div class="mb-3">
+              <label class="form-label"
+                >Teléfono <span class="text-danger">*</span></label
+              >
+              {{ form.telefono }}
+              {% if form.telefono.errors %}
+              <div class="text-danger small mt-1">
+                {% for err in form.telefono.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </div>
+              {% endif %}
+              <div class="invalid-feedback">
+                El teléfono debe contener solo números y al menos 7 dígitos.
+              </div>
+            </div>
+
           </div>
 
           <!-- COLUMNA DERECHA -->
@@ -92,18 +107,13 @@
             </div>
 
             <div class="mb-3">
-              <label class="form-label"
-                >Teléfono <span class="text-danger">*</span></label
-              >
-              {{ form.telefono }}
-              {% if form.telefono.errors %}
+              <label class="form-label">Correo electrónico</label>
+              {{ form.correo }}
+              {% if form.correo.errors %}
               <div class="text-danger small mt-1">
-                {% for err in form.telefono.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+                {% for err in form.correo.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
               </div>
               {% endif %}
-              <div class="invalid-feedback">
-                El teléfono debe contener solo números y al menos 7 dígitos.
-              </div>
             </div>
           </div>
 
@@ -130,10 +140,6 @@
         <div class="d-flex justify-content-between mt-4">
           <a href="{% url 'clientes' %}" class="btn btn-outline-secondary">Cancelar</a>
           <div>
-            <form action="{% url 'cliente_deactivate' cliente.id %}" method="POST" class="d-inline">
-              {% csrf_token %}
-              <button class="btn btn-danger me-2" type="submit" onclick="return confirm('¿Estás seguro de que deseas inhabilitar este contratante?')">Inhabilitar</button>
-            </form>
             <button class="btn btn-primary px-4" type="submit">Actualizar</button>
           </div>
         </div>
@@ -141,23 +147,24 @@
     </div>
   </div>
 </main>
-  <script>
-    // Bootstrap client-side validation
-    (function () {
-      'use strict'
+{% endblock %}
 
-      window.addEventListener('load', function () {
-        var forms = document.getElementsByClassName('needs-validation')
-        Array.prototype.filter.call(forms, function (form) {
-          form.addEventListener('submit', function (event) {
-            if (!form.checkValidity()) {
-              event.preventDefault()
-              event.stopPropagation()
-            }
-            form.classList.add('was-validated')
-          }, false)
-        })
-      }, false)
-    })()
-  </script>
+{% block extra_js %}
+<script>
+  (function () {
+    'use strict'
+    window.addEventListener('load', function () {
+      var forms = document.getElementsByClassName('needs-validation')
+      Array.prototype.filter.call(forms, function (form) {
+        form.addEventListener('submit', function (event) {
+          if (!form.checkValidity()) {
+            event.preventDefault()
+            event.stopPropagation()
+          }
+          form.classList.add('was-validated')
+        }, false)
+      })
+    }, false)
+  })()
+</script>
 {% endblock %}

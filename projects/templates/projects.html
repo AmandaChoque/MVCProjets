@@ -1,105 +1,260 @@
-{% extends 'base.html' %} {% block content %}
-<main class="container py-5">
-  <!-- Título principal -->
-  <h1
-    class="text-center display-5 fw-bold mb-5"
-    style="color: #264653; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1)"
-  >
-    PROYECTOS EN PROGRESO Y PENDIENTES
-  </h1>
+{% extends 'base.html' %}
+{% block content %}
 
-  <div class="row g-4">
-    {% for project in projects %}
-    <div class="col-md-6 col-lg-4">
-      <div class="card shadow-sm rounded-4 h-100 border-0 hover-card">
-        <div class="card-body">
-          <!-- Nombre y estado -->
-          <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="card-title fw-bold mb-0">{{ project.nombre }}</h5>
-            {% if project.estado_proyecto == 'pendiente' %}
-            <span class="badge bg-warning text-dark">Pendiente</span>
-            {% elif project.estado_proyecto == 'en_progreso' %}
-            <span class="badge bg-info text-dark">En Progreso</span>
-            {% else %}
-            <span class="badge bg-success">Completado</span>
-            {% endif %}
-          </div>
+<div class="container-fluid py-3">
 
-          <!-- Detalles del proyecto -->
-          <p class="mb-1">
-            <strong>Tipo:</strong> {{ project.get_tipo_proyecto_display }}
-          </p>
-          <p class="mb-1">
-            <strong>Inicio:</strong> {{ project.fecha_inicio|date:"M j, Y" }}
-          </p>
-          <p class="mb-1">
-            <strong>Fin:</strong> {{ project.fecha_fin|date:"M j, Y" }}
-          </p>
-
-          <!-- Botón para ver detalles -->
-          <div class="text-end mt-3">
-            <a
-              href="{% url 'project_detail' project.id %}"
-              class="btn btn-primary btn-sm px-4 shadow-sm"
-            >
-              Ver Detalles
-            </a>
-          </div>
-        </div>
-      </div>
+  {% if messages %}
+  <div class="mb-3">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     {% endfor %}
   </div>
-</main>
+  {% endif %}
 
-<style>
-  /* Hover card elegante */
-  .hover-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.12);
-    transition: all 0.3s ease-in-out;
-  }
+  <!-- ======================= ENCABEZADO ======================= -->
+  <div class="mb-2 d-flex justify-content-between align-items-center">
+    <a href="{% url 'create_project' %}" class="btn btn-primary btn-sm">+ Nuevo Proyecto</a>
+    <h5 class="fw-semibold text-secondary mb-0">Gestión de Proyectos</h5>
 
-  /* Tipografía y color */
-  .card-title {
-    font-size: 1.2rem;
-    color: #1d3557;
-  }
+    <div class="d-flex align-items-center gap-3">
+      <form method="GET" action="{% url 'projects' %}" class="d-flex align-items-center">
+        <input type="hidden" name="search_nombre" value="{{ search_nombre }}">
+        <input type="hidden" name="filter_estado" value="{{ filter_estado }}">
+        <input type="hidden" name="filter_tipo" value="{{ filter_tipo }}">
+        <input type="hidden" name="filter_pago" value="{{ filter_pago }}">
+        <input type="hidden" name="page" value="1">
+        <span class="small text-muted me-2">Mostrar:</span>
+        <select name="per_page" class="form-select form-select-sm" style="width:80px;" onchange="this.form.submit()">
+          <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+          <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+          <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+          <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+        </select>
+      </form>
+      <div class="text-muted small">
+        Mostrando {{ projects.start_index }} – {{ projects.end_index }}
+        de {{ projects.paginator.count }} registros
+      </div>
+    </div>
+  </div>
 
-  .card-body p {
-    font-size: 0.95rem;
-    color: #333;
-    line-height: 1.6;
-  }
+  <!-- ======================= FILTROS ======================= -->
+  <div class="card mb-3">
+    <div class="card-body py-2">
+      <form method="GET" action="{% url 'projects' %}" class="row g-2 align-items-end">
+        <input type="hidden" name="per_page" value="{{ per_page }}">
 
-  /* Badges */
-  .badge {
-    font-size: 0.85rem;
-    padding: 0.4em 0.7em;
-    border-radius: 0.5rem;
-  }
+        <div class="col-md-3">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Nombre del proyecto</label>
+          <input type="text" class="form-control form-control-sm" name="search_nombre"
+                 value="{{ search_nombre }}" placeholder="Buscar por nombre...">
+        </div>
 
-  /* Botón detalles */
-  .btn-primary {
-    border-radius: 50px;
-    transition: all 0.2s;
-  }
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Estado</label>
+          <select class="form-select form-select-sm" name="filter_estado">
+            <option value="">Todos</option>
+            <option value="pendiente" {% if filter_estado == "pendiente" %}selected{% endif %}>Pendiente</option>
+            <option value="en_progreso" {% if filter_estado == "en_progreso" %}selected{% endif %}>En Progreso</option>
+            <option value="completado" {% if filter_estado == "completado" %}selected{% endif %}>Completado</option>
+          </select>
+        </div>
 
-  .btn-primary:hover {
-    background-color: #1d3557;
-    border-color: #1d3557;
-  }
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Tipo</label>
+          <select class="form-select form-select-sm" name="filter_tipo">
+            <option value="">Todos</option>
+            <option value="licitacion" {% if filter_tipo == "licitacion" %}selected{% endif %}>Licitación</option>
+            <option value="contratacion_directa" {% if filter_tipo == "contratacion_directa" %}selected{% endif %}>Contrat. Directa</option>
+          </select>
+        </div>
 
-  /* Responsive */
-  @media (max-width: 768px) {
-    .col-md-6,
-    .col-lg-4 {
-      flex: 0 0 100%;
-      max-width: 100%;
-    }
-    .card-body {
-      padding: 1.5rem;
-    }
-  }
-</style>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Estado de pago</label>
+          <select class="form-select form-select-sm" name="filter_pago">
+            <option value="">Todos</option>
+            <option value="no_pagado" {% if filter_pago == "no_pagado" %}selected{% endif %}>No Pagado</option>
+            <option value="parcial" {% if filter_pago == "parcial" %}selected{% endif %}>Pago Parcial</option>
+            <option value="pagado" {% if filter_pago == "pagado" %}selected{% endif %}>Pagado</option>
+          </select>
+        </div>
+
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
+        </div>
+
+        <div class="col-md-1">
+          <a href="{% url 'projects' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ======================= TABLA ======================= -->
+  <div class="table-responsive" style="overflow:visible;">
+    <table class="table table-sm table-hover align-middle small">
+      <thead class="table-light small text-uppercase fw-semibold">
+        <tr>
+          <th>Código</th>
+          <th>Nombre</th>
+          <th>Contratante</th>
+          <th>Tipo</th>
+          <th>Estado</th>
+          <th>Estado Pago</th>
+          <th>Monto Total (Bs.)</th>
+          <th>Fecha Inicio</th>
+          <th class="text-end" style="width:60px;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for project in projects %}
+        <tr>
+          <td class="text-muted">{{ project.codigo }}</td>
+          <td class="fw-semibold">{{ project.nombre }}</td>
+          <td>
+            {% if project.cliente %}
+              {{ project.cliente.nombre }} {{ project.cliente.apellido_paterno }}
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if project.tipo_proyecto == 'licitacion' %}
+              <span class="badge bg-secondary small">Licitación</span>
+            {% else %}
+              <span class="badge bg-dark small">Contrat. Directa</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if project.estado_proyecto == 'completado' %}
+              <span class="badge bg-success small">Completado</span>
+            {% elif project.estado_proyecto == 'en_progreso' %}
+              <span class="badge bg-primary small">En Progreso</span>
+            {% else %}
+              <span class="badge bg-warning text-dark small">Pendiente</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if project.estado_pago == 'pagado' %}
+              <span class="badge bg-success small">Pagado</span>
+            {% elif project.estado_pago == 'parcial' %}
+              <span class="badge bg-info text-dark small">Parcial</span>
+            {% else %}
+              <span class="badge bg-danger small">No Pagado</span>
+            {% endif %}
+          </td>
+          <td class="fw-semibold">{{ project.monto_total|floatformat:2 }}</td>
+          <td>{{ project.fecha_inicio|date:"d/m/Y" }}</td>
+          <td class="text-end">
+            <div class="dropdown">
+              <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
+              <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                <li>
+                  <a class="dropdown-item" href="{% url 'project_view' project.id %}">Ver</a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'project_detail' project.id %}">Editar</a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <button class="dropdown-item text-danger"
+                    data-bs-toggle="modal"
+                    data-bs-target="#deleteModal"
+                    data-id="{{ project.id }}"
+                    data-nombre="{{ project.nombre }}">
+                    Inhabilitar
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="9" class="text-center text-muted py-3 small">
+            No se encontraron proyectos con los filtros seleccionados.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ======================= PAGINACIÓN ======================= -->
+  <nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center mb-0">
+
+      {% if projects.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ projects.previous_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}&filter_pago={{ filter_pago }}">
+          Anterior
+        </a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+      {% endif %}
+
+      {% for num in projects.paginator.page_range %}
+        {% if projects.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > projects.number|add:'-3' and num < projects.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}&filter_pago={{ filter_pago }}">
+              {{ num }}
+            </a>
+          </li>
+        {% endif %}
+      {% endfor %}
+
+      {% if projects.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ projects.next_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}&filter_pago={{ filter_pago }}">
+          Siguiente
+        </a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+      {% endif %}
+
+    </ul>
+  </nav>
+
+</div>
+
+<!-- Modal Confirmar Inhabilitación -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Confirmar Inhabilitación</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        ¿Está seguro que desea inhabilitar el proyecto
+        <strong id="projectNombre"></strong>?
+      </div>
+      <div class="modal-footer">
+        <form method="POST" id="deleteForm">
+          {% csrf_token %}
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger btn-sm">Inhabilitar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const deleteModal = document.getElementById('deleteModal');
+  deleteModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    document.getElementById('projectNombre').textContent = button.getAttribute('data-nombre');
+    document.getElementById('deleteForm').action = `/projects/${button.getAttribute('data-id')}/deactivate/`;
+  });
+</script>
+
 {% endblock %}
