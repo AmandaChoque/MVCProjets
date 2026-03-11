@@ -8,33 +8,6 @@
     <h5 class="fw-semibold text-secondary mb-0">Análisis de Proyectos</h5>
   </div>
 
-  <!-- ======================= FILTROS ======================= -->
-  <div class="card mb-3">
-    <div class="card-body py-2">
-      <form method="get" action="{% url 'project_analysis' %}" class="row g-2 align-items-end">
-
-        <div class="col-md-4">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Fecha inicio</label>
-          <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date }}">
-        </div>
-
-        <div class="col-md-4">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Fecha fin</label>
-          <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date }}">
-        </div>
-
-        <div class="col-md-2">
-          <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
-        </div>
-
-        <div class="col-md-2">
-          <a href="{% url 'project_analysis' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
-        </div>
-
-      </form>
-    </div>
-  </div>
-
   {% if message %}
   <div class="alert alert-info small" role="alert">
     {{ message }}

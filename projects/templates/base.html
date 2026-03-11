@@ -191,7 +191,7 @@
             <ul class="nav flex-column ms-3">
               <li>
                 <a class="nav-link" href="{% url 'projects' %}"
-                  ><i class="bi bi-list-ul me-1"></i>Listar</a
+                ><i class="bi bi-list-ul me-1"></i>Listar</a
                 >
               </li>
               <li>
@@ -307,6 +307,93 @@
               <li>
                 <a class="nav-link" href="{% url 'payment_analysis' %}"
                   ><i class="bi bi-graph-up me-1"></i>Análisis</a
+                >
+              </li>
+            </ul>
+          </div>
+        </li>
+
+        <!-- Proveedores -->
+        <li class="nav-item">
+          <a
+            class="nav-link d-flex align-items-center"
+            data-bs-toggle="collapse"
+            href="#proveedorSubmenu"
+          >
+            <i class="bi bi-truck me-2"></i>Proveedores
+            <span class="collapse-indicator">></span>
+          </a>
+          <div
+            class="collapse {% if '/proveedores' in request.path %}show{% endif %}"
+            id="proveedorSubmenu"
+          >
+            <ul class="nav flex-column ms-3">
+              <li>
+                <a class="nav-link" href="{% url 'proveedores' %}"
+                  ><i class="bi bi-list-ul me-1"></i>Listar</a
+                >
+              </li>
+              <li>
+                <a class="nav-link" href="{% url 'create_proveedor' %}"
+                  ><i class="bi bi-plus-circle me-1"></i>Crear</a
+                >
+              </li>
+            </ul>
+          </div>
+        </li>
+
+        <!-- Insumos -->
+        <li class="nav-item">
+          <a
+            class="nav-link d-flex align-items-center"
+            data-bs-toggle="collapse"
+            href="#insumoSubmenu"
+          >
+            <i class="bi bi-box-seam me-2"></i>Insumos
+            <span class="collapse-indicator">></span>
+          </a>
+          <div
+            class="collapse {% if '/insumos' in request.path %}show{% endif %}"
+            id="insumoSubmenu"
+          >
+            <ul class="nav flex-column ms-3">
+              <li>
+                <a class="nav-link" href="{% url 'insumos' %}"
+                  ><i class="bi bi-list-ul me-1"></i>Catálogo</a
+                >
+              </li>
+              <li>
+                <a class="nav-link" href="{% url 'create_insumo' %}"
+                  ><i class="bi bi-plus-circle me-1"></i>Crear</a
+                >
+              </li>
+            </ul>
+          </div>
+        </li>
+
+        <!-- Compras -->
+        <li class="nav-item">
+          <a
+            class="nav-link d-flex align-items-center"
+            data-bs-toggle="collapse"
+            href="#comprasSubmenu"
+          >
+            <i class="bi bi-cart3 me-2"></i>Compras
+            <span class="collapse-indicator">></span>
+          </a>
+          <div
+            class="collapse {% if '/compras' in request.path %}show{% endif %}"
+            id="comprasSubmenu"
+          >
+            <ul class="nav flex-column ms-3">
+              <li>
+                <a class="nav-link" href="{% url 'compras' %}"
+                  ><i class="bi bi-list-ul me-1"></i>Listar</a
+                >
+              </li>
+              <li>
+                <a class="nav-link" href="{% url 'create_realizar' %}"
+                  ><i class="bi bi-plus-circle me-1"></i>Registrar Compra</a
                 >
               </li>
             </ul>

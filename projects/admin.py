@@ -1,11 +1,11 @@
 from django.contrib import admin
-from projects.models import Proyecto, Empleado, HistorialPago, Pago, Propuesta, EntidadPublica, Cliente
+from projects.models import Proyecto, Empleado, HistorialPago, Pago, Propuesta, EntidadPublica, Cliente, Progreso, ContratoEmpleado, ContratoProyecto
 
 
 @admin.register(Proyecto)
 class ProyectoAdmin(admin.ModelAdmin):
     readonly_fields = ('created', 'updated_at', 'deleted_at')
-    list_display = ('codigo', 'nombre', 'estado_proyecto', 'tipo_proyecto', 'estado_pago', 'monto_total', 'activo', 'fecha_inicio', 'user')
+    list_display = ('codigo', 'nombre', 'estado_proyecto', 'tipo_proyecto', 'estado_pago', 'monto_total', 'activo', 'user')
     list_filter = ('activo', 'estado_proyecto', 'tipo_proyecto', 'estado_pago')
     search_fields = ('nombre', 'codigo', 'cliente__nombre', 'cliente__apellido_paterno')
     ordering = ('-created',)
@@ -66,4 +66,31 @@ class HistorialPagoAdmin(admin.ModelAdmin):
     list_filter = ('proyecto',)
     search_fields = ('proyecto__nombre', 'motivo_cambio')
     ordering = ('-fecha_modificacion',)
+    list_per_page = 20
+
+
+@admin.register(Progreso)
+class ProgresoAdmin(admin.ModelAdmin):
+    list_display = ('proyecto', 'fecha', 'porcentaje', 'descripcion', 'created')
+    list_filter = ('proyecto',)
+    search_fields = ('proyecto__nombre', 'descripcion')
+    ordering = ('-fecha',)
+    list_per_page = 20
+
+
+@admin.register(ContratoEmpleado)
+class ContratoEmpleadoAdmin(admin.ModelAdmin):
+    list_display = ('empleado', 'proyecto', 'fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'activo')
+    list_filter = ('activo',)
+    search_fields = ('empleado__nombre', 'empleado__apellido_paterno', 'proyecto__nombre')
+    ordering = ('-created',)
+    list_per_page = 20
+
+
+@admin.register(ContratoProyecto)
+class ContratoProyectoAdmin(admin.ModelAdmin):
+    list_display = ('proyecto', 'fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'activo')
+    list_filter = ('activo',)
+    search_fields = ('proyecto__nombre', 'proyecto__codigo')
+    ordering = ('-created',)
     list_per_page = 20

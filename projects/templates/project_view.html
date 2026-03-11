@@ -40,11 +40,7 @@
               <div class="row mb-2">
                 <div class="col-sm-5"><strong>Tipo:</strong></div>
                 <div class="col-sm-7">
-                  {% if project.tipo_proyecto == 'licitacion' %}
-                    <span class="badge bg-secondary">Licitación</span>
-                  {% else %}
-                    <span class="badge bg-dark">Contrat. Directa</span>
-                  {% endif %}
+                  <span class="badge bg-secondary">{{ project.get_tipo_proyecto_display }}</span>
                 </div>
               </div>
               <div class="row mb-2">
@@ -76,23 +72,13 @@
         </div>
       </div>
 
-      <!-- FECHAS Y MONTO -->
+      <!-- MONTO -->
       <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-header bg-light">
-          <h6 class="mb-0 fw-semibold">Fechas y Monto</h6>
+          <h6 class="mb-0 fw-semibold">Monto</h6>
         </div>
         <div class="card-body">
           <div class="row g-3">
-            <div class="col-md-6">
-              <div class="row mb-2">
-                <div class="col-sm-5"><strong>Fecha inicio:</strong></div>
-                <div class="col-sm-7">{{ project.fecha_inicio|date:"d/m/Y" }}</div>
-              </div>
-              <div class="row mb-2">
-                <div class="col-sm-5"><strong>Fecha fin:</strong></div>
-                <div class="col-sm-7">{{ project.fecha_fin|date:"d/m/Y"|default:"—" }}</div>
-              </div>
-            </div>
             <div class="col-md-6">
               <div class="row mb-2">
                 <div class="col-sm-5"><strong>Monto total (Bs.):</strong></div>
@@ -134,16 +120,6 @@
             </div>
             <div class="col-md-6">
               <div class="row mb-2">
-                <div class="col-sm-5"><strong>Empleado asignado:</strong></div>
-                <div class="col-sm-7">
-                  {% if project.empleado_asignado %}
-                    {{ project.empleado_asignado.nombre }} {{ project.empleado_asignado.apellido_paterno }}
-                  {% else %}
-                    <span class="text-muted">—</span>
-                  {% endif %}
-                </div>
-              </div>
-              <div class="row mb-2">
                 <div class="col-sm-5"><strong>Propuesta:</strong></div>
                 <div class="col-sm-7">
                   {% if project.propuesta %}
@@ -158,11 +134,283 @@
         </div>
       </div>
 
+      <!-- PROGRESO DEL PROYECTO -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-semibold">Progreso del Proyecto</h6>
+          <a href="{% url 'create_progreso' project.id %}" class="btn btn-sm btn-primary">+ Registrar avance</a>
+        </div>
+        <div class="card-body">
+
+          <!-- BARRA DE PROGRESO ACTUAL -->
+          <div class="mb-3">
+            <div class="d-flex justify-content-between small mb-1">
+              <span class="text-muted">Avance actual</span>
+              <span class="fw-semibold">{{ porcentaje_actual }}%</span>
+            </div>
+            <div class="progress" style="height: 14px; border-radius: 8px;">
+              <div class="progress-bar {% if porcentaje_actual == 100 %}bg-success{% elif porcentaje_actual >= 50 %}bg-primary{% else %}bg-warning{% endif %} fw-semibold"
+                   role="progressbar"
+                   style="width: {{ porcentaje_actual }}%; font-size: 0.7rem;"
+                   aria-valuenow="{{ porcentaje_actual }}" aria-valuemin="0" aria-valuemax="100">
+                {% if porcentaje_actual > 10 %}{{ porcentaje_actual }}%{% endif %}
+              </div>
+            </div>
+          </div>
+
+          <!-- HISTORIAL DE PROGRESOS -->
+          {% if progresos %}
+          <div class="table-responsive mt-3">
+            <table class="table table-sm table-hover align-middle small mb-0">
+              <thead class="table-light text-uppercase fw-semibold" style="font-size: 0.72rem;">
+                <tr>
+                  <th>Fecha</th>
+                  <th class="text-center">Porcentaje</th>
+                  <th>Descripción</th>
+                  <th>Observación</th>
+                  <th class="text-end" style="width:60px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for prog in progresos %}
+                <tr>
+                  <td>{{ prog.fecha|date:"d/m/Y" }}</td>
+                  <td class="text-center">
+                    <span class="badge {% if prog.porcentaje == 100 %}bg-success{% elif prog.porcentaje >= 50 %}bg-primary{% else %}bg-warning text-dark{% endif %}">
+                      {{ prog.porcentaje }}%
+                    </span>
+                  </td>
+                  <td>{{ prog.descripcion }}</td>
+                  <td class="text-muted">{{ prog.observacion|default:"—"|truncatechars:60 }}</td>
+                  <td class="text-end">
+                    <a href="{% url 'progreso_detail' prog.id %}" class="btn btn-sm btn-light">Editar</a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <p class="text-muted small mb-0 mt-2">Aún no hay registros de progreso. <a href="{% url 'create_progreso' project.id %}">Registrar el primer avance</a>.</p>
+          {% endif %}
+
+        </div>
+      </div>
+
+      <!-- CONTRATO DEL PROYECTO -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-semibold">Contrato del Proyecto</h6>
+          {% if not contrato_proyecto %}
+          <a href="{% url 'create_contrato_proyecto' project.id %}" class="btn btn-sm btn-primary">+ Agregar contrato</a>
+          {% endif %}
+        </div>
+        <div class="card-body">
+          {% if contrato_proyecto %}
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Fecha de Firma:</strong></div>
+                <div class="col-sm-7">{{ contrato_proyecto.fecha_firma|date:"d/m/Y" }}</div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Fecha de Inicio:</strong></div>
+                <div class="col-sm-7">{{ contrato_proyecto.fecha_inicio|date:"d/m/Y" }}</div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Fecha de Fin:</strong></div>
+                <div class="col-sm-7">{{ contrato_proyecto.fecha_fin|date:"d/m/Y" }}</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Monto Acordado (Bs.):</strong></div>
+                <div class="col-sm-7 fw-semibold">{{ contrato_proyecto.monto_acordado|floatformat:2 }}</div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Documento:</strong></div>
+                <div class="col-sm-7">
+                  {% if contrato_proyecto.documento %}
+                  <a href="{{ contrato_proyecto.documento.url }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0">Ver</a>
+                  {% else %}
+                  <span class="text-muted">—</span>
+                  {% endif %}
+                </div>
+              </div>
+              {% if contrato_proyecto.observaciones %}
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Observaciones:</strong></div>
+                <div class="col-sm-7 text-muted">{{ contrato_proyecto.observaciones }}</div>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="mt-3">
+            <a href="{% url 'contrato_proyecto_detail' contrato_proyecto.id %}" class="btn btn-sm btn-outline-primary">Editar contrato</a>
+          </div>
+          {% else %}
+          <p class="text-muted small mb-0 mt-2">No hay contrato registrado para este proyecto. <a href="{% url 'create_contrato_proyecto' project.id %}">Registrar contrato</a>.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- CONTRATOS DE EMPLEADOS -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-semibold">Contratos de Empleados</h6>
+          <a href="{% url 'create_contrato_empleado' project.id %}" class="btn btn-sm btn-primary">+ Agregar contrato</a>
+        </div>
+        <div class="card-body">
+          {% if contratos_empleados %}
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle small mb-0">
+              <thead class="table-light text-uppercase fw-semibold" style="font-size: 0.72rem;">
+                <tr>
+                  <th>Empleado</th>
+                  <th>Cargo</th>
+                  <th class="text-center">Fecha Firma</th>
+                  <th class="text-center">Inicio</th>
+                  <th class="text-center">Fin</th>
+                  <th class="text-end">Monto (Bs.)</th>
+                  <th class="text-center">Documento</th>
+                  <th class="text-end" style="width:70px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for contrato in contratos_empleados %}
+                <tr>
+                  <td>{{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }}</td>
+                  <td class="text-muted">{{ contrato.empleado.get_cargo_display }}</td>
+                  <td class="text-center">{{ contrato.fecha_firma|date:"d/m/Y" }}</td>
+                  <td class="text-center">{{ contrato.fecha_inicio|date:"d/m/Y" }}</td>
+                  <td class="text-center">{{ contrato.fecha_fin|date:"d/m/Y" }}</td>
+                  <td class="text-end fw-semibold">{{ contrato.monto_acordado|floatformat:2 }}</td>
+                  <td class="text-center">
+                    {% if contrato.documento %}
+                    <a href="{{ contrato.documento.url }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0">Ver</a>
+                    {% else %}
+                    <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end">
+                    <a href="{% url 'contrato_empleado_detail' contrato.id %}" class="btn btn-sm btn-light">Editar</a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <p class="text-muted small mb-0 mt-2">No hay contratos de empleados registrados. <a href="{% url 'create_contrato_empleado' project.id %}">Agregar el primero</a>.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- INSUMOS DEL PROYECTO -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-semibold">Insumos del Proyecto</h6>
+          <a href="{% url 'create_requiere' project.id %}" class="btn btn-sm btn-primary">+ Agregar insumo</a>
+        </div>
+        <div class="card-body">
+          {% if insumos_proyecto %}
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle small mb-0">
+              <thead class="table-light text-uppercase fw-semibold" style="font-size: 0.72rem;">
+                <tr>
+                  <th>Categoría</th>
+                  <th>Insumo</th>
+                  <th>Marca</th>
+                  <th class="text-center">Cantidad</th>
+                  <th class="text-end">Costo Unit. (Bs.)</th>
+                  <th class="text-end">Subtotal (Bs.)</th>
+                  <th class="text-end" style="width:70px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for req in insumos_proyecto %}
+                <tr>
+                  <td>{{ req.insumo.get_categoria_display }}</td>
+                  <td>{{ req.insumo.nombre }}</td>
+                  <td class="text-muted">{{ req.insumo.marca }}</td>
+                  <td class="text-center">{{ req.cantidad }}</td>
+                  <td class="text-end">{{ req.costo_unitario|floatformat:2 }}</td>
+                  <td class="text-end fw-semibold">{{ req.subtotal|floatformat:2 }}</td>
+                  <td class="text-end">
+                    <div class="dropdown">
+                      <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
+                      <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        <li><a class="dropdown-item" href="{% url 'requiere_detail' req.id %}">Editar</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                          <button class="dropdown-item text-danger"
+                            data-bs-toggle="modal"
+                            data-bs-target="#deleteInsumoModal"
+                            data-id="{{ req.id }}"
+                            data-nombre="{{ req.insumo.nombre }}">
+                            Eliminar
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+              <tfoot class="table-light">
+                <tr>
+                  <td colspan="5" class="text-end fw-semibold">Total Insumos (Bs.):</td>
+                  <td class="text-end fw-bold">{{ total_insumos|floatformat:2 }}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          {% else %}
+          <p class="text-muted small mb-0 mt-2">No hay insumos asignados a este proyecto. <a href="{% url 'create_requiere' project.id %}">Agregar el primero</a>.</p>
+          {% endif %}
+        </div>
+      </div>
+
       <!-- BOTONES -->
       <div class="d-flex justify-content-between mt-4">
         <a href="{% url 'projects' %}" class="btn btn-outline-secondary">Volver</a>
         <a href="{% url 'project_detail' project.id %}" class="btn btn-primary">Editar</a>
       </div>
+
+<!-- Modal Confirmar Eliminación de Insumo -->
+<div class="modal fade" id="deleteInsumoModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Confirmar Eliminación</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        ¿Está seguro que desea eliminar el insumo <strong id="insumoNombre"></strong> de este proyecto?
+      </div>
+      <div class="modal-footer">
+        <form method="POST" id="deleteInsumoForm">
+          {% csrf_token %}
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  const deleteInsumoModal = document.getElementById('deleteInsumoModal');
+  if (deleteInsumoModal) {
+    deleteInsumoModal.addEventListener('show.bs.modal', function (event) {
+      const button = event.relatedTarget;
+      const id = button.getAttribute('data-id');
+      const nombre = button.getAttribute('data-nombre');
+      document.getElementById('insumoNombre').textContent = nombre;
+      document.getElementById('deleteInsumoForm').action = `/insumos-proyecto/${id}/eliminar/`;
+    });
+  }
+</script>
 
     </div>
   </div>

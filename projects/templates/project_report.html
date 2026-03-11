@@ -7,12 +7,12 @@
   <div class="mb-2 d-flex justify-content-between align-items-center">
     <h5 class="fw-semibold text-secondary mb-0">Reporte de Proyectos</h5>
     <div class="d-flex gap-2">
-      <a href="?pdf=1&start_date={{ start_date|default:'' }}&end_date={{ end_date|default:'' }}&project_type={{ project_type|default:'' }}&project_status={{ project_status|default:'' }}"
+      <a href="?pdf=1&project_type={{ project_type|default:'' }}&project_status={{ project_status|default:'' }}"
          target="_blank"
          class="btn btn-outline-secondary btn-sm">
         Vista previa PDF
       </a>
-      <a href="?pdf=1&download=1&start_date={{ start_date|default:'' }}&end_date={{ end_date|default:'' }}&project_type={{ project_type|default:'' }}&project_status={{ project_status|default:'' }}"
+      <a href="?pdf=1&download=1&project_type={{ project_type|default:'' }}&project_status={{ project_status|default:'' }}"
          class="btn btn-outline-danger btn-sm">
         ↓ Descargar PDF
       </a>
@@ -23,16 +23,6 @@
   <div class="card mb-3">
     <div class="card-body py-2">
       <form method="get" action="{% url 'project_report' %}" class="row g-2 align-items-end">
-
-        <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Fecha inicio</label>
-          <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date }}">
-        </div>
-
-        <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Fecha fin</label>
-          <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date }}">
-        </div>
 
         <div class="col-md-3">
           <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Tipo de proyecto</label>
@@ -129,8 +119,6 @@
             <th>Estado</th>
             <th>Estado Pago</th>
             <th>Monto Total (Bs.)</th>
-            <th>Fecha Inicio</th>
-            <th>Fecha Fin</th>
           </tr>
         </thead>
         <tbody>
@@ -171,12 +159,10 @@
               {% endif %}
             </td>
             <td class="text-end fw-semibold">{{ project.monto_total|floatformat:2 }}</td>
-            <td>{{ project.fecha_inicio|date:"d/m/Y" }}</td>
-            <td>{{ project.fecha_fin|date:"d/m/Y"|default:"—" }}</td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="9" class="text-center text-muted py-3 small">
+            <td colspan="7" class="text-center text-muted py-3 small">
               No se encontraron proyectos con los filtros seleccionados.
             </td>
           </tr>
@@ -187,7 +173,6 @@
           <tr>
             <td colspan="6" class="text-end text-muted">Total:</td>
             <td class="text-end">Bs. {{ monto_total|floatformat:2 }}</td>
-            <td colspan="2"></td>
           </tr>
         </tfoot>
         {% endif %}

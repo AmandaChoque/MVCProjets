@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container-fluid py-3">
+
+  {% if messages %}
+  <div class="mb-3">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ENCABEZADO -->
+  <div class="mb-2 d-flex justify-content-between align-items-center">
+    <a href="{% url 'create_insumo' %}" class="btn btn-primary btn-sm">+ Nuevo Insumo</a>
+    <h5 class="fw-semibold text-secondary mb-0">Catálogo de Insumos</h5>
+
+    <div class="d-flex align-items-center gap-3">
+      <form method="GET" action="{% url 'insumos' %}" class="d-flex align-items-center">
+        <input type="hidden" name="search_nombre" value="{{ search_nombre }}">
+        <input type="hidden" name="filter_categoria" value="{{ filter_categoria }}">
+        <input type="hidden" name="page" value="1">
+        <span class="small text-muted me-2">Mostrar:</span>
+        <select name="per_page" class="form-select form-select-sm" style="width: 80px;" onchange="this.form.submit()">
+          <option value="10" {% if per_page == 10 %}selected{% endif %}>10</option>
+          <option value="20" {% if per_page == 20 %}selected{% endif %}>20</option>
+          <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+          <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+        </select>
+      </form>
+      <div class="text-muted small">
+        Mostrando {{ insumos.start_index }} – {{ insumos.end_index }}
+        de {{ insumos.paginator.count }} registros
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTROS -->
+  <div class="card mb-3">
+    <div class="card-body py-2">
+      <form method="GET" action="{% url 'insumos' %}" class="row g-2">
+        <input type="hidden" name="per_page" value="{{ per_page }}">
+        <div class="col-md-3">
+          <input type="text" class="form-control form-control-sm" name="search_nombre"
+            value="{{ search_nombre|default:'' }}" placeholder="Nombre o marca" />
+        </div>
+        <div class="col-md-3">
+          <select class="form-select form-select-sm" name="filter_categoria">
+            <option value="">Todas las categorías</option>
+            {% for val, label in categorias %}
+            <option value="{{ val }}" {% if filter_categoria == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
+        </div>
+        <div class="col-md-1">
+          <a href="{% url 'insumos' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TABLA -->
+  <div class="table-responsive">
+    <table class="table table-sm table-hover align-middle small">
+      <thead class="table-light small text-uppercase fw-semibold">
+        <tr>
+          <th>Nombre</th>
+          <th>Marca</th>
+          <th>Categoría</th>
+          <th class="text-end">Costo Unit. (Bs.)</th>
+          <th class="text-end" style="width: 60px;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for insumo in insumos %}
+        <tr>
+          <td class="small fw-semibold">{{ insumo.nombre }}</td>
+          <td class="small text-muted">{{ insumo.marca }}</td>
+          <td>
+            {% if insumo.categoria == 'camara_ip' %}
+              <span class="badge bg-primary small">{{ insumo.get_categoria_display }}</span>
+            {% elif insumo.categoria == 'camara_analogica' %}
+              <span class="badge bg-secondary small">{{ insumo.get_categoria_display }}</span>
+            {% elif insumo.categoria == 'nvr_dvr' %}
+              <span class="badge bg-dark small">{{ insumo.get_categoria_display }}</span>
+            {% elif insumo.categoria == 'alarma' %}
+              <span class="badge bg-danger small">{{ insumo.get_categoria_display }}</span>
+            {% elif insumo.categoria == 'sensor' %}
+              <span class="badge bg-warning text-dark small">{{ insumo.get_categoria_display }}</span>
+            {% elif insumo.categoria == 'cable' %}
+              <span class="badge bg-info text-dark small">{{ insumo.get_categoria_display }}</span>
+            {% elif insumo.categoria == 'fuente' %}
+              <span class="badge bg-success small">{{ insumo.get_categoria_display }}</span>
+            {% else %}
+              <span class="badge bg-light text-dark small">{{ insumo.get_categoria_display }}</span>
+            {% endif %}
+          </td>
+          <td class="text-end small">{{ insumo.costo_unitario|floatformat:2 }}</td>
+          <td class="text-end">
+            <div class="dropdown">
+              <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
+              <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                <li><a class="dropdown-item" href="{% url 'insumo_detail' insumo.id %}">Editar</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <button class="dropdown-item text-danger"
+                    data-bs-toggle="modal"
+                    data-bs-target="#deleteModal"
+                    data-id="{{ insumo.id }}"
+                    data-nombre="{{ insumo.nombre }}">
+                    Inhabilitar
+                  </button>
+                </li>
+              </ul>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-3 small">No hay insumos registrados.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- PAGINACIÓN -->
+  <nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center mb-0">
+      {% if insumos.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ insumos.previous_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_categoria={{ filter_categoria }}">Anterior</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+      {% endif %}
+
+      {% for num in insumos.paginator.page_range %}
+        {% if insumos.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > insumos.number|add:'-3' and num < insumos.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_categoria={{ filter_categoria }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+
+      {% if insumos.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ insumos.next_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_categoria={{ filter_categoria }}">Siguiente</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+      {% endif %}
+    </ul>
+  </nav>
+
+</div>
+
+<!-- Modal Confirmar Inhabilitación -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Confirmar Inhabilitación</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        ¿Está seguro que desea inhabilitar el insumo <strong id="insumoNombre"></strong>?
+      </div>
+      <div class="modal-footer">
+        <form method="POST" id="deleteForm">
+          {% csrf_token %}
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger btn-sm">Inhabilitar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  const deleteModal = document.getElementById('deleteModal');
+  deleteModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    document.getElementById('insumoNombre').textContent = button.getAttribute('data-nombre');
+    document.getElementById('deleteForm').action = `/insumos/${button.getAttribute('data-id')}/deactivate/`;
+  });
+</script>
+
+{% endblock %}

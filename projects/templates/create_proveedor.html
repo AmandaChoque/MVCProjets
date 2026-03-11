@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+  .was-validated .form-control:valid,
+  .was-validated .form-select:valid {
+    border-color: #dee2e6;
+    background-image: none;
+  }
+  .was-validated .form-control:valid:focus,
+  .was-validated .form-select:valid:focus {
+    border-color: #dee2e6;
+    box-shadow: 0 0 0 0.25rem rgba(39, 128, 227, 0.25);
+  }
+  .valid-feedback { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="container-fluid px-5 py-4">
+  <div class="mb-4">
+    <h4 class="fw-semibold mb-1">Proveedores</h4>
+    <span class="text-muted">Registrar nuevo proveedor</span>
+  </div>
+
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-4">
+      <form method="POST" class="needs-validation" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger mt-2">
+          {% for err in form.non_field_errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="row g-4">
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label">Nombre <span class="text-danger">*</span></label>
+              {{ form.nombre }}
+              {% if form.nombre.errors %}
+              <div class="text-danger small mt-1">{% for err in form.nombre.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Rubro</label>
+              {{ form.rubro }}
+              {% if form.rubro.errors %}
+              <div class="text-danger small mt-1">{% for err in form.rubro.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Celular <span class="text-danger">*</span></label>
+              {{ form.celular }}
+              {% if form.celular.errors %}
+              <div class="text-danger small mt-1">{% for err in form.celular.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label">Correo Electrónico</label>
+              {{ form.correo }}
+              {% if form.correo.errors %}
+              <div class="text-danger small mt-1">{% for err in form.correo.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Dirección</label>
+              {{ form.direccion }}
+              {% if form.direccion.errors %}
+              <div class="text-danger small mt-1">{% for err in form.direccion.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">NIT</label>
+              {{ form.nit }}
+              {% if form.nit.errors %}
+              <div class="text-danger small mt-1">{% for err in form.nit.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="text-muted small mt-2 mb-3">
+          <span class="text-danger">*</span> Campos obligatorios
+        </div>
+
+        <div class="d-flex justify-content-between mt-4">
+          <a href="{% url 'proveedores' %}" class="btn btn-outline-secondary">Cancelar</a>
+          <button class="btn btn-primary px-4" type="submit">Guardar proveedor</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll('.text-danger.small.mt-1').forEach(function (errorDiv) {
+    var prev = errorDiv.previousElementSibling;
+    if (prev && (prev.tagName === 'INPUT' || prev.tagName === 'TEXTAREA')) {
+      prev.classList.add('is-invalid');
+    }
+  });
+  (function () {
+    'use strict';
+    window.addEventListener('load', function () {
+      Array.prototype.filter.call(document.getElementsByClassName('needs-validation'), function (form) {
+        form.addEventListener('submit', function (event) {
+          if (!form.checkValidity()) { event.preventDefault(); event.stopPropagation(); }
+          form.classList.add('was-validated');
+        }, false);
+      });
+    }, false);
+  })();
+</script>
+{% endblock %}

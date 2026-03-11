@@ -71,10 +71,11 @@ class Empleado(models.Model):
     activo = models.BooleanField(default=True, verbose_name="Activo")
 
     POSITION_CHOICES = [
-        ('gerente_general', 'Gerente General'),
-        ('tecnico', 'Técnico'),
-        ('analista', 'Analista'),
-        ('desarrollador', 'Desarrollador'),
+        ('administrador', 'Administrador'),
+        ('gerente', 'Gerente'),
+        ('instalador', 'Instalador'),
+        ('tecnico_soporte', 'Técnico de Soporte'),
+        ('secretaria', 'Secretaria'),
     ]
 
     nombre = models.CharField(max_length=100, verbose_name="Nombre")
@@ -87,7 +88,7 @@ class Empleado(models.Model):
     cargo = models.CharField(
         max_length=50,
         choices=POSITION_CHOICES,  # Diccionario de opciones
-        default='gerente_general',  # Valor predeterminado
+        default='administrador',  # Valor predeterminado
         verbose_name="Cargo"
     )
     # New CI field
@@ -145,8 +146,10 @@ class Proyecto(AuditModel):
     ]
 
     PROJECT_TYPE_CHOICES = [
-        ('licitacion', 'Licitación'),            # Licitación
-        ('contratacion_directa', 'Contratación Directa'),  # Contratación directa
+        ('instalacion_nueva', 'Instalación Nueva'),
+        ('ampliacion', 'Ampliación'),
+        ('mantenimiento', 'Mantenimiento'),
+        ('emergencia', 'Emergencia'),
     ]
     # Opciones para el estado del pago
     PAYMENT_STATE_CHOICES = [
@@ -157,14 +160,10 @@ class Proyecto(AuditModel):
     codigo = models.CharField(max_length=20, unique=True, verbose_name="Código Proyecto")
     nombre = models.CharField(max_length=200, unique=True, verbose_name="Nombre Proyecto")
     descripcion = models.TextField(blank=True, verbose_name="Descripción Proyecto")
-    fecha_inicio = models.DateField(verbose_name="Fecha Inicio Proyecto")
-    fecha_fin = models.DateField(null=True, blank=True, verbose_name="Fecha Final Proyecto")
     estado_proyecto = models.CharField(max_length=20, choices=PROJECT_STATUS_CHOICES, default='pendiente', verbose_name="Estado Proyecto")
-    tipo_proyecto = models.CharField(max_length=30, choices=PROJECT_TYPE_CHOICES, default='contratacion_directa', verbose_name="Tipo Proyecto")
-    foto_contrato_firmado = models.ImageField(upload_to="contrato_firmado", null=True, blank=True, verbose_name="Contrato Firmado")
+    tipo_proyecto = models.CharField(max_length=30, choices=PROJECT_TYPE_CHOICES, default='instalacion_nueva', verbose_name="Tipo Proyecto")
     estado_pago = models.CharField(max_length=20, choices=PAYMENT_STATE_CHOICES, default='no_pagado', verbose_name="Estado de Pago")
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    empleado_asignado = models.ForeignKey(Empleado, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Empleado Asignado")
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Contratista")
     propuesta = models.OneToOneField(Propuesta, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Propuesta")
 
@@ -266,3 +265,162 @@ def update_project_payment_status(sender, instance, **kwargs):
     Actualiza el estado de pago del proyecto cuando se guarda un pago.
     """
     instance.proyecto.update_payment_status()
+
+
+# Progreso del Proyecto
+class Progreso(models.Model):
+    proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='progresos', verbose_name="Proyecto")
+    fecha = models.DateField(verbose_name="Fecha")
+    porcentaje = models.PositiveIntegerField(verbose_name="Porcentaje (%)")
+    descripcion = models.CharField(max_length=255, verbose_name="Descripción")
+    observacion = models.TextField(blank=True, verbose_name="Observación")
+    created = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = 'Progreso'
+        verbose_name_plural = 'Progresos'
+        ordering = ['-fecha', '-created']
+
+    def __str__(self):
+        return f"{self.proyecto.nombre} — {self.porcentaje}% ({self.fecha})"
+
+
+# Contrato de Empleado
+class ContratoEmpleado(models.Model):
+    empleado = models.ForeignKey(
+        Empleado, on_delete=models.CASCADE,
+        related_name='contratos', verbose_name="Empleado"
+    )
+    proyecto = models.ForeignKey(
+        Proyecto, on_delete=models.CASCADE,
+        related_name='contratos_empleados', verbose_name="Proyecto"
+    )
+    fecha_firma = models.DateField(verbose_name="Fecha de Firma")
+    fecha_inicio = models.DateField(verbose_name="Fecha de Inicio")
+    fecha_fin = models.DateField(verbose_name="Fecha de Fin")
+    monto_acordado = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto Acordado (Bs.)")
+    observaciones = models.TextField(blank=True, verbose_name="Observaciones")
+    documento = models.FileField(upload_to='contratos_empleados/', null=True, blank=True, verbose_name="Documento")
+    activo = models.BooleanField(default=True, verbose_name="Activo")
+    created = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = 'Contrato de Empleado'
+        verbose_name_plural = 'Contratos de Empleados'
+        ordering = ['-created']
+
+    def __str__(self):
+        return f"Contrato — {self.empleado.nombre} {self.empleado.apellido_paterno} / {self.proyecto.nombre}"
+
+
+# Contrato del Proyecto (con el cliente)
+class ContratoProyecto(models.Model):
+    proyecto = models.OneToOneField(
+        Proyecto, on_delete=models.CASCADE,
+        related_name='contrato_proyecto', verbose_name="Proyecto"
+    )
+    fecha_firma = models.DateField(verbose_name="Fecha de Firma")
+    fecha_inicio = models.DateField(verbose_name="Fecha de Inicio")
+    fecha_fin = models.DateField(verbose_name="Fecha de Fin")
+    monto_acordado = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto Acordado (Bs.)")
+    observaciones = models.TextField(blank=True, verbose_name="Observaciones")
+    documento = models.FileField(upload_to='contratos_proyecto/', null=True, blank=True, verbose_name="Documento")
+    activo = models.BooleanField(default=True, verbose_name="Activo")
+    created = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = 'Contrato del Proyecto'
+        verbose_name_plural = 'Contratos de Proyectos'
+        ordering = ['-created']
+
+    def __str__(self):
+        return f"Contrato del proyecto — {self.proyecto.nombre}"
+
+
+# Proveedor
+class Proveedor(models.Model):
+    nombre    = models.CharField(max_length=200, verbose_name="Nombre")
+    rubro     = models.CharField(max_length=100, verbose_name="Rubro")
+    celular   = models.CharField(max_length=15, verbose_name="Celular")
+    correo    = models.EmailField(max_length=100, blank=True, verbose_name="Correo Electrónico")
+    direccion = models.CharField(max_length=255, blank=True, verbose_name="Dirección")
+    nit       = models.CharField(max_length=20, blank=True, verbose_name="NIT")
+    activo    = models.BooleanField(default=True, verbose_name="Activo")
+    created   = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = 'Proveedor'
+        verbose_name_plural = 'Proveedores'
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+
+# Insumo (catalogo de equipos y materiales)
+class Insumo(models.Model):
+    CATEGORIA_CHOICES = [
+        ('camara_ip',        'Cámara IP'),
+        ('camara_analogica', 'Cámara Analógica'),
+        ('nvr_dvr',          'NVR / DVR'),
+        ('alarma',           'Sistema de Alarma'),
+        ('sensor',           'Sensor'),
+        ('cable',            'Cable'),
+        ('fuente',           'Fuente de Alimentación'),
+        ('accesorio',        'Accesorio'),
+    ]
+    nombre          = models.CharField(max_length=200, verbose_name="Nombre")
+    marca           = models.CharField(max_length=100, verbose_name="Marca")
+    categoria       = models.CharField(max_length=30, choices=CATEGORIA_CHOICES, verbose_name="Categoría")
+    costo_unitario  = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Costo Unitario (Bs.)")
+    activo          = models.BooleanField(default=True, verbose_name="Activo")
+    created         = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = 'Insumo'
+        verbose_name_plural = 'Insumos'
+        ordering = ['categoria', 'nombre']
+
+    def __str__(self):
+        return f"{self.get_categoria_display()} — {self.nombre} ({self.marca})"
+
+
+# Requiere (insumos asignados a un proyecto)
+class Requiere(models.Model):
+    proyecto       = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='insumos', verbose_name="Proyecto")
+    insumo         = models.ForeignKey(Insumo,   on_delete=models.CASCADE, related_name='proyectos', verbose_name="Insumo")
+    cantidad       = models.PositiveIntegerField(verbose_name="Cantidad")
+    costo_unitario = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Costo Unitario (Bs.)")
+    # costo_unitario se copia al asignar para no depender del precio actual del catalogo
+    created        = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = 'Insumo del Proyecto'
+        verbose_name_plural = 'Insumos del Proyecto'
+        ordering = ['-created']
+
+    @property
+    def subtotal(self):
+        return self.cantidad * self.costo_unitario
+
+    def __str__(self):
+        return f"{self.insumo.nombre} x{self.cantidad} → {self.proyecto.nombre}"
+
+
+# Realizar (compras de insumos a proveedores)
+class Realizar(models.Model):
+    proveedor      = models.ForeignKey(Proveedor, on_delete=models.CASCADE, related_name='compras', verbose_name="Proveedor")
+    insumo         = models.ForeignKey(Insumo,    on_delete=models.CASCADE, related_name='compras', verbose_name="Insumo")
+    cantidad       = models.PositiveIntegerField(verbose_name="Cantidad")
+    costo_unitario = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Costo Unitario (Bs.)")
+    costo_total    = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Costo Total (Bs.)")
+    fecha          = models.DateField(verbose_name="Fecha de Compra")
+    created        = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = 'Compra'
+        verbose_name_plural = 'Compras'
+        ordering = ['-fecha']
+
+    def __str__(self):
+        return f"{self.insumo.nombre} x{self.cantidad} de {self.proveedor.nombre} ({self.fecha})"

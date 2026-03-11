@@ -129,8 +129,6 @@
         <th>Estado</th>
         <th>Estado Pago</th>
         <th>Monto Total (Bs.)</th>
-        <th>Fecha Inicio</th>
-        <th>Fecha Fin</th>
       </tr>
     </thead>
     <tbody>
@@ -147,12 +145,10 @@
         <td>{{ project.get_estado_proyecto_display }}</td>
         <td>{{ project.get_estado_pago_display }}</td>
         <td>{{ project.monto_total|floatformat:2 }}</td>
-        <td>{{ project.fecha_inicio|date:"d/m/Y" }}</td>
-        <td>{{ project.fecha_fin|date:"d/m/Y"|default:"—" }}</td>
       </tr>
       {% empty %}
       <tr>
-        <td colspan="9" style="text-align:center; color:#888; padding:12px;">
+        <td colspan="7" style="text-align:center; color:#888; padding:12px;">
           No se encontraron proyectos con los filtros seleccionados.
         </td>
       </tr>
@@ -163,7 +159,6 @@
       <tr>
         <td colspan="6" style="text-align:right;">TOTAL:</td>
         <td>{{ monto_total|floatformat:2 }}</td>
-        <td colspan="2"></td>
       </tr>
     </tfoot>
     {% endif %}

@@ -7,8 +7,8 @@ from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.db import IntegrityError
 
-from .form import ProjectForm, EmpleadoForm, PaymentForm, PublicEntityForm, ProposalForm, ClienteForm
-from .models import Proyecto, Empleado, Pago, EntidadPublica, Propuesta, Cliente
+from .form import ProjectForm, EmpleadoForm, PaymentForm, PublicEntityForm, ProposalForm, ClienteForm, ProgresoForm, ContratoEmpleadoForm, ContratoProyectoForm, ProveedorForm, InsumoForm, RequerirForm, RealizarForm
+from .models import Proyecto, Empleado, Pago, EntidadPublica, Propuesta, Cliente, Progreso, ContratoEmpleado, ContratoProyecto, Proveedor, Insumo, Requiere, Realizar
 from django.contrib.auth.decorators import login_required
 
 from django.utils import timezone
@@ -117,20 +117,11 @@ def reporte_analisis_view(request):
 
 @login_required
 def project_analysis(request):
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
     projects = Proyecto.objects.all()
-
-    if start_date:
-        projects = projects.filter(fecha_inicio__gte=start_date)
-    if end_date:
-        projects = projects.filter(fecha_fin__lte=end_date)
 
     if not projects.exists():
         context = {
-            'message': "No existen proyectos en el rango de fechas seleccionado.",
-            'start_date': start_date,
-            'end_date': end_date,
+            'message': "No existen proyectos registrados.",
         }
         return render(request, 'project_analysis.html', context)
 
@@ -156,8 +147,6 @@ def project_analysis(request):
 
     context = {
         'graphic': graphic,
-        'start_date': start_date,
-        'end_date': end_date,
         'licitacion_count': licitacion_count,
         'contratacion_count': contratacion_count,
     }
@@ -166,17 +155,11 @@ def project_analysis(request):
 
 @login_required
 def project_report(request):
-    start_date = request.GET.get('start_date') or None
-    end_date = request.GET.get('end_date') or None
     project_type = request.GET.get('project_type') or None
     project_status = request.GET.get('project_status') or None
 
-    projects = Proyecto.objects.filter(activo=True).select_related('cliente', 'empleado_asignado')
+    projects = Proyecto.objects.filter(activo=True).select_related('cliente')
 
-    if start_date:
-        projects = projects.filter(fecha_inicio__gte=start_date)
-    if end_date:
-        projects = projects.filter(fecha_fin__lte=end_date)
     if project_type:
         projects = projects.filter(tipo_proyecto=project_type)
     if project_status:
@@ -189,8 +172,6 @@ def project_report(request):
 
     context = {
         'projects': projects,
-        'start_date': start_date,
-        'end_date': end_date,
         'project_type': project_type,
         'project_status': project_status,
         'monto_total': monto_total,
@@ -297,7 +278,24 @@ def project_detail(request, id_project):
 @login_required
 def project_view(request, id_project):
     project = get_object_or_404(Proyecto, pk=id_project, user=request.user)
-    return render(request, 'project_view.html', {'project': project})
+    progresos = project.progresos.all().order_by('-fecha', '-created')
+    ultimo_progreso = progresos.first()
+    porcentaje_actual = ultimo_progreso.porcentaje if ultimo_progreso else 0
+    contratos_empleados = project.contratos_empleados.filter(activo=True).select_related('empleado')
+    contrato_proyecto = getattr(project, 'contrato_proyecto', None)
+    if contrato_proyecto and not contrato_proyecto.activo:
+        contrato_proyecto = None
+    insumos_proyecto = project.insumos.select_related('insumo').order_by('-created')
+    total_insumos = sum(r.subtotal for r in insumos_proyecto)
+    return render(request, 'project_view.html', {
+        'project': project,
+        'progresos': progresos,
+        'porcentaje_actual': porcentaje_actual,
+        'contratos_empleados': contratos_empleados,
+        'contrato_proyecto': contrato_proyecto,
+        'insumos_proyecto': insumos_proyecto,
+        'total_insumos': total_insumos,
+    })
 
 
 @login_required
@@ -852,3 +850,462 @@ def landing_view(request):
 @login_required
 def dashboard_home(request):
     return render(request, 'home.html')
+
+
+# ===================== PROGRESO =====================
+
+@login_required
+def create_progreso(request, id_project):
+    project = get_object_or_404(Proyecto, pk=id_project, user=request.user)
+    if request.method == 'GET':
+        form = ProgresoForm(proyecto=project)
+        return render(request, 'create_progreso.html', {'form': form, 'project': project})
+    else:
+        form = ProgresoForm(request.POST, proyecto=project)
+        if form.is_valid():
+            progreso = form.save(commit=False)
+            progreso.proyecto = project
+            progreso.save()
+            messages.success(request, 'Progreso registrado correctamente.')
+            return redirect('project_view', id_project=project.id)
+        return render(request, 'create_progreso.html', {'form': form, 'project': project})
+
+
+@login_required
+def progreso_detail(request, id_progreso):
+    progreso = get_object_or_404(Progreso, pk=id_progreso, proyecto__user=request.user)
+    project = progreso.proyecto
+    if request.method == 'GET':
+        form = ProgresoForm(instance=progreso, proyecto=project)
+        return render(request, 'progreso_detail.html', {'form': form, 'progreso': progreso, 'project': project})
+    else:
+        form = ProgresoForm(request.POST, instance=progreso, proyecto=project)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Progreso actualizado correctamente.')
+            return redirect('project_view', id_project=project.id)
+        return render(request, 'progreso_detail.html', {'form': form, 'progreso': progreso, 'project': project})
+
+
+@login_required
+def deactivate_progreso(request, id_progreso):
+    progreso = get_object_or_404(Progreso, pk=id_progreso, proyecto__user=request.user)
+    id_project = progreso.proyecto.id
+    if request.method == 'POST':
+        progreso.delete()
+        messages.success(request, 'Registro de progreso eliminado.')
+    return redirect('project_view', id_project=id_project)
+
+
+# ===================== CONTRATOS =====================
+
+@login_required
+def create_contrato_empleado(request, id_project):
+    project = get_object_or_404(Proyecto, pk=id_project, user=request.user)
+    if request.method == 'GET':
+        form = ContratoEmpleadoForm()
+        return render(request, 'create_contrato_empleado.html', {'form': form, 'project': project})
+    else:
+        form = ContratoEmpleadoForm(request.POST, request.FILES)
+        if form.is_valid():
+            contrato = form.save(commit=False)
+            contrato.proyecto = project
+            contrato.save()
+            messages.success(request, f'Contrato registrado para {contrato.empleado.nombre} {contrato.empleado.apellido_paterno}.')
+            return redirect('project_view', id_project=project.id)
+        return render(request, 'create_contrato_empleado.html', {'form': form, 'project': project})
+
+
+@login_required
+def contrato_empleado_detail(request, id_contrato):
+    contrato = get_object_or_404(ContratoEmpleado, pk=id_contrato, activo=True, proyecto__user=request.user)
+    project = contrato.proyecto
+    if request.method == 'GET':
+        form = ContratoEmpleadoForm(instance=contrato)
+        return render(request, 'contrato_empleado_detail.html', {'form': form, 'contrato': contrato, 'project': project})
+    else:
+        form = ContratoEmpleadoForm(request.POST, request.FILES, instance=contrato)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Contrato actualizado correctamente.')
+            return redirect('project_view', id_project=project.id)
+        return render(request, 'contrato_empleado_detail.html', {'form': form, 'contrato': contrato, 'project': project})
+
+
+@login_required
+def deactivate_contrato_empleado(request, id_contrato):
+    contrato = get_object_or_404(ContratoEmpleado, pk=id_contrato, activo=True, proyecto__user=request.user)
+    if request.method == 'POST':
+        contrato.activo = False
+        contrato.save()
+        messages.success(request, f'Contrato de {contrato.empleado.nombre} {contrato.empleado.apellido_paterno} inhabilitado.')
+    return redirect('project_view', id_project=contrato.proyecto.id)
+
+
+@login_required
+def create_contrato_proyecto(request, id_project):
+    project = get_object_or_404(Proyecto, pk=id_project, user=request.user)
+    # Check if project already has an active contract
+    existing = getattr(project, 'contrato_proyecto', None)
+    if existing and existing.activo:
+        messages.warning(request, 'Este proyecto ya tiene un contrato registrado.')
+        return redirect('project_view', id_project=project.id)
+    if request.method == 'GET':
+        form = ContratoProyectoForm()
+        return render(request, 'create_contrato_proyecto.html', {'form': form, 'project': project})
+    else:
+        form = ContratoProyectoForm(request.POST, request.FILES)
+        if form.is_valid():
+            contrato = form.save(commit=False)
+            contrato.proyecto = project
+            contrato.save()
+            messages.success(request, 'Contrato del proyecto registrado correctamente.')
+            return redirect('project_view', id_project=project.id)
+        return render(request, 'create_contrato_proyecto.html', {'form': form, 'project': project})
+
+
+@login_required
+def contrato_proyecto_detail(request, id_contrato):
+    contrato = get_object_or_404(ContratoProyecto, pk=id_contrato, activo=True, proyecto__user=request.user)
+    project = contrato.proyecto
+    if request.method == 'GET':
+        form = ContratoProyectoForm(instance=contrato)
+        return render(request, 'contrato_proyecto_detail.html', {'form': form, 'contrato': contrato, 'project': project})
+    else:
+        form = ContratoProyectoForm(request.POST, request.FILES, instance=contrato)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Contrato del proyecto actualizado correctamente.')
+            return redirect('project_view', id_project=project.id)
+        return render(request, 'contrato_proyecto_detail.html', {'form': form, 'contrato': contrato, 'project': project})
+
+
+@login_required
+def deactivate_contrato_proyecto(request, id_contrato):
+    contrato = get_object_or_404(ContratoProyecto, pk=id_contrato, activo=True, proyecto__user=request.user)
+    if request.method == 'POST':
+        contrato.activo = False
+        contrato.save()
+        messages.success(request, 'Contrato del proyecto inhabilitado.')
+    return redirect('project_view', id_project=contrato.proyecto.id)
+
+
+# ===================== PROVEEDORES =====================
+
+@login_required
+def proveedores(request):
+    search_nombre = request.GET.get('search_nombre', '')
+    page = request.GET.get('page', 1)
+    per_page = request.GET.get('per_page', 10)
+
+    try:
+        page = int(page)
+        if page < 1:
+            page = 1
+    except ValueError:
+        page = 1
+
+    try:
+        per_page = int(per_page)
+        if per_page not in [10, 20, 50, 100]:
+            per_page = 10
+    except ValueError:
+        per_page = 10
+
+    qs = Proveedor.objects.filter(activo=True).order_by('nombre')
+    if search_nombre:
+        qs = qs.filter(nombre__icontains=search_nombre)
+
+    paginator = Paginator(qs, per_page)
+    try:
+        proveedores_page = paginator.page(page)
+    except PageNotAnInteger:
+        proveedores_page = paginator.page(1)
+    except EmptyPage:
+        proveedores_page = paginator.page(paginator.num_pages)
+
+    return render(request, 'proveedores.html', {
+        'proveedores': proveedores_page,
+        'search_nombre': search_nombre,
+        'per_page': per_page,
+    })
+
+
+@login_required
+def create_proveedor(request):
+    if request.method == 'GET':
+        return render(request, 'create_proveedor.html', {'form': ProveedorForm()})
+    else:
+        form = ProveedorForm(request.POST)
+        if form.is_valid():
+            proveedor = form.save()
+            messages.success(request, f'El proveedor {proveedor.nombre} fue registrado exitosamente.')
+            return redirect('proveedores')
+        return render(request, 'create_proveedor.html', {'form': form})
+
+
+@login_required
+def proveedor_detail(request, id_proveedor):
+    proveedor = get_object_or_404(Proveedor, pk=id_proveedor)
+    if request.method == 'GET':
+        form = ProveedorForm(instance=proveedor)
+        return render(request, 'proveedor_detail.html', {'proveedor': proveedor, 'form': form})
+    else:
+        form = ProveedorForm(request.POST, instance=proveedor)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'El proveedor {proveedor.nombre} fue actualizado exitosamente.')
+            return redirect('proveedores')
+        return render(request, 'proveedor_detail.html', {'proveedor': proveedor, 'form': form})
+
+
+@login_required
+def deactivate_proveedor(request, id_proveedor):
+    proveedor = get_object_or_404(Proveedor, pk=id_proveedor, activo=True)
+    proveedor.activo = False
+    proveedor.save()
+    messages.success(request, f'El proveedor {proveedor.nombre} ha sido inhabilitado.')
+    return redirect('proveedores')
+
+
+# ===================== INSUMOS =====================
+
+@login_required
+def insumos(request):
+    search_nombre = request.GET.get('search_nombre', '')
+    filter_categoria = request.GET.get('filter_categoria', '')
+    page = request.GET.get('page', 1)
+    per_page = request.GET.get('per_page', 10)
+
+    try:
+        page = int(page)
+        if page < 1:
+            page = 1
+    except ValueError:
+        page = 1
+
+    try:
+        per_page = int(per_page)
+        if per_page not in [10, 20, 50, 100]:
+            per_page = 10
+    except ValueError:
+        per_page = 10
+
+    qs = Insumo.objects.filter(activo=True).order_by('categoria', 'nombre')
+    if search_nombre:
+        qs = qs.filter(
+            Q(nombre__icontains=search_nombre) | Q(marca__icontains=search_nombre)
+        )
+    if filter_categoria:
+        qs = qs.filter(categoria=filter_categoria)
+
+    paginator = Paginator(qs, per_page)
+    try:
+        insumos_page = paginator.page(page)
+    except PageNotAnInteger:
+        insumos_page = paginator.page(1)
+    except EmptyPage:
+        insumos_page = paginator.page(paginator.num_pages)
+
+    from .models import Insumo as InsumoModel
+    categorias = InsumoModel.CATEGORIA_CHOICES
+
+    return render(request, 'insumos.html', {
+        'insumos': insumos_page,
+        'search_nombre': search_nombre,
+        'filter_categoria': filter_categoria,
+        'categorias': categorias,
+        'per_page': per_page,
+    })
+
+
+@login_required
+def create_insumo(request):
+    if request.method == 'GET':
+        return render(request, 'create_insumo.html', {'form': InsumoForm()})
+    else:
+        form = InsumoForm(request.POST)
+        if form.is_valid():
+            insumo = form.save()
+            messages.success(request, f'El insumo {insumo.nombre} fue registrado exitosamente.')
+            return redirect('insumos')
+        return render(request, 'create_insumo.html', {'form': form})
+
+
+@login_required
+def insumo_detail(request, id_insumo):
+    insumo = get_object_or_404(Insumo, pk=id_insumo)
+    if request.method == 'GET':
+        form = InsumoForm(instance=insumo)
+        return render(request, 'insumo_detail.html', {'insumo': insumo, 'form': form})
+    else:
+        form = InsumoForm(request.POST, instance=insumo)
+        if form.is_valid():
+            form.save()
+            messages.success(request, f'El insumo {insumo.nombre} fue actualizado exitosamente.')
+            return redirect('insumos')
+        return render(request, 'insumo_detail.html', {'insumo': insumo, 'form': form})
+
+
+@login_required
+def deactivate_insumo(request, id_insumo):
+    insumo = get_object_or_404(Insumo, pk=id_insumo, activo=True)
+    insumo.activo = False
+    insumo.save()
+    messages.success(request, f'El insumo {insumo.nombre} ha sido inhabilitado.')
+    return redirect('insumos')
+
+
+# ===================== REQUIERE (insumos del proyecto) =====================
+
+@login_required
+def create_requiere(request, id_project):
+    project = get_object_or_404(Proyecto, pk=id_project, user=request.user)
+    insumos_activos = Insumo.objects.filter(activo=True)
+    import json
+    insumos_con_precio = {str(i.id): str(i.costo_unitario) for i in insumos_activos}
+
+    if request.method == 'GET':
+        form = RequerirForm()
+        return render(request, 'create_requiere.html', {
+            'form': form,
+            'project': project,
+            'insumos_con_precio': json.dumps(insumos_con_precio),
+        })
+    else:
+        form = RequerirForm(request.POST)
+        if form.is_valid():
+            requiere = form.save(commit=False)
+            requiere.proyecto = project
+            requiere.save()
+            messages.success(request, f'Insumo "{requiere.insumo.nombre}" agregado al proyecto.')
+            return redirect('project_view', id_project=project.id)
+        return render(request, 'create_requiere.html', {
+            'form': form,
+            'project': project,
+            'insumos_con_precio': json.dumps(insumos_con_precio),
+        })
+
+
+@login_required
+def requiere_detail(request, id_requiere):
+    requiere = get_object_or_404(Requiere, pk=id_requiere, proyecto__user=request.user)
+    project = requiere.proyecto
+    insumos_activos = Insumo.objects.filter(activo=True)
+    import json
+    insumos_con_precio = {str(i.id): str(i.costo_unitario) for i in insumos_activos}
+
+    if request.method == 'GET':
+        form = RequerirForm(instance=requiere)
+        return render(request, 'requiere_detail.html', {
+            'form': form,
+            'requiere': requiere,
+            'project': project,
+            'insumos_con_precio': json.dumps(insumos_con_precio),
+        })
+    else:
+        form = RequerirForm(request.POST, instance=requiere)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Insumo del proyecto actualizado correctamente.')
+            return redirect('project_view', id_project=project.id)
+        return render(request, 'requiere_detail.html', {
+            'form': form,
+            'requiere': requiere,
+            'project': project,
+            'insumos_con_precio': json.dumps(insumos_con_precio),
+        })
+
+
+@login_required
+def deactivate_requiere(request, id_requiere):
+    requiere = get_object_or_404(Requiere, pk=id_requiere, proyecto__user=request.user)
+    id_project = requiere.proyecto.id
+    if request.method == 'POST':
+        requiere.delete()
+        messages.success(request, 'Insumo eliminado del proyecto.')
+    return redirect('project_view', id_project=id_project)
+
+
+# ===================== COMPRAS (Realizar) =====================
+
+@login_required
+def compras(request):
+    search = request.GET.get('search', '')
+    page = request.GET.get('page', 1)
+    per_page = request.GET.get('per_page', 10)
+
+    try:
+        page = int(page)
+        if page < 1:
+            page = 1
+    except ValueError:
+        page = 1
+
+    try:
+        per_page = int(per_page)
+        if per_page not in [10, 20, 50, 100]:
+            per_page = 10
+    except ValueError:
+        per_page = 10
+
+    qs = Realizar.objects.select_related('proveedor', 'insumo').order_by('-fecha')
+    if search:
+        qs = qs.filter(
+            Q(insumo__nombre__icontains=search) | Q(proveedor__nombre__icontains=search)
+        )
+
+    paginator = Paginator(qs, per_page)
+    try:
+        compras_page = paginator.page(page)
+    except PageNotAnInteger:
+        compras_page = paginator.page(1)
+    except EmptyPage:
+        compras_page = paginator.page(paginator.num_pages)
+
+    return render(request, 'compras.html', {
+        'compras': compras_page,
+        'search': search,
+        'per_page': per_page,
+    })
+
+
+@login_required
+def create_realizar(request):
+    if request.method == 'GET':
+        return render(request, 'create_realizar.html', {'form': RealizarForm()})
+    else:
+        form = RealizarForm(request.POST)
+        if form.is_valid():
+            compra = form.save(commit=False)
+            compra.costo_total = compra.cantidad * compra.costo_unitario
+            compra.save()
+            messages.success(request, f'Compra registrada: {compra.insumo.nombre} x{compra.cantidad} de {compra.proveedor.nombre}.')
+            return redirect('compras')
+        return render(request, 'create_realizar.html', {'form': form})
+
+
+@login_required
+def realizar_detail(request, id_realizar):
+    compra = get_object_or_404(Realizar, pk=id_realizar)
+    if request.method == 'GET':
+        form = RealizarForm(instance=compra)
+        return render(request, 'realizar_detail.html', {'compra': compra, 'form': form})
+    else:
+        form = RealizarForm(request.POST, instance=compra)
+        if form.is_valid():
+            compra = form.save(commit=False)
+            compra.costo_total = compra.cantidad * compra.costo_unitario
+            compra.save()
+            messages.success(request, 'Compra actualizada correctamente.')
+            return redirect('compras')
+        return render(request, 'realizar_detail.html', {'compra': compra, 'form': form})
+
+
+@login_required
+def deactivate_realizar(request, id_realizar):
+    compra = get_object_or_404(Realizar, pk=id_realizar)
+    if request.method == 'POST':
+        compra.delete()
+        messages.success(request, 'Compra eliminada correctamente.')
+    return redirect('compras')

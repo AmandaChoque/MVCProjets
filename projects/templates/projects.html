@@ -106,7 +106,6 @@
           <th>Estado</th>
           <th>Estado Pago</th>
           <th>Monto Total (Bs.)</th>
-          <th>Fecha Inicio</th>
           <th class="text-end" style="width:60px;">Acciones</th>
         </tr>
       </thead>
@@ -148,7 +147,6 @@
             {% endif %}
           </td>
           <td class="fw-semibold">{{ project.monto_total|floatformat:2 }}</td>
-          <td>{{ project.fecha_inicio|date:"d/m/Y" }}</td>
           <td class="text-end">
             <div class="dropdown">
               <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(venv/Scripts/python manage.py makemigrations --name split_contrato_models)",
+      "Bash(venv/Scripts/python manage.py makemigrations --name=\"update_tipo_proyecto_and_cargo_choices\")",
+      "Bash(venv/Scripts/python append_forms.py)",
+      "Bash(venv/Scripts/python manage.py check)"
+    ]
+  }
+}

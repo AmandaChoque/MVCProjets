@@ -16,6 +16,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
+from django.conf import settings
+from django.conf.urls.static import static
 from projects import views
 
 
@@ -41,7 +43,19 @@ urlpatterns = [
     path('projects/<int:id_project>/complete/', views.project_complete, name='project_complete'),
     path('projects/<int:id_project>/delete/', views.project_delete, name='project_delete'),
     path('projects/<int:id_project>/deactivate/', views.deactivate_project, name='project_deactivate'),
-    
+    path('projects/<int:id_project>/progreso/nuevo/', views.create_progreso, name='create_progreso'),
+    path('progreso/<int:id_progreso>/', views.progreso_detail, name='progreso_detail'),
+    path('progreso/<int:id_progreso>/eliminar/', views.deactivate_progreso, name='deactivate_progreso'),
+
+    # Contratos de Empleados
+    path('projects/<int:id_project>/contratos/empleado/nuevo/', views.create_contrato_empleado, name='create_contrato_empleado'),
+    path('contratos/empleado/<int:id_contrato>/', views.contrato_empleado_detail, name='contrato_empleado_detail'),
+    path('contratos/empleado/<int:id_contrato>/deactivate/', views.deactivate_contrato_empleado, name='contrato_empleado_deactivate'),
+    # Contrato del Proyecto
+    path('projects/<int:id_project>/contrato-proyecto/nuevo/', views.create_contrato_proyecto, name='create_contrato_proyecto'),
+    path('contratos/proyecto/<int:id_contrato>/', views.contrato_proyecto_detail, name='contrato_proyecto_detail'),
+    path('contratos/proyecto/<int:id_contrato>/deactivate/', views.deactivate_contrato_proyecto, name='contrato_proyecto_deactivate'),
+
     # Employees
     path('employees/', views.employees, name='employees'),
     path('employees/create/', views.create_employee, name='create_employee'),
@@ -82,4 +96,27 @@ urlpatterns = [
     path('payments/filter/', views.filter_payments_by_project_name, name='filter_payments_by_project_name'),
     path('payment-analysis/', views.payment_analysis, name='payment_analysis'),
 
-]
+    # Proveedores
+    path('proveedores/', views.proveedores, name='proveedores'),
+    path('proveedores/nuevo/', views.create_proveedor, name='create_proveedor'),
+    path('proveedores/<int:id_proveedor>/', views.proveedor_detail, name='proveedor_detail'),
+    path('proveedores/<int:id_proveedor>/deactivate/', views.deactivate_proveedor, name='proveedor_deactivate'),
+
+    # Insumos
+    path('insumos/', views.insumos, name='insumos'),
+    path('insumos/nuevo/', views.create_insumo, name='create_insumo'),
+    path('insumos/<int:id_insumo>/', views.insumo_detail, name='insumo_detail'),
+    path('insumos/<int:id_insumo>/deactivate/', views.deactivate_insumo, name='insumo_deactivate'),
+
+    # Requiere
+    path('projects/<int:id_project>/insumos/nuevo/', views.create_requiere, name='create_requiere'),
+    path('insumos-proyecto/<int:id_requiere>/', views.requiere_detail, name='requiere_detail'),
+    path('insumos-proyecto/<int:id_requiere>/eliminar/', views.deactivate_requiere, name='requiere_deactivate'),
+
+    # Compras
+    path('compras/', views.compras, name='compras'),
+    path('compras/nueva/', views.create_realizar, name='create_realizar'),
+    path('compras/<int:id_realizar>/', views.realizar_detail, name='realizar_detail'),
+    path('compras/<int:id_realizar>/deactivate/', views.deactivate_realizar, name='realizar_deactivate'),
+
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

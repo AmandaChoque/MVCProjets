@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+  .was-validated .form-control:valid,
+  .was-validated .form-select:valid {
+    border-color: #dee2e6;
+    background-image: none;
+  }
+  .was-validated .form-control:valid:focus,
+  .was-validated .form-select:valid:focus {
+    border-color: #dee2e6;
+    box-shadow: 0 0 0 0.25rem rgba(39, 128, 227, 0.25);
+  }
+  .valid-feedback { display: none; }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="container-fluid px-5 py-4">
+  <div class="mb-4">
+    <h4 class="fw-semibold mb-1">Contratos de Empleados</h4>
+    <span class="text-muted">Registrar contrato — {{ project.nombre }}</span>
+  </div>
+
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-4">
+      <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger mt-2">
+          {% for err in form.non_field_errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="row g-4">
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label">Empleado <span class="text-danger">*</span></label>
+              {{ form.empleado }}
+              {% if form.empleado.errors %}
+              <div class="text-danger small mt-1">{% for err in form.empleado.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Fecha de Firma <span class="text-danger">*</span></label>
+              {{ form.fecha_firma }}
+              {% if form.fecha_firma.errors %}
+              <div class="text-danger small mt-1">{% for err in form.fecha_firma.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Fecha de Inicio <span class="text-danger">*</span></label>
+              {{ form.fecha_inicio }}
+              {% if form.fecha_inicio.errors %}
+              <div class="text-danger small mt-1">{% for err in form.fecha_inicio.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Fecha de Fin <span class="text-danger">*</span></label>
+              {{ form.fecha_fin }}
+              {% if form.fecha_fin.errors %}
+              <div class="text-danger small mt-1">{% for err in form.fecha_fin.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="col-lg-6">
+            <div class="mb-3">
+              <label class="form-label">Monto Acordado (Bs.) <span class="text-danger">*</span></label>
+              {{ form.monto_acordado }}
+              {% if form.monto_acordado.errors %}
+              <div class="text-danger small mt-1">{% for err in form.monto_acordado.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Documento <span class="text-muted small">(PDF o imagen)</span></label>
+              {{ form.documento }}
+              {% if form.documento.errors %}
+              <div class="text-danger small mt-1">{% for err in form.documento.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+              <div class="form-text text-muted">Formatos aceptados: PDF, JPG, PNG, GIF, WEBP</div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Observaciones</label>
+              {{ form.observaciones }}
+              {% if form.observaciones.errors %}
+              <div class="text-danger small mt-1">{% for err in form.observaciones.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="text-muted small mt-2 mb-3">
+          <span class="text-danger">*</span> Campos obligatorios
+        </div>
+
+        <div class="d-flex justify-content-between mt-4">
+          <a href="{% url 'project_view' project.id %}" class="btn btn-outline-secondary">Cancelar</a>
+          <button class="btn btn-primary px-4" type="submit">Guardar contrato</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll('.text-danger.small.mt-1').forEach(function (errorDiv) {
+    var prev = errorDiv.previousElementSibling;
+    if (prev && (prev.tagName === 'INPUT' || prev.tagName === 'TEXTAREA' || prev.tagName === 'SELECT')) {
+      prev.classList.add('is-invalid');
+    }
+  });
+  (function () {
+    'use strict';
+    window.addEventListener('load', function () {
+      Array.prototype.filter.call(document.getElementsByClassName('needs-validation'), function (form) {
+        form.addEventListener('submit', function (event) {
+          if (!form.checkValidity()) { event.preventDefault(); event.stopPropagation(); }
+          form.classList.add('was-validated');
+        }, false);
+      });
+    }, false);
+  })();
+</script>
+{% endblock %}

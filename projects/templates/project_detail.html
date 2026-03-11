@@ -28,7 +28,7 @@
   <!-- TARJETA -->
   <div class="card border-0 shadow-sm rounded-3">
     <div class="card-body p-4">
-      <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+      <form method="POST" class="needs-validation" novalidate>
         {% csrf_token %}
         {% if form.non_field_errors %}
         <div class="alert alert-danger mt-2">
@@ -70,27 +70,6 @@
               {% endif %}
             </div>
 
-            <div class="row">
-              <div class="col-md-6 mb-3">
-                <label class="form-label">Fecha inicio <span class="text-danger">*</span></label>
-                {{ form.fecha_inicio }}
-                {% if form.fecha_inicio.errors %}
-                <div class="text-danger small mt-1">
-                  {% for err in form.fecha_inicio.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
-                </div>
-                {% endif %}
-              </div>
-              <div class="col-md-6 mb-3">
-                <label class="form-label">Fecha final</label>
-                {{ form.fecha_fin }}
-                {% if form.fecha_fin.errors %}
-                <div class="text-danger small mt-1">
-                  {% for err in form.fecha_fin.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
-                </div>
-                {% endif %}
-              </div>
-            </div>
-
             <div class="mb-3">
               <label class="form-label">Monto total (Bs.) <span class="text-danger">*</span></label>
               {{ form.monto_total }}
@@ -126,20 +105,6 @@
               {% endif %}
             </div>
 
-            <div class="mb-3">
-              <label class="form-label">Empleado asignado</label>
-              {{ form.empleado_asignado }}
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Contrato firmado (PDF / Imagen)</label>
-              {{ form.foto_contrato_firmado }}
-              {% if form.foto_contrato_firmado.errors %}
-              <div class="text-danger small mt-1">
-                {% for err in form.foto_contrato_firmado.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
-              </div>
-              {% endif %}
-            </div>
 
           </div>
         </div>
