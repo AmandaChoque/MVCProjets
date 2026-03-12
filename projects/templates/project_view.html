@@ -89,6 +89,81 @@
         </div>
       </div>
 
+      <!-- RENTABILIDAD DEL PROYECTO -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 fw-semibold">Análisis de Rentabilidad</h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <!-- Columna izquierda: desglose de costos -->
+            <div class="col-md-7">
+              <table class="table table-sm mb-0">
+                <tbody>
+                  <tr>
+                    <td class="text-muted ps-0">Ingreso del proyecto</td>
+                    <td class="text-end fw-semibold text-success">Bs. {{ ingresos|floatformat:2 }}</td>
+                  </tr>
+                  <tr>
+                    <td class="text-muted ps-0">
+                      <i class="bi bi-dash-circle text-danger me-1"></i>Costo de insumos/materiales
+                    </td>
+                    <td class="text-end text-danger">Bs. {{ total_insumos|floatformat:2 }}</td>
+                  </tr>
+                  <tr>
+                    <td class="text-muted ps-0">
+                      <i class="bi bi-dash-circle text-danger me-1"></i>Costo de personal (contratos)
+                    </td>
+                    <td class="text-end text-danger">Bs. {{ costo_personal|floatformat:2 }}</td>
+                  </tr>
+                  <tr class="border-top">
+                    <td class="fw-bold ps-0">Rentabilidad neta</td>
+                    <td class="text-end fw-bold {% if rentabilidad >= 0 %}text-success{% else %}text-danger{% endif %}">
+                      Bs. {{ rentabilidad|floatformat:2 }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <!-- Columna derecha: margen visual -->
+            <div class="col-md-5 d-flex flex-column align-items-center justify-content-center">
+              <div class="text-center mb-2">
+                <span class="d-block fw-semibold text-muted small">Margen de ganancia</span>
+                <span class="display-6 fw-bold {% if margen >= 30 %}text-success{% elif margen >= 10 %}text-warning{% else %}text-danger{% endif %}">
+                  {{ margen }}%
+                </span>
+              </div>
+              <div class="progress w-100" style="height: 12px; border-radius: 8px;">
+                <div class="progress-bar {% if margen >= 30 %}bg-success{% elif margen >= 10 %}bg-warning{% else %}bg-danger{% endif %}"
+                     role="progressbar"
+                     style="width: {% if margen > 100 %}100{% elif margen < 0 %}0{% else %}{{ margen }}{% endif %}%;">
+                </div>
+              </div>
+              <small class="text-muted mt-2">
+                {% if margen >= 30 %}
+                  <i class="bi bi-check-circle-fill text-success me-1"></i>Rentabilidad saludable
+                {% elif margen >= 10 %}
+                  <i class="bi bi-exclamation-circle-fill text-warning me-1"></i>Margen ajustado
+                {% elif margen >= 0 %}
+                  <i class="bi bi-x-circle-fill text-danger me-1"></i>Margen muy bajo
+                {% else %}
+                  <i class="bi bi-x-circle-fill text-danger me-1"></i>Proyecto en pérdida
+                {% endif %}
+              </small>
+              {% if ingresos == 0 %}
+              <small class="text-muted fst-italic mt-1">Sin monto definido aún.</small>
+              {% endif %}
+            </div>
+          </div>
+          {% if not contratos_empleados.exists and not insumos_proyecto %}
+          <p class="text-muted small mt-3 mb-0">
+            <i class="bi bi-info-circle me-1"></i>
+            Agrega contratos de empleados e insumos para ver la rentabilidad real del proyecto.
+          </p>
+          {% endif %}
+        </div>
+      </div>
+
       <!-- ASIGNACIONES -->
       <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-header bg-light">

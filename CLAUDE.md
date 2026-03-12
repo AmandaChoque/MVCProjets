@@ -58,8 +58,8 @@ URL routing is entirely in `project_management/urls.py` (single file, ~120 lines
 | Model | Key fields | Notes |
 |---|---|---|
 | `AuditModel` | created, updated_at, deleted_at, activo | Abstract base |
-| `Cliente` | nit_ci, nombre, apellidos, cargo, tipo_contratante, activo | Soft-delete via `delete()`. `ActiveClienteManager` (default, activo=True), `all_objects` |
-| `Empleado` | user (OneToOne→User), nombre, apellidos, cargo, carnet_identidad, activo | cargo choices: administrador/gerente/instalador/tecnico_soporte/secretaria |
+| `Cliente` | nit_ci, nombre, apellido_paterno, apellido_materno, cargo, tipo_contratante, activo | Soft-delete via `delete()`. `ActiveClienteManager` (default, activo=True), `all_objects` |
+| `Empleado` | user (OneToOne→User), nombre, apellido_paterno, apellido_materno, cargo, carnet_identidad, numero_celular, salario, fecha_contratacion, activo | cargo choices: administrador/gerente/instalador/tecnico_soporte/secretaria |
 | `EntidadPublica` | nombre_entidad, representante_legal, contacto, direccion | |
 | `Propuesta` | fecha_presentacion, monto_presupuesto, requisitos, FK→EntidadPublica | |
 | `Proyecto` | codigo, nombre, estado_proyecto, tipo_proyecto, estado_pago, monto_total, FK→User/Cliente/Propuesta | Extends AuditModel. tipo_proyecto: instalacion_nueva/ampliacion/mantenimiento/emergencia |
@@ -75,7 +75,7 @@ URL routing is entirely in `project_management/urls.py` (single file, ~120 lines
 
 ## Key Patterns
 
-**Soft-delete**: Set `activo=False` instead of deleting. `Cliente` overrides `delete()`. Other models set `activo=False` in views directly.
+**Soft-delete**: Set `activo=False` instead of deleting. `Cliente` overrides `delete()`. For all other models, `deactivate_*` views set `activo=False` directly and redirect back to the list. Hard delete (`project_delete`) is the exception, only for projects.
 
 **Forms**: All forms use Bootstrap `form-control`/`form-select` widgets. Decimal fields (monto, costo_unitario, salario) use `CharField` + `clean_*` with regex `r'\d+(\.\d{1,2})?'` — no commas, dot as decimal separator.
 
@@ -89,15 +89,64 @@ URL routing is entirely in `project_management/urls.py` (single file, ~120 lines
 
 ## URL Structure
 
+All CRUD modules follow: list → `/create/` → `/<id>/` (detail/edit) → `/<id>/deactivate/` (soft-delete).
+
 ```
-/                          → landing
-/dashboard/                → home (login required)
-/projects/<id>/view/       → full project detail with all related data
-/projects/<id>/insumos/nuevo/  → add insumo to project (Requiere)
-/insumos-proyecto/<id>/    → edit Requiere
-/proveedores/              → supplier CRUD
-/insumos/                  → equipment catalog CRUD
-/compras/                  → purchases (Realizar) CRUD
+/                                            → landing
+/dashboard/                                  → home
+/signin/, /signup/, /signout/                → auth
+/extend-session/                             → AJAX session extension (POST)
+
+/projects/                                   → list + filters
+/projects/create/
+/projects/<id>/                              → detail/edit
+/projects/<id>/view/                         → full aggregated view (progresos, contratos, insumos, pagos)
+/projects/<id>/complete/                     → mark complete
+/projects/<id>/delete/                       → hard delete
+/projects/<id>/deactivate/                   → soft-delete
+/projects/<id>/progreso/nuevo/
+/progreso/<id>/                              → edit progreso
+/progreso/<id>/eliminar/                     → deactivate progreso
+
+/projects/<id>/contratos/empleado/nuevo/
+/contratos/empleado/<id>/
+/contratos/empleado/<id>/deactivate/
+/projects/<id>/contrato-proyecto/nuevo/
+/contratos/proyecto/<id>/
+/contratos/proyecto/<id>/deactivate/
+
+/employees/                                  → list
+/employees/create/
+/employees/<id>/
+/employees/<id>/view/
+/employees/<id>/deactivate/
+
+/payments/                                   → list
+/payments/create/
+/payments/<id>/
+/payments/<id>/view/
+/payments/<id>/deactivate/
+/payments/filter/                            → AJAX filter by project name
+
+/clientes/
+/clientes/nuevo/
+/clientes/<id>/
+/clientes/<id>/ver/
+/clientes/<id>/deactivate/
+
+/public_entities/, /public_entity/create/, /public_entities/<id>/, /public_entities/<id>/deactivate/
+/proposals/, /proposal/create/, /proposals/<id>/, /proposals/<id>/deactivate/
+
+/proveedores/, /proveedores/nuevo/, /proveedores/<id>/, /proveedores/<id>/deactivate/
+/insumos/, /insumos/nuevo/, /insumos/<id>/, /insumos/<id>/deactivate/
+/projects/<id>/insumos/nuevo/                → create Requiere (link insumo to project)
+/insumos-proyecto/<id>/                      → edit Requiere
+/insumos-proyecto/<id>/eliminar/             → deactivate Requiere
+/compras/, /compras/nueva/, /compras/<id>/, /compras/<id>/deactivate/
+
+/reporte-analisis/                           → project analysis charts + PDF
+/project_report/                             → project list PDF
+/payment-analysis/                           → payment analysis charts + PDF
 ```
 
 ## Settings Notes

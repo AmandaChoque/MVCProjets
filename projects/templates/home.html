@@ -1,92 +1,268 @@
-{% extends 'base.html' %} {% block content %}
-<main class="container py-5">
-  <!-- Título principal -->
-  <h1
-    class="display-4 text-center fw-bold mb-5"
-    style="color: #264653; text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1)"
-  >
-    SOBOTEC S.R.L.
-  </h1>
-
-  <!-- Sección Misión -->
-  <section
-    class="card shadow-lg rounded-4 mb-4 border-0"
-    style="background-color: #f8f9fa"
-  >
-    <div class="card-body p-5">
-      <h2 class="h4 text-center fw-bold mb-4" style="color: #264653">Misión</h2>
-      <p
-        class="text-justify"
-        style="color: #333; line-height: 1.8; font-size: 1.05rem"
-      >
-        Ser un socio estratégico en el desarrollo de proyectos de seguridad,
-        construcción y tecnología, ofreciendo soluciones integrales e
-        innovadoras que cumplan con los más altos estándares de calidad,
-        eficiencia y sostenibilidad. Buscamos contribuir al progreso de nuestros
-        clientes y del país mediante la provisión de servicios especializados,
-        productos de alta calidad e importaciones que respondan a las
-        necesidades del mercado boliviano.
-      </p>
-    </div>
-  </section>
-
-  <!-- Sección Visión -->
-  <section
-    class="card shadow-lg rounded-4 mb-4 border-0"
-    style="background-color: #f8f9fa"
-  >
-    <div class="card-body p-5">
-      <h2 class="h4 text-center fw-bold mb-4" style="color: #264653">Visión</h2>
-      <p
-        class="text-justify"
-        style="color: #333; line-height: 1.8; font-size: 1.05rem"
-      >
-        Consolidarnos como líderes en el mercado nacional en servicios de
-        sistemas de seguridad, construcción e importación de tecnología avanzada
-        para el 2030, destacándonos por nuestra capacidad de innovación,
-        compromiso con la excelencia y expansión a nivel nacional, promoviendo
-        el desarrollo sostenible y el fortalecimiento de la industria en
-        Bolivia.
-      </p>
-    </div>
-  </section>
-
-  <!-- Botones -->
-  <div class="text-center mt-5">
-    <a
-      class="btn btn-primary btn-lg shadow-sm me-3 px-5"
-      href="/signin/"
-      style="border-radius: 50px"
-    >
-      Iniciar Sesión
-    </a>
-    <!-- <a class="btn btn-outline-primary btn-lg shadow-sm px-5" href="/signup/" style="border-radius: 50px;">
-            Registrarse
-        </a> -->
-  </div>
-</main>
-
+{% extends 'base.html' %}
+{% block extra_css %}
 <style>
-  /* Responsive y espaciado */
-  @media (max-width: 768px) {
-    main {
-      padding: 2rem 1rem;
-    }
-    .card-body {
-      padding: 2rem 1.5rem;
-    }
+  .kpi-card {
+    border-left: 4px solid;
+    border-radius: 8px;
+    transition: transform 0.15s;
   }
-
-  /* Hover en botones */
-  .btn-primary:hover {
-    background-color: #1d3557;
-    border-color: #1d3557;
-    transition: all 0.2s;
-  }
-
-  /* Mejor lectura en párrafos */
-  p.text-justify {
-    text-align: justify;
+  .kpi-card:hover { transform: translateY(-2px); }
+  .kpi-card.blue   { border-color: #0d6efd; }
+  .kpi-card.yellow { border-color: #ffc107; }
+  .kpi-card.primary{ border-color: #0dcaf0; }
+  .kpi-card.green  { border-color: #198754; }
+  .kpi-card.red    { border-color: #dc3545; }
+  .kpi-card.teal   { border-color: #20c997; }
+  .kpi-value { font-size: 2rem; font-weight: 700; line-height: 1.1; }
+  .kpi-label { font-size: 0.8rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.05em; }
+  .section-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6c757d;
+    font-weight: 600;
+    margin-bottom: 0.75rem;
   }
 </style>
+{% endblock %}
+
+{% block content %}
+<main class="container-fluid px-4 py-4">
+
+  <!-- Encabezado -->
+  <div class="mb-4">
+    <h4 class="fw-bold mb-0" style="color:#264653;">Panel de Control</h4>
+    <span class="text-muted small">Resumen general del sistema — SOBOTEC S.R.L.</span>
+  </div>
+
+  <!-- Alertas -->
+  {% if alertas %}
+  <div class="mb-4">
+    {% for alerta in alertas %}
+    <div class="alert alert-{{ alerta.tipo }} alert-dismissible py-2 mb-2 small" role="alert">
+      <i class="bi bi-exclamation-triangle-fill me-2"></i>{{ alerta.msg }}
+      <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ── FILA 1: KPIs de Proyectos ─────────────────────────────────────────── -->
+  <p class="section-title">Estado de Proyectos</p>
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card blue border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-primary">{{ total_proyectos }}</div>
+          <div class="kpi-label">Total Proyectos</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card yellow border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-warning">{{ pendientes }}</div>
+          <div class="kpi-label">Pendientes</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card primary border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-info">{{ en_progreso }}</div>
+          <div class="kpi-label">En Progreso</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card green border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-success">{{ completados }}</div>
+          <div class="kpi-label">Completados</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FILA 2: KPIs Finanzas + Entidades ─────────────────────────────────── -->
+  <p class="section-title">Finanzas y Entidades</p>
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-4">
+      <div class="card kpi-card teal border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-success" style="font-size:1.5rem;">Bs. {{ total_facturado|floatformat:2 }}</div>
+          <div class="kpi-label">Total Facturado</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4">
+      <div class="card kpi-card green border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-success" style="font-size:1.5rem;">Bs. {{ total_cobrado|floatformat:2 }}</div>
+          <div class="kpi-label">Total Cobrado</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4">
+      <div class="card kpi-card red border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-danger" style="font-size:1.5rem;">Bs. {{ por_cobrar|floatformat:2 }}</div>
+          <div class="kpi-label">Por Cobrar</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-6">
+      <div class="card kpi-card blue border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-primary">{{ total_clientes }}</div>
+          <div class="kpi-label">Clientes Activos</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-6">
+      <div class="card kpi-card primary border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-info">{{ total_empleados }}</div>
+          <div class="kpi-label">Empleados Activos</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FILA 3: Gráficos ───────────────────────────────────────────────────── -->
+  <div class="row g-3 mb-4">
+    <!-- Gráfico Estado -->
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-light">
+          <span class="fw-semibold small">Proyectos por Estado</span>
+        </div>
+        <div class="card-body d-flex align-items-center justify-content-center" style="max-height:260px;">
+          <canvas id="chartEstado"></canvas>
+        </div>
+      </div>
+    </div>
+    <!-- Gráfico Tipo -->
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-light">
+          <span class="fw-semibold small">Proyectos por Tipo</span>
+        </div>
+        <div class="card-body d-flex align-items-center justify-content-center" style="max-height:260px;">
+          <canvas id="chartTipo"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FILA 4: Últimos Proyectos ──────────────────────────────────────────── -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+      <span class="fw-semibold small">Últimos Proyectos Registrados</span>
+      <a href="{% url 'projects' %}" class="btn btn-sm btn-outline-secondary py-0 small">Ver todos</a>
+    </div>
+    <div class="card-body p-0">
+      {% if ultimos_proyectos %}
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0 small">
+          <thead class="table-light text-uppercase fw-semibold" style="font-size:0.71rem;">
+            <tr>
+              <th class="px-3">Código</th>
+              <th>Nombre</th>
+              <th>Tipo</th>
+              <th class="text-center">Estado</th>
+              <th class="text-center">Pago</th>
+              <th class="text-end px-3">Monto (Bs.)</th>
+              <th class="text-center">Registrado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in ultimos_proyectos %}
+            <tr>
+              <td class="px-3 text-muted">{{ p.codigo }}</td>
+              <td>
+                <a href="{% url 'project_view' p.id %}" class="text-decoration-none fw-semibold">{{ p.nombre }}</a>
+              </td>
+              <td><span class="badge bg-secondary fw-normal">{{ p.get_tipo_proyecto_display }}</span></td>
+              <td class="text-center">
+                {% if p.estado_proyecto == 'completado' %}
+                  <span class="badge bg-success">Completado</span>
+                {% elif p.estado_proyecto == 'en_progreso' %}
+                  <span class="badge bg-primary">En Progreso</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark">Pendiente</span>
+                {% endif %}
+              </td>
+              <td class="text-center">
+                {% if p.estado_pago == 'pagado' %}
+                  <span class="badge bg-success">Pagado</span>
+                {% elif p.estado_pago == 'parcial' %}
+                  <span class="badge bg-info text-dark">Parcial</span>
+                {% else %}
+                  <span class="badge bg-danger">Sin pago</span>
+                {% endif %}
+              </td>
+              <td class="text-end px-3 fw-semibold">{{ p.monto_total|floatformat:2 }}</td>
+              <td class="text-center text-muted">{{ p.created|date:"d/m/Y" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted small p-3 mb-0">No hay proyectos registrados aún. <a href="{% url 'create_project' %}">Crear el primero</a>.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  // Gráfico de dona - Estado
+  new Chart(document.getElementById('chartEstado'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Pendiente', 'En Progreso', 'Completado'],
+      datasets: [{
+        data: [{{ pendientes }}, {{ en_progreso }}, {{ completados }}],
+        backgroundColor: ['#ffc107', '#0dcaf0', '#198754'],
+        borderWidth: 2,
+        borderColor: '#fff',
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 16 } }
+      }
+    }
+  });
+
+  // Gráfico de barras - Tipo
+  new Chart(document.getElementById('chartTipo'), {
+    type: 'bar',
+    data: {
+      labels: {{ tipos_labels|safe }},
+      datasets: [{
+        label: 'Proyectos',
+        data: {{ tipos_values|safe }},
+        backgroundColor: ['#264653', '#2a9d8f', '#e9c46a', '#e76f51'],
+        borderRadius: 5,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } } },
+        x: { ticks: { font: { size: 11 } } }
+      }
+    }
+  });
+</script>
 {% endblock %}

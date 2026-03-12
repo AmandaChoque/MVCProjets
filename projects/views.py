@@ -76,7 +76,7 @@ def signin(request):
             })
         else:
             login(request, user)
-            return redirect('projects')
+            return redirect('dashboard')
 
 
 @login_required
@@ -287,6 +287,13 @@ def project_view(request, id_project):
         contrato_proyecto = None
     insumos_proyecto = project.insumos.select_related('insumo').order_by('-created')
     total_insumos = sum(r.subtotal for r in insumos_proyecto)
+
+    # ── Rentabilidad ───────────────────────────────────────────────────────────
+    costo_personal = contratos_empleados.aggregate(total=Sum('monto_acordado'))['total'] or 0
+    ingresos = project.monto_total
+    rentabilidad = ingresos - total_insumos - costo_personal
+    margen = round((rentabilidad / ingresos * 100), 1) if ingresos > 0 else 0
+
     return render(request, 'project_view.html', {
         'project': project,
         'progresos': progresos,
@@ -295,6 +302,10 @@ def project_view(request, id_project):
         'contrato_proyecto': contrato_proyecto,
         'insumos_proyecto': insumos_proyecto,
         'total_insumos': total_insumos,
+        'costo_personal': costo_personal,
+        'ingresos': ingresos,
+        'rentabilidad': rentabilidad,
+        'margen': margen,
     })
 
 
@@ -844,12 +855,71 @@ def deactivate_cliente(request, id_cliente):
 
 
 def landing_view(request):
+    if request.user.is_authenticated:
+        return redirect('dashboard')
     return render(request, 'landing.html')
 
 
 @login_required
 def dashboard_home(request):
-    return render(request, 'home.html')
+    # ── Proyectos ──────────────────────────────────────────────────────────────
+    proyectos_qs = Proyecto.objects.filter(activo=True)
+    total_proyectos = proyectos_qs.count()
+    pendientes      = proyectos_qs.filter(estado_proyecto='pendiente').count()
+    en_progreso     = proyectos_qs.filter(estado_proyecto='en_progreso').count()
+    completados     = proyectos_qs.filter(estado_proyecto='completado').count()
+
+    # ── Finanzas ───────────────────────────────────────────────────────────────
+    total_facturado = proyectos_qs.aggregate(total=Sum('monto_total'))['total'] or 0
+    total_cobrado   = Pago.objects.filter(activo=True, estado='pagado').aggregate(total=Sum('monto'))['total'] or 0
+    por_cobrar      = total_facturado - total_cobrado
+
+    # ── Entidades ──────────────────────────────────────────────────────────────
+    total_clientes  = Cliente.objects.filter(activo=True).count()
+    total_empleados = Empleado.objects.filter(activo=True).count()
+
+    # ── Alertas ────────────────────────────────────────────────────────────────
+    alertas = []
+    completados_sin_pago = proyectos_qs.filter(
+        estado_proyecto='completado', estado_pago='no_pagado'
+    )
+    for p in completados_sin_pago:
+        alertas.append({'tipo': 'danger', 'msg': f'Proyecto "{p.nombre}" está completado pero sin cobrar.'})
+
+    parciales_completados = proyectos_qs.filter(
+        estado_proyecto='completado', estado_pago='parcial'
+    )
+    for p in parciales_completados:
+        alertas.append({'tipo': 'warning', 'msg': f'Proyecto "{p.nombre}" completado con pago parcial pendiente.'})
+
+    # ── Últimos 5 proyectos ────────────────────────────────────────────────────
+    ultimos_proyectos = proyectos_qs.select_related('cliente').order_by('-created')[:5]
+
+    # ── Datos para gráficos (JSON-safe) ───────────────────────────────────────
+    tipos_labels = ['Instalación Nueva', 'Ampliación', 'Mantenimiento', 'Emergencia']
+    tipos_values = [
+        proyectos_qs.filter(tipo_proyecto='instalacion_nueva').count(),
+        proyectos_qs.filter(tipo_proyecto='ampliacion').count(),
+        proyectos_qs.filter(tipo_proyecto='mantenimiento').count(),
+        proyectos_qs.filter(tipo_proyecto='emergencia').count(),
+    ]
+
+    context = {
+        'total_proyectos':   total_proyectos,
+        'pendientes':        pendientes,
+        'en_progreso':       en_progreso,
+        'completados':       completados,
+        'total_facturado':   total_facturado,
+        'total_cobrado':     total_cobrado,
+        'por_cobrar':        por_cobrar,
+        'total_clientes':    total_clientes,
+        'total_empleados':   total_empleados,
+        'alertas':           alertas,
+        'ultimos_proyectos': ultimos_proyectos,
+        'tipos_labels':      tipos_labels,
+        'tipos_values':      tipos_values,
+    }
+    return render(request, 'home.html', context)
 
 
 # ===================== PROGRESO =====================
