@@ -2,6 +2,7 @@ from django.forms import ModelForm
 from django import forms
 from django.db.models import Max
 from .models import Proyecto, Empleado, Pago, EntidadPublica, Cliente, Propuesta, Progreso, ContratoEmpleado, ContratoProyecto, Proveedor, Insumo, Requiere, Realizar
+from django.contrib.auth.models import User
 import re
 from decimal import Decimal, InvalidOperation
 
@@ -21,6 +22,22 @@ class ProjectForm(forms.ModelForm):
         }
 
 class EmpleadoForm(forms.ModelForm):
+    username = forms.CharField(
+        label="Usuario (para iniciar sesión)",
+        required=True,
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: jperez', 'autocomplete': 'off'})
+    )
+    password1 = forms.CharField(
+        label="Contraseña",
+        required=True,
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'autocomplete': 'new-password'})
+    )
+    password2 = forms.CharField(
+        label="Confirmar contraseña",
+        required=True,
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'autocomplete': 'new-password'})
+    )
+
     cargo = forms.ChoiceField(
         choices=[('', 'Seleccionar cargo')] + Empleado.POSITION_CHOICES,
         widget=forms.Select(attrs={'class': 'form-select', 'required': 'required'}),
@@ -104,6 +121,21 @@ class EmpleadoForm(forms.ModelForm):
         if len(celular_digits) < 7:
             raise forms.ValidationError('El celular debe tener al menos 7 dígitos.')
         return celular_digits
+
+    def clean_username(self):
+        username = self.cleaned_data.get('username', '').strip()
+        if User.objects.filter(username=username).exists():
+            raise forms.ValidationError('Ese nombre de usuario ya está en uso.')
+        return username
+
+    def clean(self):
+        cleaned_data = super().clean()
+        p1 = cleaned_data.get('password1')
+        p2 = cleaned_data.get('password2')
+        if p1 and p2 and p1 != p2:
+            self.add_error('password2', 'Las contraseñas no coinciden.')
+        return cleaned_data
+
 
 class PaymentForm(forms.ModelForm):
     monto = forms.CharField(

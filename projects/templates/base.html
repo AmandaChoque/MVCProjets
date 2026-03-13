@@ -170,12 +170,14 @@
       <h4>SOBOTEC S.R.L.</h4>
       <ul class="nav flex-column" id="sidebarNav">
         {% if user.is_authenticated %}
-
+        
+        {% if not es_instalador_tecnico %}
         <li class="nav-item">
           <a class="nav-link d-flex align-items-center" href="{% url 'dashboard' %}"
             ><i class="bi bi-house-door-fill me-2"></i>Inicio</a
           >
         </li>
+        {% endif %}
 
         <!-- Proyectos -->
         <li class="nav-item">
@@ -198,11 +200,6 @@
                 >
               </li>
               <li>
-                <a class="nav-link" href="{% url 'create_project' %}"
-                  ><i class="bi bi-plus-circle me-1"></i>Crear Proyecto</a
-                >
-              </li>
-              <li>
                 <a class="nav-link" href="{% url 'project_report' %}"
                   ><i class="bi bi-file-earmark-text me-1"></i>Generar
                   Reporte</a
@@ -217,7 +214,8 @@
           </div>
         </li>
 
-        <!-- Empleados -->
+        <!-- Empleados: solo admin y gerente -->
+        {% if es_admin_o_gerente %}
         <li class="nav-item">
           <a
             class="nav-link d-flex align-items-center"
@@ -245,8 +243,10 @@
             </ul>
           </div>
         </li>
+        {% endif %}
 
-        <!-- Cliente -->
+        <!-- Cliente: admin, gerente y secretaria -->
+        {% if es_admin_sec %}
         <li class="nav-item">
           <a
             class="nav-link d-flex align-items-center"
@@ -274,8 +274,10 @@
             </ul>
           </div>
         </li>
+        {% endif %}
 
-        <!-- Pagos -->
+        <!-- Pagos: admin, gerente y secretaria -->
+        {% if es_admin_sec %}
         <li class="nav-item">
           <a
             class="nav-link d-flex align-items-center"
@@ -296,11 +298,6 @@
                 >
               </li>
               <li>
-                <a class="nav-link" href="{% url 'create_payment' %}"
-                  ><i class="bi bi-plus-circle me-1"></i>Crear</a
-                >
-              </li>
-              <li>
                 <a
                   class="nav-link"
                   href="{% url 'filter_payments_by_project_name' %}"
@@ -315,8 +312,10 @@
             </ul>
           </div>
         </li>
+        {% endif %}
 
-        <!-- Proveedores -->
+        <!-- Proveedores: admin, gerente, instalador, técnico -->
+        {% if es_campo %}
         <li class="nav-item">
           <a
             class="nav-link d-flex align-items-center"
@@ -344,8 +343,10 @@
             </ul>
           </div>
         </li>
+        {% endif %}
 
-        <!-- Insumos -->
+        <!-- Insumos: admin, gerente, instalador, técnico -->
+        {% if es_campo %}
         <li class="nav-item">
           <a
             class="nav-link d-flex align-items-center"
@@ -373,8 +374,10 @@
             </ul>
           </div>
         </li>
+        {% endif %}
 
-        <!-- Compras -->
+        <!-- Compras: admin, gerente, instalador, técnico -->
+        {% if es_campo %}
         <li class="nav-item">
           <a
             class="nav-link d-flex align-items-center"
@@ -402,6 +405,7 @@
             </ul>
           </div>
         </li>
+        {% endif %}
 
         {% else %}
         <li class="nav-item">

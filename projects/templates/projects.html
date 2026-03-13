@@ -16,7 +16,9 @@
 
   <!-- ======================= ENCABEZADO ======================= -->
   <div class="mb-2 d-flex justify-content-between align-items-center">
+    {% if not es_instalador_tecnico %}
     <a href="{% url 'create_project' %}" class="btn btn-primary btn-sm">+ Nuevo Proyecto</a>
+    {% else %}<div></div>{% endif %}
     <h5 class="fw-semibold text-secondary mb-0">Gestión de Proyectos</h5>
 
     <div class="d-flex align-items-center gap-3">
@@ -72,6 +74,7 @@
           </select>
         </div>
 
+        {% if not es_instalador_tecnico %}
         <div class="col-md-2">
           <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Estado de pago</label>
           <select class="form-select form-select-sm" name="filter_pago">
@@ -81,6 +84,7 @@
             <option value="pagado" {% if filter_pago == "pagado" %}selected{% endif %}>Pagado</option>
           </select>
         </div>
+        {% endif %}
 
         <div class="col-md-2">
           <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
@@ -104,8 +108,8 @@
           <th>Contratante</th>
           <th>Tipo</th>
           <th>Estado</th>
-          <th>Estado Pago</th>
-          <th>Monto Total (Bs.)</th>
+          {% if not es_instalador_tecnico %}<th>Estado Pago</th>{% endif %}
+          {% if not es_instalador_tecnico %}<th>Monto Total (Bs.)</th>{% endif %}
           <th class="text-end" style="width:60px;">Acciones</th>
         </tr>
       </thead>
@@ -137,6 +141,7 @@
               <span class="badge bg-warning text-dark small">Pendiente</span>
             {% endif %}
           </td>
+          {% if not es_instalador_tecnico %}
           <td>
             {% if project.estado_pago == 'pagado' %}
               <span class="badge bg-success small">Pagado</span>
@@ -147,6 +152,7 @@
             {% endif %}
           </td>
           <td class="fw-semibold">{{ project.monto_total|floatformat:2 }}</td>
+          {% endif %}
           <td class="text-end">
             <div class="dropdown">
               <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
@@ -154,6 +160,7 @@
                 <li>
                   <a class="dropdown-item" href="{% url 'project_view' project.id %}">Ver</a>
                 </li>
+                {% if not es_instalador_tecnico %}
                 <li>
                   <a class="dropdown-item" href="{% url 'project_detail' project.id %}">Editar</a>
                 </li>
@@ -167,6 +174,7 @@
                     Inhabilitar
                   </button>
                 </li>
+                {% endif %}
               </ul>
             </div>
           </td>

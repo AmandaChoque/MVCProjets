@@ -10,6 +10,7 @@ from django.db import IntegrityError
 from .form import ProjectForm, EmpleadoForm, PaymentForm, PublicEntityForm, ProposalForm, ClienteForm, ProgresoForm, ContratoEmpleadoForm, ContratoProyectoForm, ProveedorForm, InsumoForm, RequerirForm, RealizarForm
 from .models import Proyecto, Empleado, Pago, EntidadPublica, Propuesta, Cliente, Progreso, ContratoEmpleado, ContratoProyecto, Proveedor, Insumo, Requiere, Realizar
 from django.contrib.auth.decorators import login_required
+from .decorators import cargo_required, ROLES_ADMIN, ROLES_ADMIN_SEC, ROLES_CAMPO
 
 from django.utils import timezone
 from django.template.loader import get_template
@@ -117,22 +118,30 @@ def reporte_analisis_view(request):
 
 @login_required
 def project_analysis(request):
-    projects = Proyecto.objects.all()
+    projects = Proyecto.objects.filter(activo=True)
 
-    if not projects.exists():
-        context = {
+    project_counts = {
+        item['tipo_proyecto']: item['total']
+        for item in projects.values('tipo_proyecto').annotate(total=Count('tipo_proyecto'))
+    }
+    instalacion_count   = project_counts.get('instalacion_nueva', 0)
+    ampliacion_count    = project_counts.get('ampliacion', 0)
+    mantenimiento_count = project_counts.get('mantenimiento', 0)
+    emergencia_count    = project_counts.get('emergencia', 0)
+
+    sizes = [instalacion_count, ampliacion_count, mantenimiento_count, emergencia_count]
+
+    if sum(sizes) == 0:
+        return render(request, 'project_analysis.html', {
             'message': "No existen proyectos registrados.",
-        }
-        return render(request, 'project_analysis.html', context)
+            'instalacion_count': 0, 'ampliacion_count': 0,
+            'mantenimiento_count': 0, 'emergencia_count': 0,
+        })
 
-    project_counts = projects.values('tipo_proyecto').annotate(total=Count('tipo_proyecto'))
-    licitacion_count = next((item['total'] for item in project_counts if item['tipo_proyecto'] == 'licitacion'), 0)
-    contratacion_count = next((item['total'] for item in project_counts if item['tipo_proyecto'] == 'contratacion_directa'), 0)
-
-    labels = ['Licitación', 'Contratación Directa']
-    sizes = [licitacion_count, contratacion_count]
-    colors = ['#66b3ff', '#99ff99']
-    explode = (0.1, 0)
+    labels  = ['Instalación Nueva', 'Ampliación', 'Mantenimiento', 'Emergencia']
+    colors  = ['#66b3ff', '#99ff99', '#ffcc99', '#ff9999']
+    # Solo explotar segmentos con valor > 0
+    explode = tuple(0.05 if s > 0 else 0 for s in sizes)
 
     plt.figure(figsize=(6, 6))
     plt.pie(sizes, explode=explode, labels=labels, colors=colors, autopct='%1.1f%%', shadow=True, startangle=140)
@@ -143,12 +152,15 @@ def project_analysis(request):
     buffer.seek(0)
     image_png = buffer.getvalue()
     buffer.close()
+    plt.close()
     graphic = base64.b64encode(image_png).decode('utf-8')
 
     context = {
         'graphic': graphic,
-        'licitacion_count': licitacion_count,
-        'contratacion_count': contratacion_count,
+        'instalacion_count': instalacion_count,
+        'ampliacion_count': ampliacion_count,
+        'mantenimiento_count': mantenimiento_count,
+        'emergencia_count': emergencia_count,
     }
     return render(request, 'project_analysis.html', context)
 
@@ -222,6 +234,15 @@ def projects(request):
 
     qs = Proyecto.objects.filter(activo=True).select_related('cliente').order_by('-created')
 
+    # Instalador/Técnico solo ve proyectos donde tiene ContratoEmpleado activo
+    try:
+        cargo = request.user.employee_profile.cargo
+    except AttributeError:
+        cargo = None
+    if cargo in ('instalador', 'tecnico_soporte'):
+        empleado = request.user.employee_profile
+        qs = qs.filter(contratos_empleados__empleado=empleado, contratos_empleados__activo=True).distinct()
+
     if search_nombre:
         qs = qs.filter(nombre__icontains=search_nombre)
     if filter_estado:
@@ -251,8 +272,9 @@ def projects(request):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN)
 def deactivate_project(request, id_project):
-    project = get_object_or_404(Proyecto, id=id_project, user=request.user)
+    project = get_object_or_404(Proyecto, id=id_project)
     project.activo = False
     project.deleted_at = timezone.now()
     project.save()
@@ -261,8 +283,9 @@ def deactivate_project(request, id_project):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN)
 def project_detail(request, id_project):
-    project = get_object_or_404(Proyecto, pk=id_project, user=request.user)
+    project = get_object_or_404(Proyecto, pk=id_project)
     if request.method == 'GET':
         form = ProjectForm(instance=project)
         return render(request, 'project_detail.html', {'project': project, 'form': form})
@@ -277,7 +300,7 @@ def project_detail(request, id_project):
 
 @login_required
 def project_view(request, id_project):
-    project = get_object_or_404(Proyecto, pk=id_project, user=request.user)
+    project = get_object_or_404(Proyecto, pk=id_project)
     progresos = project.progresos.all().order_by('-fecha', '-created')
     ultimo_progreso = progresos.first()
     porcentaje_actual = ultimo_progreso.porcentaje if ultimo_progreso else 0
@@ -310,8 +333,9 @@ def project_view(request, id_project):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN)
 def project_complete(request, id_project):
-    project = get_object_or_404(Proyecto, pk=id_project, user=request.user)
+    project = get_object_or_404(Proyecto, pk=id_project)
     if request.method == 'POST':
         project.estado_proyecto = 'completado'
         project.save()
@@ -319,14 +343,16 @@ def project_complete(request, id_project):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN)
 def project_delete(request, id_project):
-    project = get_object_or_404(Proyecto, pk=id_project, user=request.user)
+    project = get_object_or_404(Proyecto, pk=id_project)
     if request.method == 'POST':
         project.delete()
         return redirect('projects')
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN)
 def create_project(request):
     if request.method == 'GET':
         return render(request, 'create_project.html', {
@@ -347,14 +373,21 @@ def create_project(request):
 
 
 @login_required
+@cargo_required('administrador')
 def create_employee(request):
     if request.method == 'GET':
         return render(request, 'create_employee.html', {'form': EmpleadoForm()})
     else:
         form = EmpleadoForm(request.POST)
         if form.is_valid():
-            employee = form.save()
-            messages.success(request, f"El empleado {employee.nombre} {employee.apellido_paterno} fue registrado exitosamente.")
+            user = User.objects.create_user(
+                username=form.cleaned_data['username'],
+                password=form.cleaned_data['password1'],
+            )
+            employee = form.save(commit=False)
+            employee.user = user
+            employee.save()
+            messages.success(request, f"El empleado {employee.nombre} {employee.apellido_paterno} fue registrado con acceso al sistema.")
             return redirect('employees')
         return render(request, 'create_employee.html', {
             'form': form,
@@ -363,6 +396,7 @@ def create_employee(request):
 
 
 @login_required
+@cargo_required('administrador')
 def deactivate_employee(request, id_employee):
     empleado = get_object_or_404(Empleado, id=id_employee, activo=True)
     empleado.activo = False
@@ -378,6 +412,7 @@ def employee_view(request, id_employee):
 
 
 @login_required
+@cargo_required('administrador')
 def employee_detail(request, id_employee):
     empleado = get_object_or_404(Empleado, pk=id_employee)
     if request.method == 'GET':
@@ -393,6 +428,7 @@ def employee_detail(request, id_employee):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN)
 def employees(request):
     search_nombre = request.GET.get('search_nombre', '')
     filter_cargo = request.GET.get('filter_cargo', '')
@@ -494,6 +530,7 @@ def payment_view(request, id_payment):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN_SEC)
 def payment_detail(request, id_payment):
     payment = get_object_or_404(Pago, pk=id_payment, activo=True)
     if request.method == 'GET':
@@ -509,6 +546,7 @@ def payment_detail(request, id_payment):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN_SEC)
 def deactivate_payment(request, id_payment):
     payment = get_object_or_404(Pago, id=id_payment, activo=True)
     payment.activo = False
@@ -518,6 +556,7 @@ def deactivate_payment(request, id_payment):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN_SEC)
 def create_payment(request):
     if request.method == 'GET':
         return render(request, 'create_payment.html', {'form': PaymentForm()})
@@ -640,6 +679,7 @@ def payment_analysis(request):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN_SEC)
 def create_public_entity(request):
     if request.method == 'GET':
         return render(request, 'create_public_entity.html', {
@@ -862,6 +902,14 @@ def landing_view(request):
 
 @login_required
 def dashboard_home(request):
+    # Instalador/técnico no tiene acceso al dashboard
+    try:
+        cargo = request.user.employee_profile.cargo
+    except AttributeError:
+        cargo = None
+    if cargo in ('instalador', 'tecnico_soporte'):
+        return redirect('projects')
+
     # ── Proyectos ──────────────────────────────────────────────────────────────
     proyectos_qs = Proyecto.objects.filter(activo=True)
     total_proyectos = proyectos_qs.count()
@@ -926,7 +974,7 @@ def dashboard_home(request):
 
 @login_required
 def create_progreso(request, id_project):
-    project = get_object_or_404(Proyecto, pk=id_project, user=request.user)
+    project = get_object_or_404(Proyecto, pk=id_project)
     if request.method == 'GET':
         form = ProgresoForm(proyecto=project)
         return render(request, 'create_progreso.html', {'form': form, 'project': project})
@@ -943,7 +991,7 @@ def create_progreso(request, id_project):
 
 @login_required
 def progreso_detail(request, id_progreso):
-    progreso = get_object_or_404(Progreso, pk=id_progreso, proyecto__user=request.user)
+    progreso = get_object_or_404(Progreso, pk=id_progreso)
     project = progreso.proyecto
     if request.method == 'GET':
         form = ProgresoForm(instance=progreso, proyecto=project)
@@ -959,7 +1007,7 @@ def progreso_detail(request, id_progreso):
 
 @login_required
 def deactivate_progreso(request, id_progreso):
-    progreso = get_object_or_404(Progreso, pk=id_progreso, proyecto__user=request.user)
+    progreso = get_object_or_404(Progreso, pk=id_progreso)
     id_project = progreso.proyecto.id
     if request.method == 'POST':
         progreso.delete()
@@ -971,7 +1019,7 @@ def deactivate_progreso(request, id_progreso):
 
 @login_required
 def create_contrato_empleado(request, id_project):
-    project = get_object_or_404(Proyecto, pk=id_project, user=request.user)
+    project = get_object_or_404(Proyecto, pk=id_project)
     if request.method == 'GET':
         form = ContratoEmpleadoForm()
         return render(request, 'create_contrato_empleado.html', {'form': form, 'project': project})
@@ -988,7 +1036,7 @@ def create_contrato_empleado(request, id_project):
 
 @login_required
 def contrato_empleado_detail(request, id_contrato):
-    contrato = get_object_or_404(ContratoEmpleado, pk=id_contrato, activo=True, proyecto__user=request.user)
+    contrato = get_object_or_404(ContratoEmpleado, pk=id_contrato, activo=True)
     project = contrato.proyecto
     if request.method == 'GET':
         form = ContratoEmpleadoForm(instance=contrato)
@@ -1004,7 +1052,7 @@ def contrato_empleado_detail(request, id_contrato):
 
 @login_required
 def deactivate_contrato_empleado(request, id_contrato):
-    contrato = get_object_or_404(ContratoEmpleado, pk=id_contrato, activo=True, proyecto__user=request.user)
+    contrato = get_object_or_404(ContratoEmpleado, pk=id_contrato, activo=True)
     if request.method == 'POST':
         contrato.activo = False
         contrato.save()
@@ -1014,7 +1062,7 @@ def deactivate_contrato_empleado(request, id_contrato):
 
 @login_required
 def create_contrato_proyecto(request, id_project):
-    project = get_object_or_404(Proyecto, pk=id_project, user=request.user)
+    project = get_object_or_404(Proyecto, pk=id_project)
     # Check if project already has an active contract
     existing = getattr(project, 'contrato_proyecto', None)
     if existing and existing.activo:
@@ -1036,7 +1084,7 @@ def create_contrato_proyecto(request, id_project):
 
 @login_required
 def contrato_proyecto_detail(request, id_contrato):
-    contrato = get_object_or_404(ContratoProyecto, pk=id_contrato, activo=True, proyecto__user=request.user)
+    contrato = get_object_or_404(ContratoProyecto, pk=id_contrato, activo=True)
     project = contrato.proyecto
     if request.method == 'GET':
         form = ContratoProyectoForm(instance=contrato)
@@ -1052,7 +1100,7 @@ def contrato_proyecto_detail(request, id_contrato):
 
 @login_required
 def deactivate_contrato_proyecto(request, id_contrato):
-    contrato = get_object_or_404(ContratoProyecto, pk=id_contrato, activo=True, proyecto__user=request.user)
+    contrato = get_object_or_404(ContratoProyecto, pk=id_contrato, activo=True)
     if request.method == 'POST':
         contrato.activo = False
         contrato.save()
@@ -1063,6 +1111,7 @@ def deactivate_contrato_proyecto(request, id_contrato):
 # ===================== PROVEEDORES =====================
 
 @login_required
+@cargo_required(*ROLES_CAMPO)
 def proveedores(request):
     search_nombre = request.GET.get('search_nombre', '')
     page = request.GET.get('page', 1)
@@ -1141,6 +1190,7 @@ def deactivate_proveedor(request, id_proveedor):
 # ===================== INSUMOS =====================
 
 @login_required
+@cargo_required(*ROLES_CAMPO)
 def insumos(request):
     search_nombre = request.GET.get('search_nombre', '')
     filter_categoria = request.GET.get('filter_categoria', '')
@@ -1230,7 +1280,7 @@ def deactivate_insumo(request, id_insumo):
 
 @login_required
 def create_requiere(request, id_project):
-    project = get_object_or_404(Proyecto, pk=id_project, user=request.user)
+    project = get_object_or_404(Proyecto, pk=id_project)
     insumos_activos = Insumo.objects.filter(activo=True)
     import json
     insumos_con_precio = {str(i.id): str(i.costo_unitario) for i in insumos_activos}
@@ -1259,7 +1309,7 @@ def create_requiere(request, id_project):
 
 @login_required
 def requiere_detail(request, id_requiere):
-    requiere = get_object_or_404(Requiere, pk=id_requiere, proyecto__user=request.user)
+    requiere = get_object_or_404(Requiere, pk=id_requiere)
     project = requiere.proyecto
     insumos_activos = Insumo.objects.filter(activo=True)
     import json
@@ -1289,7 +1339,7 @@ def requiere_detail(request, id_requiere):
 
 @login_required
 def deactivate_requiere(request, id_requiere):
-    requiere = get_object_or_404(Requiere, pk=id_requiere, proyecto__user=request.user)
+    requiere = get_object_or_404(Requiere, pk=id_requiere)
     id_project = requiere.proyecto.id
     if request.method == 'POST':
         requiere.delete()
@@ -1300,6 +1350,7 @@ def deactivate_requiere(request, id_requiere):
 # ===================== COMPRAS (Realizar) =====================
 
 @login_required
+@cargo_required(*ROLES_CAMPO)
 def compras(request):
     search = request.GET.get('search', '')
     page = request.GET.get('page', 1)

@@ -55,6 +55,7 @@
                   {% endif %}
                 </div>
               </div>
+              {% if not es_instalador_tecnico %}
               <div class="row mb-2">
                 <div class="col-sm-5"><strong>Estado de pago:</strong></div>
                 <div class="col-sm-7">
@@ -67,12 +68,14 @@
                   {% endif %}
                 </div>
               </div>
+              {% endif %}
             </div>
           </div>
         </div>
       </div>
 
-      <!-- MONTO -->
+      <!-- MONTO: oculto para instalador/técnico -->
+      {% if not es_instalador_tecnico %}
       <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-header bg-light">
           <h6 class="mb-0 fw-semibold">Monto</h6>
@@ -89,7 +92,10 @@
         </div>
       </div>
 
-      <!-- RENTABILIDAD DEL PROYECTO -->
+      {% endif %}
+
+      <!-- RENTABILIDAD DEL PROYECTO: oculto para instalador/técnico -->
+      {% if not es_instalador_tecnico %}
       <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-header bg-light">
           <h6 class="mb-0 fw-semibold">Análisis de Rentabilidad</h6>
@@ -164,7 +170,10 @@
         </div>
       </div>
 
-      <!-- ASIGNACIONES -->
+      {% endif %}
+
+      <!-- ASIGNACIONES: oculto para instalador/técnico -->
+      {% if not es_instalador_tecnico %}
       <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-header bg-light">
           <h6 class="mb-0 fw-semibold">Asignaciones</h6>
@@ -208,6 +217,8 @@
           </div>
         </div>
       </div>
+
+      {% endif %}
 
       <!-- PROGRESO DEL PROYECTO -->
       <div class="card border-0 shadow-sm rounded-3 mb-4">
@@ -272,7 +283,8 @@
         </div>
       </div>
 
-      <!-- CONTRATO DEL PROYECTO -->
+      <!-- CONTRATO DEL PROYECTO: oculto para instalador/técnico -->
+      {% if not es_instalador_tecnico %}
       <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h6 class="mb-0 fw-semibold">Contrato del Proyecto</h6>
@@ -329,7 +341,10 @@
         </div>
       </div>
 
-      <!-- CONTRATOS DE EMPLEADOS -->
+      {% endif %}
+
+      <!-- CONTRATOS DE EMPLEADOS: oculto para instalador/técnico -->
+      {% if not es_instalador_tecnico %}
       <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h6 class="mb-0 fw-semibold">Contratos de Empleados</h6>
@@ -381,6 +396,8 @@
         </div>
       </div>
 
+      {% endif %}
+
       <!-- INSUMOS DEL PROYECTO -->
       <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
@@ -397,8 +414,10 @@
                   <th>Insumo</th>
                   <th>Marca</th>
                   <th class="text-center">Cantidad</th>
+                  {% if not es_instalador_tecnico %}
                   <th class="text-end">Costo Unit. (Bs.)</th>
                   <th class="text-end">Subtotal (Bs.)</th>
+                  {% endif %}
                   <th class="text-end" style="width:70px;">Acciones</th>
                 </tr>
               </thead>
@@ -409,9 +428,12 @@
                   <td>{{ req.insumo.nombre }}</td>
                   <td class="text-muted">{{ req.insumo.marca }}</td>
                   <td class="text-center">{{ req.cantidad }}</td>
+                  {% if not es_instalador_tecnico %}
                   <td class="text-end">{{ req.costo_unitario|floatformat:2 }}</td>
                   <td class="text-end fw-semibold">{{ req.subtotal|floatformat:2 }}</td>
+                  {% endif %}
                   <td class="text-end">
+                    {% if not es_instalador_tecnico %}
                     <div class="dropdown">
                       <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
                       <ul class="dropdown-menu dropdown-menu-end shadow-sm">
@@ -428,10 +450,12 @@
                         </li>
                       </ul>
                     </div>
+                    {% else %}—{% endif %}
                   </td>
                 </tr>
                 {% endfor %}
               </tbody>
+              {% if not es_instalador_tecnico %}
               <tfoot class="table-light">
                 <tr>
                   <td colspan="5" class="text-end fw-semibold">Total Insumos (Bs.):</td>
@@ -439,6 +463,7 @@
                   <td></td>
                 </tr>
               </tfoot>
+              {% endif %}
             </table>
           </div>
           {% else %}
@@ -450,7 +475,9 @@
       <!-- BOTONES -->
       <div class="d-flex justify-content-between mt-4">
         <a href="{% url 'projects' %}" class="btn btn-outline-secondary">Volver</a>
+        {% if not es_instalador_tecnico %}
         <a href="{% url 'project_detail' project.id %}" class="btn btn-primary">Editar</a>
+        {% endif %}
       </div>
 
 <!-- Modal Confirmar Eliminación de Insumo -->

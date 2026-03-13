@@ -45,9 +45,11 @@ python manage.py check
 
 All code lives in a single Django app `projects/`:
 - `models.py` — all models
-- `views.py` — all views (function-based, ~1000 lines)
+- `views.py` — all views (function-based, ~1400 lines)
 - `form.py` — all forms (NOT `forms.py`)
 - `admin.py` — admin registrations
+- `decorators.py` — `@cargo_required(*cargos)` for role-based view access
+- `context_processors.py` — injects `user_cargo`, `es_admin`, `es_admin_o_gerente`, `es_admin_sec`, `es_campo` into every template
 - `migrations/` — 14 migrations (0001–0014)
 - `templates/` — all HTML templates (~50 files), extend `base.html`
 
@@ -80,6 +82,8 @@ URL routing is entirely in `project_management/urls.py` (single file, ~120 lines
 **Forms**: All forms use Bootstrap `form-control`/`form-select` widgets. Decimal fields (monto, costo_unitario, salario) use `CharField` + `clean_*` with regex `r'\d+(\.\d{1,2})?'` — no commas, dot as decimal separator.
 
 **Views**: All use `@login_required`. Pattern: GET returns form, POST validates and redirects. Use `messages.success()` on create/update. Use `get_object_or_404()`.
+
+**Role-based access**: Use `@cargo_required(*cargos)` from `decorators.py` after `@login_required`. Predefined role groups: `ROLES_ADMIN = ('administrador', 'gerente')`, `ROLES_ADMIN_SEC` (adds secretaria), `ROLES_CAMPO` (adds instalador, tecnico_soporte). Superusers bypass all cargo checks. Access `request.user.employee_profile.cargo` for the current user's role. Templates use `{% if es_admin %}` / `{% if es_campo %}` etc. (injected by the context processor).
 
 **Pagination**: `Paginator` with configurable `per_page` (10/20/50/100) via GET param. Applied to projects, employees, payments, clients, proveedores, insumos, compras.
 
