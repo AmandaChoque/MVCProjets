@@ -1,7 +1,7 @@
 from django.forms import ModelForm
 from django import forms
 from django.db.models import Max
-from .models import Proyecto, Empleado, Pago, EntidadPublica, Cliente, Propuesta, Progreso, ContratoEmpleado, ContratoProyecto, Proveedor, Insumo, Requiere, Realizar
+from .models import Proyecto, Empleado, Pago, EntidadPublica, Cliente, Propuesta, Progreso, ContratoEmpleado, ContratoProyecto, Proveedor, Insumo, Requiere, Realizar, PagoEmpleado
 from django.contrib.auth.models import User
 import re
 from decimal import Decimal, InvalidOperation
@@ -576,4 +576,38 @@ class RealizarForm(forms.ModelForm):
             raise forms.ValidationError('Ingrese un número válido.')
         if resultado <= 0:
             raise forms.ValidationError('El costo debe ser mayor a cero.')
+        return resultado
+
+
+class PagoEmpleadoForm(forms.ModelForm):
+    monto = forms.CharField(
+        required=True,
+        label="Monto (Bs.)",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ej: 1500 o 1500.50',
+        })
+    )
+
+    class Meta:
+        model = PagoEmpleado
+        fields = ['monto', 'fecha', 'concepto']
+        widgets = {
+            'fecha':    forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'concepto': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Anticipo, Saldo final, Mensualidad'}),
+        }
+
+    def clean_monto(self):
+        valor = self.cleaned_data.get('monto')
+        if not valor:
+            raise forms.ValidationError('El monto es obligatorio.')
+        valor_str = str(valor).strip()
+        if not re.fullmatch(DECIMAL_REGEX, valor_str):
+            raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 1500 o 1500.50).')
+        try:
+            resultado = Decimal(valor_str)
+        except InvalidOperation:
+            raise forms.ValidationError('Ingrese un número válido.')
+        if resultado <= 0:
+            raise forms.ValidationError('El monto debe ser mayor a cero.')
         return resultado

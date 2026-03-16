@@ -4,7 +4,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 # Señal para actualizar automáticamente el estado del proyecto
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, pre_save
 from django.dispatch import receiver
 
 from django.db.models import Sum
@@ -267,6 +267,26 @@ def update_project_payment_status(sender, instance, **kwargs):
     instance.proyecto.update_payment_status()
 
 
+@receiver(pre_save, sender=Proyecto)
+def registrar_cambio_monto_proyecto(sender, instance, **kwargs):
+    """
+    Registra en HistorialPago cuando cambia el monto_total de un proyecto.
+    """
+    if not instance.pk:
+        return  # proyecto nuevo, no hay historial que registrar
+    try:
+        anterior = Proyecto.objects.get(pk=instance.pk)
+    except Proyecto.DoesNotExist:
+        return
+    if anterior.monto_total != instance.monto_total:
+        HistorialPago.objects.create(
+            proyecto=anterior,
+            monto_anterior=anterior.monto_total,
+            monto_actual=instance.monto_total,
+            motivo_cambio=f'Monto actualizado de Bs. {anterior.monto_total} a Bs. {instance.monto_total}.',
+        )
+
+
 # Progreso del Proyecto
 class Progreso(models.Model):
     proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='progresos', verbose_name="Proyecto")
@@ -311,6 +331,27 @@ class ContratoEmpleado(models.Model):
 
     def __str__(self):
         return f"Contrato — {self.empleado.nombre} {self.empleado.apellido_paterno} / {self.proyecto.nombre}"
+
+
+# Pagos de la empresa al empleado (por contrato)
+class PagoEmpleado(models.Model):
+    contrato  = models.ForeignKey(
+        ContratoEmpleado, on_delete=models.CASCADE,
+        related_name='pagos', verbose_name="Contrato"
+    )
+    monto     = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto (Bs.)")
+    fecha     = models.DateField(verbose_name="Fecha de Pago")
+    concepto  = models.CharField(max_length=255, verbose_name="Concepto", help_text="Ej: Anticipo, Saldo final, Mensualidad")
+    activo    = models.BooleanField(default=True, verbose_name="Activo")
+    created   = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        verbose_name = 'Pago a Empleado'
+        verbose_name_plural = 'Pagos a Empleados'
+        ordering = ['-fecha']
+
+    def __str__(self):
+        return f"Bs. {self.monto} — {self.concepto} ({self.fecha})"
 
 
 # Contrato del Proyecto (con el cliente)

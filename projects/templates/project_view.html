@@ -472,6 +472,104 @@
         </div>
       </div>
 
+      <!-- PAGOS A EMPLEADOS -->
+      {% if not es_instalador_tecnico and contratos_con_pagos %}
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 fw-semibold">Pagos a Empleados</h6>
+        </div>
+        <div class="card-body p-0">
+          {% for item in contratos_con_pagos %}
+          <div class="border-bottom px-4 py-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div>
+                <span class="fw-semibold">{{ item.contrato.empleado.nombre }} {{ item.contrato.empleado.apellido_paterno }}</span>
+                <span class="text-muted small ms-2">{{ item.contrato.empleado.get_cargo_display }}</span>
+              </div>
+              <div class="d-flex gap-3 align-items-center">
+                <span class="small text-muted">Acordado: <strong class="text-dark">Bs. {{ item.contrato.monto_acordado|floatformat:2 }}</strong></span>
+                <span class="small text-success">Pagado: <strong>Bs. {{ item.total_pagado|floatformat:2 }}</strong></span>
+                {% if item.saldo_pendiente > 0 %}
+                <span class="small text-danger">Pendiente: <strong>Bs. {{ item.saldo_pendiente|floatformat:2 }}</strong></span>
+                {% else %}
+                <span class="badge bg-success">Completo</span>
+                {% endif %}
+                {% if es_admin %}
+                <a href="{% url 'create_pago_empleado' item.contrato.id %}" class="btn btn-sm btn-outline-primary py-0">+ Pago</a>
+                {% endif %}
+              </div>
+            </div>
+            {% if item.pagos %}
+            <div class="table-responsive">
+              <table class="table table-sm align-middle small mb-0">
+                <thead class="table-light text-uppercase fw-semibold" style="font-size:0.7rem;">
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Concepto</th>
+                    <th class="text-end">Monto (Bs.)</th>
+                    {% if es_admin %}<th class="text-end" style="width:60px;">Acción</th>{% endif %}
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for pago in item.pagos %}
+                  <tr>
+                    <td>{{ pago.fecha|date:"d/m/Y" }}</td>
+                    <td>{{ pago.concepto }}</td>
+                    <td class="text-end fw-semibold">{{ pago.monto|floatformat:2 }}</td>
+                    {% if es_admin %}
+                    <td class="text-end">
+                      <a href="{% url 'pago_empleado_detail' pago.id %}" class="btn btn-sm btn-light py-0">Editar</a>
+                    </td>
+                    {% endif %}
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% else %}
+            <p class="text-muted small mb-0">Sin pagos registrados aún.
+              {% if es_admin %}<a href="{% url 'create_pago_empleado' item.contrato.id %}">Registrar el primero</a>.{% endif %}
+            </p>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- HISTORIAL DE CAMBIOS DE MONTO -->
+      {% if not es_instalador_tecnico and historial_monto %}
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 fw-semibold">Historial de Cambios de Monto</h6>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm align-middle small mb-0">
+              <thead class="table-light text-uppercase fw-semibold" style="font-size:0.7rem;">
+                <tr>
+                  <th class="px-3">Fecha</th>
+                  <th class="text-end">Monto Anterior (Bs.)</th>
+                  <th class="text-end">Monto Actual (Bs.)</th>
+                  <th>Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for h in historial_monto %}
+                <tr>
+                  <td class="px-3 text-muted">{{ h.created|date:"d/m/Y H:i" }}</td>
+                  <td class="text-end text-danger">{{ h.monto_anterior|floatformat:2 }}</td>
+                  <td class="text-end text-success fw-semibold">{{ h.monto_actual|floatformat:2 }}</td>
+                  <td class="text-muted">{{ h.motivo_cambio }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
       <!-- BOTONES -->
       <div class="d-flex justify-content-between mt-4">
         <a href="{% url 'projects' %}" class="btn btn-outline-secondary">Volver</a>

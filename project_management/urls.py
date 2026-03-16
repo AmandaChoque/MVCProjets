@@ -120,4 +120,9 @@ urlpatterns = [
     path('compras/<int:id_realizar>/', views.realizar_detail, name='realizar_detail'),
     path('compras/<int:id_realizar>/deactivate/', views.deactivate_realizar, name='realizar_deactivate'),
 
+    # Pagos de Empleados
+    path('contratos/empleado/<int:id_contrato>/pagos/nuevo/', views.create_pago_empleado, name='create_pago_empleado'),
+    path('pagos-empleado/<int:id_pago>/', views.pago_empleado_detail, name='pago_empleado_detail'),
+    path('pagos-empleado/<int:id_pago>/deactivate/', views.deactivate_pago_empleado, name='pago_empleado_deactivate'),
+
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

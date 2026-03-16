@@ -8,8 +8,8 @@ from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.db import IntegrityError
 
-from .form import ProjectForm, EmpleadoForm, PaymentForm, PublicEntityForm, ProposalForm, ClienteForm, ProgresoForm, ContratoEmpleadoForm, ContratoProyectoForm, ProveedorForm, InsumoForm, RequerirForm, RealizarForm
-from .models import Proyecto, Empleado, Pago, EntidadPublica, Propuesta, Cliente, Progreso, ContratoEmpleado, ContratoProyecto, Proveedor, Insumo, Requiere, Realizar
+from .form import ProjectForm, EmpleadoForm, PaymentForm, PublicEntityForm, ProposalForm, ClienteForm, ProgresoForm, ContratoEmpleadoForm, ContratoProyectoForm, ProveedorForm, InsumoForm, RequerirForm, RealizarForm, PagoEmpleadoForm
+from .models import Proyecto, Empleado, Pago, EntidadPublica, Propuesta, Cliente, Progreso, ContratoEmpleado, ContratoProyecto, Proveedor, Insumo, Requiere, Realizar, PagoEmpleado, HistorialPago
 from django.contrib.auth.decorators import login_required
 from .decorators import cargo_required, ROLES_ADMIN, ROLES_ADMIN_SEC, ROLES_CAMPO
 
@@ -337,6 +337,21 @@ def project_view(request, id_project):
     insumos_proyecto = project.insumos.select_related('insumo').order_by('-created')
     total_insumos = sum(r.subtotal for r in insumos_proyecto)
 
+    # ── Pagos a empleados por contrato ─────────────────────────────────────────
+    contratos_con_pagos = []
+    for contrato in contratos_empleados:
+        pagos = contrato.pagos.filter(activo=True).order_by('-fecha')
+        total_pagado = pagos.aggregate(total=Sum('monto'))['total'] or 0
+        contratos_con_pagos.append({
+            'contrato': contrato,
+            'pagos': pagos,
+            'total_pagado': total_pagado,
+            'saldo_pendiente': contrato.monto_acordado - total_pagado,
+        })
+
+    # ── Historial de cambios de monto ──────────────────────────────────────────
+    historial_monto = HistorialPago.objects.filter(proyecto=project).order_by('-created')
+
     # ── Rentabilidad ───────────────────────────────────────────────────────────
     costo_personal = contratos_empleados.aggregate(total=Sum('monto_acordado'))['total'] or 0
     ingresos = project.monto_total
@@ -348,6 +363,7 @@ def project_view(request, id_project):
         'progresos': progresos,
         'porcentaje_actual': porcentaje_actual,
         'contratos_empleados': contratos_empleados,
+        'contratos_con_pagos': contratos_con_pagos,
         'contrato_proyecto': contrato_proyecto,
         'insumos_proyecto': insumos_proyecto,
         'total_insumos': total_insumos,
@@ -355,6 +371,7 @@ def project_view(request, id_project):
         'ingresos': ingresos,
         'rentabilidad': rentabilidad,
         'margen': margen,
+        'historial_monto': historial_monto,
     })
 
 
@@ -1490,3 +1507,66 @@ def deactivate_realizar(request, id_realizar):
         compra.delete()
         messages.success(request, 'Compra eliminada correctamente.')
     return redirect('compras')
+
+
+# ===================== PAGOS DE EMPLEADOS (PagoEmpleado) =====================
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def create_pago_empleado(request, id_contrato):
+    contrato = get_object_or_404(ContratoEmpleado, pk=id_contrato, activo=True)
+    if request.method == 'GET':
+        form = PagoEmpleadoForm()
+        return render(request, 'create_pago_empleado.html', {
+            'form': form,
+            'contrato': contrato,
+        })
+    else:
+        form = PagoEmpleadoForm(request.POST)
+        if form.is_valid():
+            pago = form.save(commit=False)
+            pago.contrato = contrato
+            pago.save()
+            messages.success(request, f'Pago de Bs. {pago.monto} registrado para {contrato.empleado.nombre}.')
+            return redirect('project_view', id_project=contrato.proyecto.id)
+        return render(request, 'create_pago_empleado.html', {
+            'form': form,
+            'contrato': contrato,
+        })
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def pago_empleado_detail(request, id_pago):
+    pago = get_object_or_404(PagoEmpleado, pk=id_pago, activo=True)
+    contrato = pago.contrato
+    if request.method == 'GET':
+        form = PagoEmpleadoForm(instance=pago)
+        return render(request, 'pago_empleado_detail.html', {
+            'form': form,
+            'pago': pago,
+            'contrato': contrato,
+        })
+    else:
+        form = PagoEmpleadoForm(request.POST, instance=pago)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Pago actualizado correctamente.')
+            return redirect('project_view', id_project=contrato.proyecto.id)
+        return render(request, 'pago_empleado_detail.html', {
+            'form': form,
+            'pago': pago,
+            'contrato': contrato,
+        })
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def deactivate_pago_empleado(request, id_pago):
+    pago = get_object_or_404(PagoEmpleado, pk=id_pago)
+    id_project = pago.contrato.proyecto.id
+    if request.method == 'POST':
+        pago.activo = False
+        pago.save()
+        messages.success(request, 'Pago eliminado correctamente.')
+    return redirect('project_view', id_project=id_project)
