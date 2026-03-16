@@ -39,18 +39,28 @@ python manage.py migrate
 
 # Check for errors
 python manage.py check
+
+# Run all tests
+python manage.py test projects
+
+# Run a single test class
+python manage.py test projects.tests.PaymentFormCleanMontoTest
+
+# Run a single test method
+python manage.py test projects.tests.PaymentFormCleanMontoTest.test_monto_entero_valido
 ```
 
 ## Architecture
 
 All code lives in a single Django app `projects/`:
 - `models.py` — all models
-- `views.py` — all views (function-based, ~1400 lines)
+- `views.py` — all views (function-based, ~1450 lines)
 - `form.py` — all forms (NOT `forms.py`)
 - `admin.py` — admin registrations
 - `decorators.py` — `@cargo_required(*cargos)` for role-based view access
 - `context_processors.py` — injects `user_cargo`, `es_admin`, `es_admin_o_gerente`, `es_admin_sec`, `es_campo` into every template
-- `migrations/` — 14 migrations (0001–0014)
+- `tests.py` — unit/integration tests (forms, model signals)
+- `migrations/` — 15 migrations (0001–0015)
 - `templates/` — all HTML templates (~50 files), extend `base.html`
 
 URL routing is entirely in `project_management/urls.py` (single file, ~120 lines).
@@ -100,6 +110,7 @@ All CRUD modules follow: list → `/create/` → `/<id>/` (detail/edit) → `/<i
 /dashboard/                                  → home
 /signin/, /signup/, /signout/                → auth
 /extend-session/                             → AJAX session extension (POST)
+/cambiar-contrasena/                         → change password (authenticated user)
 
 /projects/                                   → list + filters
 /projects/create/

@@ -108,6 +108,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 8},
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
@@ -115,13 +116,22 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
+    {
+        'NAME': 'projects.validators.UppercaseValidator',
+    },
+    {
+        'NAME': 'projects.validators.LowercaseValidator',
+    },
+    {
+        'NAME': 'projects.validators.NumberValidator',
+    },
 ]
 
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'es'
 
 TIME_ZONE = 'UTC'
 
@@ -143,7 +153,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # Para desarrollo local, puedes tener esta línea si tu proyecto no usa collectstatic
 STATICFILES_DIRS = [BASE_DIR / "static"]
 # STATIC_URL = 'static/'
-LOGIN_URL = '/signin'
+LOGIN_URL = '/signin/'
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
@@ -153,5 +163,5 @@ LOGOUT_REDIRECT_URL = '/'
 
 # Session configuration
 SESSION_COOKIE_AGE = 1800  # 30 minutes in seconds (30 * 60)
-SESSION_EXPIRE_AT_BROWSER_CLOSE = False  # Keep session even when browser is closed
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Cerrar sesión al cerrar el navegador
 SESSION_SAVE_EVERY_REQUEST = True  # Save session on every request to reset timeout

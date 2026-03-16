@@ -1,5 +1,6 @@
 from django.shortcuts import get_object_or_404, render, redirect
-from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
+from django.contrib.auth.forms import AuthenticationForm, PasswordChangeForm
+from django.contrib.auth import update_session_auth_hash
 from django.contrib.auth.models import User
 from django.contrib.auth import login, logout, authenticate
 from django.contrib import messages
@@ -33,51 +34,76 @@ def home(request):
     return render(request, 'home.html')
 
 
-def signup(request):
-    if request.method == 'GET':
-        return render(request, 'signup.html', {
-            'form': UserCreationForm
-        })
-    else:
-        if request.POST['password1'] == request.POST['password2']:
-            try:
-                user = User.objects.create_user(
-                    username=request.POST['username'], password=request.POST['password1'])
-                user.save()
-                login(request, user)
-                return redirect('projects')
-            except IntegrityError:
-                return render(request, 'signup.html', {
-                    'form': UserCreationForm,
-                    'error': 'Username already exists'
-                })
-        return render(request, 'signup.html', {
-            'form': UserCreationForm,
-            'error': 'Password do not match'
-        })
-
-
 @login_required
+@cargo_required(*ROLES_ADMIN)
+def signup(request):
+    # Registro público deshabilitado: solo administradores pueden acceder.
+    # Los empleados se crean desde /employees/create/
+    return redirect('employees')
+
+
 def signout(request):
-    logout(request)
+    if request.method == 'POST':
+        logout(request)
     return redirect('landing')
 
 
+
+
 def signin(request):
+    # Si ya está autenticado, redirigir según rol
+    if request.user.is_authenticated:
+        try:
+            cargo = request.user.employee_profile.cargo
+        except AttributeError:
+            cargo = None
+        if cargo in ('instalador', 'tecnico_soporte'):
+            return redirect('projects')
+        return redirect('dashboard')
+
     if request.method == 'GET':
         return render(request, 'signin.html', {
-            'form': AuthenticationForm
+            'form': AuthenticationForm()
         })
+
+    user = authenticate(request, username=request.POST.get('username', ''), password=request.POST.get('password', ''))
+    if user is None:
+        return render(request, 'signin.html', {
+            'form': AuthenticationForm(),
+            'error': 'Usuario o contraseña incorrectos.'
+        })
+
+    login(request, user)
+    # Respetar ?next= si viene de @login_required
+    next_url = request.POST.get('next') or request.GET.get('next')
+    if next_url:
+        return redirect(next_url)
+    # Redirigir según cargo
+    try:
+        cargo = user.employee_profile.cargo
+    except AttributeError:
+        cargo = None
+    if cargo in ('instalador', 'tecnico_soporte'):
+        return redirect('projects')
+    return redirect('dashboard')
+
+
+@login_required
+def cambiar_contrasena(request):
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)  # Mantiene la sesión activa
+            messages.success(request, 'Contraseña actualizada correctamente.')
+            return redirect('cambiar_contrasena')
     else:
-        user = authenticate(request, username=request.POST['username'], password=request.POST['password'])
-        if user is None:
-            return render(request, 'signin.html', {
-                'form': AuthenticationForm,
-                'error': 'Username or password is incorrect'
-            })
-        else:
-            login(request, user)
-            return redirect('dashboard')
+        form = PasswordChangeForm(request.user)
+
+    for field in form.fields.values():
+        field.widget.attrs.update({'class': 'form-control form-control-sm'})
+
+    return render(request, 'cambiar_contrasena.html', {'form': form})
 
 
 @login_required
@@ -380,9 +406,14 @@ def create_employee(request):
     else:
         form = EmpleadoForm(request.POST)
         if form.is_valid():
+            apellido_materno = form.cleaned_data.get('apellido_materno') or ''
+            last_name = f"{form.cleaned_data['apellido_paterno']} {apellido_materno}".strip()
             user = User.objects.create_user(
                 username=form.cleaned_data['username'],
                 password=form.cleaned_data['password1'],
+                first_name=form.cleaned_data['nombre'],
+                last_name=last_name,
+                email=form.cleaned_data.get('correo') or '',
             )
             employee = form.save(commit=False)
             employee.user = user
@@ -416,12 +447,19 @@ def employee_view(request, id_employee):
 def employee_detail(request, id_employee):
     empleado = get_object_or_404(Empleado, pk=id_employee)
     if request.method == 'GET':
-        form = EmpleadoForm(instance=empleado)
+        initial = {'correo': empleado.user.email if empleado.user else ''}
+        form = EmpleadoForm(instance=empleado, initial=initial)
         return render(request, 'employee_detail.html', {'employee': empleado, 'form': form})
     else:
         form = EmpleadoForm(request.POST, instance=empleado)
         if form.is_valid():
-            form.save()
+            empleado = form.save()
+            if empleado.user:
+                apellido_materno = form.cleaned_data.get('apellido_materno') or ''
+                empleado.user.first_name = form.cleaned_data['nombre']
+                empleado.user.last_name = f"{form.cleaned_data['apellido_paterno']} {apellido_materno}".strip()
+                empleado.user.email = form.cleaned_data.get('correo') or ''
+                empleado.user.save(update_fields=['first_name', 'last_name', 'email'])
             messages.success(request, f"El empleado {empleado.nombre} {empleado.apellido_paterno} fue actualizado exitosamente.")
             return redirect('employees')
         return render(request, 'employee_detail.html', {'employee': empleado, 'form': form})

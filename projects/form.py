@@ -6,6 +6,8 @@ from django.contrib.auth.models import User
 import re
 from decimal import Decimal, InvalidOperation
 
+DECIMAL_REGEX = r'\d+(\.\d{1,2})?'
+
 
 class ProjectForm(forms.ModelForm):
     class Meta:
@@ -65,6 +67,11 @@ class EmpleadoForm(forms.ModelForm):
             'placeholder': 'Salario Ej: 1500 o 1500.50',
         })
     )
+    correo = forms.EmailField(
+        required=False,
+        label="Correo Electrónico",
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'ejemplo@correo.com'})
+    )
 
     class Meta:
         model = Empleado
@@ -101,7 +108,7 @@ class EmpleadoForm(forms.ModelForm):
         if valor is None or valor == '':
             return None
         valor_str = str(valor).strip()
-        if not re.fullmatch(r'\d+(\.\d{1,2})?', valor_str):
+        if not re.fullmatch(DECIMAL_REGEX, valor_str):
             raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 1500 o 1500.50). No use separadores de miles ni comas.')
         try:
             resultado = Decimal(valor_str)
@@ -162,7 +169,7 @@ class PaymentForm(forms.ModelForm):
         if not valor:
             raise forms.ValidationError('El monto es obligatorio.')
         valor_str = str(valor).strip()
-        if not re.fullmatch(r'\d+(\.\d{1,2})?', valor_str):
+        if not re.fullmatch(DECIMAL_REGEX, valor_str):
             raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 1500 o 1500.50). No use comas ni separadores de miles.')
         try:
             resultado = Decimal(valor_str)
@@ -303,7 +310,7 @@ class ContratoEmpleadoForm(forms.ModelForm):
         if not valor:
             raise forms.ValidationError('El monto es obligatorio.')
         valor_str = str(valor).strip()
-        if not re.fullmatch(r'\d+(\.\d{1,2})?', valor_str):
+        if not re.fullmatch(DECIMAL_REGEX, valor_str):
             raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 5000 o 5000.50).')
         try:
             resultado = Decimal(valor_str)
@@ -360,7 +367,7 @@ class ContratoProyectoForm(forms.ModelForm):
         if not valor:
             raise forms.ValidationError('El monto es obligatorio.')
         valor_str = str(valor).strip()
-        if not re.fullmatch(r'\d+(\.\d{1,2})?', valor_str):
+        if not re.fullmatch(DECIMAL_REGEX, valor_str):
             raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 5000 o 5000.50).')
         try:
             resultado = Decimal(valor_str)
@@ -463,7 +470,7 @@ class InsumoForm(forms.ModelForm):
         if not valor:
             raise forms.ValidationError('El costo unitario es obligatorio.')
         valor_str = str(valor).strip()
-        if not re.fullmatch(r'\d+(\.\d{1,2})?', valor_str):
+        if not re.fullmatch(DECIMAL_REGEX, valor_str):
             raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 150 o 150.50). No use comas ni separadores de miles.')
         try:
             resultado = Decimal(valor_str)
@@ -502,7 +509,7 @@ class RequerirForm(forms.ModelForm):
         if not valor:
             raise forms.ValidationError('El costo unitario es obligatorio.')
         valor_str = str(valor).strip()
-        if not re.fullmatch(r'\d+(\.\d{1,2})?', valor_str):
+        if not re.fullmatch(DECIMAL_REGEX, valor_str):
             raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 150 o 150.50). No use comas ni separadores de miles.')
         try:
             resultado = Decimal(valor_str)
@@ -545,7 +552,7 @@ class RealizarForm(forms.ModelForm):
         if not valor:
             raise forms.ValidationError('El costo unitario es obligatorio.')
         valor_str = str(valor).strip()
-        if not re.fullmatch(r'\d+(\.\d{1,2})?', valor_str):
+        if not re.fullmatch(DECIMAL_REGEX, valor_str):
             raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 150 o 150.50). No use comas ni separadores de miles.')
         try:
             resultado = Decimal(valor_str)

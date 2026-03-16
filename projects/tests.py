@@ -1,3 +1,292 @@
-from django.test import TestCase
+from decimal import Decimal
+from datetime import date
 
-# Create your tests here.
+from django.test import TestCase
+from django.contrib.auth.models import User
+
+from .models import Cliente, Proyecto, Pago, Progreso
+from .form import PaymentForm, ProgresoForm, InsumoForm
+
+
+# ---------------------------------------------------------------------------
+# Helpers reutilizables
+# ---------------------------------------------------------------------------
+
+def crear_user(username='testuser'):
+    return User.objects.create_user(username=username, password='pass1234')
+
+
+def crear_cliente():
+    return Cliente.objects.create(
+        nombre='Ana',
+        apellido_paterno='Lopez',
+        nit_ci='1234567',
+        tipo_contratante='personal',
+        telefono='70000001',
+        cargo='Gerente',
+        direccion='Av. Siempre Viva',
+    )
+
+
+def crear_proyecto(user, monto_total='10000.00'):
+    return Proyecto.objects.create(
+        codigo='PRY-001',
+        nombre='Instalacion SOBOTEC Test',
+        estado_proyecto='pendiente',
+        tipo_proyecto='instalacion_nueva',
+        estado_pago='no_pagado',
+        monto_total=Decimal(monto_total),
+        user=user,
+        cliente=crear_cliente(),
+    )
+
+
+# ===========================================================================
+# 1. PaymentForm — clean_monto
+# ===========================================================================
+
+class PaymentFormCleanMontoTest(TestCase):
+    """Valida que clean_monto acepte formatos correctos y rechace los incorrectos."""
+
+    def setUp(self):
+        self.user = crear_user()
+        self.proyecto = crear_proyecto(self.user)
+
+    def _data(self, monto):
+        return {
+            'monto': monto,
+            'fecha': date.today().isoformat(),
+            'estado': 'pagado',
+            'tipo_pago': 'parcial',
+            'proyecto': self.proyecto.pk,
+        }
+
+    # --- Casos validos ---
+
+    def test_monto_entero_valido(self):
+        form = PaymentForm(data=self._data('1500'))
+        form.is_valid()
+        self.assertNotIn('monto', form.errors)
+
+    def test_monto_decimal_dos_cifras_valido(self):
+        form = PaymentForm(data=self._data('1500.50'))
+        form.is_valid()
+        self.assertNotIn('monto', form.errors)
+
+    def test_monto_decimal_una_cifra_valido(self):
+        form = PaymentForm(data=self._data('200.5'))
+        form.is_valid()
+        self.assertNotIn('monto', form.errors)
+
+    def test_monto_retorna_decimal(self):
+        """El form debe convertir el string a Decimal."""
+        form = PaymentForm(data=self._data('3500.75'))
+        form.is_valid()
+        self.assertEqual(form.cleaned_data['monto'], Decimal('3500.75'))
+
+    # --- Casos invalidos ---
+
+    def test_monto_con_coma_invalido(self):
+        """Bolivia usa punto como separador decimal, no coma."""
+        form = PaymentForm(data=self._data('1.500,00'))
+        form.is_valid()
+        self.assertIn('monto', form.errors)
+
+    def test_monto_cero_invalido(self):
+        form = PaymentForm(data=self._data('0'))
+        form.is_valid()
+        self.assertIn('monto', form.errors)
+
+    def test_monto_negativo_invalido(self):
+        form = PaymentForm(data=self._data('-500'))
+        form.is_valid()
+        self.assertIn('monto', form.errors)
+
+    def test_monto_texto_invalido(self):
+        form = PaymentForm(data=self._data('abc'))
+        form.is_valid()
+        self.assertIn('monto', form.errors)
+
+    def test_monto_vacio_invalido(self):
+        form = PaymentForm(data=self._data(''))
+        form.is_valid()
+        self.assertIn('monto', form.errors)
+
+
+# ===========================================================================
+# 2. ProgresoForm — clean_porcentaje (regla de no-retroceso)
+# ===========================================================================
+
+class ProgresoFormCleanPorcentajeTest(TestCase):
+    """Valida que el progreso no pueda retroceder."""
+
+    def setUp(self):
+        self.user = crear_user()
+        self.proyecto = crear_proyecto(self.user)
+
+    def _data(self, porcentaje):
+        return {
+            'fecha': date.today().isoformat(),
+            'porcentaje': porcentaje,
+            'descripcion': 'Avance de prueba',
+            'observacion': '',
+        }
+
+    def test_primer_progreso_valido(self):
+        """Sin progresos anteriores, cualquier valor 0-100 es valido."""
+        form = ProgresoForm(data=self._data(40), proyecto=self.proyecto)
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_progreso_mayor_al_anterior_valido(self):
+        Progreso.objects.create(
+            proyecto=self.proyecto,
+            fecha=date.today(),
+            porcentaje=50,
+            descripcion='Primer avance',
+        )
+        form = ProgresoForm(data=self._data(75), proyecto=self.proyecto)
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_progreso_igual_al_maximo_valido(self):
+        """Mantener el mismo porcentaje es permitido."""
+        Progreso.objects.create(
+            proyecto=self.proyecto,
+            fecha=date.today(),
+            porcentaje=60,
+            descripcion='Avance',
+        )
+        form = ProgresoForm(data=self._data(60), proyecto=self.proyecto)
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_progreso_menor_al_maximo_invalido(self):
+        """Retroceder el porcentaje debe ser rechazado."""
+        Progreso.objects.create(
+            proyecto=self.proyecto,
+            fecha=date.today(),
+            porcentaje=80,
+            descripcion='Avance alto',
+        )
+        form = ProgresoForm(data=self._data(50), proyecto=self.proyecto)
+        self.assertFalse(form.is_valid())
+        self.assertIn('porcentaje', form.errors)
+
+    def test_porcentaje_mayor_a_100_invalido(self):
+        form = ProgresoForm(data=self._data(110), proyecto=self.proyecto)
+        self.assertFalse(form.is_valid())
+        self.assertIn('porcentaje', form.errors)
+
+    def test_porcentaje_negativo_invalido(self):
+        form = ProgresoForm(data=self._data(-10), proyecto=self.proyecto)
+        self.assertFalse(form.is_valid())
+        self.assertIn('porcentaje', form.errors)
+
+
+# ===========================================================================
+# 3. Proyecto.update_payment_status — logica de negocio y senial post_save
+# ===========================================================================
+
+class UpdatePaymentStatusTest(TestCase):
+    """Verifica que el estado_pago del proyecto se actualice correctamente."""
+
+    def setUp(self):
+        self.user = crear_user()
+        self.proyecto = crear_proyecto(self.user, monto_total='10000.00')
+
+    def _pago(self, monto, estado='pagado'):
+        return Pago.objects.create(
+            monto=Decimal(monto),
+            fecha=date.today(),
+            estado=estado,
+            tipo_pago='parcial',
+            proyecto=self.proyecto,
+            activo=True,
+        )
+
+    def test_sin_pagos_es_no_pagado(self):
+        self.proyecto.update_payment_status()
+        self.proyecto.refresh_from_db()
+        self.assertEqual(self.proyecto.estado_pago, 'no_pagado')
+
+    def test_pago_parcial_cambia_estado_a_parcial(self):
+        self._pago('4000.00')
+        self.proyecto.update_payment_status()
+        self.proyecto.refresh_from_db()
+        self.assertEqual(self.proyecto.estado_pago, 'parcial')
+
+    def test_pago_exacto_al_total_cambia_a_pagado(self):
+        self._pago('10000.00')
+        self.proyecto.update_payment_status()
+        self.proyecto.refresh_from_db()
+        self.assertEqual(self.proyecto.estado_pago, 'pagado')
+
+    def test_multiples_pagos_que_suman_el_total(self):
+        self._pago('6000.00')
+        self._pago('4000.00')
+        self.proyecto.update_payment_status()
+        self.proyecto.refresh_from_db()
+        self.assertEqual(self.proyecto.estado_pago, 'pagado')
+
+    def test_pago_inactivo_no_cuenta_para_el_total(self):
+        """Pagos con activo=False no deben sumar al total pagado."""
+        pago = self._pago('10000.00')
+        pago.activo = False
+        pago.save()
+        self.proyecto.update_payment_status()
+        self.proyecto.refresh_from_db()
+        self.assertNotEqual(self.proyecto.estado_pago, 'pagado')
+
+    def test_senal_post_save_actualiza_proyecto_automaticamente(self):
+        """La senal post_save de Pago debe actualizar estado_pago sin llamar update manualmente."""
+        self.proyecto.refresh_from_db()
+        self.assertEqual(self.proyecto.estado_pago, 'no_pagado')
+
+        Pago.objects.create(
+            monto=Decimal('10000.00'),
+            fecha=date.today(),
+            estado='pagado',
+            tipo_pago='completo',
+            proyecto=self.proyecto,
+            activo=True,
+        )
+
+        self.proyecto.refresh_from_db()
+        self.assertEqual(self.proyecto.estado_pago, 'pagado')
+
+
+# ===========================================================================
+# 4. InsumoForm — clean_costo_unitario
+# ===========================================================================
+
+class InsumoFormCleanCostoTest(TestCase):
+    """Verifica la validacion del costo unitario de insumos."""
+
+    def _data(self, costo):
+        return {
+            'nombre': 'Camara IP',
+            'marca': 'Hikvision',
+            'categoria': 'camara_ip',
+            'costo_unitario': costo,
+        }
+
+    def test_costo_valido(self):
+        form = InsumoForm(data=self._data('350.00'))
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_costo_entero_valido(self):
+        form = InsumoForm(data=self._data('350'))
+        self.assertTrue(form.is_valid(), form.errors)
+
+    def test_costo_con_coma_invalido(self):
+        form = InsumoForm(data=self._data('1.200,00'))
+        self.assertFalse(form.is_valid())
+        self.assertIn('costo_unitario', form.errors)
+
+    def test_costo_cero_invalido(self):
+        form = InsumoForm(data=self._data('0'))
+        self.assertFalse(form.is_valid())
+        self.assertIn('costo_unitario', form.errors)
+
+    def test_costo_vacio_invalido(self):
+        form = InsumoForm(data=self._data(''))
+        self.assertFalse(form.is_valid())
+        self.assertIn('costo_unitario', form.errors)

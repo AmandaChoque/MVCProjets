@@ -61,6 +61,14 @@
                 <div class="col-sm-7">{{ employee.numero_celular|default:"—" }}</div>
               </div>
               <div class="row mb-2">
+                <div class="col-sm-5"><strong>Correo:</strong></div>
+                <div class="col-sm-7">
+                  {% if employee.user.email %}
+                    <a href="mailto:{{ employee.user.email }}">{{ employee.user.email }}</a>
+                  {% else %}—{% endif %}
+                </div>
+              </div>
+              <div class="row mb-2">
                 <div class="col-sm-5"><strong>Fecha de contratación:</strong></div>
                 <div class="col-sm-7">{{ employee.fecha_contratacion|date:"d/m/Y"|default:"—" }}</div>
               </div>

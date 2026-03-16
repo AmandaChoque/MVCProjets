@@ -183,7 +183,7 @@ class Proyecto(AuditModel):
         """
         Actualiza el estado de pago del proyecto basado en los pagos realizados.
         """
-        total_pagado = self.pagos.filter(estado='pagado').aggregate(total_pagado=Sum('monto'))['total_pagado'] or 0
+        total_pagado = self.pagos.filter(estado='pagado', activo=True).aggregate(total_pagado=Sum('monto'))['total_pagado'] or 0
 
         if total_pagado >= self.monto_total:
             self.estado_pago = 'pagado'
@@ -398,6 +398,7 @@ class Requiere(models.Model):
         verbose_name = 'Insumo del Proyecto'
         verbose_name_plural = 'Insumos del Proyecto'
         ordering = ['-created']
+        unique_together = [('proyecto', 'insumo')]
 
     @property
     def subtotal(self):

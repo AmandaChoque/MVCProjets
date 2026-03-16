@@ -76,6 +76,16 @@
                 El celular debe contener solo números y al menos 7 dígitos.
               </div>
             </div>
+
+            <div class="mb-3">
+              <label class="form-label">Correo Electrónico</label>
+              {{ form.correo }}
+              {% if form.correo.errors %}
+              <div class="text-danger small mt-1">
+                {% for err in form.correo.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </div>
+              {% endif %}
+            </div>
           </div>
 
           <!-- COLUMNA DERECHA -->

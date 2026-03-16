@@ -34,6 +34,7 @@ urlpatterns = [
     path('signout/', views.signout, name='signout'),
     path('signin/', views.signin, name='signin'),
     path('extend-session/', views.extend_session, name='extend_session'),
+    path('cambiar-contrasena/', views.cambiar_contrasena, name='cambiar_contrasena'),
     
     # Proyects
     path('projects/', views.projects, name='projects'),
