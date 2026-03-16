@@ -41,6 +41,7 @@
               {% if form.insumo.errors %}
               <div class="text-danger small mt-1">{% for err in form.insumo.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
+              <div id="stockInfo" class="form-text mt-1"></div>
             </div>
             <div class="mb-3">
               <label class="form-label">Cantidad <span class="text-danger">*</span></label>
@@ -83,6 +84,7 @@
 {% block extra_js %}
 <script>
   const precios = {{ insumos_con_precio|safe }};
+  const stocks  = {{ insumos_con_stock|safe }};
 
   const insumoSelect = document.getElementById('id_insumo');
   const costoInput   = document.getElementById('id_costo_unitario');
@@ -95,12 +97,27 @@
     subtotalDiv.textContent = 'Bs. ' + (costo * cantidad).toFixed(2);
   }
 
+  const stockInfo = document.getElementById('stockInfo');
+
+  function updateStockInfo(id) {
+    if (!id || !stocks[id]) { stockInfo.innerHTML = ''; return; }
+    const s = parseInt(stocks[id]);
+    if (s <= 0) {
+      stockInfo.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-circle-fill me-1"></i>Sin stock disponible (0 unidades)</span>';
+    } else if (stocks['min_' + id] && s <= parseInt(stocks['min_' + id])) {
+      stockInfo.innerHTML = `<span class="text-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i>Stock bajo — disponible: <strong>${s}</strong> unidades</span>`;
+    } else {
+      stockInfo.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Disponible: <strong>${s}</strong> unidades</span>`;
+    }
+  }
+
   if (insumoSelect) {
     insumoSelect.addEventListener('change', function () {
       const id = this.value;
       if (id && precios[id]) {
         costoInput.value = precios[id];
       }
+      updateStockInfo(id);
       updateSubtotal();
     });
   }

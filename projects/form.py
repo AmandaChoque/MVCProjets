@@ -458,11 +458,12 @@ class InsumoForm(forms.ModelForm):
 
     class Meta:
         model = Insumo
-        fields = ['nombre', 'marca', 'categoria', 'costo_unitario']
+        fields = ['nombre', 'marca', 'categoria', 'costo_unitario', 'stock_minimo']
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del insumo', 'required': 'required'}),
             'marca': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Marca'}),
             'categoria': forms.Select(attrs={'class': 'form-select'}),
+            'stock_minimo': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'placeholder': 'Ej: 2'}),
         }
 
     def clean_costo_unitario(self):
@@ -503,6 +504,21 @@ class RequerirForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['insumo'].queryset = Insumo.objects.filter(activo=True)
         self.fields['insumo'].empty_label = 'Seleccionar insumo'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        insumo   = cleaned_data.get('insumo')
+        cantidad = cleaned_data.get('cantidad')
+        if insumo and cantidad:
+            # Al editar, el stock ya incluye la cantidad actual del registro → restaurarla
+            stock_disponible = insumo.stock
+            if self.instance and self.instance.pk:
+                stock_disponible += self.instance.cantidad
+            if cantidad > stock_disponible:
+                raise forms.ValidationError(
+                    f'Stock insuficiente. Disponible: {stock_disponible} unidad(es) de "{insumo.nombre}".'
+                )
+        return cleaned_data
 
     def clean_costo_unitario(self):
         valor = self.cleaned_data.get('costo_unitario')

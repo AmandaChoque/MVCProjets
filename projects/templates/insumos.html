@@ -75,6 +75,7 @@
           <th>Marca</th>
           <th>Categoría</th>
           <th class="text-end">Costo Unit. (Bs.)</th>
+          <th class="text-center">Stock</th>
           <th class="text-end" style="width: 60px;">Acciones</th>
         </tr>
       </thead>
@@ -103,6 +104,15 @@
             {% endif %}
           </td>
           <td class="text-end small">{{ insumo.costo_unitario|floatformat:2 }}</td>
+          <td class="text-center">
+            {% if insumo.stock_status == 'agotado' %}
+              <span class="badge bg-danger">Sin stock ({{ insumo.stock }})</span>
+            {% elif insumo.stock_status == 'bajo' %}
+              <span class="badge bg-warning text-dark">Stock bajo ({{ insumo.stock }})</span>
+            {% else %}
+              <span class="badge bg-success">{{ insumo.stock }}</span>
+            {% endif %}
+          </td>
           <td class="text-end">
             <div class="dropdown">
               <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
@@ -124,7 +134,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="5" class="text-center text-muted py-3 small">No hay insumos registrados.</td>
+          <td colspan="6" class="text-center text-muted py-3 small">No hay insumos registrados.</td>
         </tr>
         {% endfor %}
       </tbody>

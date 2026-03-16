@@ -65,6 +65,26 @@
               <div class="text-danger small mt-1">{% for err in form.costo_unitario.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
             </div>
+            <div class="mb-3">
+              <label class="form-label">Stock actual</label>
+              <div class="form-control bg-light fw-semibold">
+                {% if insumo.stock_status == 'agotado' %}
+                  <span class="text-danger"><i class="bi bi-exclamation-circle-fill me-1"></i>{{ insumo.stock }} unidades — Sin stock</span>
+                {% elif insumo.stock_status == 'bajo' %}
+                  <span class="text-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i>{{ insumo.stock }} unidades — Stock bajo</span>
+                {% else %}
+                  <span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>{{ insumo.stock }} unidades</span>
+                {% endif %}
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Stock mínimo de alerta</label>
+              {{ form.stock_minimo }}
+              <div class="form-text text-muted small">Recibirás advertencia cuando el stock baje hasta este nivel. 0 = sin alerta.</div>
+              {% if form.stock_minimo.errors %}
+              <div class="text-danger small mt-1">{% for err in form.stock_minimo.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+            </div>
           </div>
         </div>
 

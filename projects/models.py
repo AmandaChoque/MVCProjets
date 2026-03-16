@@ -373,8 +373,27 @@ class Insumo(models.Model):
     marca           = models.CharField(max_length=100, verbose_name="Marca")
     categoria       = models.CharField(max_length=30, choices=CATEGORIA_CHOICES, verbose_name="Categoría")
     costo_unitario  = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Costo Unitario (Bs.)")
+    stock           = models.IntegerField(default=0, verbose_name="Stock actual")
+    stock_minimo    = models.PositiveIntegerField(default=0, verbose_name="Stock mínimo de alerta")
     activo          = models.BooleanField(default=True, verbose_name="Activo")
     created         = models.DateTimeField(default=timezone.now)
+
+    def recalculate_stock(self):
+        """Recalcula el stock sumando compras y restando lo asignado a proyectos."""
+        from django.db.models import Sum
+        compras    = self.compras.aggregate(t=Sum('cantidad'))['t'] or 0
+        asignados  = self.proyectos.aggregate(t=Sum('cantidad'))['t'] or 0
+        self.stock = compras - asignados
+        self.save(update_fields=['stock'])
+
+    @property
+    def stock_status(self):
+        """Retorna 'agotado', 'bajo' o 'ok' según el nivel de stock."""
+        if self.stock <= 0:
+            return 'agotado'
+        if self.stock_minimo > 0 and self.stock <= self.stock_minimo:
+            return 'bajo'
+        return 'ok'
 
     class Meta:
         verbose_name = 'Insumo'

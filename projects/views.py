@@ -964,6 +964,13 @@ def dashboard_home(request):
     total_clientes  = Cliente.objects.filter(activo=True).count()
     total_empleados = Empleado.objects.filter(activo=True).count()
 
+    # ── Insumos / Stock ────────────────────────────────────────────────────────
+    insumos_qs         = Insumo.objects.filter(activo=True)
+    total_insumos      = insumos_qs.count()
+    insumos_agotados   = [i for i in insumos_qs if i.stock_status == 'agotado']
+    insumos_stock_bajo = [i for i in insumos_qs if i.stock_status == 'bajo']
+    insumos_criticos   = insumos_agotados + insumos_stock_bajo
+
     # ── Alertas ────────────────────────────────────────────────────────────────
     alertas = []
     completados_sin_pago = proyectos_qs.filter(
@@ -978,6 +985,11 @@ def dashboard_home(request):
     for p in parciales_completados:
         alertas.append({'tipo': 'warning', 'msg': f'Proyecto "{p.nombre}" completado con pago parcial pendiente.'})
 
+    for i in insumos_agotados:
+        alertas.append({'tipo': 'danger', 'msg': f'Insumo "{i.nombre}" sin stock disponible (0 unidades).'})
+    for i in insumos_stock_bajo:
+        alertas.append({'tipo': 'warning', 'msg': f'Insumo "{i.nombre}" con stock bajo ({i.stock} unidades, mínimo {i.stock_minimo}).'})
+
     # ── Últimos 5 proyectos ────────────────────────────────────────────────────
     ultimos_proyectos = proyectos_qs.select_related('cliente').order_by('-created')[:5]
 
@@ -991,19 +1003,23 @@ def dashboard_home(request):
     ]
 
     context = {
-        'total_proyectos':   total_proyectos,
-        'pendientes':        pendientes,
-        'en_progreso':       en_progreso,
-        'completados':       completados,
-        'total_facturado':   total_facturado,
-        'total_cobrado':     total_cobrado,
-        'por_cobrar':        por_cobrar,
-        'total_clientes':    total_clientes,
-        'total_empleados':   total_empleados,
-        'alertas':           alertas,
-        'ultimos_proyectos': ultimos_proyectos,
-        'tipos_labels':      tipos_labels,
-        'tipos_values':      tipos_values,
+        'total_proyectos':      total_proyectos,
+        'pendientes':           pendientes,
+        'en_progreso':          en_progreso,
+        'completados':          completados,
+        'total_facturado':      total_facturado,
+        'total_cobrado':        total_cobrado,
+        'por_cobrar':           por_cobrar,
+        'total_clientes':       total_clientes,
+        'total_empleados':      total_empleados,
+        'total_insumos':        total_insumos,
+        'cnt_agotados':         len(insumos_agotados),
+        'cnt_stock_bajo':       len(insumos_stock_bajo),
+        'insumos_criticos':     insumos_criticos,
+        'alertas':              alertas,
+        'ultimos_proyectos':    ultimos_proyectos,
+        'tipos_labels':         tipos_labels,
+        'tipos_values':         tipos_values,
     }
     return render(request, 'home.html', context)
 
@@ -1322,6 +1338,10 @@ def create_requiere(request, id_project):
     insumos_activos = Insumo.objects.filter(activo=True)
     import json
     insumos_con_precio = {str(i.id): str(i.costo_unitario) for i in insumos_activos}
+    insumos_con_stock  = {str(i.id): i.stock for i in insumos_activos}
+    # añadir stock_minimo con prefijo 'min_' para el JS
+    for i in insumos_activos:
+        insumos_con_stock[f'min_{i.id}'] = i.stock_minimo
 
     if request.method == 'GET':
         form = RequerirForm()
@@ -1329,6 +1349,7 @@ def create_requiere(request, id_project):
             'form': form,
             'project': project,
             'insumos_con_precio': json.dumps(insumos_con_precio),
+            'insumos_con_stock': json.dumps(insumos_con_stock),
         })
     else:
         form = RequerirForm(request.POST)
@@ -1342,6 +1363,7 @@ def create_requiere(request, id_project):
             'form': form,
             'project': project,
             'insumos_con_precio': json.dumps(insumos_con_precio),
+            'insumos_con_stock': json.dumps(insumos_con_stock),
         })
 
 
