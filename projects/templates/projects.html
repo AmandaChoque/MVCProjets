@@ -69,8 +69,10 @@
           <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Tipo</label>
           <select class="form-select form-select-sm" name="filter_tipo">
             <option value="">Todos</option>
-            <option value="licitacion" {% if filter_tipo == "licitacion" %}selected{% endif %}>Licitación</option>
-            <option value="contratacion_directa" {% if filter_tipo == "contratacion_directa" %}selected{% endif %}>Contrat. Directa</option>
+            <option value="instalacion_nueva" {% if filter_tipo == "instalacion_nueva" %}selected{% endif %}>Instalación Nueva</option>
+            <option value="ampliacion" {% if filter_tipo == "ampliacion" %}selected{% endif %}>Ampliación</option>
+            <option value="mantenimiento" {% if filter_tipo == "mantenimiento" %}selected{% endif %}>Mantenimiento</option>
+            <option value="emergencia" {% if filter_tipo == "emergencia" %}selected{% endif %}>Emergencia</option>
           </select>
         </div>
 
@@ -126,11 +128,7 @@
             {% endif %}
           </td>
           <td>
-            {% if project.tipo_proyecto == 'licitacion' %}
-              <span class="badge bg-secondary small">Licitación</span>
-            {% else %}
-              <span class="badge bg-dark small">Contrat. Directa</span>
-            {% endif %}
+            <span class="badge bg-secondary small">{{ project.get_tipo_proyecto_display }}</span>
           </td>
           <td>
             {% if project.estado_proyecto == 'completado' %}

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from projects.models import Proyecto, Empleado, HistorialPago, Pago, Propuesta, EntidadPublica, Cliente, Progreso, ContratoEmpleado, ContratoProyecto
+from projects.models import Proyecto, Empleado, HistorialPago, Pago, Cliente, Progreso, ContratoEmpleado, ContratoProyecto
 
 
 @admin.register(Proyecto)
@@ -41,23 +41,6 @@ class PagoAdmin(admin.ModelAdmin):
     ordering = ('-fecha',)
     list_per_page = 20
 
-
-@admin.register(EntidadPublica)
-class EntidadPublicaAdmin(admin.ModelAdmin):
-    list_display = ('nombre_entidad', 'representante_legal', 'contacto', 'direccion', 'activo')
-    list_filter = ('activo',)
-    search_fields = ('nombre_entidad', 'representante_legal', 'contacto')
-    ordering = ('nombre_entidad',)
-    list_per_page = 20
-
-
-@admin.register(Propuesta)
-class PropuestaAdmin(admin.ModelAdmin):
-    list_display = ('id', 'entidad_publica', 'fecha_presentacion', 'monto_presupuesto', 'activo', 'created')
-    list_filter = ('activo', 'entidad_publica')
-    search_fields = ('entidad_publica__nombre_entidad', 'requisitos')
-    ordering = ('-fecha_presentacion',)
-    list_per_page = 20
 
 
 @admin.register(HistorialPago)

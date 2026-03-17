@@ -71,17 +71,6 @@ urlpatterns = [
     path('payments/<int:id_payment>/view/', views.payment_view, name='payment_view'),
     path('payments/<int:id_payment>/deactivate/', views.deactivate_payment, name='payment_deactivate'),
 
-    # Public Entities
-    path('public_entities/', views.public_entities, name='public_entities'),
-    path('public_entities/<int:id_public_entity>/', views.public_entity_detail, name='public_entity_detail'),
-    path('public_entities/<int:id_public_entity>/deactivate/', views.deactivate_public_entity, name='public_entity_deactivate'),
-    path('public_entity/create/', views.create_public_entity, name='create_public_entity'),
-
-    # Proposals
-    path('proposals/', views.proposals, name='proposals'),
-    path('proposals/<int:id_proposal>/', views.proposal_detail, name='proposal_detail'),
-    path('proposals/<int:id_proposal>/deactivate/', views.deactivate_proposal, name='proposal_deactivate'),
-    path('proposal/create/', views.create_proposal, name='create_proposal'),
 
 
     # clientes

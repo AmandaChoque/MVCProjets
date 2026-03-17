@@ -8,8 +8,8 @@ from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.db import IntegrityError
 
-from .form import ProjectForm, EmpleadoForm, PaymentForm, PublicEntityForm, ProposalForm, ClienteForm, ProgresoForm, ContratoEmpleadoForm, ContratoProyectoForm, ProveedorForm, InsumoForm, RequerirForm, RealizarForm, PagoEmpleadoForm
-from .models import Proyecto, Empleado, Pago, EntidadPublica, Propuesta, Cliente, Progreso, ContratoEmpleado, ContratoProyecto, Proveedor, Insumo, Requiere, Realizar, PagoEmpleado, HistorialPago
+from .form import ProjectForm, EmpleadoForm, PaymentForm, ClienteForm, ProgresoForm, ContratoEmpleadoForm, ContratoProyectoForm, ProveedorForm, InsumoForm, RequerirForm, RealizarForm, PagoEmpleadoForm
+from .models import Proyecto, Empleado, Pago, Cliente, Progreso, ContratoEmpleado, ContratoProyecto, Proveedor, Insumo, Requiere, Realizar, PagoEmpleado, HistorialPago
 from django.contrib.auth.decorators import login_required
 from .decorators import cargo_required, ROLES_ADMIN, ROLES_ADMIN_SEC, ROLES_CAMPO
 
@@ -357,6 +357,7 @@ def project_view(request, id_project):
     ingresos = project.monto_total
     rentabilidad = ingresos - total_insumos - costo_personal
     margen = round((rentabilidad / ingresos * 100), 1) if ingresos > 0 else 0
+    margen_clamped = max(0, min(100, margen))
 
     return render(request, 'project_view.html', {
         'project': project,
@@ -371,6 +372,7 @@ def project_view(request, id_project):
         'ingresos': ingresos,
         'rentabilidad': rentabilidad,
         'margen': margen,
+        'margen_clamped': margen_clamped,
         'historial_monto': historial_monto,
     })
 
@@ -733,103 +735,6 @@ def payment_analysis(request):
     return render(request, 'payment_analysis.html', context)
 
 
-@login_required
-@cargo_required(*ROLES_ADMIN_SEC)
-def create_public_entity(request):
-    if request.method == 'GET':
-        return render(request, 'create_public_entity.html', {
-            'form': PublicEntityForm()
-        })
-    else:
-        try:
-            form = PublicEntityForm(request.POST)
-            new_entity = form.save(commit=False)
-            new_entity.save()
-            return redirect('public_entities')
-        except ValueError:
-            return render(request, 'create_public_entity.html', {
-                'form': PublicEntityForm(),
-                'error': 'Por favor, proporcione datos válidos'
-            })
-
-
-@login_required
-def deactivate_public_entity(request, id_public_entity):
-    public_entity = get_object_or_404(EntidadPublica, id=id_public_entity)
-    public_entity.activo = False
-    public_entity.save()
-    return redirect('public_entities')
-
-
-@login_required
-def public_entity_detail(request, id_public_entity):
-    if request.method == 'GET':
-        public_entity = get_object_or_404(EntidadPublica, pk=id_public_entity)
-        form = PublicEntityForm(instance=public_entity)
-        return render(request, 'public_entity_detail.html', {'public_entity': public_entity, 'form': form})
-    else:
-        try:
-            public_entity = get_object_or_404(EntidadPublica, pk=id_public_entity)
-            form = PublicEntityForm(request.POST, instance=public_entity)
-            form.save()
-            return redirect('public_entities')
-        except ValueError:
-            return render(request, 'public_entity_detail.html', {'public_entity': public_entity, 'form': form, 'error': "Error al actualizar la entidad pública"})
-
-
-@login_required
-def public_entities(request):
-    public_entities = EntidadPublica.objects.all()
-    return render(request, 'public_entities.html', {'public_entities': public_entities})
-
-
-@login_required
-def create_proposal(request):
-    if request.method == 'GET':
-        return render(request, 'create_proposal.html', {
-            'form': ProposalForm()
-        })
-    else:
-        try:
-            form = ProposalForm(request.POST)
-            new_proposal = form.save(commit=False)
-            new_proposal.save()
-            return redirect('proposals')
-        except ValueError:
-            return render(request, 'create_proposal.html', {
-                'form': ProposalForm(),
-                'error': 'Por favor, proporcione datos válidos'
-            })
-
-
-@login_required
-def proposal_detail(request, id_proposal):
-    if request.method == 'GET':
-        proposal = get_object_or_404(Propuesta, pk=id_proposal)
-        form = ProposalForm(instance=proposal)
-        return render(request, 'proposal_detail.html', {'proposal': proposal, 'form': form})
-    else:
-        try:
-            proposal = get_object_or_404(Propuesta, pk=id_proposal)
-            form = ProposalForm(request.POST, instance=proposal)
-            form.save()
-            return redirect('proposals')
-        except ValueError:
-            return render(request, 'proposal_detail.html', {'proposal': proposal, 'form': form, 'error': "Error al actualizar la propuesta"})
-
-
-@login_required
-def proposals(request):
-    proposals = Propuesta.objects.all()
-    return render(request, 'proposals.html', {'proposals': proposals})
-
-
-@login_required
-def deactivate_proposal(request, id_proposal):
-    proposal = get_object_or_404(Propuesta, id=id_proposal)
-    proposal.activo = False
-    proposal.save()
-    return redirect('proposals')
 
 
 @login_required

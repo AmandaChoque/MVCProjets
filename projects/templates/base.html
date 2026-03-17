@@ -187,107 +187,41 @@
       <h4>SOBOTEC S.R.L.</h4>
       <ul class="nav flex-column" id="sidebarNav">
         {% if user.is_authenticated %}
-        
+
+        <!-- Inicio -->
         {% if not es_instalador_tecnico %}
         <li class="nav-item">
-          <a class="nav-link d-flex align-items-center" href="{% url 'dashboard' %}"
-            ><i class="bi bi-house-door-fill me-2"></i>Inicio</a
-          >
+          <a class="nav-link d-flex align-items-center" href="{% url 'dashboard' %}">
+            <i class="bi bi-house-door-fill me-2"></i>Inicio
+          </a>
         </li>
         {% endif %}
 
         <!-- Proyectos -->
         <li class="nav-item">
-          <a
-            class="nav-link d-flex align-items-center"
-            data-bs-toggle="collapse"
-            href="#projectSubmenu"
-          >
+          <a class="nav-link d-flex align-items-center" data-bs-toggle="collapse" href="#projectSubmenu">
             <i class="bi bi-folder2-open me-2"></i>Proyectos
             <span class="collapse-indicator">></span>
           </a>
-          <div
-            class="collapse {% if '/projects' in request.path %}show{% endif %}"
-            id="projectSubmenu"
-          >
+          <div class="collapse {% if '/projects' in request.path or '/progreso' in request.path %}show{% endif %}" id="projectSubmenu">
             <ul class="nav flex-column ms-3">
-              <li>
-                <a class="nav-link" href="{% url 'projects' %}"
-                ><i class="bi bi-list-ul me-1"></i>Listar</a
-                >
-              </li>
-              <li>
-                <a class="nav-link" href="{% url 'project_report' %}"
-                  ><i class="bi bi-file-earmark-text me-1"></i>Generar
-                  Reporte</a
-                >
-              </li>
-              <li>
-                <a class="nav-link" href="{% url 'project_analysis' %}"
-                  ><i class="bi bi-graph-up me-1"></i>Ver Análisis</a
-                >
-              </li>
+              <li><a class="nav-link" href="{% url 'projects' %}"><i class="bi bi-list-ul me-1"></i>Listar</a></li>
+              <li><a class="nav-link" href="{% url 'project_report' %}"><i class="bi bi-file-earmark-pdf me-1"></i>Reporte PDF</a></li>
+              <li><a class="nav-link" href="{% url 'project_analysis' %}"><i class="bi bi-graph-up me-1"></i>Análisis</a></li>
             </ul>
           </div>
         </li>
 
-        <!-- Empleados: solo admin y gerente -->
-        {% if es_admin_o_gerente %}
-        <li class="nav-item">
-          <a
-            class="nav-link d-flex align-items-center"
-            data-bs-toggle="collapse"
-            href="#employeeSubmenu"
-          >
-            <i class="bi bi-people-fill me-2"></i>Empleados
-            <span class="collapse-indicator">></span>
-          </a>
-          <div
-            class="collapse {% if '/employees' in request.path %}show{% endif %}"
-            id="employeeSubmenu"
-          >
-            <ul class="nav flex-column ms-3">
-              <li>
-                <a class="nav-link" href="{% url 'employees' %}"
-                  ><i class="bi bi-list-ul me-1"></i>Listar</a
-                >
-              </li>
-              <li>
-                <a class="nav-link" href="{% url 'create_employee' %}"
-                  ><i class="bi bi-person-plus-fill me-1"></i>Crear</a
-                >
-              </li>
-            </ul>
-          </div>
-        </li>
-        {% endif %}
-
-        <!-- Cliente: admin, gerente y secretaria -->
+        <!-- Clientes: admin, gerente y secretaria -->
         {% if es_admin_sec %}
         <li class="nav-item">
-          <a
-            class="nav-link d-flex align-items-center"
-            data-bs-toggle="collapse"
-            href="#clienteSubmenu"
-          >
-            <i class="bi bi-people-fill me-2"></i>Cliente
+          <a class="nav-link d-flex align-items-center" data-bs-toggle="collapse" href="#clienteSubmenu">
+            <i class="bi bi-person-lines-fill me-2"></i>Clientes
             <span class="collapse-indicator">></span>
           </a>
-          <div
-            class="collapse {% if '/clientes' in request.path %}show{% endif %}"
-            id="clienteSubmenu"
-          >
+          <div class="collapse {% if '/clientes' in request.path %}show{% endif %}" id="clienteSubmenu">
             <ul class="nav flex-column ms-3">
-              <li>
-                <a class="nav-link" href="{% url 'clientes' %}"
-                  ><i class="bi bi-list-ul me-1"></i>Listar</a
-                >
-              </li>
-              <li>
-                <a class="nav-link" href="{% url 'create_cliente' %}"
-                  ><i class="bi bi-person-plus-fill me-1"></i>Crear</a
-                >
-              </li>
+              <li><a class="nav-link" href="{% url 'clientes' %}"><i class="bi bi-people me-1"></i>Clientes</a></li>
             </ul>
           </div>
         </li>
@@ -296,129 +230,60 @@
         <!-- Pagos: admin, gerente y secretaria -->
         {% if es_admin_sec %}
         <li class="nav-item">
-          <a
-            class="nav-link d-flex align-items-center"
-            data-bs-toggle="collapse"
-            href="#paymentSubmenu"
-          >
+          <a class="nav-link d-flex align-items-center" data-bs-toggle="collapse" href="#paymentSubmenu">
             <i class="bi bi-cash-stack me-2"></i>Pagos
             <span class="collapse-indicator">></span>
           </a>
-          <div
-            class="collapse {% if '/payments' in request.path %}show{% endif %}"
-            id="paymentSubmenu"
-          >
+          <div class="collapse {% if '/payments' in request.path %}show{% endif %}" id="paymentSubmenu">
+            <ul class="nav flex-column ms-3">
+              <li><a class="nav-link" href="{% url 'payments' %}"><i class="bi bi-list-ul me-1"></i>Listar</a></li>
+              <li><a class="nav-link" href="{% url 'filter_payments_by_project_name' %}"><i class="bi bi-file-earmark-text me-1"></i>Reporte</a></li>
+              <li><a class="nav-link" href="{% url 'payment_analysis' %}"><i class="bi bi-graph-up me-1"></i>Análisis</a></li>
+            </ul>
+          </div>
+        </li>
+        {% endif %}
+
+        <!-- Inventario: admin, gerente, instalador, técnico -->
+        {% if es_campo %}
+        <li class="nav-item">
+          <a class="nav-link d-flex align-items-center" data-bs-toggle="collapse" href="#inventarioSubmenu">
+            <i class="bi bi-boxes me-2"></i>Inventario
+            <span class="collapse-indicator">></span>
+          </a>
+          <div class="collapse {% if '/insumos' in request.path or '/compras' in request.path or '/proveedores' in request.path %}show{% endif %}" id="inventarioSubmenu">
             <ul class="nav flex-column ms-3">
               <li>
-                <a class="nav-link" href="{% url 'payments' %}"
-                  ><i class="bi bi-list-ul me-1"></i>Listar</a
-                >
+                <span class="nav-link text-white-50" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; padding-bottom:2px; cursor:default;">Insumos</span>
+                <a class="nav-link ps-3" href="{% url 'insumos' %}"><i class="bi bi-box-seam me-1"></i>Catálogo</a>
+                <a class="nav-link ps-3" href="{% url 'create_insumo' %}"><i class="bi bi-plus-circle me-1"></i>Nuevo insumo</a>
               </li>
-              <li>
-                <a
-                  class="nav-link"
-                  href="{% url 'filter_payments_by_project_name' %}"
-                  ><i class="bi bi-file-earmark-text me-1"></i>Reporte</a
-                >
+              <li class="mt-1">
+                <span class="nav-link text-white-50" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; padding-bottom:2px; cursor:default;">Compras</span>
+                <a class="nav-link ps-3" href="{% url 'compras' %}"><i class="bi bi-cart3 me-1"></i>Listar</a>
+                <a class="nav-link ps-3" href="{% url 'create_realizar' %}"><i class="bi bi-plus-circle me-1"></i>Registrar compra</a>
               </li>
-              <li>
-                <a class="nav-link" href="{% url 'payment_analysis' %}"
-                  ><i class="bi bi-graph-up me-1"></i>Análisis</a
-                >
+              <li class="mt-1">
+                <span class="nav-link text-white-50" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; padding-bottom:2px; cursor:default;">Proveedores</span>
+                <a class="nav-link ps-3" href="{% url 'proveedores' %}"><i class="bi bi-truck me-1"></i>Listar</a>
+                <a class="nav-link ps-3" href="{% url 'create_proveedor' %}"><i class="bi bi-plus-circle me-1"></i>Nuevo proveedor</a>
               </li>
             </ul>
           </div>
         </li>
         {% endif %}
 
-        <!-- Proveedores: admin, gerente, instalador, técnico -->
-        {% if es_campo %}
+        <!-- Empleados: admin y gerente -->
+        {% if es_admin_o_gerente %}
         <li class="nav-item">
-          <a
-            class="nav-link d-flex align-items-center"
-            data-bs-toggle="collapse"
-            href="#proveedorSubmenu"
-          >
-            <i class="bi bi-truck me-2"></i>Proveedores
+          <a class="nav-link d-flex align-items-center" data-bs-toggle="collapse" href="#employeeSubmenu">
+            <i class="bi bi-people-fill me-2"></i>Empleados
             <span class="collapse-indicator">></span>
           </a>
-          <div
-            class="collapse {% if '/proveedores' in request.path %}show{% endif %}"
-            id="proveedorSubmenu"
-          >
+          <div class="collapse {% if '/employees' in request.path %}show{% endif %}" id="employeeSubmenu">
             <ul class="nav flex-column ms-3">
-              <li>
-                <a class="nav-link" href="{% url 'proveedores' %}"
-                  ><i class="bi bi-list-ul me-1"></i>Listar</a
-                >
-              </li>
-              <li>
-                <a class="nav-link" href="{% url 'create_proveedor' %}"
-                  ><i class="bi bi-plus-circle me-1"></i>Crear</a
-                >
-              </li>
-            </ul>
-          </div>
-        </li>
-        {% endif %}
-
-        <!-- Insumos: admin, gerente, instalador, técnico -->
-        {% if es_campo %}
-        <li class="nav-item">
-          <a
-            class="nav-link d-flex align-items-center"
-            data-bs-toggle="collapse"
-            href="#insumoSubmenu"
-          >
-            <i class="bi bi-box-seam me-2"></i>Insumos
-            <span class="collapse-indicator">></span>
-          </a>
-          <div
-            class="collapse {% if '/insumos' in request.path %}show{% endif %}"
-            id="insumoSubmenu"
-          >
-            <ul class="nav flex-column ms-3">
-              <li>
-                <a class="nav-link" href="{% url 'insumos' %}"
-                  ><i class="bi bi-list-ul me-1"></i>Catálogo</a
-                >
-              </li>
-              <li>
-                <a class="nav-link" href="{% url 'create_insumo' %}"
-                  ><i class="bi bi-plus-circle me-1"></i>Crear</a
-                >
-              </li>
-            </ul>
-          </div>
-        </li>
-        {% endif %}
-
-        <!-- Compras: admin, gerente, instalador, técnico -->
-        {% if es_campo %}
-        <li class="nav-item">
-          <a
-            class="nav-link d-flex align-items-center"
-            data-bs-toggle="collapse"
-            href="#comprasSubmenu"
-          >
-            <i class="bi bi-cart3 me-2"></i>Compras
-            <span class="collapse-indicator">></span>
-          </a>
-          <div
-            class="collapse {% if '/compras' in request.path %}show{% endif %}"
-            id="comprasSubmenu"
-          >
-            <ul class="nav flex-column ms-3">
-              <li>
-                <a class="nav-link" href="{% url 'compras' %}"
-                  ><i class="bi bi-list-ul me-1"></i>Listar</a
-                >
-              </li>
-              <li>
-                <a class="nav-link" href="{% url 'create_realizar' %}"
-                  ><i class="bi bi-plus-circle me-1"></i>Registrar Compra</a
-                >
-              </li>
+              <li><a class="nav-link" href="{% url 'employees' %}"><i class="bi bi-list-ul me-1"></i>Listar</a></li>
+              <li><a class="nav-link" href="{% url 'create_employee' %}"><i class="bi bi-person-plus-fill me-1"></i>Crear</a></li>
             </ul>
           </div>
         </li>
@@ -426,14 +291,10 @@
 
         {% else %}
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'dashboard' %}"
-            ><i class="bi bi-house-door-fill me-1"></i>Inicio</a
-          >
+          <a class="nav-link" href="{% url 'dashboard' %}"><i class="bi bi-house-door-fill me-1"></i>Inicio</a>
         </li>
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'signin' %}"
-            ><i class="bi bi-box-arrow-in-right me-1"></i>Iniciar Sesión</a
-          >
+          <a class="nav-link" href="{% url 'signin' %}"><i class="bi bi-box-arrow-in-right me-1"></i>Iniciar Sesión</a>
         </li>
         {% endif %}
       </ul>

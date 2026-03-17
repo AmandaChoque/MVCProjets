@@ -60,7 +60,7 @@ All code lives in a single Django app `projects/`:
 - `decorators.py` — `@cargo_required(*cargos)` for role-based view access
 - `context_processors.py` — injects `user_cargo`, `es_admin`, `es_admin_o_gerente`, `es_admin_sec`, `es_campo` into every template
 - `tests.py` — unit/integration tests (forms, model signals)
-- `migrations/` — 15 migrations (0001–0015)
+- `migrations/` — 25 migrations (0001–0025); 0022–0025 are pending `migrate`
 - `templates/` — all HTML templates (~50 files), extend `base.html`
 
 URL routing is entirely in `project_management/urls.py` (single file, ~120 lines).
@@ -70,20 +70,19 @@ URL routing is entirely in `project_management/urls.py` (single file, ~120 lines
 | Model | Key fields | Notes |
 |---|---|---|
 | `AuditModel` | created, updated_at, deleted_at, activo | Abstract base |
-| `Cliente` | nit_ci, nombre, apellido_paterno, apellido_materno, cargo, tipo_contratante, activo | Soft-delete via `delete()`. `ActiveClienteManager` (default, activo=True), `all_objects` |
+| `Cliente` | nit_ci, nombre, apellido_paterno, apellido_materno, cargo, tipo_contratante, telefono, correo, direccion, nombre_entidad, representante_legal, activo | Soft-delete via `delete()`. `ActiveClienteManager` (default, activo=True), `all_objects`. `nombre_entidad`/`representante_legal` only used when tipo_contratante='entidad_publica' |
 | `Empleado` | user (OneToOne→User), nombre, apellido_paterno, apellido_materno, cargo, carnet_identidad, numero_celular, salario, fecha_contratacion, activo | cargo choices: administrador/gerente/instalador/tecnico_soporte/secretaria |
-| `EntidadPublica` | nombre_entidad, representante_legal, contacto, direccion | |
-| `Propuesta` | fecha_presentacion, monto_presupuesto, requisitos, FK→EntidadPublica | |
-| `Proyecto` | codigo, nombre, estado_proyecto, tipo_proyecto, estado_pago, monto_total, FK→User/Cliente/Propuesta | Extends AuditModel. tipo_proyecto: instalacion_nueva/ampliacion/mantenimiento/emergencia |
+| `Proyecto` | codigo, nombre, estado_proyecto, tipo_proyecto, estado_pago, monto_total, FK→User/Cliente | Extends AuditModel. tipo_proyecto: instalacion_nueva/ampliacion/mantenimiento/emergencia. `pre_save` signal logs monto_total changes to HistorialPago |
 | `Pago` | monto, fecha, estado, tipo_pago, FK→Proyecto | post_save signal → `update_project_payment_status()` |
-| `HistorialPago` | monto_anterior, monto_actual, motivo_cambio, FK→Proyecto | |
+| `HistorialPago` | monto_anterior, monto_actual, motivo_cambio, FK→Proyecto | Auto-created by pre_save signal on Proyecto when monto_total changes |
 | `Progreso` | proyecto, fecha, porcentaje (0-100), descripcion, observacion | Cannot decrease porcentaje (enforced in ProgresoForm) |
-| `ContratoEmpleado` | empleado, proyecto, fechas, monto_acordado, documento | FileField: PDF/JPG/PNG/GIF/WEBP |
-| `ContratoProyecto` | proyecto (OneToOne), fechas, monto_acordado, documento | One per project |
+| `ContratoEmpleado` | empleado, proyecto, fechas, monto_acordado, observaciones, documento, activo | FileField: PDF/JPG/PNG/GIF/WEBP |
+| `ContratoProyecto` | proyecto (OneToOne), fechas, monto_acordado, observaciones, documento, activo | One per project |
 | `Proveedor` | nombre, rubro, celular, correo, direccion, nit, activo | |
-| `Insumo` | nombre, marca, categoria, costo_unitario, activo | categoria choices: camara_ip/camara_analogica/nvr_dvr/alarma/sensor/cable/fuente/accesorio |
-| `Requiere` | proyecto, insumo, cantidad, costo_unitario | `@property subtotal = cantidad × costo_unitario`. Price copied at assignment time |
+| `Insumo` | nombre, marca, categoria, costo_unitario, stock, stock_minimo, activo | categoria choices: camara_ip/camara_analogica/nvr_dvr/alarma/sensor/cable/fuente/pantalla/computadora/red/accesorio. `recalculate_stock()` = compras − asignados. `@property stock_status` → 'agotado'/'bajo'/'ok' |
+| `Requiere` | proyecto, insumo, cantidad, costo_unitario | `@property subtotal = cantidad × costo_unitario`. Price copied at assignment time. `unique_together (proyecto, insumo)` |
 | `Realizar` | proveedor, insumo, cantidad, costo_unitario, costo_total, fecha | costo_total calculated in view before save |
+| `PagoEmpleado` | contrato (FK→ContratoEmpleado), monto, fecha, concepto, activo | Pagos de la empresa al empleado por contrato |
 
 ## Key Patterns
 
@@ -149,15 +148,16 @@ All CRUD modules follow: list → `/create/` → `/<id>/` (detail/edit) → `/<i
 /clientes/<id>/ver/
 /clientes/<id>/deactivate/
 
-/public_entities/, /public_entity/create/, /public_entities/<id>/, /public_entities/<id>/deactivate/
-/proposals/, /proposal/create/, /proposals/<id>/, /proposals/<id>/deactivate/
-
 /proveedores/, /proveedores/nuevo/, /proveedores/<id>/, /proveedores/<id>/deactivate/
 /insumos/, /insumos/nuevo/, /insumos/<id>/, /insumos/<id>/deactivate/
 /projects/<id>/insumos/nuevo/                → create Requiere (link insumo to project)
 /insumos-proyecto/<id>/                      → edit Requiere
 /insumos-proyecto/<id>/eliminar/             → deactivate Requiere
 /compras/, /compras/nueva/, /compras/<id>/, /compras/<id>/deactivate/
+
+/contratos/empleado/<id>/pagos/nuevo/        → create PagoEmpleado
+/pagos-empleado/<id>/                        → edit PagoEmpleado
+/pagos-empleado/<id>/deactivate/
 
 /reporte-analisis/                           → project analysis charts + PDF
 /project_report/                             → project list PDF

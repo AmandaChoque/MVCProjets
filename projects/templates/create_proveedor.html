@@ -43,7 +43,7 @@
               {% endif %}
             </div>
             <div class="mb-3">
-              <label class="form-label">Rubro</label>
+              <label class="form-label">Rubro <span class="text-danger">*</span></label>
               {{ form.rubro }}
               {% if form.rubro.errors %}
               <div class="text-danger small mt-1">{% for err in form.rubro.errors %}{{ err }}{% endfor %}</div>

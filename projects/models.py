@@ -28,14 +28,13 @@ class ActiveClienteManager(models.Manager):
         return super().get_queryset().filter(activo=True)
 
 
-class Cliente(models.Model):
+class Cliente(AuditModel):
 
     TIPO_CONTRATANTE_CHOICES = [
         ('empresa', 'Empresa'),
         ('personal', 'Personal'),
         ('entidad_publica', 'Entidad Pública'),
     ]
-    activo = models.BooleanField(default=True, verbose_name="Activo")
     cargo = models.CharField(max_length=50, verbose_name="Cargo")
     nit_ci = models.CharField(max_length=20, verbose_name="NIT/CI")
     nombre = models.CharField(max_length=50, verbose_name="Nombre")
@@ -45,7 +44,9 @@ class Cliente(models.Model):
     correo = models.EmailField(max_length=100, blank=True, null=True, verbose_name="Correo Electrónico")
     direccion = models.CharField(max_length=255, verbose_name="Dirección")
     tipo_contratante = models.CharField(max_length=20, choices=TIPO_CONTRATANTE_CHOICES, default='entidad_publica', verbose_name="Tipo Contratante")
-    created = models.DateTimeField(default=timezone.now)
+    # Solo para tipo_contratante = 'entidad_publica'
+    nombre_entidad = models.CharField(max_length=200, blank=True, null=True, verbose_name="Nombre de la Entidad")
+    representante_legal = models.CharField(max_length=200, blank=True, null=True, verbose_name="Representante Legal")
 
     # managers
     objects = ActiveClienteManager()           # default manager filters activo=True
@@ -103,39 +104,6 @@ class Empleado(models.Model):
         return f"{self.nombre} {self.apellido_paterno} {self.apellido_materno or ''} - CI: {self.carnet_identidad}"
 
 
-# EntidadPublica
-class EntidadPublica(models.Model):
-    activo = models.BooleanField(default=True, verbose_name="Activo")
-    representante_legal = models.CharField(max_length=200, verbose_name="Representante Legal")
-    contacto = models.CharField(max_length=100, verbose_name="Contacto")
-    direccion = models.CharField(max_length=300, verbose_name="Dirección")
-    nombre_entidad = models.CharField(max_length=200, verbose_name="Nombre Entidad")
-    created = models.DateTimeField(default=timezone.now)
-
-    class Meta:
-        verbose_name = 'Entidad Pública'
-        verbose_name_plural = 'Entidades Públicas'
-
-    def __str__(self):
-        return self.nombre_entidad
-
-# Propuesta
-class Propuesta(models.Model):
-    activo = models.BooleanField(default=True, verbose_name="Activo")
-    fecha_presentacion = models.DateField(verbose_name="Fecha de Presentación")
-    monto_presupuesto = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto Presupuestado")
-    requisitos = models.TextField(verbose_name="Requisitos")
-
-    entidad_publica = models.ForeignKey(EntidadPublica, on_delete=models.CASCADE, related_name='propuestas', verbose_name="Entidad Pública")
-
-    created = models.DateTimeField(default=timezone.now)
-
-    class Meta:
-        verbose_name = 'Propuesta'
-        verbose_name_plural = 'Propuestas'
-
-    def __str__(self):
-        return f"Propuesta para {self.entidad_publica}"
 
 # Proyecto
 class Proyecto(AuditModel):
@@ -162,10 +130,10 @@ class Proyecto(AuditModel):
     descripcion = models.TextField(blank=True, verbose_name="Descripción Proyecto")
     estado_proyecto = models.CharField(max_length=20, choices=PROJECT_STATUS_CHOICES, default='pendiente', verbose_name="Estado Proyecto")
     tipo_proyecto = models.CharField(max_length=30, choices=PROJECT_TYPE_CHOICES, default='instalacion_nueva', verbose_name="Tipo Proyecto")
+    fecha_estimada_fin = models.DateField(null=True, blank=True, verbose_name="Fecha Estimada de Finalización")
     estado_pago = models.CharField(max_length=20, choices=PAYMENT_STATE_CHOICES, default='no_pagado', verbose_name="Estado de Pago")
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Contratista")
-    propuesta = models.OneToOneField(Propuesta, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Propuesta")
 
     activo = models.BooleanField(default=True, verbose_name="Activo")
 
@@ -408,6 +376,9 @@ class Insumo(models.Model):
         ('sensor',           'Sensor'),
         ('cable',            'Cable'),
         ('fuente',           'Fuente de Alimentación'),
+        ('pantalla',         'Pantalla / Display'),
+        ('computadora',      'Equipo Computacional'),
+        ('red',              'Equipo de Red'),
         ('accesorio',        'Accesorio'),
     ]
     nombre          = models.CharField(max_length=200, verbose_name="Nombre")
@@ -476,6 +447,7 @@ class Realizar(models.Model):
     costo_unitario = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Costo Unitario (Bs.)")
     costo_total    = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Costo Total (Bs.)")
     fecha          = models.DateField(verbose_name="Fecha de Compra")
+    activo         = models.BooleanField(default=True, verbose_name="Activo")
     created        = models.DateTimeField(default=timezone.now)
 
     class Meta:

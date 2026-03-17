@@ -1,7 +1,7 @@
 from django.forms import ModelForm
 from django import forms
 from django.db.models import Max
-from .models import Proyecto, Empleado, Pago, EntidadPublica, Cliente, Propuesta, Progreso, ContratoEmpleado, ContratoProyecto, Proveedor, Insumo, Requiere, Realizar, PagoEmpleado
+from .models import Proyecto, Empleado, Pago, Cliente, Progreso, ContratoEmpleado, ContratoProyecto, Proveedor, Insumo, Requiere, Realizar, PagoEmpleado
 from django.contrib.auth.models import User
 import re
 from decimal import Decimal, InvalidOperation
@@ -10,18 +10,42 @@ DECIMAL_REGEX = r'\d+(\.\d{1,2})?'
 
 
 class ProjectForm(forms.ModelForm):
+    monto_total = forms.CharField(
+        required=True,
+        label="Monto Total (Bs.)",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ej: 5000 o 5000.50',
+        })
+    )
+
     class Meta:
         model = Proyecto
-        fields = ['codigo', 'nombre', 'descripcion', 'estado_proyecto', 'tipo_proyecto', 'monto_total', 'cliente']
+        fields = ['codigo', 'nombre', 'descripcion', 'estado_proyecto', 'tipo_proyecto', 'fecha_estimada_fin', 'monto_total', 'cliente']
         widgets = {
-            'codigo': forms.TextInput(attrs={'class':'form-control', 'placeholder': 'Escribe el codigo'}),
-            'nombre': forms.TextInput(attrs={'class':'form-control', 'placeholder': 'Escribe el nombre'}),
-            'descripcion': forms.Textarea(attrs={'class':'form-control', 'placeholder': 'Escribe la descripcion'}),
-            'estado_proyecto': forms.Select(attrs={'class':'form-select'}),
-            'tipo_proyecto': forms.Select(attrs={'class':'form-select'}),
-            'monto_total': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Monto total del proyecto', 'min': '0'}),
-            'cliente': forms.Select(attrs={'class': 'form-select'})
+            'codigo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el codigo'}),
+            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el nombre'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Escribe la descripcion'}),
+            'estado_proyecto': forms.Select(attrs={'class': 'form-select'}),
+            'tipo_proyecto': forms.Select(attrs={'class': 'form-select'}),
+            'fecha_estimada_fin': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'cliente': forms.Select(attrs={'class': 'form-select'}),
         }
+
+    def clean_monto_total(self):
+        valor = self.cleaned_data.get('monto_total')
+        if not valor:
+            raise forms.ValidationError('El monto es obligatorio.')
+        valor_str = str(valor).strip()
+        if not re.fullmatch(DECIMAL_REGEX, valor_str):
+            raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 5000 o 5000.50). No use comas ni separadores de miles.')
+        try:
+            resultado = Decimal(valor_str)
+        except InvalidOperation:
+            raise forms.ValidationError('Ingrese un número válido.')
+        if resultado <= 0:
+            raise forms.ValidationError('El monto debe ser mayor a cero.')
+        return resultado
 
 class EmpleadoForm(forms.ModelForm):
     username = forms.CharField(
@@ -179,33 +203,11 @@ class PaymentForm(forms.ModelForm):
             raise forms.ValidationError('El monto debe ser mayor a cero.')
         return resultado
 
-class PublicEntityForm(forms.ModelForm):
-    class Meta:
-        model = EntidadPublica
-        fields = ['representante_legal', 'contacto', 'direccion', 'nombre_entidad']
-        widgets = {
-            'representante_legal': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el representante legal'}),
-            'contacto': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el contacto'}),
-            'direccion': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Escribe la dirección'}),
-            'nombre_entidad': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el nombre de la entidad'}),
-        }
-
-class ProposalForm(forms.ModelForm):
-    class Meta:
-        model = Propuesta
-        fields = ['fecha_presentacion', 'monto_presupuesto', 'requisitos', 'entidad_publica']
-        widgets = {
-            'fecha_presentacion': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'monto_presupuesto': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el monto presupuestado', 'min': '0'}),
-            'requisitos': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Escribe los requisitos'}),
-            'entidad_publica': forms.Select(attrs={'class': 'form-select'}),
-
-        }
 
 class ClienteForm(forms.ModelForm):
     class Meta:
         model = Cliente
-        fields = ['cargo', 'nit_ci', 'nombre', 'apellido_paterno', 'apellido_materno', 'telefono', 'correo', 'direccion', 'tipo_contratante']
+        fields = ['cargo', 'nit_ci', 'nombre', 'apellido_paterno', 'apellido_materno', 'telefono', 'correo', 'direccion', 'tipo_contratante', 'nombre_entidad', 'representante_legal']
         widgets = {
             'cargo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el cargo'}),
             'nit_ci': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el NIT/CI', 'inputmode': 'numeric', 'pattern': '[0-9]+', 'title': 'Ingrese solo números', 'required': 'required', 'minlength': '6'}),
@@ -216,6 +218,8 @@ class ClienteForm(forms.ModelForm):
             'correo': forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'ejemplo@correo.com'}),
             'direccion': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Escribe la dirección', 'required': 'required', 'rows': 3}),
             'tipo_contratante': forms.Select(attrs={'class': 'form-select', 'required': 'required'}),
+            'nombre_entidad': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre de la institución'}),
+            'representante_legal': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del representante legal'}),
         }
 
     def clean_nit_ci(self):
