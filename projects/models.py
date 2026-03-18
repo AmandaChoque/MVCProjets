@@ -43,7 +43,7 @@ class Cliente(AuditModel):
     ]
     cargo = models.CharField(max_length=50, verbose_name="Cargo")
     nit_ci = models.CharField(max_length=20, blank=True, default='', verbose_name="NIT/CI")
-    nombre = models.CharField(max_length=50, verbose_name="Nombre")
+    nombre = models.CharField(max_length=50, verbose_name="Nombres")
     apellido_paterno = models.CharField(max_length=50, verbose_name="Apellido Paterno")
     apellido_materno = models.CharField(max_length=50, blank=True, default='', verbose_name="Apellido Materno")
     telefono = models.CharField(max_length=15, verbose_name="Número de Teléfono")

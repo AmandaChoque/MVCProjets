@@ -183,7 +183,7 @@ class ClienteForm(forms.ModelForm):
         widgets = {
             'cargo':             forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el cargo'}),
             'nit_ci':            forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el NIT/CI (opcional)', 'inputmode': 'numeric', 'pattern': '[0-9]*', 'title': 'Ingrese solo números'}),
-            'nombre':            forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el nombre', 'required': 'required'}),
+            'nombre':            forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe los nombres', 'required': 'required'}),
             'apellido_paterno':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el apellido paterno', 'required': 'required'}),
             'apellido_materno':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el apellido materno'}),
             'telefono':          forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el número de teléfono', 'inputmode': 'numeric', 'pattern': '[0-9]+', 'title': 'Ingrese solo números', 'required': 'required', 'minlength': '7'}),
@@ -204,6 +204,15 @@ class ClienteForm(forms.ModelForm):
         if len(nit_digits) < 6:
             raise forms.ValidationError('El NIT/CI debe tener al menos 6 dígitos.')
         return nit_digits
+
+    def clean_nombre(self):
+        return self.cleaned_data.get('nombre', '').strip().title()
+
+    def clean_apellido_paterno(self):
+        return self.cleaned_data.get('apellido_paterno', '').strip().title()
+
+    def clean_apellido_materno(self):
+        return self.cleaned_data.get('apellido_materno', '').strip().title()
 
     def clean_telefono(self):
         telefono = self.cleaned_data.get('telefono', '').replace(' ', '')

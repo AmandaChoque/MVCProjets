@@ -106,11 +106,12 @@ def payment_view(request, id_payment):
 @cargo_required(*ROLES_ADMIN_SEC)
 def deactivate_payment(request, id_payment):
     payment = get_object_or_404(Pago, id=id_payment, activo=True)
-    payment.activo = False
-    payment.deleted_at = timezone.now()
-    payment.deleted_by = request.user
-    payment.save()
-    messages.success(request, f"El pago de Bs. {payment.monto} del proyecto '{payment.proyecto.nombre}' ha sido inhabilitado.")
+    if request.method == 'POST':
+        payment.activo = False
+        payment.deleted_at = timezone.now()
+        payment.deleted_by = request.user
+        payment.save()
+        messages.success(request, f"El pago de Bs. {payment.monto} del proyecto '{payment.proyecto.nombre}' ha sido inhabilitado.")
     return redirect('payments')
 
 

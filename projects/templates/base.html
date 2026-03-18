@@ -483,8 +483,11 @@
         if (response) {
           // User wants to continue - extend session
           fetch("/extend-session/", {
-            method: "GET",
+            method: "POST",
             credentials: "same-origin",
+            headers: {
+              "X-CSRFToken": document.cookie.match(/csrftoken=([^;]+)/)?.[1] || "",
+            },
           }).then(() => {
             resetSessionTimer();
           });

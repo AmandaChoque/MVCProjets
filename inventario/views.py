@@ -77,11 +77,12 @@ def proveedor_detail(request, id_proveedor):
 @login_required
 def deactivate_proveedor(request, id_proveedor):
     proveedor = get_object_or_404(Proveedor, pk=id_proveedor, activo=True)
-    proveedor.activo = False
-    proveedor.deleted_at = timezone.now()
-    proveedor.deleted_by = request.user
-    proveedor.save()
-    messages.success(request, f'El proveedor {proveedor.nombre} ha sido inhabilitado.')
+    if request.method == 'POST':
+        proveedor.activo = False
+        proveedor.deleted_at = timezone.now()
+        proveedor.deleted_by = request.user
+        proveedor.save()
+        messages.success(request, f'El proveedor {proveedor.nombre} ha sido inhabilitado.')
     return redirect('proveedores')
 
 
@@ -156,11 +157,12 @@ def insumo_detail(request, id_insumo):
 @login_required
 def deactivate_insumo(request, id_insumo):
     insumo = get_object_or_404(Insumo, pk=id_insumo, activo=True)
-    insumo.activo = False
-    insumo.deleted_at = timezone.now()
-    insumo.deleted_by = request.user
-    insumo.save()
-    messages.success(request, f'El insumo {insumo.nombre} ha sido inhabilitado.')
+    if request.method == 'POST':
+        insumo.activo = False
+        insumo.deleted_at = timezone.now()
+        insumo.deleted_by = request.user
+        insumo.save()
+        messages.success(request, f'El insumo {insumo.nombre} ha sido inhabilitado.')
     return redirect('insumos')
 
 

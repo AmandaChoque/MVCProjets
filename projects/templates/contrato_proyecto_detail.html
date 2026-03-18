@@ -100,8 +100,8 @@
         <div class="d-flex justify-content-between mt-4">
           <div class="d-flex gap-2">
             <a href="{% url 'project_view' project.id %}" class="btn btn-outline-secondary">Cancelar</a>
-            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalInhabilitar">
-              Inhabilitar
+            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEliminar">
+              Eliminar
             </button>
           </div>
           <button class="btn btn-primary px-4" type="submit">Actualizar contrato</button>
@@ -111,7 +111,7 @@
   </div>
 </main>
 
-<div class="modal fade" id="modalInhabilitar" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalEliminar" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
@@ -126,7 +126,7 @@
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
         <form method="POST" action="{% url 'contrato_proyecto_deactivate' contrato.id %}">
           {% csrf_token %}
-          <button type="submit" class="btn btn-danger">Inhabilitar</button>
+          <button type="submit" class="btn btn-danger">Eliminar</button>
         </form>
       </div>
     </div>

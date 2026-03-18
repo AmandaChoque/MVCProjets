@@ -169,7 +169,7 @@
                     data-bs-target="#deleteModal"
                     data-id="{{ project.id }}"
                     data-nombre="{{ project.nombre }}">
-                    Inhabilitar
+                    Eliminar
                   </button>
                 </li>
                 {% endif %}
@@ -245,7 +245,7 @@
         <form method="POST" id="deleteForm">
           {% csrf_token %}
           <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-danger btn-sm">Inhabilitar</button>
+          <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
         </form>
       </div>
     </div>

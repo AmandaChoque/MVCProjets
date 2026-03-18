@@ -76,7 +76,7 @@
             class="form-control form-control-sm"
             name="search_nombre"
             value="{{ search_nombre|default:'' }}"
-            placeholder="Nombre o Apellido"
+            placeholder="Nombres o Apellido"
           />
         </div>
 
@@ -130,7 +130,7 @@
 
 
   <!-- ======================= TABLA ======================= -->
-  <div class="table-responsive">
+  <div class="table-responsive" style="overflow: visible;">
     <table class="table table-sm table-hover align-middle small">
 
       <thead class="table-light small text-uppercase fw-semibold">
@@ -207,7 +207,7 @@
                 data-bs-target="#deleteModal"
                 data-id="{{ cliente.id }}"
                 data-nombre="{{ cliente.nombre }} {{ cliente.apellido_paterno }}">
-                Inhabilitar
+                Eliminar
                 </button>
               </li>
         
@@ -307,7 +307,7 @@
 
           <button type="submit"
                   class="btn btn-danger btn-sm">
-            Inhabilitar
+            Eliminar
           </button>
 
         </form>

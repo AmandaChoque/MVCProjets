@@ -111,9 +111,10 @@ def cambiar_contrasena(request):
 @login_required
 def extend_session(request):
     """
-    View to extend the user session. Called via AJAX when user wants to extend their session.
+    View to extend the user session. Called via AJAX (POST) when user wants to extend their session.
     """
-    # Update the session's expiry time
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
     request.session.set_expiry(1800)  # 30 minutes from now
     return JsonResponse({'status': 'success', 'message': 'Session extended'})
 
@@ -303,10 +304,11 @@ def projects(request):
 @cargo_required(*ROLES_ADMIN)
 def deactivate_project(request, id_project):
     project = get_object_or_404(Proyecto, id=id_project)
-    project.activo = False
-    project.deleted_at = timezone.now()
-    project.deleted_by = request.user
-    project.save()
+    if request.method == 'POST':
+        project.activo = False
+        project.deleted_at = timezone.now()
+        project.deleted_by = request.user
+        project.save()
     return redirect('projects')
 
 
@@ -452,11 +454,12 @@ def create_employee(request):
 @cargo_required('administrador')
 def deactivate_employee(request, id_employee):
     empleado = get_object_or_404(Empleado, id=id_employee, activo=True)
-    empleado.activo = False
-    empleado.deleted_at = timezone.now()
-    empleado.deleted_by = request.user
-    empleado.save()
-    messages.success(request, f"El empleado {empleado.nombre} {empleado.apellido_paterno} fue inhabilitado.")
+    if request.method == 'POST':
+        empleado.activo = False
+        empleado.deleted_at = timezone.now()
+        empleado.deleted_by = request.user
+        empleado.save()
+        messages.success(request, f"El empleado {empleado.nombre} {empleado.apellido_paterno} fue inhabilitado.")
     return redirect('employees')
 
 
@@ -642,14 +645,13 @@ def clientes(request):
 
 @login_required
 def deactivate_cliente(request, id_cliente):
-    # cliente = get_object_or_404(Cliente, id=id_cliente)
-    # cliente.delete()
     cliente = get_object_or_404(Cliente, id=id_cliente, activo=True)
-    cliente.activo = False
-    cliente.deleted_at = timezone.now()
-    cliente.deleted_by = request.user
-    cliente.save()
-    messages.success(request, f"El contratante {cliente.nombre} {cliente.apellido_paterno} ha sido inhabilitado exitosamente.")
+    if request.method == 'POST':
+        cliente.activo = False
+        cliente.deleted_at = timezone.now()
+        cliente.deleted_by = request.user
+        cliente.save()
+        messages.success(request, f"El contratante {cliente.nombre} {cliente.apellido_paterno} ha sido inhabilitado exitosamente.")
     return redirect('clientes')
 
 
