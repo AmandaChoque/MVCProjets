@@ -10,6 +10,12 @@ DECIMAL_REGEX = r'\d+(\.\d{1,2})?'
 
 
 class ProjectForm(forms.ModelForm):
+    cliente = forms.ModelChoiceField(
+        queryset=Cliente.objects.all(),
+        required=True,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        error_messages={'required': 'Debe seleccionar un cliente.'}
+    )
     monto_total = forms.CharField(
         required=True,
         label="Monto Total (Bs.)",
@@ -21,14 +27,16 @@ class ProjectForm(forms.ModelForm):
 
     class Meta:
         model = Proyecto
-        fields = ['codigo', 'nombre', 'descripcion', 'estado_proyecto', 'tipo_proyecto', 'fecha_estimada_fin', 'monto_total', 'cliente']
+        fields = ['codigo', 'nombre', 'descripcion', 'observacion', 'estado_proyecto', 'tipo_proyecto', 'fecha_inicio', 'fecha_fin', 'monto_total', 'cliente']
         widgets = {
             'codigo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el codigo'}),
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el nombre'}),
-            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Escribe la descripcion'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Escribe la descripción'}),
+            'observacion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Notas operativas, observaciones internas...'}),
             'estado_proyecto': forms.Select(attrs={'class': 'form-select'}),
             'tipo_proyecto': forms.Select(attrs={'class': 'form-select'}),
-            'fecha_estimada_fin': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'fecha_inicio': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'fecha_fin': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'cliente': forms.Select(attrs={'class': 'form-select'}),
         }
 
@@ -210,7 +218,7 @@ class ClienteForm(forms.ModelForm):
         fields = ['cargo', 'nit_ci', 'nombre', 'apellido_paterno', 'apellido_materno', 'telefono', 'correo', 'direccion', 'tipo_contratante', 'nombre_entidad', 'representante_legal']
         widgets = {
             'cargo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el cargo'}),
-            'nit_ci': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el NIT/CI', 'inputmode': 'numeric', 'pattern': '[0-9]+', 'title': 'Ingrese solo números', 'required': 'required', 'minlength': '6'}),
+            'nit_ci': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el NIT/CI (opcional)', 'inputmode': 'numeric', 'pattern': '[0-9]*', 'title': 'Ingrese solo números'}),
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el nombre', 'required': 'required'}),
             'apellido_paterno': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el apellido paterno', 'required': 'required'}),
             'apellido_materno': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el apellido materno'}),
@@ -223,10 +231,9 @@ class ClienteForm(forms.ModelForm):
         }
 
     def clean_nit_ci(self):
-        nit = self.cleaned_data.get('nit_ci', '')
-        if nit is None:
-            return nit
-        # Permitir espacios intermedios pero exigir solo dígitos
+        nit = self.cleaned_data.get('nit_ci', '').strip()
+        if not nit:
+            return ''
         nit_digits = nit.replace(' ', '')
         if not nit_digits.isdigit():
             raise forms.ValidationError('El NIT/CI debe contener solo números.')

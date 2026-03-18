@@ -1,11 +1,14 @@
 from django.contrib import admin
-from projects.models import Proyecto, Empleado, HistorialPago, Pago, Cliente, Progreso, ContratoEmpleado, ContratoProyecto
+from projects.models import (
+    Proyecto, Empleado, HistorialPago, Pago, Cliente, Progreso,
+    ContratoEmpleado, ContratoProyecto, Proveedor, Insumo, Realizar, PagoEmpleado
+)
 
 
 @admin.register(Proyecto)
 class ProyectoAdmin(admin.ModelAdmin):
-    readonly_fields = ('created', 'updated_at', 'deleted_at')
-    list_display = ('codigo', 'nombre', 'estado_proyecto', 'tipo_proyecto', 'estado_pago', 'monto_total', 'activo', 'user')
+    readonly_fields = ('created', 'updated_at', 'deleted_at', 'deleted_by')
+    list_display = ('codigo', 'nombre', 'estado_proyecto', 'tipo_proyecto', 'estado_pago', 'monto_total', 'activo', 'creado_por')
     list_filter = ('activo', 'estado_proyecto', 'tipo_proyecto', 'estado_pago')
     search_fields = ('nombre', 'codigo', 'cliente__nombre', 'cliente__apellido_paterno')
     ordering = ('-created',)
@@ -77,3 +80,43 @@ class ContratoProyectoAdmin(admin.ModelAdmin):
     search_fields = ('proyecto__nombre', 'proyecto__codigo')
     ordering = ('-created',)
     list_per_page = 20
+
+
+@admin.register(Proveedor)
+class ProveedorAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'rubro', 'celular', 'nit', 'activo', 'created')
+    list_filter = ('activo',)
+    search_fields = ('nombre', 'rubro', 'nit')
+    ordering = ('nombre',)
+    list_per_page = 20
+    readonly_fields = ('created', 'updated_at', 'deleted_at', 'deleted_by')
+
+
+@admin.register(Insumo)
+class InsumoAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'marca', 'categoria', 'costo_unitario', 'stock', 'activo', 'created')
+    list_filter = ('activo', 'categoria')
+    search_fields = ('nombre', 'marca')
+    ordering = ('categoria', 'nombre')
+    list_per_page = 20
+    readonly_fields = ('created', 'updated_at', 'deleted_at', 'deleted_by')
+
+
+@admin.register(Realizar)
+class RealizarAdmin(admin.ModelAdmin):
+    list_display = ('insumo', 'proveedor', 'cantidad', 'costo_total', 'fecha', 'activo', 'created')
+    list_filter = ('activo',)
+    search_fields = ('insumo__nombre', 'proveedor__nombre')
+    ordering = ('-fecha',)
+    list_per_page = 20
+    readonly_fields = ('created', 'updated_at', 'deleted_at', 'deleted_by')
+
+
+@admin.register(PagoEmpleado)
+class PagoEmpleadoAdmin(admin.ModelAdmin):
+    list_display = ('contrato', 'monto', 'fecha', 'concepto', 'activo', 'created')
+    list_filter = ('activo',)
+    search_fields = ('contrato__empleado__nombre', 'concepto')
+    ordering = ('-fecha',)
+    list_per_page = 20
+    readonly_fields = ('created', 'updated_at', 'deleted_at', 'deleted_by')

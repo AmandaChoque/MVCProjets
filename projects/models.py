@@ -15,6 +15,12 @@ class AuditModel(models.Model):
     created = models.DateTimeField(auto_now_add=True, verbose_name="Fecha Creación")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Fecha Actualización")
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name="Fecha Eliminación")
+    deleted_by = models.ForeignKey(
+        User, null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='+',
+        verbose_name="Eliminado por"
+    )
     activo = models.BooleanField(default=True, verbose_name="Activo")
 
     class Meta:
@@ -36,10 +42,10 @@ class Cliente(AuditModel):
         ('entidad_publica', 'Entidad Pública'),
     ]
     cargo = models.CharField(max_length=50, verbose_name="Cargo")
-    nit_ci = models.CharField(max_length=20, verbose_name="NIT/CI")
+    nit_ci = models.CharField(max_length=20, blank=True, default='', verbose_name="NIT/CI")
     nombre = models.CharField(max_length=50, verbose_name="Nombre")
     apellido_paterno = models.CharField(max_length=50, verbose_name="Apellido Paterno")
-    apellido_materno = models.CharField(max_length=50, verbose_name="Apellido Materno")
+    apellido_materno = models.CharField(max_length=50, blank=True, default='', verbose_name="Apellido Materno")
     telefono = models.CharField(max_length=15, verbose_name="Número de Teléfono")
     correo = models.EmailField(max_length=100, blank=True, null=True, verbose_name="Correo Electrónico")
     direccion = models.CharField(max_length=255, verbose_name="Dirección")
@@ -66,10 +72,9 @@ class Cliente(AuditModel):
 
 
 # Empleado
-class Empleado(models.Model):
+class Empleado(AuditModel):
     # Opciones para el campo "cargo"
     user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="employee_profile")  # Relación uno a uno con User
-    activo = models.BooleanField(default=True, verbose_name="Activo")
 
     POSITION_CHOICES = [
         ('administrador', 'Administrador'),
@@ -94,7 +99,6 @@ class Empleado(models.Model):
     )
     # New CI field
     carnet_identidad = models.CharField(max_length=20, unique=True, verbose_name="Carnet de Identidad")
-    created =models.DateTimeField(auto_now_add=True)
 
     class Meta:
         verbose_name = 'Empleado'
@@ -130,17 +134,17 @@ class Proyecto(AuditModel):
     descripcion = models.TextField(blank=True, verbose_name="Descripción Proyecto")
     estado_proyecto = models.CharField(max_length=20, choices=PROJECT_STATUS_CHOICES, default='pendiente', verbose_name="Estado Proyecto")
     tipo_proyecto = models.CharField(max_length=30, choices=PROJECT_TYPE_CHOICES, default='instalacion_nueva', verbose_name="Tipo Proyecto")
-    fecha_estimada_fin = models.DateField(null=True, blank=True, verbose_name="Fecha Estimada de Finalización")
+    fecha_inicio = models.DateField(null=True, blank=True, verbose_name="Fecha de Inicio")
+    fecha_fin = models.DateField(null=True, blank=True, verbose_name="Fecha de Finalización")
+    observacion = models.TextField(blank=True, default='', verbose_name="Observación")
     estado_pago = models.CharField(max_length=20, choices=PAYMENT_STATE_CHOICES, default='no_pagado', verbose_name="Estado de Pago")
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    creado_por = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Creado por")
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Contratista")
-
-    activo = models.BooleanField(default=True, verbose_name="Activo")
 
     monto_total = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Monto Total del Proyecto")
 
     def __str__(self):
-        return self.nombre + ' - by ' + self.user.username
+        return self.nombre + ' - by ' + self.creado_por.username
 
     class Meta:
         verbose_name = 'Proyecto'
@@ -163,7 +167,7 @@ class Proyecto(AuditModel):
         self.save()
 
 # Pago
-class Pago(models.Model):
+class Pago(AuditModel):
     # Opciones para el estado del pago
     PAYMENT_STATUS_CHOICES = [
         ('pagado', 'Pagado'),  # Pagado
@@ -183,8 +187,6 @@ class Pago(models.Model):
     tipo_pago = models.CharField(max_length=10, choices=PAYMENT_TYPE_CHOICES, default='parcial', verbose_name="Tipo Pago")
 
     proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='pagos', verbose_name="Proyecto")
-    created = models.DateTimeField(default=timezone.now)
-    activo = models.BooleanField(default=True, verbose_name="Activo")
 
     class Meta:
 
@@ -274,7 +276,7 @@ class Progreso(models.Model):
 
 
 # Contrato de Empleado
-class ContratoEmpleado(models.Model):
+class ContratoEmpleado(AuditModel):
     empleado = models.ForeignKey(
         Empleado, on_delete=models.CASCADE,
         related_name='contratos', verbose_name="Empleado"
@@ -289,8 +291,6 @@ class ContratoEmpleado(models.Model):
     monto_acordado = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto Acordado (Bs.)")
     observaciones = models.TextField(blank=True, verbose_name="Observaciones")
     documento = models.FileField(upload_to='contratos_empleados/', null=True, blank=True, verbose_name="Documento")
-    activo = models.BooleanField(default=True, verbose_name="Activo")
-    created = models.DateTimeField(default=timezone.now)
 
     class Meta:
         verbose_name = 'Contrato de Empleado'
@@ -302,7 +302,7 @@ class ContratoEmpleado(models.Model):
 
 
 # Pagos de la empresa al empleado (por contrato)
-class PagoEmpleado(models.Model):
+class PagoEmpleado(AuditModel):
     contrato  = models.ForeignKey(
         ContratoEmpleado, on_delete=models.CASCADE,
         related_name='pagos', verbose_name="Contrato"
@@ -310,8 +310,6 @@ class PagoEmpleado(models.Model):
     monto     = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto (Bs.)")
     fecha     = models.DateField(verbose_name="Fecha de Pago")
     concepto  = models.CharField(max_length=255, verbose_name="Concepto", help_text="Ej: Anticipo, Saldo final, Mensualidad")
-    activo    = models.BooleanField(default=True, verbose_name="Activo")
-    created   = models.DateTimeField(default=timezone.now)
 
     class Meta:
         verbose_name = 'Pago a Empleado'
@@ -323,7 +321,7 @@ class PagoEmpleado(models.Model):
 
 
 # Contrato del Proyecto (con el cliente)
-class ContratoProyecto(models.Model):
+class ContratoProyecto(AuditModel):
     proyecto = models.OneToOneField(
         Proyecto, on_delete=models.CASCADE,
         related_name='contrato_proyecto', verbose_name="Proyecto"
@@ -334,8 +332,6 @@ class ContratoProyecto(models.Model):
     monto_acordado = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto Acordado (Bs.)")
     observaciones = models.TextField(blank=True, verbose_name="Observaciones")
     documento = models.FileField(upload_to='contratos_proyecto/', null=True, blank=True, verbose_name="Documento")
-    activo = models.BooleanField(default=True, verbose_name="Activo")
-    created = models.DateTimeField(default=timezone.now)
 
     class Meta:
         verbose_name = 'Contrato del Proyecto'
@@ -347,15 +343,13 @@ class ContratoProyecto(models.Model):
 
 
 # Proveedor
-class Proveedor(models.Model):
+class Proveedor(AuditModel):
     nombre    = models.CharField(max_length=200, verbose_name="Nombre")
     rubro     = models.CharField(max_length=100, verbose_name="Rubro")
     celular   = models.CharField(max_length=15, verbose_name="Celular")
     correo    = models.EmailField(max_length=100, blank=True, verbose_name="Correo Electrónico")
     direccion = models.CharField(max_length=255, blank=True, verbose_name="Dirección")
     nit       = models.CharField(max_length=20, blank=True, verbose_name="NIT")
-    activo    = models.BooleanField(default=True, verbose_name="Activo")
-    created   = models.DateTimeField(default=timezone.now)
 
     class Meta:
         verbose_name = 'Proveedor'
@@ -367,7 +361,7 @@ class Proveedor(models.Model):
 
 
 # Insumo (catalogo de equipos y materiales)
-class Insumo(models.Model):
+class Insumo(AuditModel):
     CATEGORIA_CHOICES = [
         ('camara_ip',        'Cámara IP'),
         ('camara_analogica', 'Cámara Analógica'),
@@ -387,13 +381,11 @@ class Insumo(models.Model):
     costo_unitario  = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Costo Unitario (Bs.)")
     stock           = models.IntegerField(default=0, verbose_name="Stock actual")
     stock_minimo    = models.PositiveIntegerField(default=0, verbose_name="Stock mínimo de alerta")
-    activo          = models.BooleanField(default=True, verbose_name="Activo")
-    created         = models.DateTimeField(default=timezone.now)
 
     def recalculate_stock(self):
         """Recalcula el stock sumando compras y restando lo asignado a proyectos."""
         from django.db.models import Sum
-        compras    = self.compras.aggregate(t=Sum('cantidad'))['t'] or 0
+        compras    = self.compras.filter(activo=True).aggregate(t=Sum('cantidad'))['t'] or 0
         asignados  = self.proyectos.aggregate(t=Sum('cantidad'))['t'] or 0
         self.stock = compras - asignados
         self.save(update_fields=['stock'])
@@ -440,15 +432,13 @@ class Requiere(models.Model):
 
 
 # Realizar (compras de insumos a proveedores)
-class Realizar(models.Model):
+class Realizar(AuditModel):
     proveedor      = models.ForeignKey(Proveedor, on_delete=models.CASCADE, related_name='compras', verbose_name="Proveedor")
     insumo         = models.ForeignKey(Insumo,    on_delete=models.CASCADE, related_name='compras', verbose_name="Insumo")
     cantidad       = models.PositiveIntegerField(verbose_name="Cantidad")
     costo_unitario = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Costo Unitario (Bs.)")
     costo_total    = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Costo Total (Bs.)")
     fecha          = models.DateField(verbose_name="Fecha de Compra")
-    activo         = models.BooleanField(default=True, verbose_name="Activo")
-    created        = models.DateTimeField(default=timezone.now)
 
     class Meta:
         verbose_name = 'Compra'

@@ -303,6 +303,7 @@ def deactivate_project(request, id_project):
     project = get_object_or_404(Proyecto, id=id_project)
     project.activo = False
     project.deleted_at = timezone.now()
+    project.deleted_by = request.user
     project.save()
     return redirect('projects')
 
@@ -407,7 +408,7 @@ def create_project(request):
         try:
             form = ProjectForm(request.POST)
             new_project = form.save(commit=False)
-            new_project.user = request.user
+            new_project.creado_por = request.user
             new_project.save()
             return redirect('projects')
         except ValueError:
@@ -450,6 +451,8 @@ def create_employee(request):
 def deactivate_employee(request, id_employee):
     empleado = get_object_or_404(Empleado, id=id_employee, activo=True)
     empleado.activo = False
+    empleado.deleted_at = timezone.now()
+    empleado.deleted_by = request.user
     empleado.save()
     messages.success(request, f"El empleado {empleado.nombre} {empleado.apellido_paterno} fue inhabilitado.")
     return redirect('employees')
@@ -607,6 +610,8 @@ def payment_detail(request, id_payment):
 def deactivate_payment(request, id_payment):
     payment = get_object_or_404(Pago, id=id_payment, activo=True)
     payment.activo = False
+    payment.deleted_at = timezone.now()
+    payment.deleted_by = request.user
     payment.save()
     messages.success(request, f"El pago de Bs. {payment.monto} del proyecto '{payment.proyecto.nombre}' ha sido inhabilitado.")
     return redirect('payments')
@@ -849,6 +854,8 @@ def deactivate_cliente(request, id_cliente):
     # cliente.delete()
     cliente = get_object_or_404(Cliente, id=id_cliente, activo=True)
     cliente.activo = False
+    cliente.deleted_at = timezone.now()
+    cliente.deleted_by = request.user
     cliente.save()
     messages.success(request, f"El contratante {cliente.nombre} {cliente.apellido_paterno} ha sido inhabilitado exitosamente.")
     return redirect('clientes')
@@ -1031,6 +1038,8 @@ def deactivate_contrato_empleado(request, id_contrato):
     contrato = get_object_or_404(ContratoEmpleado, pk=id_contrato, activo=True)
     if request.method == 'POST':
         contrato.activo = False
+        contrato.deleted_at = timezone.now()
+        contrato.deleted_by = request.user
         contrato.save()
         messages.success(request, f'Contrato de {contrato.empleado.nombre} {contrato.empleado.apellido_paterno} inhabilitado.')
     return redirect('project_view', id_project=contrato.proyecto.id)
@@ -1079,6 +1088,8 @@ def deactivate_contrato_proyecto(request, id_contrato):
     contrato = get_object_or_404(ContratoProyecto, pk=id_contrato, activo=True)
     if request.method == 'POST':
         contrato.activo = False
+        contrato.deleted_at = timezone.now()
+        contrato.deleted_by = request.user
         contrato.save()
         messages.success(request, 'Contrato del proyecto inhabilitado.')
     return redirect('project_view', id_project=contrato.proyecto.id)
@@ -1158,6 +1169,8 @@ def proveedor_detail(request, id_proveedor):
 def deactivate_proveedor(request, id_proveedor):
     proveedor = get_object_or_404(Proveedor, pk=id_proveedor, activo=True)
     proveedor.activo = False
+    proveedor.deleted_at = timezone.now()
+    proveedor.deleted_by = request.user
     proveedor.save()
     messages.success(request, f'El proveedor {proveedor.nombre} ha sido inhabilitado.')
     return redirect('proveedores')
@@ -1247,6 +1260,8 @@ def insumo_detail(request, id_insumo):
 def deactivate_insumo(request, id_insumo):
     insumo = get_object_or_404(Insumo, pk=id_insumo, activo=True)
     insumo.activo = False
+    insumo.deleted_at = timezone.now()
+    insumo.deleted_by = request.user
     insumo.save()
     messages.success(request, f'El insumo {insumo.nombre} ha sido inhabilitado.')
     return redirect('insumos')
@@ -1407,10 +1422,14 @@ def realizar_detail(request, id_realizar):
 
 @login_required
 def deactivate_realizar(request, id_realizar):
-    compra = get_object_or_404(Realizar, pk=id_realizar)
+    compra = get_object_or_404(Realizar, pk=id_realizar, activo=True)
     if request.method == 'POST':
-        compra.delete()
-        messages.success(request, 'Compra eliminada correctamente.')
+        compra.activo = False
+        compra.deleted_at = timezone.now()
+        compra.deleted_by = request.user
+        compra.save()
+        compra.insumo.recalculate_stock()
+        messages.success(request, 'Compra inhabilitada correctamente.')
     return redirect('compras')
 
 
@@ -1472,6 +1491,8 @@ def deactivate_pago_empleado(request, id_pago):
     id_project = pago.contrato.proyecto.id
     if request.method == 'POST':
         pago.activo = False
+        pago.deleted_at = timezone.now()
+        pago.deleted_by = request.user
         pago.save()
         messages.success(request, 'Pago eliminado correctamente.')
     return redirect('project_view', id_project=id_project)

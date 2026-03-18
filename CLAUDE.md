@@ -60,7 +60,7 @@ All code lives in a single Django app `projects/`:
 - `decorators.py` — `@cargo_required(*cargos)` for role-based view access
 - `context_processors.py` — injects `user_cargo`, `es_admin`, `es_admin_o_gerente`, `es_admin_sec`, `es_campo` into every template
 - `tests.py` — unit/integration tests (forms, model signals)
-- `migrations/` — 25 migrations (0001–0025); 0022–0025 are pending `migrate`
+- `migrations/` — 28 migrations (0001–0028); run `python manage.py migrate` after pulling
 - `templates/` — all HTML templates (~50 files), extend `base.html`
 
 URL routing is entirely in `project_management/urls.py` (single file, ~120 lines).
@@ -69,7 +69,7 @@ URL routing is entirely in `project_management/urls.py` (single file, ~120 lines
 
 | Model | Key fields | Notes |
 |---|---|---|
-| `AuditModel` | created, updated_at, deleted_at, activo | Abstract base |
+| `AuditModel` | created, updated_at, deleted_at, deleted_by, activo | Abstract base |
 | `Cliente` | nit_ci, nombre, apellido_paterno, apellido_materno, cargo, tipo_contratante, telefono, correo, direccion, nombre_entidad, representante_legal, activo | Soft-delete via `delete()`. `ActiveClienteManager` (default, activo=True), `all_objects`. `nombre_entidad`/`representante_legal` only used when tipo_contratante='entidad_publica' |
 | `Empleado` | user (OneToOne→User), nombre, apellido_paterno, apellido_materno, cargo, carnet_identidad, numero_celular, salario, fecha_contratacion, activo | cargo choices: administrador/gerente/instalador/tecnico_soporte/secretaria |
 | `Proyecto` | codigo, nombre, estado_proyecto, tipo_proyecto, estado_pago, monto_total, FK→User/Cliente | Extends AuditModel. tipo_proyecto: instalacion_nueva/ampliacion/mantenimiento/emergencia. `pre_save` signal logs monto_total changes to HistorialPago |

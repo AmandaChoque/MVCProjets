@@ -30,6 +30,9 @@
       .navbar {
         background-color: #264653;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        position: sticky;
+        top: 0;
+        z-index: 1040;
       }
       .navbar .navbar-brand {
         color: #f8f9fa !important;
@@ -47,49 +50,83 @@
 
       /* Sidebar */
       .sidebar {
-        height: 100vh;
         width: 250px;
         position: fixed;
-        top: 0;
+        top: 56px;
         left: 0;
+        height: calc(100vh - 56px);
         background: linear-gradient(to bottom, #264653, #2a9d8f);
-        padding-top: 20px;
+        padding-top: 16px;
         overflow-y: auto;
-        transition: all 0.3s;
+        overflow-x: hidden;
+        transition: transform 0.3s ease;
+        z-index: 1030;
       }
       .sidebar-hidden {
         transform: translateX(-100%);
       }
       .sidebar img {
         display: block;
-        margin: 10px auto;
+        margin: 4px auto 8px;
         width: 45%;
-        max-width: 80px;
+        max-width: 72px;
         border-radius: 8px;
       }
       .sidebar h4 {
         color: #fff;
         text-align: center;
-        margin-bottom: 10px;
+        margin-bottom: 12px;
         font-weight: 600;
-        font-size: 1rem;
+        font-size: 0.95rem;
       }
       .sidebar .nav-link {
-        padding: 8px 12px;
-        font-size: 0.9rem;
+        color: #fff !important;
+        padding: 9px 14px;
+        font-size: 0.88rem;
+        border-radius: 6px;
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+        transition: background-color 0.15s;
+      }
+      .sidebar .nav-link:hover {
+        background-color: rgba(255, 255, 255, 0.18);
+      }
+      .sidebar .nav-link.active-link {
+        background-color: rgba(255, 255, 255, 0.28);
+        font-weight: 600;
       }
       .sidebar .nav-link i {
         font-size: 1rem;
+        flex-shrink: 0;
       }
-      .sidebar a {
-        color: #fff !important;
-        text-decoration: none;
-        padding: 10px 15px;
+      /* Sub-items */
+      .sidebar .submenu .nav-link {
+        font-size: 0.83rem;
+        padding: 7px 10px 7px 14px;
+        border-radius: 5px;
+      }
+      /* Chevron indicator */
+      .chevron {
+        margin-left: auto;
+        transition: transform 0.25s ease;
+        font-size: 0.75rem;
+        opacity: 0.75;
+      }
+      .collapse.show + * .chevron,
+      [aria-expanded="true"] .chevron {
+        transform: rotate(180deg);
+      }
+      /* Overlay (mobile) */
+      .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+        z-index: 1020;
+      }
+      .sidebar-overlay.active {
         display: block;
-        border-radius: 6px;
-      }
-      .sidebar a:hover {
-        background-color: rgba(255, 255, 255, 0.2);
       }
 
       /* Main content */
@@ -97,6 +134,7 @@
         margin-left: 260px;
         padding: 20px;
         transition: margin-left 0.3s;
+        min-height: calc(100vh - 56px);
       }
 
       /* Cards y badges */
@@ -110,27 +148,13 @@
           margin-left: 0 !important;
         }
         .sidebar {
-          width: 220px;
+          width: 240px;
         }
       }
       @media (max-width: 768px) {
         .main-content {
-          margin-left: 0 !important;
           padding: 1rem;
         }
-      }
-
-      /* Collapse indicator styles */
-      .collapse-indicator {
-        margin-left: auto;
-        font-size: 0.8rem;
-        transition: transform 0.3s ease;
-      }
-      .collapse-indicator.expanded {
-        transform: rotate(180deg);
-      }
-      .nav-link .collapse-indicator {
-        color: rgba(255, 255, 255, 0.7);
       }
     </style>
   </head>
@@ -181,17 +205,21 @@
       </div>
     </nav>
 
+    <!-- Overlay mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <!-- Sidebar -->
-    <div class="sidebar collapse show" id="sidebar">
-      <img src="/static/common/logo.png" alt="Logo de la empresa" />
+    <div class="sidebar" id="sidebar">
+      <img src="/static/common/logo.png" alt="Logo SOBOTEC" />
       <h4>SOBOTEC S.R.L.</h4>
-      <ul class="nav flex-column" id="sidebarNav">
+      <ul class="nav flex-column px-2" id="sidebarNav">
         {% if user.is_authenticated %}
 
-        <!-- Inicio -->
+        <!-- Inicio: oculto para instalador/técnico -->
         {% if not es_instalador_tecnico %}
         <li class="nav-item">
-          <a class="nav-link d-flex align-items-center" href="{% url 'dashboard' %}">
+          <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active-link{% endif %}"
+             href="{% url 'dashboard' %}">
             <i class="bi bi-house-door-fill me-2"></i>Inicio
           </a>
         </li>
@@ -199,15 +227,31 @@
 
         <!-- Proyectos -->
         <li class="nav-item">
-          <a class="nav-link d-flex align-items-center" data-bs-toggle="collapse" href="#projectSubmenu">
+          <a class="nav-link" data-bs-toggle="collapse" href="#projectSubmenu"
+             aria-expanded="{% if '/projects' in request.path or '/progreso' in request.path %}true{% else %}false{% endif %}">
             <i class="bi bi-folder2-open me-2"></i>Proyectos
-            <span class="collapse-indicator">></span>
+            <i class="bi bi-chevron-down chevron"></i>
           </a>
-          <div class="collapse {% if '/projects' in request.path or '/progreso' in request.path %}show{% endif %}" id="projectSubmenu">
-            <ul class="nav flex-column ms-3">
-              <li><a class="nav-link" href="{% url 'projects' %}"><i class="bi bi-list-ul me-1"></i>Listar</a></li>
-              <li><a class="nav-link" href="{% url 'project_report' %}"><i class="bi bi-file-earmark-pdf me-1"></i>Reporte PDF</a></li>
-              <li><a class="nav-link" href="{% url 'project_analysis' %}"><i class="bi bi-graph-up me-1"></i>Análisis</a></li>
+          <div class="collapse submenu {% if '/projects' in request.path or '/progreso' in request.path %}show{% endif %}" id="projectSubmenu">
+            <ul class="nav flex-column ms-2">
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'projects' %}active-link{% endif %}"
+                   href="{% url 'projects' %}">
+                  <i class="bi bi-list-ul me-2"></i>Listar
+                </a>
+              </li>
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'project_report' %}active-link{% endif %}"
+                   href="{% url 'project_report' %}">
+                  <i class="bi bi-file-earmark-pdf me-2"></i>Reporte PDF
+                </a>
+              </li>
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'project_analysis' %}active-link{% endif %}"
+                   href="{% url 'project_analysis' %}">
+                  <i class="bi bi-graph-up me-2"></i>Análisis
+                </a>
+              </li>
             </ul>
           </div>
         </li>
@@ -215,30 +259,41 @@
         <!-- Clientes: admin, gerente y secretaria -->
         {% if es_admin_sec %}
         <li class="nav-item">
-          <a class="nav-link d-flex align-items-center" data-bs-toggle="collapse" href="#clienteSubmenu">
+          <a class="nav-link {% if '/clientes' in request.path %}active-link{% endif %}"
+             href="{% url 'clientes' %}">
             <i class="bi bi-person-lines-fill me-2"></i>Clientes
-            <span class="collapse-indicator">></span>
           </a>
-          <div class="collapse {% if '/clientes' in request.path %}show{% endif %}" id="clienteSubmenu">
-            <ul class="nav flex-column ms-3">
-              <li><a class="nav-link" href="{% url 'clientes' %}"><i class="bi bi-people me-1"></i>Clientes</a></li>
-            </ul>
-          </div>
         </li>
         {% endif %}
 
         <!-- Pagos: admin, gerente y secretaria -->
         {% if es_admin_sec %}
         <li class="nav-item">
-          <a class="nav-link d-flex align-items-center" data-bs-toggle="collapse" href="#paymentSubmenu">
+          <a class="nav-link" data-bs-toggle="collapse" href="#paymentSubmenu"
+             aria-expanded="{% if '/payments' in request.path %}true{% else %}false{% endif %}">
             <i class="bi bi-cash-stack me-2"></i>Pagos
-            <span class="collapse-indicator">></span>
+            <i class="bi bi-chevron-down chevron"></i>
           </a>
-          <div class="collapse {% if '/payments' in request.path %}show{% endif %}" id="paymentSubmenu">
-            <ul class="nav flex-column ms-3">
-              <li><a class="nav-link" href="{% url 'payments' %}"><i class="bi bi-list-ul me-1"></i>Listar</a></li>
-              <li><a class="nav-link" href="{% url 'filter_payments_by_project_name' %}"><i class="bi bi-file-earmark-text me-1"></i>Reporte</a></li>
-              <li><a class="nav-link" href="{% url 'payment_analysis' %}"><i class="bi bi-graph-up me-1"></i>Análisis</a></li>
+          <div class="collapse submenu {% if '/payments' in request.path %}show{% endif %}" id="paymentSubmenu">
+            <ul class="nav flex-column ms-2">
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'payments' %}active-link{% endif %}"
+                   href="{% url 'payments' %}">
+                  <i class="bi bi-list-ul me-2"></i>Listar
+                </a>
+              </li>
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'filter_payments_by_project_name' %}active-link{% endif %}"
+                   href="{% url 'filter_payments_by_project_name' %}">
+                  <i class="bi bi-file-earmark-text me-2"></i>Reporte
+                </a>
+              </li>
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'payment_analysis' %}active-link{% endif %}"
+                   href="{% url 'payment_analysis' %}">
+                  <i class="bi bi-graph-up me-2"></i>Análisis
+                </a>
+              </li>
             </ul>
           </div>
         </li>
@@ -247,26 +302,51 @@
         <!-- Inventario: admin, gerente, instalador, técnico -->
         {% if es_campo %}
         <li class="nav-item">
-          <a class="nav-link d-flex align-items-center" data-bs-toggle="collapse" href="#inventarioSubmenu">
+          <a class="nav-link" data-bs-toggle="collapse" href="#inventarioSubmenu"
+             aria-expanded="{% if '/insumos' in request.path or '/compras' in request.path or '/proveedores' in request.path %}true{% else %}false{% endif %}">
             <i class="bi bi-boxes me-2"></i>Inventario
-            <span class="collapse-indicator">></span>
+            <i class="bi bi-chevron-down chevron"></i>
           </a>
-          <div class="collapse {% if '/insumos' in request.path or '/compras' in request.path or '/proveedores' in request.path %}show{% endif %}" id="inventarioSubmenu">
-            <ul class="nav flex-column ms-3">
+          <div class="collapse submenu {% if '/insumos' in request.path or '/compras' in request.path or '/proveedores' in request.path %}show{% endif %}" id="inventarioSubmenu">
+            <ul class="nav flex-column ms-2">
+              <li class="px-2 pt-2 pb-1" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; color:rgba(255,255,255,0.5);">Insumos</li>
               <li>
-                <span class="nav-link text-white-50" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; padding-bottom:2px; cursor:default;">Insumos</span>
-                <a class="nav-link ps-3" href="{% url 'insumos' %}"><i class="bi bi-box-seam me-1"></i>Catálogo</a>
-                <a class="nav-link ps-3" href="{% url 'create_insumo' %}"><i class="bi bi-plus-circle me-1"></i>Nuevo insumo</a>
+                <a class="nav-link {% if request.resolver_match.url_name == 'insumos' %}active-link{% endif %}"
+                   href="{% url 'insumos' %}">
+                  <i class="bi bi-box-seam me-2"></i>Catálogo
+                </a>
               </li>
-              <li class="mt-1">
-                <span class="nav-link text-white-50" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; padding-bottom:2px; cursor:default;">Compras</span>
-                <a class="nav-link ps-3" href="{% url 'compras' %}"><i class="bi bi-cart3 me-1"></i>Listar</a>
-                <a class="nav-link ps-3" href="{% url 'create_realizar' %}"><i class="bi bi-plus-circle me-1"></i>Registrar compra</a>
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'create_insumo' %}active-link{% endif %}"
+                   href="{% url 'create_insumo' %}">
+                  <i class="bi bi-plus-circle me-2"></i>Nuevo insumo
+                </a>
               </li>
-              <li class="mt-1">
-                <span class="nav-link text-white-50" style="font-size:0.72rem; text-transform:uppercase; letter-spacing:0.05em; padding-bottom:2px; cursor:default;">Proveedores</span>
-                <a class="nav-link ps-3" href="{% url 'proveedores' %}"><i class="bi bi-truck me-1"></i>Listar</a>
-                <a class="nav-link ps-3" href="{% url 'create_proveedor' %}"><i class="bi bi-plus-circle me-1"></i>Nuevo proveedor</a>
+              <li class="px-2 pt-2 pb-1" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; color:rgba(255,255,255,0.5);">Compras</li>
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'compras' %}active-link{% endif %}"
+                   href="{% url 'compras' %}">
+                  <i class="bi bi-cart3 me-2"></i>Listar
+                </a>
+              </li>
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'create_realizar' %}active-link{% endif %}"
+                   href="{% url 'create_realizar' %}">
+                  <i class="bi bi-plus-circle me-2"></i>Registrar compra
+                </a>
+              </li>
+              <li class="px-2 pt-2 pb-1" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; color:rgba(255,255,255,0.5);">Proveedores</li>
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'proveedores' %}active-link{% endif %}"
+                   href="{% url 'proveedores' %}">
+                  <i class="bi bi-truck me-2"></i>Listar
+                </a>
+              </li>
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'create_proveedor' %}active-link{% endif %}"
+                   href="{% url 'create_proveedor' %}">
+                  <i class="bi bi-plus-circle me-2"></i>Nuevo proveedor
+                </a>
               </li>
             </ul>
           </div>
@@ -276,14 +356,25 @@
         <!-- Empleados: admin y gerente -->
         {% if es_admin_o_gerente %}
         <li class="nav-item">
-          <a class="nav-link d-flex align-items-center" data-bs-toggle="collapse" href="#employeeSubmenu">
+          <a class="nav-link" data-bs-toggle="collapse" href="#employeeSubmenu"
+             aria-expanded="{% if '/employees' in request.path %}true{% else %}false{% endif %}">
             <i class="bi bi-people-fill me-2"></i>Empleados
-            <span class="collapse-indicator">></span>
+            <i class="bi bi-chevron-down chevron"></i>
           </a>
-          <div class="collapse {% if '/employees' in request.path %}show{% endif %}" id="employeeSubmenu">
-            <ul class="nav flex-column ms-3">
-              <li><a class="nav-link" href="{% url 'employees' %}"><i class="bi bi-list-ul me-1"></i>Listar</a></li>
-              <li><a class="nav-link" href="{% url 'create_employee' %}"><i class="bi bi-person-plus-fill me-1"></i>Crear</a></li>
+          <div class="collapse submenu {% if '/employees' in request.path %}show{% endif %}" id="employeeSubmenu">
+            <ul class="nav flex-column ms-2">
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'employees' %}active-link{% endif %}"
+                   href="{% url 'employees' %}">
+                  <i class="bi bi-list-ul me-2"></i>Listar
+                </a>
+              </li>
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'create_employee' %}active-link{% endif %}"
+                   href="{% url 'create_employee' %}">
+                  <i class="bi bi-person-plus-fill me-2"></i>Crear
+                </a>
+              </li>
             </ul>
           </div>
         </li>
@@ -291,10 +382,9 @@
 
         {% else %}
         <li class="nav-item">
-          <a class="nav-link" href="{% url 'dashboard' %}"><i class="bi bi-house-door-fill me-1"></i>Inicio</a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="{% url 'signin' %}"><i class="bi bi-box-arrow-in-right me-1"></i>Iniciar Sesión</a>
+          <a class="nav-link" href="{% url 'signin' %}">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión
+          </a>
         </li>
         {% endif %}
       </ul>
@@ -307,49 +397,56 @@
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-      const sidebar = document.querySelector(".sidebar");
-      const main = document.querySelector(".main-content");
+      const sidebar  = document.getElementById("sidebar");
+      const overlay  = document.getElementById("sidebarOverlay");
+      const toggler  = document.querySelector(".navbar-toggler");
 
-      document
-        .querySelector(".navbar-toggler")
-        .addEventListener("click", () => {
-          sidebar.classList.toggle("sidebar-hidden");
-          main.style.marginLeft = sidebar.classList.contains("sidebar-hidden")
-            ? "0"
-            : "260px";
-        });
+      function openSidebar() {
+        sidebar.classList.remove("sidebar-hidden");
+        overlay.classList.add("active");
+      }
+      function closeSidebar() {
+        sidebar.classList.add("sidebar-hidden");
+        overlay.classList.remove("active");
+      }
+      function isMobile() {
+        return window.innerWidth < 992;
+      }
 
-      // Collapse indicator logic - using Bootstrap events
-      document.addEventListener("DOMContentLoaded", function () {
-        const collapseElements = document.querySelectorAll(".collapse");
+      // En móvil el sidebar empieza oculto
+      if (isMobile()) closeSidebar();
 
-        // Handle Bootstrap collapse events for indicators
-        collapseElements.forEach((collapse) => {
-          // Skip the main sidebar collapse
-          if (collapse.id === "sidebar") return;
+      toggler.addEventListener("click", () => {
+        if (sidebar.classList.contains("sidebar-hidden")) {
+          openSidebar();
+        } else {
+          closeSidebar();
+        }
+      });
 
-          collapse.addEventListener("shown.bs.collapse", function () {
-            const link = document.querySelector(`[href="#${this.id}"]`);
-            const indicator = link
-              ? link.querySelector(".collapse-indicator")
-              : null;
-            if (indicator) {
-              indicator.innerHTML = "v";
-              indicator.classList.add("expanded");
-            }
-          });
+      // Cerrar al tocar el overlay
+      overlay.addEventListener("click", closeSidebar);
 
-          collapse.addEventListener("hidden.bs.collapse", function () {
-            const link = document.querySelector(`[href="#${this.id}"]`);
-            const indicator = link
-              ? link.querySelector(".collapse-indicator")
-              : null;
-            if (indicator) {
-              indicator.innerHTML = ">";
-              indicator.classList.remove("expanded");
-            }
-          });
-        });
+      // Al redimensionar, ajustar visibilidad
+      window.addEventListener("resize", () => {
+        if (!isMobile()) {
+          sidebar.classList.remove("sidebar-hidden");
+          overlay.classList.remove("active");
+        } else {
+          closeSidebar();
+        }
+      });
+
+      // Rotar chevron según estado del collapse (Bootstrap events)
+      document.querySelectorAll(".collapse.submenu").forEach((el) => {
+        const trigger = document.querySelector(`[href="#${el.id}"]`);
+        if (!trigger) return;
+        const chevron = trigger.querySelector(".chevron");
+        if (!chevron) return;
+        el.addEventListener("shown.bs.collapse",  () => chevron.style.transform = "rotate(180deg)");
+        el.addEventListener("hidden.bs.collapse", () => chevron.style.transform = "rotate(0deg)");
+        // Estado inicial
+        if (el.classList.contains("show")) chevron.style.transform = "rotate(180deg)";
       });
     </script>
 

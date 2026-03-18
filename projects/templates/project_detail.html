@@ -71,6 +71,16 @@
             </div>
 
             <div class="mb-3">
+              <label class="form-label">Observación</label>
+              {{ form.observacion }}
+              {% if form.observacion.errors %}
+              <div class="text-danger small mt-1">
+                {% for err in form.observacion.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </div>
+              {% endif %}
+            </div>
+
+            <div class="mb-3">
               <label class="form-label">Monto total (Bs.) <span class="text-danger">*</span></label>
               {{ form.monto_total }}
               {% if form.monto_total.errors %}
@@ -105,6 +115,15 @@
               {% endif %}
             </div>
 
+            <div class="mb-3">
+              <label class="form-label">Fecha de Inicio</label>
+              {{ form.fecha_inicio }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Fecha de Finalización</label>
+              {{ form.fecha_fin }}
+            </div>
 
           </div>
         </div>
