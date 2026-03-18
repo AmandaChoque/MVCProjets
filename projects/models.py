@@ -4,7 +4,7 @@ from django.db import models
 from django.contrib.auth.models import User
 
 # Señal para actualizar automáticamente el estado del proyecto
-from django.db.models.signals import post_save, pre_save
+from django.db.models.signals import pre_save
 from django.dispatch import receiver
 
 from django.db.models import Sum
@@ -166,52 +166,6 @@ class Proyecto(AuditModel):
 
         self.save()
 
-# Pago
-class Pago(AuditModel):
-    # Opciones para el estado del pago
-    PAYMENT_STATUS_CHOICES = [
-        ('pagado', 'Pagado'),  # Pagado
-        ('pendiente', 'Pendiente'),  # Pendiente
-    ]
-
-    # Opciones para el tipo de pago
-    PAYMENT_TYPE_CHOICES = [
-        ('parcial', 'Parcial'),  # Parcial
-        ('completo', 'Completo'),  # Completo
-    ]
-
-    # Campos del modelo Payment
-    monto = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Monto")
-    fecha = models.DateField(verbose_name="Fecha Pago")
-    estado = models.CharField(max_length=10, choices=PAYMENT_STATUS_CHOICES, default='pagado', verbose_name="Estado Pago")
-    tipo_pago = models.CharField(max_length=10, choices=PAYMENT_TYPE_CHOICES, default='parcial', verbose_name="Tipo Pago")
-
-    proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='pagos', verbose_name="Proyecto")
-
-    class Meta:
-
-        verbose_name_plural = 'Pagos'
-
-    def __str__(self):
-        return f"Pago de {self.monto} - {self.estado}"
-
-    def is_payment_complete(self):
-        return self.monto >= self.proyecto.monto_total
-
-    def update_payment_status(self):
-        """
-        Actualiza el estado del pago y sincroniza el estado de pago del proyecto.
-        """
-        # Actualizar estado del pago
-        if self.monto >= self.proyecto.monto_total:
-            self.estado = 'pagado'
-        else:
-            self.estado = 'pendiente'
-        self.save()
-
-        # Actualizar estado de pago del proyecto
-        self.proyecto.update_payment_status()
-
 # HistorialPagos
 class HistorialPago(models.Model):
     fecha_modificacion = models.DateTimeField(auto_now=True, verbose_name="Fecha Modificación")
@@ -228,14 +182,6 @@ class HistorialPago(models.Model):
 
     def __str__(self):
         return f"Historial de Pago - Modificado en {self.fecha_modificacion}"
-
-@receiver(post_save, sender=Pago)
-def update_project_payment_status(sender, instance, **kwargs):
-    """
-    Actualiza el estado de pago del proyecto cuando se guarda un pago.
-    """
-    instance.proyecto.update_payment_status()
-
 
 @receiver(pre_save, sender=Proyecto)
 def registrar_cambio_monto_proyecto(sender, instance, **kwargs):
@@ -301,25 +247,6 @@ class ContratoEmpleado(AuditModel):
         return f"Contrato — {self.empleado.nombre} {self.empleado.apellido_paterno} / {self.proyecto.nombre}"
 
 
-# Pagos de la empresa al empleado (por contrato)
-class PagoEmpleado(AuditModel):
-    contrato  = models.ForeignKey(
-        ContratoEmpleado, on_delete=models.CASCADE,
-        related_name='pagos', verbose_name="Contrato"
-    )
-    monto     = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto (Bs.)")
-    fecha     = models.DateField(verbose_name="Fecha de Pago")
-    concepto  = models.CharField(max_length=255, verbose_name="Concepto", help_text="Ej: Anticipo, Saldo final, Mensualidad")
-
-    class Meta:
-        verbose_name = 'Pago a Empleado'
-        verbose_name_plural = 'Pagos a Empleados'
-        ordering = ['-fecha']
-
-    def __str__(self):
-        return f"Bs. {self.monto} — {self.concepto} ({self.fecha})"
-
-
 # Contrato del Proyecto (con el cliente)
 class ContratoProyecto(AuditModel):
     proyecto = models.OneToOneField(
@@ -342,108 +269,3 @@ class ContratoProyecto(AuditModel):
         return f"Contrato del proyecto — {self.proyecto.nombre}"
 
 
-# Proveedor
-class Proveedor(AuditModel):
-    nombre    = models.CharField(max_length=200, verbose_name="Nombre")
-    rubro     = models.CharField(max_length=100, verbose_name="Rubro")
-    celular   = models.CharField(max_length=15, verbose_name="Celular")
-    correo    = models.EmailField(max_length=100, blank=True, verbose_name="Correo Electrónico")
-    direccion = models.CharField(max_length=255, blank=True, verbose_name="Dirección")
-    nit       = models.CharField(max_length=20, blank=True, verbose_name="NIT")
-
-    class Meta:
-        verbose_name = 'Proveedor'
-        verbose_name_plural = 'Proveedores'
-        ordering = ['nombre']
-
-    def __str__(self):
-        return self.nombre
-
-
-# Insumo (catalogo de equipos y materiales)
-class Insumo(AuditModel):
-    CATEGORIA_CHOICES = [
-        ('camara_ip',        'Cámara IP'),
-        ('camara_analogica', 'Cámara Analógica'),
-        ('nvr_dvr',          'NVR / DVR'),
-        ('alarma',           'Sistema de Alarma'),
-        ('sensor',           'Sensor'),
-        ('cable',            'Cable'),
-        ('fuente',           'Fuente de Alimentación'),
-        ('pantalla',         'Pantalla / Display'),
-        ('computadora',      'Equipo Computacional'),
-        ('red',              'Equipo de Red'),
-        ('accesorio',        'Accesorio'),
-    ]
-    nombre          = models.CharField(max_length=200, verbose_name="Nombre")
-    marca           = models.CharField(max_length=100, verbose_name="Marca")
-    categoria       = models.CharField(max_length=30, choices=CATEGORIA_CHOICES, verbose_name="Categoría")
-    costo_unitario  = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Costo Unitario (Bs.)")
-    stock           = models.IntegerField(default=0, verbose_name="Stock actual")
-    stock_minimo    = models.PositiveIntegerField(default=0, verbose_name="Stock mínimo de alerta")
-
-    def recalculate_stock(self):
-        """Recalcula el stock sumando compras y restando lo asignado a proyectos."""
-        from django.db.models import Sum
-        compras    = self.compras.filter(activo=True).aggregate(t=Sum('cantidad'))['t'] or 0
-        asignados  = self.proyectos.aggregate(t=Sum('cantidad'))['t'] or 0
-        self.stock = compras - asignados
-        self.save(update_fields=['stock'])
-
-    @property
-    def stock_status(self):
-        """Retorna 'agotado', 'bajo' o 'ok' según el nivel de stock."""
-        if self.stock <= 0:
-            return 'agotado'
-        if self.stock_minimo > 0 and self.stock <= self.stock_minimo:
-            return 'bajo'
-        return 'ok'
-
-    class Meta:
-        verbose_name = 'Insumo'
-        verbose_name_plural = 'Insumos'
-        ordering = ['categoria', 'nombre']
-
-    def __str__(self):
-        return f"{self.get_categoria_display()} — {self.nombre} ({self.marca})"
-
-
-# Requiere (insumos asignados a un proyecto)
-class Requiere(models.Model):
-    proyecto       = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='insumos', verbose_name="Proyecto")
-    insumo         = models.ForeignKey(Insumo,   on_delete=models.CASCADE, related_name='proyectos', verbose_name="Insumo")
-    cantidad       = models.PositiveIntegerField(verbose_name="Cantidad")
-    costo_unitario = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Costo Unitario (Bs.)")
-    # costo_unitario se copia al asignar para no depender del precio actual del catalogo
-    created        = models.DateTimeField(default=timezone.now)
-
-    class Meta:
-        verbose_name = 'Insumo del Proyecto'
-        verbose_name_plural = 'Insumos del Proyecto'
-        ordering = ['-created']
-        unique_together = [('proyecto', 'insumo')]
-
-    @property
-    def subtotal(self):
-        return self.cantidad * self.costo_unitario
-
-    def __str__(self):
-        return f"{self.insumo.nombre} x{self.cantidad} → {self.proyecto.nombre}"
-
-
-# Realizar (compras de insumos a proveedores)
-class Realizar(AuditModel):
-    proveedor      = models.ForeignKey(Proveedor, on_delete=models.CASCADE, related_name='compras', verbose_name="Proveedor")
-    insumo         = models.ForeignKey(Insumo,    on_delete=models.CASCADE, related_name='compras', verbose_name="Insumo")
-    cantidad       = models.PositiveIntegerField(verbose_name="Cantidad")
-    costo_unitario = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Costo Unitario (Bs.)")
-    costo_total    = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Costo Total (Bs.)")
-    fecha          = models.DateField(verbose_name="Fecha de Compra")
-
-    class Meta:
-        verbose_name = 'Compra'
-        verbose_name_plural = 'Compras'
-        ordering = ['-fecha']
-
-    def __str__(self):
-        return f"{self.insumo.nombre} x{self.cantidad} de {self.proveedor.nombre} ({self.fecha})"

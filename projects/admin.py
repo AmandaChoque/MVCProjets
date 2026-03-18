@@ -1,8 +1,10 @@
 from django.contrib import admin
 from projects.models import (
-    Proyecto, Empleado, HistorialPago, Pago, Cliente, Progreso,
-    ContratoEmpleado, ContratoProyecto, Proveedor, Insumo, Realizar, PagoEmpleado
+    Proyecto, Empleado, HistorialPago, Cliente, Progreso,
+    ContratoEmpleado, ContratoProyecto,
 )
+from inventario.models import Proveedor, Insumo, Realizar
+from pagos.models import Pago, PagoEmpleado
 
 
 @admin.register(Proyecto)
