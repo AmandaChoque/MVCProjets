@@ -278,6 +278,10 @@ def create_realizar(request):
         compra = form.save(commit=False)
         compra.costo_total = compra.cantidad * compra.costo_unitario
         compra.save()
+        # Actualizar el precio del catálogo con el precio real de esta compra
+        compra.insumo.costo_unitario = compra.costo_unitario
+        compra.insumo.save(update_fields=['costo_unitario'])
+        compra.insumo.recalculate_stock()
         messages.success(request, f'Compra registrada: {compra.insumo.nombre} x{compra.cantidad} de {compra.proveedor.nombre}.')
         return redirect('compras')
     return render(request, 'create_realizar.html', {'form': form})
@@ -296,6 +300,9 @@ def realizar_detail(request, id_realizar):
         compra = form.save(commit=False)
         compra.costo_total = compra.cantidad * compra.costo_unitario
         compra.save()
+        # Actualizar el precio del catálogo con el precio real de esta compra
+        compra.insumo.costo_unitario = compra.costo_unitario
+        compra.insumo.save(update_fields=['costo_unitario'])
         messages.success(request, 'Compra actualizada correctamente.')
         return redirect('compras')
     return render(request, 'realizar_detail.html', {'compra': compra, 'form': form})

@@ -27,7 +27,7 @@ class ProjectForm(forms.ModelForm):
 
     class Meta:
         model = Proyecto
-        fields = ['codigo', 'nombre', 'descripcion', 'observacion', 'estado_proyecto', 'tipo_proyecto', 'fecha_inicio', 'fecha_fin', 'monto_total', 'cliente']
+        fields = ['codigo', 'nombre', 'descripcion', 'observacion', 'estado_proyecto', 'tipo_proyecto', 'monto_total', 'cliente']
         widgets = {
             'codigo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el codigo'}),
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el nombre'}),
@@ -35,8 +35,6 @@ class ProjectForm(forms.ModelForm):
             'observacion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Notas operativas, observaciones internas...'}),
             'estado_proyecto': forms.Select(attrs={'class': 'form-select'}),
             'tipo_proyecto': forms.Select(attrs={'class': 'form-select'}),
-            'fecha_inicio': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'fecha_fin': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'cliente': forms.Select(attrs={'class': 'form-select'}),
         }
 

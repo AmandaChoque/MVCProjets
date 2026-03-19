@@ -41,6 +41,16 @@
               {% if form.empleado.errors %}
               <div class="text-danger small mt-1">{% for err in form.empleado.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
+              {% if not form.empleado.field.queryset.exists %}
+              <p class="text-muted small mt-1 mb-0">
+                <i class="bi bi-info-circle me-1"></i>No hay empleados activos registrados.
+              </p>
+              {% endif %}
+              <div id="empleado-info" class="mt-2 p-2 bg-light rounded border small text-muted" style="display:none;">
+                <i class="bi bi-person-badge me-1"></i><span id="empleado-cargo"></span>
+                &nbsp;·&nbsp;
+                <i class="bi bi-phone me-1"></i><span id="empleado-celular"></span>
+              </div>
             </div>
 
             <div class="mb-3">
@@ -112,6 +122,26 @@
 
 {% block extra_js %}
 <script>
+  const empleadosData = {{ empleados_data|safe }};
+  const selectEmpleado = document.getElementById('id_empleado');
+  const infoBox = document.getElementById('empleado-info');
+
+  function updateEmpleadoInfo() {
+    const val = selectEmpleado ? selectEmpleado.value : null;
+    if (val && empleadosData[val]) {
+      document.getElementById('empleado-cargo').textContent = empleadosData[val].cargo;
+      document.getElementById('empleado-celular').textContent = empleadosData[val].celular;
+      infoBox.style.display = 'block';
+    } else if (infoBox) {
+      infoBox.style.display = 'none';
+    }
+  }
+
+  if (selectEmpleado) {
+    selectEmpleado.addEventListener('change', updateEmpleadoInfo);
+    updateEmpleadoInfo();
+  }
+
   document.querySelectorAll('.text-danger.small.mt-1').forEach(function (errorDiv) {
     var prev = errorDiv.previousElementSibling;
     if (prev && (prev.tagName === 'INPUT' || prev.tagName === 'TEXTAREA' || prev.tagName === 'SELECT')) {

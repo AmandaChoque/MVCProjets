@@ -11,7 +11,7 @@ from django.db import IntegrityError
 from .form import ProjectForm, EmpleadoForm, ClienteForm, ProgresoForm, ContratoEmpleadoForm, ContratoProyectoForm
 from .models import Proyecto, Empleado, Cliente, Progreso, ContratoEmpleado, ContratoProyecto, HistorialPago
 from inventario.models import Insumo, Requiere
-from pagos.models import Pago
+from pagos.models import Pago, PagoEmpleado
 from django.contrib.auth.decorators import login_required
 from .decorators import cargo_required, ROLES_ADMIN, ROLES_ADMIN_SEC, ROLES_CAMPO
 
@@ -120,6 +120,7 @@ def extend_session(request):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN_SEC)
 def reporte_analisis_view(request):
     total_completados = Proyecto.objects.filter(estado_proyecto='completado').count()
     total_en_progreso = Proyecto.objects.filter(estado_proyecto='en_progreso').count()
@@ -146,6 +147,7 @@ def reporte_analisis_view(request):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN_SEC)
 def project_analysis(request):
     projects = Proyecto.objects.filter(activo=True)
 
@@ -195,6 +197,7 @@ def project_analysis(request):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN_SEC)
 def project_report(request):
     project_type = request.GET.get('project_type') or None
     project_status = request.GET.get('project_status') or None
@@ -388,7 +391,8 @@ def project_complete(request, id_project):
     project = get_object_or_404(Proyecto, pk=id_project)
     if request.method == 'POST':
         project.estado_proyecto = 'completado'
-        project.save()
+        project.fecha_fin = timezone.now().date()
+        project.save(update_fields=['estado_proyecto', 'fecha_fin'])
         return redirect('projects')
 
 
@@ -406,20 +410,45 @@ def project_delete(request, id_project):
 def create_project(request):
     if request.method == 'GET':
         return render(request, 'create_project.html', {
-            'form': ProjectForm()
+            'form': ProjectForm(),
+            'contrato_form': ContratoProyectoForm(),
         })
-    else:
-        try:
-            form = ProjectForm(request.POST)
-            new_project = form.save(commit=False)
-            new_project.creado_por = request.user
-            new_project.save()
-            return redirect('projects')
-        except ValueError:
+
+    form = ProjectForm(request.POST)
+    contrato_form = ContratoProyectoForm(request.POST, request.FILES)
+    adjuntar_contrato = request.POST.get('adjuntar_contrato') == 'on'
+
+    if form.is_valid():
+        if adjuntar_contrato and not contrato_form.is_valid():
             return render(request, 'create_project.html', {
-                'form': ProjectForm(),
-                'error': 'Please provide valid data'
+                'form': form,
+                'contrato_form': contrato_form,
+                'adjuntar_contrato': True,
             })
+
+        project = form.save(commit=False)
+        project.creado_por = request.user
+
+        if adjuntar_contrato:
+            project.monto_total = contrato_form.cleaned_data['monto_acordado']
+        else:
+            project.monto_total = 0
+
+        project.save()
+
+        if adjuntar_contrato:
+            contrato = contrato_form.save(commit=False)
+            contrato.proyecto = project
+            contrato.save()
+
+        messages.success(request, f'Proyecto "{project.nombre}" creado correctamente.')
+        return redirect('project_view', id_project=project.id)
+
+    return render(request, 'create_project.html', {
+        'form': form,
+        'contrato_form': contrato_form,
+        'adjuntar_contrato': adjuntar_contrato,
+    })
 
 
 @login_required
@@ -713,6 +742,20 @@ def dashboard_home(request):
     for i in insumos_stock_bajo:
         alertas.append({'tipo': 'warning', 'msg': f'Insumo "{i.nombre}" con stock bajo ({i.stock} unidades, mínimo {i.stock_minimo}).'})
 
+    # Empleados con pago pendiente en proyectos completados
+    contratos_completados = ContratoEmpleado.objects.filter(
+        activo=True,
+        proyecto__estado_proyecto='completado'
+    ).select_related('empleado', 'proyecto')
+    for contrato in contratos_completados:
+        pagado = PagoEmpleado.objects.filter(contrato=contrato, activo=True).aggregate(t=Sum('monto'))['t'] or 0
+        if pagado < contrato.monto_acordado:
+            pendiente = contrato.monto_acordado - pagado
+            alertas.append({
+                'tipo': 'warning',
+                'msg': f'Empleado {contrato.empleado.nombre} {contrato.empleado.apellido_paterno} tiene Bs. {pendiente:.2f} pendientes de cobro en el proyecto "{contrato.proyecto.nombre}".'
+            })
+
     # ── Últimos 5 proyectos ────────────────────────────────────────────────────
     ultimos_proyectos = proyectos_qs.select_related('cliente').order_by('-created')[:5]
 
@@ -761,7 +804,22 @@ def create_progreso(request, id_project):
             progreso = form.save(commit=False)
             progreso.proyecto = project
             progreso.save()
-            messages.success(request, 'Progreso registrado correctamente.')
+
+            if progreso.porcentaje == 100 and project.estado_proyecto != 'completado':
+                era_pendiente = project.estado_proyecto == 'pendiente'
+                project.estado_proyecto = 'completado'
+                project.fecha_fin = timezone.now().date()
+                if era_pendiente and not project.fecha_inicio:
+                    project.fecha_inicio = timezone.now().date()
+                project.save(update_fields=['estado_proyecto', 'fecha_fin', 'fecha_inicio'])
+                messages.success(request, 'Progreso registrado. El proyecto fue marcado como completado automáticamente.')
+            elif 0 < progreso.porcentaje < 100 and project.estado_proyecto == 'pendiente':
+                project.estado_proyecto = 'en_progreso'
+                project.fecha_inicio = timezone.now().date()
+                project.save(update_fields=['estado_proyecto', 'fecha_inicio'])
+                messages.success(request, 'Progreso registrado. El proyecto fue marcado como en progreso.')
+            else:
+                messages.success(request, 'Progreso registrado correctamente.')
             return redirect('project_view', id_project=project.id)
         return render(request, 'create_progreso.html', {'form': form, 'project': project})
 
@@ -776,8 +834,19 @@ def progreso_detail(request, id_progreso):
     else:
         form = ProgresoForm(request.POST, instance=progreso, proyecto=project)
         if form.is_valid():
-            form.save()
-            messages.success(request, 'Progreso actualizado correctamente.')
+            progreso = form.save()
+            if progreso.porcentaje == 100 and project.estado_proyecto != 'completado':
+                project.estado_proyecto = 'completado'
+                project.fecha_fin = timezone.now().date()
+                project.save(update_fields=['estado_proyecto', 'fecha_fin'])
+                messages.success(request, 'Progreso actualizado. El proyecto fue marcado como completado automáticamente.')
+            elif 0 < progreso.porcentaje < 100 and project.estado_proyecto == 'pendiente':
+                project.estado_proyecto = 'en_progreso'
+                project.fecha_inicio = timezone.now().date()
+                project.save(update_fields=['estado_proyecto', 'fecha_inicio'])
+                messages.success(request, 'Progreso actualizado. El proyecto fue marcado como en progreso.')
+            else:
+                messages.success(request, 'Progreso actualizado correctamente.')
             return redirect('project_view', id_project=project.id)
         return render(request, 'progreso_detail.html', {'form': form, 'progreso': progreso, 'project': project})
 
@@ -797,9 +866,16 @@ def deactivate_progreso(request, id_progreso):
 @login_required
 def create_contrato_empleado(request, id_project):
     project = get_object_or_404(Proyecto, pk=id_project)
+    empleados_data = {
+        str(e.id): {
+            'cargo': e.get_cargo_display(),
+            'celular': e.numero_celular or '—',
+        }
+        for e in Empleado.objects.filter(activo=True)
+    }
     if request.method == 'GET':
         form = ContratoEmpleadoForm()
-        return render(request, 'create_contrato_empleado.html', {'form': form, 'project': project})
+        return render(request, 'create_contrato_empleado.html', {'form': form, 'project': project, 'empleados_data': empleados_data})
     else:
         form = ContratoEmpleadoForm(request.POST, request.FILES)
         if form.is_valid():
@@ -808,7 +884,7 @@ def create_contrato_empleado(request, id_project):
             contrato.save()
             messages.success(request, f'Contrato registrado para {contrato.empleado.nombre} {contrato.empleado.apellido_paterno}.')
             return redirect('project_view', id_project=project.id)
-        return render(request, 'create_contrato_empleado.html', {'form': form, 'project': project})
+        return render(request, 'create_contrato_empleado.html', {'form': form, 'project': project, 'empleados_data': empleados_data})
 
 
 @login_required
@@ -856,6 +932,8 @@ def create_contrato_proyecto(request, id_project):
             contrato = form.save(commit=False)
             contrato.proyecto = project
             contrato.save()
+            project.monto_total = contrato.monto_acordado
+            project.save(update_fields=['monto_total'])
             messages.success(request, 'Contrato del proyecto registrado correctamente.')
             return redirect('project_view', id_project=project.id)
         return render(request, 'create_contrato_proyecto.html', {'form': form, 'project': project})
@@ -871,7 +949,9 @@ def contrato_proyecto_detail(request, id_contrato):
     else:
         form = ContratoProyectoForm(request.POST, request.FILES, instance=contrato)
         if form.is_valid():
-            form.save()
+            contrato = form.save()
+            project.monto_total = contrato.monto_acordado
+            project.save(update_fields=['monto_total'])
             messages.success(request, 'Contrato del proyecto actualizado correctamente.')
             return redirect('project_view', id_project=project.id)
         return render(request, 'contrato_proyecto_detail.html', {'form': form, 'contrato': contrato, 'project': project})

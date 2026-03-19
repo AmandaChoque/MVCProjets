@@ -116,13 +116,17 @@
             </div>
 
             <div class="mb-3">
-              <label class="form-label">Fecha de Inicio</label>
-              {{ form.fecha_inicio }}
+              <label class="form-label small fw-semibold text-muted">Fecha de Inicio de Ejecución</label>
+              <div class="form-control bg-light text-muted">
+                {{ project.fecha_inicio|date:"d/m/Y"|default:"— (se asigna automáticamente)" }}
+              </div>
             </div>
 
             <div class="mb-3">
-              <label class="form-label">Fecha de Finalización</label>
-              {{ form.fecha_fin }}
+              <label class="form-label small fw-semibold text-muted">Fecha de Culminación</label>
+              <div class="form-control bg-light text-muted">
+                {{ project.fecha_fin|date:"d/m/Y"|default:"— (se asigna automáticamente)" }}
+              </div>
             </div>
 
           </div>

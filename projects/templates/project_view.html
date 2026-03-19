@@ -108,8 +108,11 @@
               <div class="info-row"><span class="info-label">Tipo:</span><span><span class="badge bg-secondary">{{ project.get_tipo_proyecto_display }}</span></span></div>
               <div class="info-row"><span class="info-label">Descripción:</span><span class="text-muted">{{ project.descripcion|default:"—" }}</span></div>
               <div class="info-row"><span class="info-label">Registrado:</span><span class="text-muted small">{{ project.created|date:"d/m/Y" }}</span></div>
-              {% if project.fecha_estimada_fin %}
-              <div class="info-row"><span class="info-label">Fecha Est. Fin:</span><span class="text-muted small">{{ project.fecha_estimada_fin|date:"d/m/Y" }}</span></div>
+              {% if project.fecha_inicio %}
+              <div class="info-row"><span class="info-label">Inicio Ejecución:</span><span class="text-muted small">{{ project.fecha_inicio|date:"d/m/Y" }}</span></div>
+              {% endif %}
+              {% if project.fecha_fin %}
+              <div class="info-row"><span class="info-label">Fecha Culminación:</span><span class="text-muted small">{{ project.fecha_fin|date:"d/m/Y" }}</span></div>
               {% endif %}
             </div>
           </div>
@@ -166,7 +169,7 @@
             <table class="table table-sm table-hover align-middle small mb-0">
               <thead class="table-light text-uppercase fw-semibold" style="font-size:0.72rem;">
                 <tr>
-                  <th>Fecha</th><th class="text-center">%</th>
+                  <th>Registrado</th><th>Fecha</th><th class="text-center">%</th>
                   <th>Descripción</th><th>Observación</th>
                   <th class="text-end" style="width:60px;">Acciones</th>
                 </tr>
@@ -174,7 +177,11 @@
               <tbody>
                 {% for prog in progresos %}
                 <tr>
-                  <td>{{ prog.fecha|date:"d/m/Y" }}</td>
+                  <td style="white-space:nowrap;">
+                    {{ prog.created|date:"d/m/Y" }}
+                    <div class="text-muted" style="font-size:0.75rem;">{{ prog.created|date:"H:i" }}</div>
+                  </td>
+                  <td style="white-space:nowrap;">{{ prog.fecha|date:"d/m/Y" }}</td>
                   <td class="text-center">
                     <span class="badge {% if prog.porcentaje == 100 %}bg-success{% elif prog.porcentaje >= 50 %}bg-primary{% else %}bg-warning text-dark{% endif %}">
                       {{ prog.porcentaje }}%

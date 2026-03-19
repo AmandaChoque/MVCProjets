@@ -1,0 +1,184 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container-fluid py-3">
+
+  {% if messages %}
+  <div class="mb-3">
+    {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- ENCABEZADO -->
+  <div class="mb-2 d-flex justify-content-between align-items-center">
+    <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevoPago">
+      + Nuevo Pago
+    </button>
+    <h5 class="fw-semibold text-secondary mb-0">Pagos a Empleados</h5>
+
+    <div class="d-flex align-items-center gap-3">
+      <form method="GET" action="{% url 'pagos_empleados_list' %}" class="d-flex align-items-center">
+        <input type="hidden" name="search_empleado" value="{{ search_empleado }}">
+        <input type="hidden" name="search_proyecto" value="{{ search_proyecto }}">
+        <input type="hidden" name="page" value="1">
+        <span class="small text-muted me-2">Mostrar:</span>
+        <select name="per_page" class="form-select form-select-sm" style="width:80px;" onchange="this.form.submit()">
+          <option value="10"  {% if per_page == 10  %}selected{% endif %}>10</option>
+          <option value="20"  {% if per_page == 20  %}selected{% endif %}>20</option>
+          <option value="50"  {% if per_page == 50  %}selected{% endif %}>50</option>
+          <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+        </select>
+      </form>
+      <div class="text-muted small">
+        Mostrando {{ pagos.start_index }} – {{ pagos.end_index }}
+        de {{ pagos.paginator.count }} registros
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTROS -->
+  <div class="card mb-3">
+    <div class="card-body py-2">
+      <form method="GET" action="{% url 'pagos_empleados_list' %}" class="row g-2">
+        <input type="hidden" name="per_page" value="{{ per_page }}">
+        <div class="col-md-4">
+          <input type="text" class="form-control form-control-sm" name="search_empleado"
+            value="{{ search_empleado|default:'' }}" placeholder="Buscar por empleado" />
+        </div>
+        <div class="col-md-4">
+          <input type="text" class="form-control form-control-sm" name="search_proyecto"
+            value="{{ search_proyecto|default:'' }}" placeholder="Buscar por proyecto" />
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
+        </div>
+        <div class="col-md-2">
+          <a href="{% url 'pagos_empleados_list' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- TABLA -->
+  <div class="table-responsive" style="overflow: visible;">
+    <table class="table table-sm table-hover align-middle small">
+      <thead class="table-light small text-uppercase fw-semibold">
+        <tr>
+          <th>Empleado</th>
+          <th>Proyecto</th>
+          <th>Concepto</th>
+          <th>Fecha</th>
+          <th class="text-end">Monto (Bs.)</th>
+          <th class="text-end" style="width:60px;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pago in pagos %}
+        <tr>
+          <td class="fw-semibold">
+            {{ pago.contrato.empleado.nombre }} {{ pago.contrato.empleado.apellido_paterno }}
+            <div class="text-muted" style="font-size:0.75rem;">{{ pago.contrato.empleado.get_cargo_display }}</div>
+          </td>
+          <td class="small">
+            <a href="{% url 'project_view' pago.contrato.proyecto.id %}" class="text-decoration-none">
+              {{ pago.contrato.proyecto.nombre }}
+            </a>
+          </td>
+          <td class="small">{{ pago.concepto }}</td>
+          <td class="small">{{ pago.fecha|date:"d/m/Y" }}</td>
+          <td class="text-end fw-semibold">{{ pago.monto|floatformat:2 }}</td>
+          <td class="text-end">
+            {% if es_admin %}
+            <a href="{% url 'pago_empleado_detail' pago.id %}" class="btn btn-sm btn-light">Editar</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" class="text-center text-muted py-3 small">No hay pagos a empleados registrados.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if pagos %}
+      <tfoot class="table-light">
+        <tr>
+          <td colspan="4" class="text-end fw-semibold">Total (Bs.):</td>
+          <td class="text-end fw-bold">{{ total_monto|floatformat:2 }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+
+  <!-- PAGINACIÓN -->
+  <nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center mb-0">
+      {% if pagos.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ pagos.previous_page_number }}&per_page={{ per_page }}&search_empleado={{ search_empleado }}&search_proyecto={{ search_proyecto }}">Anterior</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+      {% endif %}
+
+      {% for num in pagos.paginator.page_range %}
+        {% if pagos.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > pagos.number|add:'-3' and num < pagos.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&search_empleado={{ search_empleado }}&search_proyecto={{ search_proyecto }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+
+      {% if pagos.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ pagos.next_page_number }}&per_page={{ per_page }}&search_empleado={{ search_empleado }}&search_proyecto={{ search_proyecto }}">Siguiente</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+      {% endif %}
+    </ul>
+  </nav>
+
+</div>
+<!-- Modal seleccionar contrato -->
+<div class="modal fade" id="modalNuevoPago" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title fw-semibold">Seleccionar Contrato</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <label class="form-label small">Empleado — Proyecto</label>
+        <select id="selectContrato" class="form-select form-select-sm">
+          <option value="">— Seleccione un contrato —</option>
+          {% for c in contratos_activos %}
+          <option value="{% url 'create_pago_empleado' c.id %}">
+            {{ c.empleado.nombre }} {{ c.empleado.apellido_paterno }} — {{ c.proyecto.nombre }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btnContinuar">Continuar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('btnContinuar').addEventListener('click', function () {
+    const url = document.getElementById('selectContrato').value;
+    if (url) window.location.href = url;
+  });
+</script>
+{% endblock %}

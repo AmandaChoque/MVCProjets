@@ -14,6 +14,7 @@ urlpatterns = [
     path('payment-analysis/',                    views.payment_analysis,      name='payment_analysis'),
 
     # Pagos a empleados
+    path('pagos-empleados/',                     views.pagos_empleados_list,  name='pagos_empleados_list'),
     path('contratos/empleado/<int:id_contrato>/pagos/nuevo/', views.create_pago_empleado,  name='create_pago_empleado'),
     path('pagos-empleado/<int:id_pago>/',        views.pago_empleado_detail,  name='pago_empleado_detail'),
     path('pagos-empleado/<int:id_pago>/deactivate/', views.deactivate_pago_empleado, name='pago_empleado_deactivate'),

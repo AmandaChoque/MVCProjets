@@ -67,7 +67,7 @@
         height: calc(100vh - 56px);
         background: linear-gradient(to bottom, var(--sobotec-azul-dark), var(--sobotec-azul));
         padding-top: 8px;
-        overflow-y: hidden;
+        overflow-y: auto;
         overflow-x: hidden;
         transition: transform 0.3s ease;
         z-index: 1030;
@@ -198,7 +198,10 @@
         >
           <span class="navbar-toggler-icon"></span>
         </button>
-        <a class="navbar-brand">SOBOTEC S.R.L.</a>
+        <a class="navbar-brand d-flex align-items-center gap-2">
+          <img src="/static/common/logo.png" alt="Logo" style="height:34px; width:34px; border-radius:6px; object-fit:cover;">
+          SOBOTEC S.R.L.
+        </a>
 
         <div class="ms-auto d-none d-lg-flex align-items-center">
           {% if user.is_authenticated %}
@@ -237,9 +240,7 @@
 
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
-      <img src="/static/common/logo.png" alt="Logo SOBOTEC" />
-      <h4>SOBOTEC S.R.L.</h4>
-      <ul class="nav flex-column px-2" id="sidebarNav">
+      <ul class="nav flex-column px-2 pt-2" id="sidebarNav">
         {% if user.is_authenticated %}
 
         <!-- Inicio: oculto para instalador/técnico -->
@@ -259,11 +260,11 @@
 
         <li class="nav-item">
           <a class="nav-link" data-bs-toggle="collapse" href="#projectSubmenu"
-             aria-expanded="{% if '/projects' in request.path or '/progreso' in request.path %}true{% else %}false{% endif %}">
+             aria-expanded="{% if '/projects' in request.path or '/progreso' in request.path or request.resolver_match.url_name == 'project_report' or request.resolver_match.url_name == 'project_analysis' %}true{% else %}false{% endif %}">
             <i class="bi bi-folder2-open me-2"></i>Proyectos
             <i class="bi bi-chevron-down chevron"></i>
           </a>
-          <div class="collapse submenu {% if '/projects' in request.path or '/progreso' in request.path %}show{% endif %}" id="projectSubmenu">
+          <div class="collapse submenu {% if '/projects' in request.path or '/progreso' in request.path or request.resolver_match.url_name == 'project_report' or request.resolver_match.url_name == 'project_analysis' %}show{% endif %}" id="projectSubmenu">
             <ul class="nav flex-column ms-2">
               <li>
                 <a class="nav-link {% if request.resolver_match.url_name == 'projects' %}active-link{% endif %}"
@@ -271,6 +272,7 @@
                   <i class="bi bi-list-ul me-2"></i>Listar
                 </a>
               </li>
+              {% if not es_instalador_tecnico %}
               <li>
                 <a class="nav-link {% if request.resolver_match.url_name == 'project_report' %}active-link{% endif %}"
                    href="{% url 'project_report' %}">
@@ -283,6 +285,7 @@
                   <i class="bi bi-graph-up me-2"></i>Análisis
                 </a>
               </li>
+              {% endif %}
             </ul>
           </div>
         </li>
@@ -409,12 +412,13 @@
 
         <li class="nav-item">
           <a class="nav-link" data-bs-toggle="collapse" href="#paymentSubmenu"
-             aria-expanded="{% if '/payments' in request.path %}true{% else %}false{% endif %}">
+             aria-expanded="{% if '/payments' in request.path or '/pagos-empleados' in request.path %}true{% else %}false{% endif %}">
             <i class="bi bi-cash-stack me-2"></i>Pagos
             <i class="bi bi-chevron-down chevron"></i>
           </a>
-          <div class="collapse submenu {% if '/payments' in request.path %}show{% endif %}" id="paymentSubmenu">
+          <div class="collapse submenu {% if '/payments' in request.path or '/pagos-empleados' in request.path %}show{% endif %}" id="paymentSubmenu">
             <ul class="nav flex-column ms-2">
+              <li class="px-2 pt-1" style="font-size:0.62rem; text-transform:uppercase; letter-spacing:0.1em; color:rgba(255,255,255,0.4); font-weight:700;">Clientes</li>
               <li>
                 <a class="nav-link {% if request.resolver_match.url_name == 'payments' %}active-link{% endif %}"
                    href="{% url 'payments' %}">
@@ -431,6 +435,13 @@
                 <a class="nav-link {% if request.resolver_match.url_name == 'payment_analysis' %}active-link{% endif %}"
                    href="{% url 'payment_analysis' %}">
                   <i class="bi bi-graph-up me-2"></i>Análisis
+                </a>
+              </li>
+              <li class="px-2 pt-1" style="font-size:0.62rem; text-transform:uppercase; letter-spacing:0.1em; color:rgba(255,255,255,0.4); font-weight:700;">Empleados</li>
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'pagos_empleados_list' %}active-link{% endif %}"
+                   href="{% url 'pagos_empleados_list' %}">
+                  <i class="bi bi-people me-2"></i>Listar
                 </a>
               </li>
             </ul>

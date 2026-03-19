@@ -66,34 +66,49 @@ def payment_list(request):
     })
 
 
+def _proyectos_data():
+    proyectos = Proyecto.objects.filter(activo=True).prefetch_related('pagos')
+    data = {}
+    for p in proyectos:
+        pagado = p.pagos.filter(activo=True, estado='pagado').aggregate(t=Sum('monto'))['t'] or 0
+        data[str(p.id)] = {
+            'monto_total': float(p.monto_total),
+            'pagado': float(pagado),
+            'saldo': float(p.monto_total - pagado),
+        }
+    return data
+
 @login_required
 @cargo_required(*ROLES_ADMIN_SEC)
 def create_payment(request):
+    proyectos_data = _proyectos_data()
     if request.method == 'GET':
-        return render(request, 'create_payment.html', {'form': PaymentForm()})
+        return render(request, 'create_payment.html', {'form': PaymentForm(), 'proyectos_data': proyectos_data})
     form = PaymentForm(request.POST)
     if form.is_valid():
         payment = form.save()
         messages.success(request, f'El pago de Bs. {payment.monto} fue registrado exitosamente.')
         return redirect('payments')
-    return render(request, 'create_payment.html', {'form': form, 'error': 'Por favor, proporcione datos válidos'})
+    return render(request, 'create_payment.html', {'form': form, 'proyectos_data': proyectos_data, 'error': 'Por favor, proporcione datos válidos'})
 
 
 @login_required
 @cargo_required(*ROLES_ADMIN_SEC)
 def payment_detail(request, id_payment):
     payment = get_object_or_404(Pago, pk=id_payment, activo=True)
+    proyectos_data = _proyectos_data()
     if request.method == 'GET':
         return render(request, 'payment_detail.html', {
             'payment': payment,
             'form': PaymentForm(instance=payment),
+            'proyectos_data': proyectos_data,
         })
     form = PaymentForm(request.POST, instance=payment)
     if form.is_valid():
         form.save()
         messages.success(request, f"El pago del proyecto '{payment.proyecto.nombre}' fue actualizado exitosamente.")
         return redirect('payments')
-    return render(request, 'payment_detail.html', {'payment': payment, 'form': form, 'error': 'Error al actualizar el pago'})
+    return render(request, 'payment_detail.html', {'payment': payment, 'form': form, 'proyectos_data': proyectos_data, 'error': 'Error al actualizar el pago'})
 
 
 @login_required
@@ -218,12 +233,71 @@ def payment_analysis(request):
 # ── Pagos a empleados ─────────────────────────────────────────────────────────
 
 @login_required
+@cargo_required(*ROLES_ADMIN_SEC)
+def pagos_empleados_list(request):
+    search_empleado = request.GET.get('search_empleado', '')
+    search_proyecto = request.GET.get('search_proyecto', '')
+    page     = request.GET.get('page', 1)
+    per_page = request.GET.get('per_page', 10)
+
+    try:
+        page = max(int(page), 1)
+    except ValueError:
+        page = 1
+    try:
+        per_page = int(per_page) if int(per_page) in [10, 20, 50, 100] else 10
+    except ValueError:
+        per_page = 10
+
+    qs = PagoEmpleado.objects.filter(activo=True).select_related(
+        'contrato__empleado', 'contrato__proyecto'
+    ).order_by('-fecha')
+
+    if search_empleado:
+        qs = qs.filter(
+            Q(contrato__empleado__nombre__icontains=search_empleado) |
+            Q(contrato__empleado__apellido_paterno__icontains=search_empleado)
+        )
+    if search_proyecto:
+        qs = qs.filter(contrato__proyecto__nombre__icontains=search_proyecto)
+
+    paginator = Paginator(qs, per_page)
+    try:
+        pagos_page = paginator.page(page)
+    except (PageNotAnInteger, EmptyPage):
+        pagos_page = paginator.page(1)
+
+    total_monto = qs.aggregate(t=Sum('monto'))['t'] or 0
+    contratos_activos = ContratoEmpleado.objects.filter(activo=True).select_related('empleado', 'proyecto').order_by('empleado__nombre')
+
+    return render(request, 'pagos_empleados_list.html', {
+        'pagos': pagos_page,
+        'search_empleado': search_empleado,
+        'search_proyecto': search_proyecto,
+        'contratos_activos': contratos_activos,
+        'per_page': per_page,
+        'total_monto': total_monto,
+    })
+
+def _contrato_resumen(contrato, excluir_pago_id=None):
+    qs = PagoEmpleado.objects.filter(contrato=contrato, activo=True)
+    if excluir_pago_id:
+        qs = qs.exclude(pk=excluir_pago_id)
+    pagado = qs.aggregate(t=Sum('monto'))['t'] or 0
+    return {
+        'pagado': pagado,
+        'saldo': contrato.monto_acordado - pagado,
+    }
+
+@login_required
 def create_pago_empleado(request, id_contrato):
     contrato = get_object_or_404(ContratoEmpleado, pk=id_contrato, activo=True)
+    resumen  = _contrato_resumen(contrato)
     if request.method == 'GET':
         return render(request, 'create_pago_empleado.html', {
             'form': PagoEmpleadoForm(),
             'contrato': contrato,
+            'resumen': resumen,
         })
     form = PagoEmpleadoForm(request.POST)
     if form.is_valid():
@@ -232,7 +306,7 @@ def create_pago_empleado(request, id_contrato):
         pago.save()
         messages.success(request, f'Pago de Bs. {pago.monto} registrado para {contrato.empleado.nombre}.')
         return redirect('project_view', id_project=contrato.proyecto.id)
-    return render(request, 'create_pago_empleado.html', {'form': form, 'contrato': contrato})
+    return render(request, 'create_pago_empleado.html', {'form': form, 'contrato': contrato, 'resumen': resumen})
 
 
 @login_required
@@ -240,18 +314,20 @@ def create_pago_empleado(request, id_contrato):
 def pago_empleado_detail(request, id_pago):
     pago     = get_object_or_404(PagoEmpleado, pk=id_pago, activo=True)
     contrato = pago.contrato
+    resumen  = _contrato_resumen(contrato, excluir_pago_id=pago.id)
     if request.method == 'GET':
         return render(request, 'pago_empleado_detail.html', {
             'form': PagoEmpleadoForm(instance=pago),
             'pago': pago,
             'contrato': contrato,
+            'resumen': resumen,
         })
     form = PagoEmpleadoForm(request.POST, instance=pago)
     if form.is_valid():
         form.save()
         messages.success(request, 'Pago actualizado correctamente.')
         return redirect('project_view', id_project=contrato.proyecto.id)
-    return render(request, 'pago_empleado_detail.html', {'form': form, 'pago': pago, 'contrato': contrato})
+    return render(request, 'pago_empleado_detail.html', {'form': form, 'pago': pago, 'contrato': contrato, 'resumen': resumen})
 
 
 @login_required
