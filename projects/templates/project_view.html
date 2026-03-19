@@ -1,8 +1,12 @@
 {% extends 'base.html' %}
 {% block extra_css %}
 <style>
-  .nav-tabs .nav-link { font-size: 0.85rem; color: #6c757d; }
-  .nav-tabs .nav-link.active { font-weight: 600; color: #264653; border-bottom: 2px solid #264653; }
+  .nav-tabs .nav-link { font-size: 0.85rem; color: #6c757d; border: none; border-bottom: 2px solid transparent; border-radius: 0; }
+  .nav-tabs .nav-link:hover { color: #264653; background: transparent; }
+  .nav-tabs .nav-link.active { font-weight: 600; color: #0d6efd; border-bottom: 2px solid #0d6efd; background: transparent; }
+  #tab-insumos.nav-link.active,
+  button[data-bs-target="#tab-insumos"].active { color: #198754; border-bottom-color: #198754; }
+  button[data-bs-target="#tab-finanzas"].active { color: #fd7e14; border-bottom-color: #fd7e14; }
   .tab-content { padding-top: 1.25rem; }
   .info-label { min-width: 160px; font-weight: 600; color: #495057; flex-shrink: 0; }
   .info-row { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
@@ -15,7 +19,7 @@
   <!-- ENCABEZADO -->
   <div class="d-flex justify-content-between align-items-start mb-3">
     <div>
-      <h4 class="fw-semibold mb-1" style="color:#264653;">{{ project.nombre }}</h4>
+      <h4 class="fw-semibold mb-1" style="color:#1B4D90;">{{ project.nombre }}</h4>
       <div class="d-flex align-items-center gap-2 flex-wrap">
         <span class="text-muted small">{{ project.codigo }}</span>
         {% if project.estado_proyecto == 'completado' %}

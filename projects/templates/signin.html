@@ -8,27 +8,182 @@
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet" />
   <style>
-    body { min-height: 100vh; background-color: #f1f3f6; }
+    :root {
+      --sobotec-azul:       #1B4D90;
+      --sobotec-azul-dark:  #0F2D5A;
+      --sobotec-azul-mid:   #2563C4;
+      --sobotec-dorado:     #D4B84A;
+      --sobotec-dorado-luz: #F0D878;
+    }
+
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; background-color: #f1f3f6; font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif; }
+
+    /* ── Panel izquierdo ── */
     .brand-panel {
-      background: linear-gradient(160deg, #1d3557 0%, #264653 60%, #2a9d8f 100%);
+      background: linear-gradient(160deg, var(--sobotec-azul-dark) 0%, var(--sobotec-azul) 100%);
+      min-height: 100vh;
+      position: relative;
+      overflow: hidden;
+    }
+    /* Círculos decorativos de fondo */
+    .brand-panel::before {
+      content: '';
+      position: absolute;
+      width: 350px; height: 350px;
+      border-radius: 50%;
+      border: 40px solid rgba(212,184,74,0.08);
+      top: -80px; right: -80px;
+    }
+    .brand-panel::after {
+      content: '';
+      position: absolute;
+      width: 250px; height: 250px;
+      border-radius: 50%;
+      border: 30px solid rgba(212,184,74,0.06);
+      bottom: -60px; left: -60px;
+    }
+
+    .brand-logo {
+      width: 140px;
+      height: 140px;
+      object-fit: contain;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      padding: 12px;
+      border: 3px solid rgba(212,184,74,0.4);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+      margin-bottom: 1.5rem;
+    }
+
+    .brand-title {
+      color: var(--sobotec-dorado);
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      margin-bottom: 0.25rem;
+    }
+    .brand-subtitle {
+      color: rgba(255,255,255,0.7);
+      font-size: 0.82rem;
+      letter-spacing: 0.05em;
+    }
+    .brand-desc {
+      color: rgba(255,255,255,0.6);
+      font-size: 0.85rem;
+      line-height: 1.7;
+      max-width: 280px;
+      text-align: center;
+    }
+    .brand-divider {
+      width: 60px; height: 3px;
+      background: linear-gradient(90deg, transparent, var(--sobotec-dorado), transparent);
+      border: none;
+      margin: 1.5rem auto;
+      opacity: 0.6;
+    }
+    .brand-features {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      text-align: left;
+    }
+    .brand-features li {
+      color: rgba(255,255,255,0.65);
+      font-size: 0.8rem;
+      padding: 5px 0;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .brand-features li i {
+      color: var(--sobotec-dorado);
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+
+    /* ── Panel derecho ── */
+    .form-panel {
+      background: #fff;
       min-height: 100vh;
     }
-    .btn-login { background-color: #264653; border-color: #264653; }
-    .btn-login:hover { background-color: #1d3557; border-color: #1d3557; }
-    .form-control:focus { border-color: #264653; box-shadow: 0 0 0 0.2rem rgba(38,70,83,.2); }
+    .login-card {
+      width: 100%;
+      max-width: 420px;
+    }
 
-    /* Borde de error suave con fondo tenue */
+    .login-header-icon {
+      width: 56px; height: 56px;
+      background: linear-gradient(135deg, var(--sobotec-azul-dark), var(--sobotec-azul));
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 1.25rem;
+      box-shadow: 0 4px 16px rgba(27,77,144,0.3);
+    }
+
+    .form-label { font-size: 0.82rem; font-weight: 600; color: #374151; margin-bottom: 0.35rem; }
+
+    .input-group-text {
+      background: #f8fafc;
+      border-color: #e2e8f0;
+      color: #94a3b8;
+    }
+    .form-control {
+      border-color: #e2e8f0;
+      font-size: 0.9rem;
+    }
+    .form-control:focus {
+      border-color: var(--sobotec-azul);
+      box-shadow: 0 0 0 3px rgba(27,77,144,0.12);
+    }
+    .input-group:focus-within .input-group-text {
+      border-color: var(--sobotec-azul);
+      color: var(--sobotec-azul);
+    }
+
+    /* Error */
     .input-group.has-error .input-group-text {
-      border-color: #f1a2a2;
-      background-color: #fff5f5;
-      color: #dc3545;
+      border-color: #fca5a5; background-color: #fff5f5; color: #dc3545;
     }
     .input-group.has-error .form-control,
     .input-group.has-error .btn-outline-secondary {
-      border-color: #f1a2a2;
-      background-color: #fff5f5;
+      border-color: #fca5a5; background-color: #fff5f5;
     }
-    .input-group.has-error .form-control::placeholder { color: #e0a0a0; }
+
+    /* Botón login */
+    .btn-login {
+      background: linear-gradient(135deg, var(--sobotec-azul-dark), var(--sobotec-azul));
+      border: none;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      padding: 0.65rem;
+      transition: all 0.2s;
+      box-shadow: 0 4px 14px rgba(27,77,144,0.35);
+    }
+    .btn-login:hover {
+      background: linear-gradient(135deg, var(--sobotec-azul), var(--sobotec-azul-mid));
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(27,77,144,0.45);
+    }
+    .btn-login:active { transform: translateY(0); }
+
+    /* Botón volver */
+    .btn-back {
+      border-color: #e2e8f0; color: #6b7280; font-size: 0.85rem;
+    }
+    .btn-back:hover { border-color: var(--sobotec-azul); color: var(--sobotec-azul); }
+
+    /* Footer */
+    .login-footer { font-size: 0.72rem; color: #94a3b8; }
+
+    /* Badge seguro */
+    .secure-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #f0f9ff; border: 1px solid #bae6fd;
+      color: #0369a1; border-radius: 20px;
+      font-size: 0.72rem; padding: 3px 10px;
+    }
   </style>
 </head>
 <body>
@@ -37,31 +192,39 @@
   <div class="row g-0 min-vh-100">
 
     <!-- PANEL IZQUIERDO — branding -->
-    <div class="col-md-5 d-none d-md-flex brand-panel flex-column justify-content-center align-items-center text-white p-5">
-      <i class="bi bi-shield-lock-fill display-1 mb-4 opacity-75"></i>
-      <h1 class="fw-bold fs-2 text-center mb-2">SOBOTEC S.R.L.</h1>
-      <p class="text-center opacity-75 small lh-lg px-3">
-        Sistema de gestión de proyectos<br>de seguridad electrónica
-      </p>
-      <hr class="border-light opacity-25 w-50 my-4">
-      <span class="text-uppercase opacity-50" style="font-size:0.72rem; letter-spacing:2px;">
-        Sistemas de Seguridad · Bolivia
-      </span>
+    <div class="col-lg-5 d-none d-lg-flex brand-panel flex-column justify-content-center align-items-center p-5">
+      <img src="{% static 'common/logo.png' %}" alt="Logo SOBOTEC" class="brand-logo" />
+      <div class="brand-title">SOBOTEC S.R.L.</div>
+      <hr class="brand-divider">
+      <p class="brand-desc mb-3">
+        Sistema para la gestión de proyectos<br> </p>
+      <ul class="brand-features">
+        <li><i class="bi bi-camera-video-fill"></i>Cámaras IP y analógicas</li>
+        <li><i class="bi bi-hdd-network-fill"></i>DVR / NVR y redes</li>
+        <li><i class="bi bi-shield-fill-check"></i>Alarmas y sensores</li>
+        <li><i class="bi bi-wrench-adjustable"></i>Instalación y mantenimiento</li>
+      </ul>
+      <div class="mt-4" style="color:rgba(255,255,255,0.3);font-size:0.7rem;letter-spacing:2px;text-transform:uppercase;">
+        Bolivia - La Paz
+      </div>
     </div>
 
     <!-- PANEL DERECHO — formulario -->
-    <div class="col-md-7 d-flex align-items-center justify-content-center bg-white">
-      <div class="w-100 px-4 px-md-5" style="max-width:440px;">
-
-        <!-- Encabezado -->
-        <div class="mb-4">
-          <h2 class="fw-bold text-dark mb-1">Bienvenido</h2>
-          <p class="text-muted small mb-0">Ingresa tus credenciales para continuar</p>
+    <div class="col-lg-7 form-panel d-flex align-items-center justify-content-center px-4 py-5">
+      <div class="login-card">
+        
+        <!-- Logo visible solo en móvil -->
+        <div class="d-flex d-lg-none align-items-center gap-2 mb-3">
+          <img src="{% static 'common/logo.png' %}" alt="Logo" style="width:36px;height:36px;object-fit:contain;">
+          <span class="fw-bold" style="color:var(--sobotec-azul);">SOBOTEC S.R.L.</span>
         </div>
+
+        <h2 class="fw-bold mb-1" style="color:#111827;">Iniciar Sesión</h2>
+        <p class="text-muted small mb-4">Ingresa tus credenciales para acceder al sistema</p>
 
         <!-- Alerta de error -->
         {% if error %}
-        <div class="alert alert-danger d-flex align-items-center gap-2 py-2 small" role="alert">
+        <div class="alert alert-danger d-flex align-items-center gap-2 py-2 small mb-3" role="alert">
           <i class="bi bi-exclamation-circle-fill flex-shrink-0"></i>
           <span>{{ error }}</span>
         </div>
@@ -74,13 +237,13 @@
 
           <!-- Usuario -->
           <div class="mb-3">
-            <label for="username" class="form-label fw-semibold small">Usuario</label>
+            <label for="username" class="form-label">Usuario</label>
             <div class="input-group {% if error %}has-error{% endif %}">
-              <span class="input-group-text bg-light border-end-0">
-                <i class="bi bi-person{% if error %}-fill{% endif %}"></i>
+              <span class="input-group-text">
+                <i class="bi bi-person-fill"></i>
               </span>
               <input type="text" name="username" id="username"
-                     class="form-control border-start-0"
+                     class="form-control"
                      placeholder="Nombre de usuario"
                      autocomplete="username"
                      autofocus required>
@@ -89,13 +252,13 @@
 
           <!-- Contraseña -->
           <div class="mb-4">
-            <label for="password" class="form-label fw-semibold small">Contraseña</label>
+            <label for="password" class="form-label">Contraseña</label>
             <div class="input-group {% if error %}has-error{% endif %}">
-              <span class="input-group-text bg-light border-end-0">
-                <i class="bi bi-lock{% if error %}-fill{% endif %}"></i>
+              <span class="input-group-text">
+                <i class="bi bi-lock-fill"></i>
               </span>
               <input type="password" name="password" id="password"
-                     class="form-control border-start-0 border-end-0"
+                     class="form-control border-end-0"
                      placeholder="Contraseña"
                      autocomplete="current-password" required>
               <button class="btn btn-outline-secondary border-start-0" type="button" id="togglePw" tabindex="-1">
@@ -104,26 +267,28 @@
             </div>
           </div>
 
-          <!-- Botón iniciar sesión -->
+          <!-- Botón -->
           <div class="d-grid mb-3">
-            <button type="submit" class="btn btn-login btn-primary fw-semibold py-2">
-              <i class="bi bi-box-arrow-in-right me-1"></i> Iniciar Sesión
+            <button type="submit" class="btn btn-login text-white">
+              <i class="bi bi-box-arrow-in-right me-2"></i>Ingresar al Sistema
             </button>
           </div>
 
         </form>
 
-        <!-- Botón volver al inicio -->
-        <div class="d-grid mb-2">
-          <a href="{% url 'landing' %}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-arrow-left me-1"></i> Volver al inicio
+        <!-- Volver -->
+        <div class="d-grid mb-4">
+          <a href="{% url 'landing' %}" class="btn btn-back btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Volver al inicio
           </a>
         </div>
 
-        <!-- Footer -->
-        <p class="text-center text-muted mt-4 mb-0" style="font-size:0.75rem;">
-          &copy; {% now "Y" %} SOBOTEC S.R.L. — Solo personal autorizado
-        </p>
+        <!-- Badge seguro + footer -->
+        <div class="d-flex flex-column align-items-center gap-2">
+          <p class="login-footer mb-0 text-center">
+            &copy; {% now "Y" %} SOBOTEC S.R.L. — Solo personal autorizado
+          </p>
+        </div>
 
       </div>
     </div>
@@ -136,7 +301,6 @@
   const togglePw   = document.getElementById('togglePw');
   const pwInput    = document.getElementById('password');
   const toggleIcon = document.getElementById('toggleIcon');
-
   togglePw.addEventListener('click', function () {
     const show = pwInput.type === 'password';
     pwInput.type = show ? 'text' : 'password';

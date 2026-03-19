@@ -21,30 +21,40 @@
     {% block extra_css %}{% endblock %}
 
     <style>
+      /* ── Variables de marca SOBOTEC ─────────────────── */
+      :root {
+        --sobotec-azul:       #1B4D90;
+        --sobotec-azul-dark:  #0F2D5A;
+        --sobotec-azul-mid:   #2563C4;
+        --sobotec-dorado:     #D4B84A;
+        --sobotec-dorado-luz: #F0D878;
+        --sobotec-bg:         #f1f3f6;
+      }
+
       body {
         font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-        background-color: #f1f3f6;
+        background-color: var(--sobotec-bg);
       }
 
       /* Navbar */
       .navbar {
-        background-color: #264653;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        background: linear-gradient(90deg, var(--sobotec-azul-dark), var(--sobotec-azul));
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         position: sticky;
         top: 0;
         z-index: 1040;
       }
       .navbar .navbar-brand {
-        color: #f8f9fa !important;
+        color: var(--sobotec-dorado) !important;
         font-weight: bold;
         font-size: 1.6rem;
         letter-spacing: 1px;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
       }
       .btn-outline-light:hover {
-        background-color: #f8f9fa;
-        color: #264653;
-        border-color: #f8f9fa;
+        background-color: var(--sobotec-dorado);
+        color: var(--sobotec-azul-dark);
+        border-color: var(--sobotec-dorado);
         transition: all 0.2s;
       }
 
@@ -55,9 +65,9 @@
         top: 56px;
         left: 0;
         height: calc(100vh - 56px);
-        background: linear-gradient(to bottom, #264653, #2a9d8f);
-        padding-top: 16px;
-        overflow-y: auto;
+        background: linear-gradient(to bottom, var(--sobotec-azul-dark), var(--sobotec-azul));
+        padding-top: 8px;
+        overflow-y: hidden;
         overflow-x: hidden;
         transition: transform 0.3s ease;
         z-index: 1030;
@@ -67,22 +77,22 @@
       }
       .sidebar img {
         display: block;
-        margin: 4px auto 8px;
-        width: 45%;
-        max-width: 72px;
+        margin: 2px auto 4px;
+        width: 40%;
+        max-width: 52px;
         border-radius: 8px;
       }
       .sidebar h4 {
         color: #fff;
         text-align: center;
-        margin-bottom: 12px;
+        margin-bottom: 6px;
         font-weight: 600;
-        font-size: 0.95rem;
+        font-size: 0.85rem;
       }
       .sidebar .nav-link {
         color: #fff !important;
-        padding: 9px 14px;
-        font-size: 0.88rem;
+        padding: 6px 10px;
+        font-size: 0.84rem;
         border-radius: 6px;
         display: flex;
         align-items: center;
@@ -90,10 +100,13 @@
         transition: background-color 0.15s;
       }
       .sidebar .nav-link:hover {
-        background-color: rgba(255, 255, 255, 0.18);
+        background-color: rgba(212, 184, 74, 0.18);
+        color: var(--sobotec-dorado-luz) !important;
       }
       .sidebar .nav-link.active-link {
-        background-color: rgba(255, 255, 255, 0.28);
+        background-color: rgba(212, 184, 74, 0.25);
+        border-left: 3px solid var(--sobotec-dorado);
+        color: var(--sobotec-dorado-luz) !important;
         font-weight: 600;
       }
       .sidebar .nav-link i {
@@ -102,10 +115,24 @@
       }
       /* Sub-items */
       .sidebar .submenu .nav-link {
-        font-size: 0.83rem;
-        padding: 7px 10px 7px 14px;
+        font-size: 0.8rem;
+        padding: 4px 8px 4px 12px;
         border-radius: 5px;
       }
+      /* Sección del sidebar */
+      .sidebar-section {
+        font-size: 0.62rem;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        font-weight: 700;
+        padding: 8px 14px 2px;
+        margin-top: 0;
+        border-top: 1px solid rgba(255,255,255,0.12);
+      }
+      .sidebar-section.mod-proyectos { color: var(--sobotec-dorado); border-color: rgba(212,184,74,0.3); }
+      .sidebar-section.mod-inventario { color: #7bd9a5; border-color: rgba(123,217,165,0.25); }
+      .sidebar-section.mod-pagos { color: #ffb98a; border-color: rgba(255,185,138,0.25); }
+
       /* Chevron indicator */
       .chevron {
         margin-left: auto;
@@ -225,7 +252,11 @@
         </li>
         {% endif %}
 
-        <!-- Proyectos -->
+        <!-- ── MÓDULO PROYECTOS ─────────────────────────── -->
+        <li class="sidebar-section mod-proyectos">
+          <i class="bi bi-folder2 me-1"></i>Proyectos
+        </li>
+
         <li class="nav-item">
           <a class="nav-link" data-bs-toggle="collapse" href="#projectSubmenu"
              aria-expanded="{% if '/projects' in request.path or '/progreso' in request.path %}true{% else %}false{% endif %}">
@@ -256,7 +287,6 @@
           </div>
         </li>
 
-        <!-- Clientes: admin, gerente y secretaria -->
         {% if es_admin_sec %}
         <li class="nav-item">
           <a class="nav-link {% if '/clientes' in request.path %}active-link{% endif %}"
@@ -266,8 +296,117 @@
         </li>
         {% endif %}
 
-        <!-- Pagos: admin, gerente y secretaria -->
+        {% if es_admin_o_gerente %}
+        <li class="nav-item">
+          <a class="nav-link" data-bs-toggle="collapse" href="#employeeSubmenu"
+             aria-expanded="{% if '/employees' in request.path %}true{% else %}false{% endif %}">
+            <i class="bi bi-people-fill me-2"></i>Empleados
+            <i class="bi bi-chevron-down chevron"></i>
+          </a>
+          <div class="collapse submenu {% if '/employees' in request.path %}show{% endif %}" id="employeeSubmenu">
+            <ul class="nav flex-column ms-2">
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'employees' %}active-link{% endif %}"
+                   href="{% url 'employees' %}">
+                  <i class="bi bi-list-ul me-2"></i>Listar
+                </a>
+              </li>
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'create_employee' %}active-link{% endif %}"
+                   href="{% url 'create_employee' %}">
+                  <i class="bi bi-person-plus-fill me-2"></i>Crear
+                </a>
+              </li>
+            </ul>
+          </div>
+        </li>
+        {% endif %}
+
+        <!-- ── MÓDULO INVENTARIO ────────────────────────── -->
+        {% if es_campo %}
+        <li class="sidebar-section mod-inventario">
+          <i class="bi bi-box-seam me-1"></i>Inventario
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" data-bs-toggle="collapse" href="#insumoSubmenu"
+             aria-expanded="{% if '/insumos' in request.path %}true{% else %}false{% endif %}">
+            <i class="bi bi-box-seam me-2"></i>Insumos
+            <i class="bi bi-chevron-down chevron"></i>
+          </a>
+          <div class="collapse submenu {% if '/insumos' in request.path %}show{% endif %}" id="insumoSubmenu">
+            <ul class="nav flex-column ms-2">
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'insumos' %}active-link{% endif %}"
+                   href="{% url 'insumos' %}">
+                  <i class="bi bi-list-ul me-2"></i>Catálogo
+                </a>
+              </li>
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'create_insumo' %}active-link{% endif %}"
+                   href="{% url 'create_insumo' %}">
+                  <i class="bi bi-plus-circle me-2"></i>Nuevo insumo
+                </a>
+              </li>
+            </ul>
+          </div>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" data-bs-toggle="collapse" href="#comprasSubmenu"
+             aria-expanded="{% if '/compras' in request.path %}true{% else %}false{% endif %}">
+            <i class="bi bi-cart3 me-2"></i>Compras
+            <i class="bi bi-chevron-down chevron"></i>
+          </a>
+          <div class="collapse submenu {% if '/compras' in request.path %}show{% endif %}" id="comprasSubmenu">
+            <ul class="nav flex-column ms-2">
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'compras' %}active-link{% endif %}"
+                   href="{% url 'compras' %}">
+                  <i class="bi bi-list-ul me-2"></i>Listar
+                </a>
+              </li>
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'create_realizar' %}active-link{% endif %}"
+                   href="{% url 'create_realizar' %}">
+                  <i class="bi bi-plus-circle me-2"></i>Registrar compra
+                </a>
+              </li>
+            </ul>
+          </div>
+        </li>
+
+        <li class="nav-item">
+          <a class="nav-link" data-bs-toggle="collapse" href="#proveedoresSubmenu"
+             aria-expanded="{% if '/proveedores' in request.path %}true{% else %}false{% endif %}">
+            <i class="bi bi-truck me-2"></i>Proveedores
+            <i class="bi bi-chevron-down chevron"></i>
+          </a>
+          <div class="collapse submenu {% if '/proveedores' in request.path %}show{% endif %}" id="proveedoresSubmenu">
+            <ul class="nav flex-column ms-2">
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'proveedores' %}active-link{% endif %}"
+                   href="{% url 'proveedores' %}">
+                  <i class="bi bi-list-ul me-2"></i>Listar
+                </a>
+              </li>
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'create_proveedor' %}active-link{% endif %}"
+                   href="{% url 'create_proveedor' %}">
+                  <i class="bi bi-plus-circle me-2"></i>Nuevo proveedor
+                </a>
+              </li>
+            </ul>
+          </div>
+        </li>
+        {% endif %}
+
+        <!-- ── MÓDULO PAGOS ──────────────────────────────── -->
         {% if es_admin_sec %}
+        <li class="sidebar-section mod-pagos">
+          <i class="bi bi-cash-stack me-1"></i>Pagos
+        </li>
+
         <li class="nav-item">
           <a class="nav-link" data-bs-toggle="collapse" href="#paymentSubmenu"
              aria-expanded="{% if '/payments' in request.path %}true{% else %}false{% endif %}">
@@ -292,87 +431,6 @@
                 <a class="nav-link {% if request.resolver_match.url_name == 'payment_analysis' %}active-link{% endif %}"
                    href="{% url 'payment_analysis' %}">
                   <i class="bi bi-graph-up me-2"></i>Análisis
-                </a>
-              </li>
-            </ul>
-          </div>
-        </li>
-        {% endif %}
-
-        <!-- Inventario: admin, gerente, instalador, técnico -->
-        {% if es_campo %}
-        <li class="nav-item">
-          <a class="nav-link" data-bs-toggle="collapse" href="#inventarioSubmenu"
-             aria-expanded="{% if '/insumos' in request.path or '/compras' in request.path or '/proveedores' in request.path %}true{% else %}false{% endif %}">
-            <i class="bi bi-boxes me-2"></i>Inventario
-            <i class="bi bi-chevron-down chevron"></i>
-          </a>
-          <div class="collapse submenu {% if '/insumos' in request.path or '/compras' in request.path or '/proveedores' in request.path %}show{% endif %}" id="inventarioSubmenu">
-            <ul class="nav flex-column ms-2">
-              <li class="px-2 pt-2 pb-1" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; color:rgba(255,255,255,0.5);">Insumos</li>
-              <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'insumos' %}active-link{% endif %}"
-                   href="{% url 'insumos' %}">
-                  <i class="bi bi-box-seam me-2"></i>Catálogo
-                </a>
-              </li>
-              <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'create_insumo' %}active-link{% endif %}"
-                   href="{% url 'create_insumo' %}">
-                  <i class="bi bi-plus-circle me-2"></i>Nuevo insumo
-                </a>
-              </li>
-              <li class="px-2 pt-2 pb-1" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; color:rgba(255,255,255,0.5);">Compras</li>
-              <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'compras' %}active-link{% endif %}"
-                   href="{% url 'compras' %}">
-                  <i class="bi bi-cart3 me-2"></i>Listar
-                </a>
-              </li>
-              <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'create_realizar' %}active-link{% endif %}"
-                   href="{% url 'create_realizar' %}">
-                  <i class="bi bi-plus-circle me-2"></i>Registrar compra
-                </a>
-              </li>
-              <li class="px-2 pt-2 pb-1" style="font-size:0.7rem; text-transform:uppercase; letter-spacing:0.06em; color:rgba(255,255,255,0.5);">Proveedores</li>
-              <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'proveedores' %}active-link{% endif %}"
-                   href="{% url 'proveedores' %}">
-                  <i class="bi bi-truck me-2"></i>Listar
-                </a>
-              </li>
-              <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'create_proveedor' %}active-link{% endif %}"
-                   href="{% url 'create_proveedor' %}">
-                  <i class="bi bi-plus-circle me-2"></i>Nuevo proveedor
-                </a>
-              </li>
-            </ul>
-          </div>
-        </li>
-        {% endif %}
-
-        <!-- Empleados: admin y gerente -->
-        {% if es_admin_o_gerente %}
-        <li class="nav-item">
-          <a class="nav-link" data-bs-toggle="collapse" href="#employeeSubmenu"
-             aria-expanded="{% if '/employees' in request.path %}true{% else %}false{% endif %}">
-            <i class="bi bi-people-fill me-2"></i>Empleados
-            <i class="bi bi-chevron-down chevron"></i>
-          </a>
-          <div class="collapse submenu {% if '/employees' in request.path %}show{% endif %}" id="employeeSubmenu">
-            <ul class="nav flex-column ms-2">
-              <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'employees' %}active-link{% endif %}"
-                   href="{% url 'employees' %}">
-                  <i class="bi bi-list-ul me-2"></i>Listar
-                </a>
-              </li>
-              <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'create_employee' %}active-link{% endif %}"
-                   href="{% url 'create_employee' %}">
-                  <i class="bi bi-person-plus-fill me-2"></i>Crear
                 </a>
               </li>
             </ul>
@@ -437,16 +495,27 @@
         }
       });
 
-      // Rotar chevron según estado del collapse (Bootstrap events)
-      document.querySelectorAll(".collapse.submenu").forEach((el) => {
+      // Rotar chevron + acordeón (cerrar otros al abrir uno)
+      const allSubmenus = document.querySelectorAll(".collapse.submenu");
+      allSubmenus.forEach((el) => {
         const trigger = document.querySelector(`[href="#${el.id}"]`);
         if (!trigger) return;
         const chevron = trigger.querySelector(".chevron");
-        if (!chevron) return;
-        el.addEventListener("shown.bs.collapse",  () => chevron.style.transform = "rotate(180deg)");
-        el.addEventListener("hidden.bs.collapse", () => chevron.style.transform = "rotate(0deg)");
-        // Estado inicial
-        if (el.classList.contains("show")) chevron.style.transform = "rotate(180deg)";
+
+        el.addEventListener("show.bs.collapse", () => {
+          // Cerrar todos los demás submenus
+          allSubmenus.forEach((other) => {
+            if (other !== el && other.classList.contains("show")) {
+              bootstrap.Collapse.getOrCreateInstance(other).hide();
+            }
+          });
+        });
+
+        if (chevron) {
+          el.addEventListener("shown.bs.collapse",  () => chevron.style.transform = "rotate(180deg)");
+          el.addEventListener("hidden.bs.collapse", () => chevron.style.transform = "rotate(0deg)");
+          if (el.classList.contains("show")) chevron.style.transform = "rotate(180deg)";
+        }
       });
     </script>
 

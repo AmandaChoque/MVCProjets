@@ -7,7 +7,7 @@
     transition: transform 0.15s;
   }
   .kpi-card:hover { transform: translateY(-2px); }
-  .kpi-card.blue   { border-color: #0d6efd; }
+  .kpi-card.blue   { border-color: #1B4D90; }
   .kpi-card.yellow { border-color: #ffc107; }
   .kpi-card.primary{ border-color: #0dcaf0; }
   .kpi-card.green  { border-color: #198754; }
@@ -31,7 +31,7 @@
 
   <!-- Encabezado -->
   <div class="mb-4">
-    <h4 class="fw-bold mb-0" style="color:#264653;">Panel de Control</h4>
+    <h4 class="fw-bold mb-0" style="color:#1B4D90;">Panel de Control</h4>
     <span class="text-muted small">Resumen general del sistema — SOBOTEC S.R.L.</span>
   </div>
 
@@ -46,6 +46,58 @@
     {% endfor %}
   </div>
   {% endif %}
+
+  <!-- ── MÓDULOS DE ACCESO RÁPIDO ─────────────────────────────────────────── -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-4">
+      <a href="{% url 'projects' %}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #0d6efd !important;">
+          <div class="card-body d-flex align-items-center gap-3 py-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                 style="width:48px;height:48px;background:rgba(13,110,253,0.1);flex-shrink:0;">
+              <i class="bi bi-folder2-open fs-4 text-primary"></i>
+            </div>
+            <div>
+              <div class="fw-bold text-dark">Módulo Proyectos</div>
+              <div class="text-muted small">Proyectos, clientes y empleados</div>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-4">
+      <a href="{% url 'insumos' %}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #198754 !important;">
+          <div class="card-body d-flex align-items-center gap-3 py-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                 style="width:48px;height:48px;background:rgba(25,135,84,0.1);flex-shrink:0;">
+              <i class="bi bi-box-seam fs-4 text-success"></i>
+            </div>
+            <div>
+              <div class="fw-bold text-dark">Módulo Inventario</div>
+              <div class="text-muted small">Insumos, compras y proveedores</div>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-md-4">
+      <a href="{% url 'payments' %}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #fd7e14 !important;">
+          <div class="card-body d-flex align-items-center gap-3 py-3">
+            <div class="rounded-circle d-flex align-items-center justify-content-center"
+                 style="width:48px;height:48px;background:rgba(253,126,20,0.1);flex-shrink:0;">
+              <i class="bi bi-cash-stack fs-4" style="color:#fd7e14;"></i>
+            </div>
+            <div>
+              <div class="fw-bold text-dark">Módulo Pagos</div>
+              <div class="text-muted small">Pagos y reportes de análisis</div>
+            </div>
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
 
   <!-- ── FILA 1: KPIs de Proyectos ─────────────────────────────────────────── -->
   <p class="section-title">Estado de Proyectos</p>
