@@ -3,13 +3,13 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
-from django.db.models import Q, Sum
+from django.db.models import Q, F, Sum
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 from projects.models import Proyecto
 from projects.decorators import cargo_required, ROLES_CAMPO
-from .models import Proveedor, Insumo, Requiere, Realizar
-from .forms import ProveedorForm, InsumoForm, RequerirForm, RealizarForm
+from .models import Proveedor, Insumo, Requiere, Compra
+from .forms import ProveedorForm, InsumoForm, RequerirForm, CompraForm
 
 
 # ── Proveedores ───────────────────────────────────────────────────────────────
@@ -93,6 +93,7 @@ def deactivate_proveedor(request, id_proveedor):
 def insumos(request):
     search_nombre    = request.GET.get('search_nombre', '')
     filter_categoria = request.GET.get('filter_categoria', '')
+    filter_stock     = request.GET.get('filter_stock', '')
     page     = request.GET.get('page', 1)
     per_page = request.GET.get('per_page', 10)
 
@@ -110,6 +111,12 @@ def insumos(request):
         qs = qs.filter(Q(nombre__icontains=search_nombre) | Q(marca__icontains=search_nombre))
     if filter_categoria:
         qs = qs.filter(categoria=filter_categoria)
+    if filter_stock == 'agotado':
+        qs = qs.filter(stock__lte=0)
+    elif filter_stock == 'bajo':
+        qs = qs.filter(stock__gt=0, stock_minimo__gt=0, stock__lte=F('stock_minimo'))
+    elif filter_stock == 'ok':
+        qs = qs.exclude(stock__lte=0).exclude(stock_minimo__gt=0, stock__lte=F('stock_minimo'))
 
     paginator = Paginator(qs, per_page)
     try:
@@ -121,6 +128,7 @@ def insumos(request):
         'insumos': insumos_page,
         'search_nombre': search_nombre,
         'filter_categoria': filter_categoria,
+        'filter_stock': filter_stock,
         'categorias': Insumo.CATEGORIA_CHOICES,
         'per_page': per_page,
     })
@@ -155,6 +163,28 @@ def insumo_detail(request, id_insumo):
 
 
 @login_required
+def insumo_view(request, id_insumo):
+    insumo = get_object_or_404(Insumo, pk=id_insumo)
+    historial_precios = (
+        Compra.objects
+        .filter(insumo=insumo, activo=True)
+        .select_related('proveedor')
+        .order_by('-fecha', '-created')
+    )
+    proyectos_asignados = (
+        Requiere.objects
+        .filter(insumo=insumo, activo=True)
+        .select_related('proyecto')
+        .order_by('-created')
+    )
+    return render(request, 'insumo_view.html', {
+        'insumo': insumo,
+        'historial_precios': historial_precios,
+        'proyectos_asignados': proyectos_asignados,
+    })
+
+
+@login_required
 def deactivate_insumo(request, id_insumo):
     insumo = get_object_or_404(Insumo, pk=id_insumo, activo=True)
     if request.method == 'POST':
@@ -171,6 +201,9 @@ def deactivate_insumo(request, id_insumo):
 @login_required
 def create_requiere(request, id_project):
     project = get_object_or_404(Proyecto, pk=id_project)
+    if project.estado_proyecto == 'completado':
+        messages.error(request, 'No se pueden agregar insumos a un proyecto completado. Los precios quedan bloqueados.')
+        return redirect('project_view', id_project=project.id)
     insumos_activos = Insumo.objects.filter(activo=True)
     insumos_con_precio = {str(i.id): str(i.costo_promedio) for i in insumos_activos}
     insumos_con_stock  = {str(i.id): i.stock for i in insumos_activos}
@@ -201,6 +234,9 @@ def create_requiere(request, id_project):
 def requiere_detail(request, id_requiere):
     requiere = get_object_or_404(Requiere, pk=id_requiere)
     project = requiere.proyecto
+    if project.estado_proyecto == 'completado':
+        messages.error(request, 'Los insumos de un proyecto completado no pueden modificarse. Los precios están bloqueados.')
+        return redirect('project_view', id_project=project.id)
     insumos_activos = Insumo.objects.filter(activo=True)
     insumos_con_precio = {str(i.id): str(i.costo_promedio) for i in insumos_activos}
 
@@ -225,7 +261,11 @@ def requiere_detail(request, id_requiere):
 @login_required
 def deactivate_requiere(request, id_requiere):
     requiere = get_object_or_404(Requiere, pk=id_requiere)
-    id_project = requiere.proyecto.id
+    project = requiere.proyecto
+    id_project = project.id
+    if project.estado_proyecto == 'completado':
+        messages.error(request, 'No se pueden eliminar insumos de un proyecto completado.')
+        return redirect('project_view', id_project=id_project)
     if request.method == 'POST':
         requiere.activo = False
         requiere.deleted_at = timezone.now()
@@ -253,7 +293,7 @@ def compras(request):
     except ValueError:
         per_page = 10
 
-    qs = Realizar.objects.select_related('proveedor', 'insumo').order_by('-fecha')
+    qs = Compra.objects.filter(activo=True).select_related('proveedor', 'insumo').order_by('-fecha')
     if search:
         qs = qs.filter(
             Q(insumo__nombre__icontains=search) | Q(proveedor__nombre__icontains=search)
@@ -273,36 +313,36 @@ def compras(request):
 
 
 @login_required
-def create_realizar(request):
+def create_compra(request):
     if request.method == 'GET':
-        return render(request, 'create_realizar.html', {'form': RealizarForm()})
-    form = RealizarForm(request.POST)
+        return render(request, 'create_compra.html', {'form': CompraForm()})
+    form = CompraForm(request.POST)
     if form.is_valid():
         compra = form.save()
         messages.success(request, f'Compra registrada: {compra.insumo.nombre} x{compra.cantidad} de {compra.proveedor.nombre}.')
         return redirect('compras')
-    return render(request, 'create_realizar.html', {'form': form})
+    return render(request, 'create_compra.html', {'form': form})
 
 
 @login_required
-def realizar_detail(request, id_realizar):
-    compra = get_object_or_404(Realizar, pk=id_realizar)
+def compra_detail(request, id_compra):
+    compra = get_object_or_404(Compra, pk=id_compra)
     if request.method == 'GET':
-        return render(request, 'realizar_detail.html', {
+        return render(request, 'compra_detail.html', {
             'compra': compra,
-            'form': RealizarForm(instance=compra),
+            'form': CompraForm(instance=compra),
         })
-    form = RealizarForm(request.POST, instance=compra)
+    form = CompraForm(request.POST, instance=compra)
     if form.is_valid():
         compra = form.save()
         messages.success(request, 'Compra actualizada correctamente.')
         return redirect('compras')
-    return render(request, 'realizar_detail.html', {'compra': compra, 'form': form})
+    return render(request, 'compra_detail.html', {'compra': compra, 'form': form})
 
 
 @login_required
-def deactivate_realizar(request, id_realizar):
-    compra = get_object_or_404(Realizar, pk=id_realizar, activo=True)
+def deactivate_compra(request, id_compra):
+    compra = get_object_or_404(Compra, pk=id_compra, activo=True)
     if request.method == 'POST':
         compra.activo = False
         compra.deleted_at = timezone.now()

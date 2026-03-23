@@ -12,6 +12,7 @@ urlpatterns = [
     path('insumos/',                             views.insumos,              name='insumos'),
     path('insumos/nuevo/',                       views.create_insumo,        name='create_insumo'),
     path('insumos/<int:id_insumo>/',             views.insumo_detail,        name='insumo_detail'),
+    path('insumos/<int:id_insumo>/ver/',         views.insumo_view,          name='insumo_view'),
     path('insumos/<int:id_insumo>/deactivate/',  views.deactivate_insumo,    name='insumo_deactivate'),
 
     # Requiere (insumos por proyecto)
@@ -21,7 +22,7 @@ urlpatterns = [
 
     # Compras
     path('compras/',                             views.compras,              name='compras'),
-    path('compras/nueva/',                       views.create_realizar,      name='create_realizar'),
-    path('compras/<int:id_realizar>/',           views.realizar_detail,      name='realizar_detail'),
-    path('compras/<int:id_realizar>/deactivate/', views.deactivate_realizar, name='realizar_deactivate'),
+    path('compras/nueva/',                       views.create_compra,        name='create_compra'),
+    path('compras/<int:id_compra>/',             views.compra_detail,        name='compra_detail'),
+    path('compras/<int:id_compra>/deactivate/',  views.deactivate_compra,    name='compra_deactivate'),
 ]

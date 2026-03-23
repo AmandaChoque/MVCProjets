@@ -2,7 +2,7 @@ from django import forms
 from decimal import Decimal, InvalidOperation
 import re
 
-from .models import Proveedor, Insumo, Requiere, Realizar
+from .models import Proveedor, Insumo, Requiere, Compra
 
 DECIMAL_REGEX = r'\d+(\.\d{1,2})?'
 
@@ -13,7 +13,7 @@ class ProveedorForm(forms.ModelForm):
         fields = ['nombre', 'rubro', 'celular', 'correo', 'direccion', 'nit']
         widgets = {
             'nombre':    forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del proveedor', 'required': 'required'}),
-            'rubro':     forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Rubro o actividad'}),
+            'rubro':     forms.Select(attrs={'class': 'form-select'}),
             'celular':   forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número de celular', 'inputmode': 'numeric', 'pattern': '[0-9]+', 'title': 'Ingrese solo números', 'required': 'required', 'minlength': '7'}),
             'correo':    forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'ejemplo@correo.com'}),
             'direccion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Dirección'}),
@@ -106,7 +106,7 @@ class RequerirForm(forms.ModelForm):
         return resultado
 
 
-class RealizarForm(forms.ModelForm):
+class CompraForm(forms.ModelForm):
     costo_unitario = forms.CharField(
         required=True,
         label="Costo Unitario (Bs.)",
@@ -114,7 +114,7 @@ class RealizarForm(forms.ModelForm):
     )
 
     class Meta:
-        model = Realizar
+        model = Compra
         fields = ['proveedor', 'insumo', 'cantidad', 'costo_unitario', 'fecha']
         widgets = {
             'proveedor': forms.Select(attrs={'class': 'form-select'}),

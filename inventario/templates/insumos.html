@@ -23,6 +23,7 @@
       <form method="GET" action="{% url 'insumos' %}" class="d-flex align-items-center">
         <input type="hidden" name="search_nombre" value="{{ search_nombre }}">
         <input type="hidden" name="filter_categoria" value="{{ filter_categoria }}">
+        <input type="hidden" name="filter_stock" value="{{ filter_stock }}">
         <input type="hidden" name="page" value="1">
         <span class="small text-muted me-2">Mostrar:</span>
         <select name="per_page" class="form-select form-select-sm" style="width: 80px;" onchange="this.form.submit()">
@@ -54,6 +55,14 @@
             {% for val, label in categorias %}
             <option value="{{ val }}" {% if filter_categoria == val %}selected{% endif %}>{{ label }}</option>
             {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <select class="form-select form-select-sm" name="filter_stock">
+            <option value="">Todos los stocks</option>
+            <option value="agotado" {% if filter_stock == 'agotado' %}selected{% endif %}>Sin stock</option>
+            <option value="bajo"    {% if filter_stock == 'bajo'    %}selected{% endif %}>Stock bajo</option>
+            <option value="ok"      {% if filter_stock == 'ok'      %}selected{% endif %}>Stock ok</option>
           </select>
         </div>
         <div class="col-md-2">
@@ -93,8 +102,10 @@
               <span class="badge bg-secondary small">{{ insumo.get_categoria_display }}</span>
             {% elif insumo.categoria == 'nvr_dvr' %}
               <span class="badge bg-dark small">{{ insumo.get_categoria_display }}</span>
-            {% elif insumo.categoria == 'alarma' %}
+            {% elif insumo.categoria == 'alarma_sonora' or insumo.categoria == 'alarma_gsm' %}
               <span class="badge bg-danger small">{{ insumo.get_categoria_display }}</span>
+            {% elif insumo.categoria == 'perifoneo' %}
+              <span class="badge bg-danger small" style="opacity:0.75;">{{ insumo.get_categoria_display }}</span>
             {% elif insumo.categoria == 'sensor' %}
               <span class="badge bg-warning text-dark small">{{ insumo.get_categoria_display }}</span>
             {% elif insumo.categoria == 'cable' %}
@@ -119,6 +130,7 @@
             <div class="dropdown">
               <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
               <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                <li><a class="dropdown-item" href="{% url 'insumo_view' insumo.id %}">Ver detalle</a></li>
                 <li><a class="dropdown-item" href="{% url 'insumo_detail' insumo.id %}">Editar</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
@@ -148,7 +160,7 @@
     <ul class="pagination pagination-sm justify-content-center mb-0">
       {% if insumos.has_previous %}
       <li class="page-item">
-        <a class="page-link" href="?page={{ insumos.previous_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_categoria={{ filter_categoria }}">Anterior</a>
+        <a class="page-link" href="?page={{ insumos.previous_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_categoria={{ filter_categoria }}&filter_stock={{ filter_stock }}">Anterior</a>
       </li>
       {% else %}
       <li class="page-item disabled"><span class="page-link">Anterior</span></li>
@@ -159,14 +171,14 @@
           <li class="page-item active"><span class="page-link">{{ num }}</span></li>
         {% elif num > insumos.number|add:'-3' and num < insumos.number|add:'3' %}
           <li class="page-item">
-            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_categoria={{ filter_categoria }}">{{ num }}</a>
+            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_categoria={{ filter_categoria }}&filter_stock={{ filter_stock }}">{{ num }}</a>
           </li>
         {% endif %}
       {% endfor %}
 
       {% if insumos.has_next %}
       <li class="page-item">
-        <a class="page-link" href="?page={{ insumos.next_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_categoria={{ filter_categoria }}">Siguiente</a>
+        <a class="page-link" href="?page={{ insumos.next_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_categoria={{ filter_categoria }}&filter_stock={{ filter_stock }}">Siguiente</a>
       </li>
       {% else %}
       <li class="page-item disabled"><span class="page-link">Siguiente</span></li>

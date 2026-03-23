@@ -1,16 +1,27 @@
 from django.db import models
-from django.utils import timezone
-from django.db.models import Sum
+from django.db.models import Q, Sum
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
+from django.utils import timezone
 from decimal import Decimal
 
 from projects.models import AuditModel, Proyecto
 
 
 class Proveedor(AuditModel):
+    RUBRO_CHOICES = [
+        ('camaras_seguridad',   'Cámaras y Equipos de Seguridad'),
+        ('cables_conectores',   'Cables y Conectores'),
+        ('equipos_red',         'Equipos de Red'),
+        ('alarmas_perifoneo',   'Alarmas, Perifoneo y GSM'),
+        ('sensores',            'Sensores'),
+        ('computo',             'Equipos de Cómputo'),
+        ('distribuidor',        'Distribuidor General'),
+        ('otro',                'Otro'),
+    ]
+
     nombre    = models.CharField(max_length=200, verbose_name="Nombre")
-    rubro     = models.CharField(max_length=100, verbose_name="Rubro")
+    rubro     = models.CharField(max_length=30, choices=RUBRO_CHOICES, verbose_name="Rubro")
     celular   = models.CharField(max_length=15, verbose_name="Celular")
     correo    = models.EmailField(max_length=100, blank=True, verbose_name="Correo Electrónico")
     direccion = models.CharField(max_length=255, blank=True, verbose_name="Dirección")
@@ -20,7 +31,14 @@ class Proveedor(AuditModel):
         verbose_name = 'Proveedor'
         verbose_name_plural = 'Proveedores'
         ordering = ['nombre']
-        db_table = 'projects_proveedor'
+        db_table = 'inventario_proveedor'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['nit'],
+                condition=~Q(nit=''),
+                name='unique_proveedor_nit_when_not_empty',
+            )
+        ]
 
     def __str__(self):
         return self.nombre
@@ -31,7 +49,9 @@ class Insumo(AuditModel):
         ('camara_ip',        'Cámara IP'),
         ('camara_analogica', 'Cámara Analógica'),
         ('nvr_dvr',          'NVR / DVR'),
-        ('alarma',           'Sistema de Alarma'),
+        ('alarma_sonora',    'Alarma Sonora'),
+        ('alarma_gsm',       'Alarma GSM (activable por llamada)'),
+        ('perifoneo',        'Sistema de Perifoneo'),
         ('sensor',           'Sensor'),
         ('cable',            'Cable'),
         ('fuente',           'Fuente de Alimentación'),
@@ -76,7 +96,18 @@ class Insumo(AuditModel):
         verbose_name = 'Insumo'
         verbose_name_plural = 'Insumos'
         ordering = ['categoria', 'nombre']
-        db_table = 'projects_insumo'
+        db_table = 'inventario_insumo'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['nombre', 'marca', 'modelo'],
+                condition=Q(activo=True),
+                name='unique_insumo_nombre_marca_modelo',
+            ),
+            models.CheckConstraint(
+                condition=Q(stock__gte=0),
+                name='insumo_stock_no_negativo',
+            ),
+        ]
 
     def __str__(self):
         return f"{self.get_categoria_display()} — {self.nombre} ({self.marca})"
@@ -84,7 +115,7 @@ class Insumo(AuditModel):
 
 class Requiere(AuditModel):
     proyecto       = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='insumos', verbose_name="Proyecto")
-    insumo         = models.ForeignKey(Insumo, on_delete=models.CASCADE, related_name='proyectos', verbose_name="Insumo")
+    insumo         = models.ForeignKey(Insumo, on_delete=models.SET_NULL, null=True, related_name='proyectos', verbose_name="Insumo")
     cantidad       = models.PositiveIntegerField(verbose_name="Cantidad")
     costo_unitario = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Costo Unitario (Bs.)")
 
@@ -92,20 +123,29 @@ class Requiere(AuditModel):
         verbose_name = 'Insumo del Proyecto'
         verbose_name_plural = 'Insumos del Proyecto'
         ordering = ['-created']
-        unique_together = [('proyecto', 'insumo')]
-        db_table = 'projects_requiere'
+        db_table = 'inventario_requiere'
+        constraints = [
+            # Solo un insumo activo por proyecto — los soft-deleted no bloquean la reasignación
+            models.UniqueConstraint(
+                fields=['proyecto', 'insumo'],
+                condition=Q(activo=True),
+                name='unique_requiere_proyecto_insumo_activo',
+            )
+        ]
 
     @property
     def subtotal(self):
         return self.cantidad * self.costo_unitario
 
     def __str__(self):
-        return f"{self.insumo.nombre} x{self.cantidad} → {self.proyecto.nombre}"
+        insumo = self.insumo.nombre if self.insumo else 'Insumo eliminado'
+        return f"{insumo} x{self.cantidad} → {self.proyecto.nombre}"
 
 
-class Realizar(AuditModel):
-    proveedor      = models.ForeignKey(Proveedor, on_delete=models.CASCADE, related_name='compras', verbose_name="Proveedor")
-    insumo         = models.ForeignKey(Insumo, on_delete=models.CASCADE, related_name='compras', verbose_name="Insumo")
+class Compra(AuditModel):
+    # FK con SET_NULL para preservar el historial si se elimina el proveedor o insumo
+    proveedor      = models.ForeignKey(Proveedor, on_delete=models.SET_NULL, null=True, related_name='compras', verbose_name="Proveedor")
+    insumo         = models.ForeignKey(Insumo, on_delete=models.SET_NULL, null=True, related_name='compras', verbose_name="Insumo")
     cantidad       = models.PositiveIntegerField(verbose_name="Cantidad")
     costo_unitario = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Costo Unitario (Bs.)")
     costo_total    = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Costo Total (Bs.)")
@@ -119,21 +159,36 @@ class Realizar(AuditModel):
         verbose_name = 'Compra'
         verbose_name_plural = 'Compras'
         ordering = ['-fecha']
-        db_table = 'projects_realizar'
+        db_table = 'inventario_compra'
 
     def __str__(self):
-        return f"{self.insumo.nombre} x{self.cantidad} de {self.proveedor.nombre} ({self.fecha})"
+        insumo    = self.insumo.nombre    if self.insumo    else 'Insumo eliminado'
+        proveedor = self.proveedor.nombre if self.proveedor else 'Proveedor eliminado'
+        return f"{insumo} x{self.cantidad} de {proveedor} ({self.fecha})"
+
+
+# ── Alias para compatibilidad (se puede eliminar cuando todas las referencias sean Compra) ──
+Realizar = Compra
 
 
 # ── Señales: recalcular stock automáticamente ─────────────────────────────────
 
-@receiver(post_save, sender=Realizar)
-@receiver(post_delete, sender=Realizar)
-def realizar_recalculate_stock(sender, instance, **kwargs):
-    instance.insumo.recalculate_stock()
+@receiver(post_save, sender=Compra)
+@receiver(post_delete, sender=Compra)
+def compra_recalculate_stock(sender, instance, **kwargs):
+    if instance.insumo is None:
+        return
+    insumo = instance.insumo
+    insumo.recalculate_stock()
+    # Actualizar costo_unitario al último precio de compra registrado
+    ultima_compra = Compra.objects.filter(insumo=insumo, activo=True).order_by('-fecha', '-created').first()
+    if ultima_compra:
+        Insumo.objects.filter(pk=insumo.pk).update(costo_unitario=ultima_compra.costo_unitario)
 
 
 @receiver(post_save, sender=Requiere)
 @receiver(post_delete, sender=Requiere)
 def requiere_recalculate_stock(sender, instance, **kwargs):
+    if instance.insumo is None:
+        return
     instance.insumo.recalculate_stock()

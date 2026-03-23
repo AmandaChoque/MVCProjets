@@ -9,6 +9,7 @@ from django.db.models.signals import pre_save
 from django.dispatch import receiver
 
 from django.db.models import Sum
+from django.core.validators import MaxValueValidator
 # Create your models here.
 
 # Auditoria
@@ -22,7 +23,7 @@ class AuditModel(models.Model):
         related_name='+',
         verbose_name="Eliminado por"
     )
-    activo = models.BooleanField(default=True, verbose_name="Activo")
+    activo = models.BooleanField(default=True, db_index=True, verbose_name="Activo")
 
     class Meta:
         abstract = True
@@ -134,16 +135,16 @@ class Proyecto(AuditModel):
     codigo = models.CharField(max_length=20, unique=True, verbose_name="Código Proyecto")
     nombre = models.CharField(max_length=200, unique=True, verbose_name="Nombre Proyecto")
     descripcion = models.TextField(blank=True, verbose_name="Descripción Proyecto")
-    estado_proyecto = models.CharField(max_length=20, choices=PROJECT_STATUS_CHOICES, default='pendiente', verbose_name="Estado Proyecto")
-    tipo_proyecto = models.CharField(max_length=30, choices=PROJECT_TYPE_CHOICES, default='instalacion_nueva', verbose_name="Tipo Proyecto")
+    estado_proyecto = models.CharField(max_length=20, choices=PROJECT_STATUS_CHOICES, default='pendiente', db_index=True, verbose_name="Estado Proyecto")
+    tipo_proyecto = models.CharField(max_length=30, choices=PROJECT_TYPE_CHOICES, default='instalacion_nueva', db_index=True, verbose_name="Tipo Proyecto")
     fecha_inicio = models.DateField(null=True, blank=True, verbose_name="Fecha de Inicio")
     fecha_fin = models.DateField(null=True, blank=True, verbose_name="Fecha de Finalización")
     observacion = models.TextField(blank=True, default='', verbose_name="Observación")
-    estado_pago = models.CharField(max_length=20, choices=PAYMENT_STATE_CHOICES, default='no_pagado', verbose_name="Estado de Pago")
+    estado_pago = models.CharField(max_length=20, choices=PAYMENT_STATE_CHOICES, default='no_pagado', db_index=True, verbose_name="Estado de Pago")
     creado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name="Creado por")
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Contratista")
 
-    monto_total = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=0, verbose_name="Monto Total del Proyecto")
+    monto_total = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Monto Total del Proyecto")
 
     def __str__(self):
         username = self.creado_por.username if self.creado_por else 'N/A'
@@ -215,7 +216,7 @@ def registrar_cambio_monto_proyecto(sender, instance, **kwargs):
 class Progreso(models.Model):
     proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='progresos', verbose_name="Proyecto")
     fecha = models.DateField(verbose_name="Fecha")
-    porcentaje = models.PositiveIntegerField(verbose_name="Porcentaje (%)")
+    porcentaje = models.PositiveIntegerField(validators=[MaxValueValidator(100)], verbose_name="Porcentaje (%)")
     descripcion = models.CharField(max_length=255, verbose_name="Descripción")
     observacion = models.TextField(blank=True, verbose_name="Observación")
     created = models.DateTimeField(default=timezone.now)

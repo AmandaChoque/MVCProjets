@@ -20,7 +20,7 @@
 <main class="container-fluid px-5 py-4">
   <div class="mb-4">
     <h4 class="fw-semibold mb-1">Compras</h4>
-    <span class="text-muted">Editar compra — {{ compra.insumo.nombre }} ({{ compra.fecha|date:"d/m/Y" }})</span>
+    <span class="text-muted">Editar compra — {{ compra.insumo.nombre|default:"Insumo eliminado" }} ({{ compra.fecha|date:"d/m/Y" }})</span>
   </div>
 
   <div class="card border-0 shadow-sm rounded-3">

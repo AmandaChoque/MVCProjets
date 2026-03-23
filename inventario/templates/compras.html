@@ -16,7 +16,7 @@
 
   <!-- ENCABEZADO -->
   <div class="mb-2 d-flex justify-content-between align-items-center">
-    <a href="{% url 'create_realizar' %}" class="btn btn-primary btn-sm">+ Registrar Compra</a>
+    <a href="{% url 'create_compra' %}" class="btn btn-primary btn-sm">+ Registrar Compra</a>
     <h5 class="fw-semibold text-secondary mb-0">Compras</h5>
 
     <div class="d-flex align-items-center gap-3">
@@ -74,8 +74,8 @@
       <tbody>
         {% for compra in compras %}
         <tr>
-          <td class="small">{{ compra.proveedor.nombre }}</td>
-          <td class="small fw-semibold">{{ compra.insumo.nombre }}</td>
+          <td class="small">{{ compra.proveedor.nombre|default:"Proveedor eliminado" }}</td>
+          <td class="small fw-semibold">{{ compra.insumo.nombre|default:"Insumo eliminado" }}</td>
           <td class="text-center small">{{ compra.cantidad }}</td>
           <td class="text-end small">{{ compra.costo_unitario|floatformat:2 }}</td>
           <td class="text-end small fw-semibold">{{ compra.costo_total|floatformat:2 }}</td>
@@ -84,14 +84,14 @@
             <div class="dropdown">
               <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
               <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                <li><a class="dropdown-item" href="{% url 'realizar_detail' compra.id %}">Editar</a></li>
+                <li><a class="dropdown-item" href="{% url 'compra_detail' compra.id %}">Editar</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
                   <button class="dropdown-item text-danger"
                     data-bs-toggle="modal"
                     data-bs-target="#deleteModal"
                     data-id="{{ compra.id }}"
-                    data-nombre="{{ compra.insumo.nombre }}">
+                    data-nombre="{{ compra.insumo.nombre|default:'Insumo eliminado' }}">
                     Eliminar
                   </button>
                 </li>

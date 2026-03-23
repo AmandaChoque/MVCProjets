@@ -40,14 +40,20 @@ class Pago(AuditModel):
 
 
 class PagoEmpleado(AuditModel):
+    CONCEPTO_CHOICES = [
+        ('anticipo',    'Anticipo'),
+        ('mensualidad', 'Mensualidad'),
+        ('saldo_final', 'Saldo Final'),
+        ('otro',        'Otro'),
+    ]
+
     contrato = models.ForeignKey(
         Contrato, on_delete=models.CASCADE,
         related_name='pagos', verbose_name="Contrato"
     )
     monto    = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto (Bs.)")
     fecha    = models.DateField(verbose_name="Fecha de Pago")
-    concepto = models.CharField(max_length=255, verbose_name="Concepto",
-                                help_text="Ej: Anticipo, Saldo final, Mensualidad")
+    concepto = models.CharField(max_length=20, choices=CONCEPTO_CHOICES, verbose_name="Concepto")
 
     class Meta:
         verbose_name = 'Pago a Empleado'

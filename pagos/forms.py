@@ -46,7 +46,7 @@ class PagoEmpleadoForm(forms.ModelForm):
         fields = ['monto', 'fecha', 'concepto']
         widgets = {
             'fecha':    forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'concepto': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Anticipo, Saldo final, Mensualidad'}),
+            'concepto': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def clean_monto(self):
