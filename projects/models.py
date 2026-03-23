@@ -1,7 +1,8 @@
-from django.utils import timezone  # Asegúrate de importar timezone desde django.utils
-
+from django.utils import timezone
+from django.conf import settings
 from django.db import models
-from django.contrib.auth.models import User
+from django.contrib.auth.models import AbstractUser
+from django.db.models import Q
 
 # Señal para actualizar automáticamente el estado del proyecto
 from django.db.models.signals import pre_save
@@ -16,7 +17,7 @@ class AuditModel(models.Model):
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Fecha Actualización")
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name="Fecha Eliminación")
     deleted_by = models.ForeignKey(
-        User, null=True, blank=True,
+        settings.AUTH_USER_MODEL, null=True, blank=True,
         on_delete=models.SET_NULL,
         related_name='+',
         verbose_name="Eliminado por"
@@ -61,6 +62,13 @@ class Cliente(AuditModel):
     class Meta:
         verbose_name = 'Cliente'
         verbose_name_plural = 'Clientes'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['nit_ci'],
+                condition=~Q(nit_ci=''),
+                name='unique_nit_ci_when_not_empty',
+            )
+        ]
 
     def __str__(self):
         return f"{self.nombre} {self.apellido_paterno}"
@@ -71,11 +79,8 @@ class Cliente(AuditModel):
         self.save()
 
 
-# Empleado
-class Empleado(AuditModel):
-    # Opciones para el campo "cargo"
-    user = models.OneToOneField(User, on_delete=models.SET_NULL, null=True, blank=True, related_name="employee_profile")  # Relación uno a uno con User
-
+# Empleado (es también el usuario del sistema)
+class Empleado(AbstractUser):
     POSITION_CHOICES = [
         ('administrador', 'Administrador'),
         ('gerente', 'Gerente'),
@@ -88,17 +93,14 @@ class Empleado(AuditModel):
     apellido_paterno = models.CharField(max_length=100, verbose_name="Apellido Paterno")
     apellido_materno = models.CharField(max_length=100, blank=True, null=True, verbose_name="Apellido Materno")
     numero_celular = models.CharField(max_length=15, blank=True, verbose_name="Numero Celular")
-
-    fecha_contratacion = models.DateField(null=True, blank=True, verbose_name="Fecha Contratación")  # No obligatorio
-    salario = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Salario")  # No obligatorio
     cargo = models.CharField(
         max_length=50,
-        choices=POSITION_CHOICES,  # Diccionario de opciones
-        default='administrador',  # Valor predeterminado
+        choices=POSITION_CHOICES,
+        default='administrador',
         verbose_name="Cargo"
     )
-    # New CI field
     carnet_identidad = models.CharField(max_length=20, unique=True, verbose_name="Carnet de Identidad")
+    # is_active ya existe en AbstractUser — no se repite aquí
 
     class Meta:
         verbose_name = 'Empleado'
@@ -138,13 +140,14 @@ class Proyecto(AuditModel):
     fecha_fin = models.DateField(null=True, blank=True, verbose_name="Fecha de Finalización")
     observacion = models.TextField(blank=True, default='', verbose_name="Observación")
     estado_pago = models.CharField(max_length=20, choices=PAYMENT_STATE_CHOICES, default='no_pagado', verbose_name="Estado de Pago")
-    creado_por = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Creado por")
+    creado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name="Creado por")
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Contratista")
 
-    monto_total = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Monto Total del Proyecto")
+    monto_total = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, default=0, verbose_name="Monto Total del Proyecto")
 
     def __str__(self):
-        return self.nombre + ' - by ' + self.creado_por.username
+        username = self.creado_por.username if self.creado_por else 'N/A'
+        return self.nombre + ' - by ' + username
 
     class Meta:
         verbose_name = 'Proyecto'
@@ -168,13 +171,17 @@ class Proyecto(AuditModel):
 
 # HistorialPagos
 class HistorialPago(models.Model):
-    fecha_modificacion = models.DateTimeField(auto_now=True, verbose_name="Fecha Modificación")
+    fecha_modificacion = models.DateTimeField(auto_now_add=True, verbose_name="Fecha Modificación")
     monto_anterior = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto Anterior")
     monto_actual = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto Actual")
     motivo_cambio = models.TextField(verbose_name="Motivo del Cambio")
-
+    modificado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='+',
+        verbose_name="Modificado por"
+    )
     proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='historial_pagos', verbose_name="Proyecto")
-    created = models.DateTimeField(default=timezone.now)
 
     class Meta:
         verbose_name = 'Historial Pago'
@@ -200,6 +207,7 @@ def registrar_cambio_monto_proyecto(sender, instance, **kwargs):
             monto_anterior=anterior.monto_total,
             monto_actual=instance.monto_total,
             motivo_cambio=f'Monto actualizado de Bs. {anterior.monto_total} a Bs. {instance.monto_total}.',
+            modificado_por=getattr(instance, '_current_user', None),
         )
 
 
@@ -221,51 +229,54 @@ class Progreso(models.Model):
         return f"{self.proyecto.nombre} — {self.porcentaje}% ({self.fecha})"
 
 
-# Contrato de Empleado
-class ContratoEmpleado(AuditModel):
-    empleado = models.ForeignKey(
-        Empleado, on_delete=models.CASCADE,
-        related_name='contratos', verbose_name="Empleado"
-    )
+# Contrato unificado (con empleado o con cliente/proyecto)
+class Contrato(AuditModel):
+    TIPO_CHOICES = [
+        ('empleado', 'Contrato con Empleado'),
+        ('proyecto', 'Contrato con Cliente'),
+    ]
+    TIPO_SALARIO_CHOICES = [
+        ('mensual', 'Mensual'),
+        ('diario',  'Diario'),
+    ]
+    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, verbose_name="Tipo de Contrato")
+    tipo_salario = models.CharField(max_length=10, choices=TIPO_SALARIO_CHOICES, default='mensual', null=True, blank=True, verbose_name="Tipo de Pago")
     proyecto = models.ForeignKey(
         Proyecto, on_delete=models.CASCADE,
-        related_name='contratos_empleados', verbose_name="Proyecto"
+        related_name='contratos', verbose_name="Proyecto"
+    )
+    # Solo para tipo='empleado'
+    empleado = models.ForeignKey(
+        Empleado, on_delete=models.CASCADE,
+        null=True, blank=True,
+        related_name='contratos', verbose_name="Empleado"
     )
     fecha_firma = models.DateField(verbose_name="Fecha de Firma")
     fecha_inicio = models.DateField(verbose_name="Fecha de Inicio")
     fecha_fin = models.DateField(verbose_name="Fecha de Fin")
     monto_acordado = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto Acordado (Bs.)")
     observaciones = models.TextField(blank=True, verbose_name="Observaciones")
-    documento = models.FileField(upload_to='contratos_empleados/', null=True, blank=True, verbose_name="Documento")
+    documento = models.FileField(upload_to='contratos/', null=True, blank=True, verbose_name="Documento")
 
     class Meta:
-        verbose_name = 'Contrato de Empleado'
-        verbose_name_plural = 'Contratos de Empleados'
+        verbose_name = 'Contrato'
+        verbose_name_plural = 'Contratos'
         ordering = ['-created']
+        constraints = [
+            models.CheckConstraint(
+                condition=~Q(tipo='empleado') | Q(empleado__isnull=False),
+                name='contrato_empleado_required_when_tipo_empleado',
+            )
+        ]
 
     def __str__(self):
-        return f"Contrato — {self.empleado.nombre} {self.empleado.apellido_paterno} / {self.proyecto.nombre}"
+        if self.tipo == 'empleado' and self.empleado:
+            return f"Contrato empleado — {self.empleado.nombre} {self.empleado.apellido_paterno} / {self.proyecto.nombre}"
+        return f"Contrato proyecto — {self.proyecto.nombre}"
 
 
-# Contrato del Proyecto (con el cliente)
-class ContratoProyecto(AuditModel):
-    proyecto = models.OneToOneField(
-        Proyecto, on_delete=models.CASCADE,
-        related_name='contrato_proyecto', verbose_name="Proyecto"
-    )
-    fecha_firma = models.DateField(verbose_name="Fecha de Firma")
-    fecha_inicio = models.DateField(verbose_name="Fecha de Inicio")
-    fecha_fin = models.DateField(verbose_name="Fecha de Fin")
-    monto_acordado = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto Acordado (Bs.)")
-    observaciones = models.TextField(blank=True, verbose_name="Observaciones")
-    documento = models.FileField(upload_to='contratos_proyecto/', null=True, blank=True, verbose_name="Documento")
-
-    class Meta:
-        verbose_name = 'Contrato del Proyecto'
-        verbose_name_plural = 'Contratos de Proyectos'
-        ordering = ['-created']
-
-    def __str__(self):
-        return f"Contrato del proyecto — {self.proyecto.nombre}"
+# Alias para compatibilidad con imports existentes
+ContratoEmpleado = Contrato
+ContratoProyecto = Contrato
 
 

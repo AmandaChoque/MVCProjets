@@ -1,6 +1,8 @@
 import io
 import base64
 from datetime import datetime
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 import matplotlib
 matplotlib.use('Agg')
@@ -16,7 +18,7 @@ from django.db.models import Q, Count, Sum
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from xhtml2pdf import pisa
 
-from projects.models import Proyecto, ContratoEmpleado
+from projects.models import Proyecto, Contrato
 from projects.decorators import cargo_required, ROLES_ADMIN, ROLES_ADMIN_SEC
 from .models import Pago, PagoEmpleado
 from .forms import PaymentForm, PagoEmpleadoForm
@@ -172,6 +174,7 @@ def filter_payments_by_project_name(request):
         'count_pagado': count_pagado,
         'count_pendiente': count_pendiente,
         'now': timezone.now(),
+        'generado_por': request.user.get_full_name() or request.user.username,
     }
 
     if 'pdf' in request.GET:
@@ -183,6 +186,125 @@ def filter_payments_by_project_name(request):
         pisa_status = pisa.CreatePDF(html, dest=response)
         if pisa_status.err:
             return HttpResponse('Error al generar el PDF', status=500)
+        return response
+
+    if 'excel' in request.GET:
+        NUM_COLS = 8
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Pagos Clientes'
+
+        # ── Estilos con colores SOBOTEC ──
+        title_fill  = PatternFill(start_color='0F2D5A', end_color='0F2D5A', fill_type='solid')
+        title_font  = Font(bold=True, size=14, color='D4B84A')
+        info_fill   = PatternFill(start_color='1B4D90', end_color='1B4D90', fill_type='solid')
+        info_font   = Font(size=9, color='FFFFFF')
+        header_fill = PatternFill(start_color='0F2D5A', end_color='0F2D5A', fill_type='solid')
+        header_font = Font(bold=True, color='D4B84A', size=10)
+        alt_fill    = PatternFill(start_color='EFF2F8', end_color='EFF2F8', fill_type='solid')
+        total_fill  = PatternFill(start_color='E8EDF5', end_color='E8EDF5', fill_type='solid')
+        total_font  = Font(bold=True, size=10, color='0F2D5A')
+        center      = Alignment(horizontal='center', vertical='center')
+        left        = Alignment(horizontal='left',   vertical='center')
+        right_al    = Alignment(horizontal='right',  vertical='center')
+        cell_border = Border(
+            left=Side(style='thin', color='C0C8D8'), right=Side(style='thin', color='C0C8D8'),
+            top=Side(style='thin', color='C0C8D8'),  bottom=Side(style='thin', color='C0C8D8'),
+        )
+        total_border = Border(
+            left=Side(style='thin', color='C0C8D8'), right=Side(style='thin', color='C0C8D8'),
+            top=Side(style='medium', color='0F2D5A'), bottom=Side(style='medium', color='0F2D5A'),
+        )
+        money_fmt = '#,##0.00'
+
+        # Fila 1 — título
+        ws.append(['Reporte de Pagos de Clientes — SOBOTEC S.R.L.'])
+        ws.merge_cells(f'A1:{openpyxl.utils.get_column_letter(NUM_COLS)}1')
+        ws['A1'].font      = title_font
+        ws['A1'].fill      = title_fill
+        ws['A1'].alignment = Alignment(horizontal='left', vertical='center', indent=1)
+        ws.row_dimensions[1].height = 26
+
+        # Fila 2 — generado por + filtros
+        gen_por  = request.user.get_full_name() or request.user.username
+        info_str = f'Generado por: {gen_por}  |  Fecha: {timezone.now().strftime("%d/%m/%Y %H:%M")}'
+        if project_name:  info_str += f'  |  Proyecto: {project_name}'
+        if start_date:    info_str += f'  |  Desde: {start_date}'
+        if end_date:      info_str += f'  |  Hasta: {end_date}'
+        if filter_estado: info_str += f'  |  Estado: {filter_estado}'
+        if filter_tipo:   info_str += f'  |  Tipo: {filter_tipo}'
+        ws.append([info_str])
+        ws.merge_cells(f'A2:{openpyxl.utils.get_column_letter(NUM_COLS)}2')
+        ws['A2'].font      = info_font
+        ws['A2'].fill      = info_fill
+        ws['A2'].alignment = Alignment(horizontal='left', vertical='center', indent=1)
+        ws.row_dimensions[2].height = 18
+
+        # Fila 3 — separador
+        ws.append([])
+        ws.row_dimensions[3].height = 6
+
+        # Fila 4 — encabezados
+        headers = ['Proyecto', 'Cliente', 'Estado Proyecto', 'Monto Total Proy. (Bs.)',
+                   'Monto Pago (Bs.)', 'Fecha', 'Estado Pago', 'Tipo de Pago']
+        ws.append(headers)
+        for cell in ws[4]:
+            cell.font = header_font; cell.fill = header_fill
+            cell.alignment = center; cell.border = cell_border
+        ws.row_dimensions[4].height = 22
+
+        # Filas de datos
+        last_row = 4
+        for i, p in enumerate(payments, start=5):
+            cliente = (f'{p.proyecto.cliente.nombre} {p.proyecto.cliente.apellido_paterno}'
+                       if p.proyecto.cliente else '—')
+            ws.append([
+                p.proyecto.nombre,
+                cliente,
+                p.proyecto.get_estado_proyecto_display(),
+                float(p.proyecto.monto_total),
+                float(p.monto),
+                p.fecha.strftime('%d/%m/%Y') if p.fecha else '—',
+                p.get_estado_display(),
+                p.get_tipo_pago_display(),
+            ])
+            row_fill = alt_fill if i % 2 == 0 else None
+            for j, cell in enumerate(ws[i], start=1):
+                if row_fill: cell.fill = row_fill
+                cell.border = cell_border
+                if j in (4, 5):
+                    cell.alignment = right_al; cell.number_format = money_fmt
+                elif j == 6:
+                    cell.alignment = center
+                else:
+                    cell.alignment = left
+            ws.row_dimensions[i].height = 16
+            last_row = i
+
+        # Fila de totales
+        total_row = last_row + 1
+        ws.append(['', 'TOTAL', '', '', float(total_monto), '', '', ''])
+        for j, cell in enumerate(ws[total_row], start=1):
+            cell.font = total_font; cell.fill = total_fill; cell.border = total_border
+            if j in (4, 5):
+                cell.alignment = right_al; cell.number_format = money_fmt
+            else:
+                cell.alignment = left
+        ws.row_dimensions[total_row].height = 18
+
+        # Anchos de columna
+        col_widths = [30, 25, 16, 20, 18, 12, 14, 16]
+        for col_idx, width in enumerate(col_widths, start=1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = width
+
+        ws.freeze_panes = 'A5'
+        ws.auto_filter.ref = f'A4:{openpyxl.utils.get_column_letter(NUM_COLS)}4'
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="reporte_pagos.xlsx"'
+        wb.save(response)
         return response
 
     return render(request, 'payments_by_project_name.html', context)
@@ -268,7 +390,7 @@ def pagos_empleados_list(request):
         pagos_page = paginator.page(1)
 
     total_monto = qs.aggregate(t=Sum('monto'))['t'] or 0
-    contratos_activos = ContratoEmpleado.objects.filter(activo=True).select_related('empleado', 'proyecto').order_by('empleado__nombre')
+    contratos_activos = Contrato.objects.filter(tipo='empleado', activo=True).select_related('empleado', 'proyecto').order_by('empleado__nombre')
 
     return render(request, 'pagos_empleados_list.html', {
         'pagos': pagos_page,
@@ -291,7 +413,7 @@ def _contrato_resumen(contrato, excluir_pago_id=None):
 
 @login_required
 def create_pago_empleado(request, id_contrato):
-    contrato = get_object_or_404(ContratoEmpleado, pk=id_contrato, activo=True)
+    contrato = get_object_or_404(Contrato, pk=id_contrato, tipo='empleado', activo=True)
     resumen  = _contrato_resumen(contrato)
     if request.method == 'GET':
         return render(request, 'create_pago_empleado.html', {

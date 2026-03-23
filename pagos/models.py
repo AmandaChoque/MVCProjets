@@ -1,7 +1,7 @@
 from django.db import models
 from django.db.models import Sum
 
-from projects.models import AuditModel, Proyecto, ContratoEmpleado
+from projects.models import AuditModel, Proyecto, Contrato
 
 
 class Pago(AuditModel):
@@ -41,7 +41,7 @@ class Pago(AuditModel):
 
 class PagoEmpleado(AuditModel):
     contrato = models.ForeignKey(
-        ContratoEmpleado, on_delete=models.CASCADE,
+        Contrato, on_delete=models.CASCADE,
         related_name='pagos', verbose_name="Contrato"
     )
     monto    = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto (Bs.)")

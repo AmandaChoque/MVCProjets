@@ -15,10 +15,7 @@ def user_cargo_context(request):
     if request.user.is_superuser:
         cargo = 'administrador'
     else:
-        try:
-            cargo = request.user.employee_profile.cargo
-        except AttributeError:
-            cargo = None
+        cargo = getattr(request.user, 'cargo', None)
 
     return {
         'user_cargo': cargo,

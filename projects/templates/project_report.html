@@ -3,50 +3,70 @@
 
 <div class="container-fluid py-3">
 
-  <!-- ======================= ENCABEZADO ======================= -->
+  <!-- ENCABEZADO -->
   <div class="mb-2 d-flex justify-content-between align-items-center">
     <h5 class="fw-semibold text-secondary mb-0">Reporte de Proyectos</h5>
     <div class="d-flex gap-2">
-      <a href="?pdf=1&project_type={{ project_type|default:'' }}&project_status={{ project_status|default:'' }}"
-         target="_blank"
-         class="btn btn-outline-secondary btn-sm">
-        Vista previa PDF
+      <a href="?pdf=1&search_nombre={{ search_nombre|default:'' }}&project_type={{ project_type|default:'' }}&project_status={{ project_status|default:'' }}&filter_estado_pago={{ filter_estado_pago|default:'' }}"
+         target="_blank" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-file-earmark-pdf me-1"></i>Vista previa PDF
       </a>
-      <a href="?pdf=1&download=1&project_type={{ project_type|default:'' }}&project_status={{ project_status|default:'' }}"
+      <a href="?pdf=1&download=1&search_nombre={{ search_nombre|default:'' }}&project_type={{ project_type|default:'' }}&project_status={{ project_status|default:'' }}&filter_estado_pago={{ filter_estado_pago|default:'' }}"
          class="btn btn-outline-danger btn-sm">
-        ↓ Descargar PDF
+        <i class="bi bi-download me-1"></i>PDF
+      </a>
+      <a href="?excel=1&search_nombre={{ search_nombre|default:'' }}&project_type={{ project_type|default:'' }}&project_status={{ project_status|default:'' }}&filter_estado_pago={{ filter_estado_pago|default:'' }}"
+         class="btn btn-outline-success btn-sm">
+        <i class="bi bi-file-earmark-excel me-1"></i>Excel
       </a>
     </div>
   </div>
 
-  <!-- ======================= FILTROS ======================= -->
+  <!-- FILTROS -->
   <div class="card mb-3">
     <div class="card-body py-2">
       <form method="get" action="{% url 'project_report' %}" class="row g-2 align-items-end">
 
         <div class="col-md-3">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Tipo de proyecto</label>
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Nombre</label>
+          <input type="text" name="search_nombre" class="form-control form-control-sm"
+                 value="{{ search_nombre|default:'' }}" placeholder="Buscar por nombre">
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Tipo</label>
           <select name="project_type" class="form-select form-select-sm">
             <option value="">Todos</option>
-            <option value="licitacion" {% if project_type == 'licitacion' %}selected{% endif %}>Licitación</option>
-            <option value="contratacion_directa" {% if project_type == 'contratacion_directa' %}selected{% endif %}>Contratación Directa</option>
+            <option value="instalacion_nueva"  {% if project_type == 'instalacion_nueva'  %}selected{% endif %}>Instalación Nueva</option>
+            <option value="ampliacion"         {% if project_type == 'ampliacion'         %}selected{% endif %}>Ampliación</option>
+            <option value="mantenimiento"      {% if project_type == 'mantenimiento'      %}selected{% endif %}>Mantenimiento</option>
+            <option value="emergencia"         {% if project_type == 'emergencia'         %}selected{% endif %}>Emergencia</option>
           </select>
         </div>
 
-        <div class="col-md-3">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Estado del proyecto</label>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Estado</label>
           <select name="project_status" class="form-select form-select-sm">
             <option value="">Todos</option>
-            <option value="pendiente" {% if project_status == 'pendiente' %}selected{% endif %}>Pendiente</option>
+            <option value="pendiente"   {% if project_status == 'pendiente'   %}selected{% endif %}>Pendiente</option>
             <option value="en_progreso" {% if project_status == 'en_progreso' %}selected{% endif %}>En Progreso</option>
-            <option value="completado" {% if project_status == 'completado' %}selected{% endif %}>Completado</option>
+            <option value="completado"  {% if project_status == 'completado'  %}selected{% endif %}>Completado</option>
+          </select>
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Estado de Pago</label>
+          <select name="filter_estado_pago" class="form-select form-select-sm">
+            <option value="">Todos</option>
+            <option value="no_pagado" {% if filter_estado_pago == 'no_pagado' %}selected{% endif %}>No Pagado</option>
+            <option value="parcial"   {% if filter_estado_pago == 'parcial'   %}selected{% endif %}>Parcial</option>
+            <option value="pagado"    {% if filter_estado_pago == 'pagado'    %}selected{% endif %}>Pagado</option>
           </select>
         </div>
 
         <div class="col-md-1">
           <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
         </div>
-
         <div class="col-md-1">
           <a href="{% url 'project_report' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
         </div>
@@ -55,45 +75,49 @@
     </div>
   </div>
 
-  <!-- ======================= RESUMEN HORIZONTAL ======================= -->
+  <!-- RESUMEN -->
   <div class="card mb-3 border-0 shadow-sm">
     <div class="card-body py-2 px-0">
-      <div class="d-flex">
+      <div class="d-flex flex-wrap">
 
-        <div class="flex-fill text-center px-3 py-1">
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem; letter-spacing:.05em;">Total Proyectos</div>
+        <div class="flex-fill text-center px-3 py-1 border-end">
+          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Total Proyectos</div>
           <div class="fw-bold fs-5 mt-1">{{ projects|length }}</div>
           <div class="text-muted" style="font-size:0.7rem;">registros</div>
         </div>
 
-        <div class="vr"></div>
-
-        <div class="flex-fill text-center px-3 py-1">
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem; letter-spacing:.05em;">Monto Total</div>
+        <div class="flex-fill text-center px-3 py-1 border-end">
+          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Monto Contratado</div>
           <div class="fw-bold fs-5 mt-1">Bs. {{ monto_total|floatformat:2 }}</div>
-          <div class="text-muted" style="font-size:0.7rem;">suma de proyectos</div>
+          <div class="text-muted" style="font-size:0.7rem;">total contratos</div>
         </div>
 
-        <div class="vr"></div>
+        <div class="flex-fill text-center px-3 py-1 border-end">
+          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Cobrado</div>
+          <div class="fw-bold fs-5 mt-1 text-success">Bs. {{ total_cobrado|floatformat:2 }}</div>
+          <div class="text-muted" style="font-size:0.7rem;">pagos recibidos</div>
+        </div>
 
-        <div class="flex-fill text-center px-3 py-1">
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem; letter-spacing:.05em;">Completados</div>
+        <div class="flex-fill text-center px-3 py-1 border-end">
+          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Saldo Pendiente</div>
+          <div class="fw-bold fs-5 mt-1 text-danger">Bs. {{ total_saldo|floatformat:2 }}</div>
+          <div class="text-muted" style="font-size:0.7rem;">por cobrar</div>
+        </div>
+
+        <div class="flex-fill text-center px-3 py-1 border-end">
+          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Completados</div>
           <div class="fw-bold fs-5 mt-1 text-success">{{ count_completado }}</div>
           <div class="text-muted" style="font-size:0.7rem;">proyectos</div>
         </div>
 
-        <div class="vr"></div>
-
-        <div class="flex-fill text-center px-3 py-1">
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem; letter-spacing:.05em;">En Progreso</div>
+        <div class="flex-fill text-center px-3 py-1 border-end">
+          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">En Progreso</div>
           <div class="fw-bold fs-5 mt-1 text-primary">{{ count_en_progreso }}</div>
           <div class="text-muted" style="font-size:0.7rem;">proyectos</div>
         </div>
 
-        <div class="vr"></div>
-
         <div class="flex-fill text-center px-3 py-1">
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem; letter-spacing:.05em;">Pendientes</div>
+          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Pendientes</div>
           <div class="fw-bold fs-5 mt-1 text-warning">{{ count_pendiente }}</div>
           <div class="text-muted" style="font-size:0.7rem;">proyectos</div>
         </div>
@@ -102,7 +126,7 @@
     </div>
   </div>
 
-  <!-- ======================= TABLA ======================= -->
+  <!-- TABLA -->
   <div class="card mb-3">
     <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
       <span class="fw-semibold small">Detalle de Proyectos</span>
@@ -117,52 +141,68 @@
             <th>Contratante</th>
             <th>Tipo</th>
             <th>Estado</th>
+            <th>Avance</th>
             <th>Estado Pago</th>
-            <th>Monto Total (Bs.)</th>
+            <th class="text-end">Monto (Bs.)</th>
+            <th class="text-end">Cobrado (Bs.)</th>
+            <th class="text-end">Saldo (Bs.)</th>
+            <th>Inicio</th>
+            <th>Fin</th>
           </tr>
         </thead>
         <tbody>
           {% for project in projects %}
+          {% with cobrado=project.monto_cobrado|default:0 %}
           <tr>
             <td class="text-muted">{{ project.codigo }}</td>
-            <td class="fw-semibold">{{ project.nombre }}</td>
+            <td class="fw-semibold">
+              <a href="{% url 'project_view' project.id %}" class="text-decoration-none">{{ project.nombre }}</a>
+            </td>
             <td>
               {% if project.cliente %}
                 {{ project.cliente.nombre }} {{ project.cliente.apellido_paterno }}
-              {% else %}
-                <span class="text-muted">—</span>
+              {% else %}<span class="text-muted">—</span>{% endif %}
+            </td>
+            <td>
+              {% if project.tipo_proyecto == 'instalacion_nueva' %}<span class="badge bg-secondary">Instalación</span>
+              {% elif project.tipo_proyecto == 'ampliacion' %}<span class="badge bg-info text-dark">Ampliación</span>
+              {% elif project.tipo_proyecto == 'mantenimiento' %}<span class="badge bg-dark">Mantenim.</span>
+              {% else %}<span class="badge bg-danger">Emergencia</span>
               {% endif %}
             </td>
             <td>
-              {% if project.tipo_proyecto == 'licitacion' %}
-                <span class="badge bg-secondary">Licitación</span>
-              {% else %}
-                <span class="badge bg-dark">Contrat. Directa</span>
+              {% if project.estado_proyecto == 'completado' %}<span class="badge bg-success">Completado</span>
+              {% elif project.estado_proyecto == 'en_progreso' %}<span class="badge bg-primary">En Progreso</span>
+              {% else %}<span class="badge bg-warning text-dark">Pendiente</span>
               {% endif %}
             </td>
             <td>
-              {% if project.estado_proyecto == 'completado' %}
-                <span class="badge bg-success">Completado</span>
-              {% elif project.estado_proyecto == 'en_progreso' %}
-                <span class="badge bg-primary">En Progreso</span>
-              {% else %}
-                <span class="badge bg-warning text-dark">Pendiente</span>
-              {% endif %}
+              {% with avance=project.ultimo_avance|default:0 %}
+              <div class="d-flex align-items-center gap-1">
+                <div class="progress flex-grow-1" style="height:6px; min-width:50px;">
+                  <div class="progress-bar {% if avance == 100 %}bg-success{% elif avance > 0 %}bg-primary{% else %}bg-secondary{% endif %}"
+                       style="width:{{ avance }}%"></div>
+                </div>
+                <span class="text-muted" style="font-size:0.7rem; white-space:nowrap;">{{ avance }}%</span>
+              </div>
+              {% endwith %}
             </td>
             <td>
-              {% if project.estado_pago == 'pagado' %}
-                <span class="badge bg-success">Pagado</span>
-              {% elif project.estado_pago == 'parcial' %}
-                <span class="badge bg-info text-dark">Parcial</span>
-              {% else %}
-                <span class="badge bg-danger">No Pagado</span>
+              {% if project.estado_pago == 'pagado' %}<span class="badge bg-success">Pagado</span>
+              {% elif project.estado_pago == 'parcial' %}<span class="badge bg-info text-dark">Parcial</span>
+              {% else %}<span class="badge bg-danger">No Pagado</span>
               {% endif %}
             </td>
             <td class="text-end fw-semibold">{{ project.monto_total|floatformat:2 }}</td>
+            <td class="text-end text-success fw-semibold">{{ cobrado|floatformat:2 }}</td>
+            <td class="text-end text-danger fw-semibold">{{ project.monto_saldo|floatformat:2 }}</td>
+            <td class="text-muted">{{ project.fecha_inicio|date:"d/m/Y"|default:"—" }}</td>
+            <td class="text-muted">{{ project.fecha_fin|date:"d/m/Y"|default:"—" }}</td>
           </tr>
+          {% endwith %}
           {% empty %}
           <tr>
-            <td colspan="7" class="text-center text-muted py-3 small">
+            <td colspan="12" class="text-center text-muted py-3 small">
               No se encontraron proyectos con los filtros seleccionados.
             </td>
           </tr>
@@ -171,8 +211,11 @@
         {% if projects %}
         <tfoot class="table-light fw-semibold small">
           <tr>
-            <td colspan="6" class="text-end text-muted">Total:</td>
+            <td colspan="7" class="text-end text-muted">Total:</td>
             <td class="text-end">Bs. {{ monto_total|floatformat:2 }}</td>
+            <td class="text-end text-success">Bs. {{ total_cobrado|floatformat:2 }}</td>
+            <td class="text-end text-danger">Bs. {{ total_saldo|floatformat:2 }}</td>
+            <td colspan="2"></td>
           </tr>
         </tfoot>
         {% endif %}

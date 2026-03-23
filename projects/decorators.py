@@ -31,9 +31,8 @@ def cargo_required(*cargos):
         def wrapper(request, *args, **kwargs):
             if request.user.is_superuser:
                 return view_func(request, *args, **kwargs)
-            try:
-                cargo = request.user.employee_profile.cargo
-            except AttributeError:
+            cargo = getattr(request.user, 'cargo', None)
+            if not cargo:
                 messages.error(request, 'No tienes permiso para acceder a esta sección.')
                 return redirect('dashboard')
             if cargo not in cargos:

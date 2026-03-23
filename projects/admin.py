@@ -1,7 +1,7 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
 from projects.models import (
-    Proyecto, Empleado, HistorialPago, Cliente, Progreso,
-    ContratoEmpleado, ContratoProyecto,
+    Proyecto, Empleado, HistorialPago, Cliente, Progreso, Contrato,
 )
 from inventario.models import Proveedor, Insumo, Realizar
 from pagos.models import Pago, PagoEmpleado
@@ -18,12 +18,15 @@ class ProyectoAdmin(admin.ModelAdmin):
 
 
 @admin.register(Empleado)
-class EmpleadoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'apellido_paterno', 'apellido_materno', 'cargo', 'carnet_identidad', 'numero_celular', 'activo')
-    list_filter = ('activo', 'cargo')
-    search_fields = ('nombre', 'apellido_paterno', 'carnet_identidad')
+class EmpleadoAdmin(UserAdmin):
+    list_display = ('username', 'nombre', 'apellido_paterno', 'cargo', 'carnet_identidad', 'is_active')
+    list_filter = ('is_active', 'cargo', 'is_staff')
+    search_fields = ('username', 'nombre', 'apellido_paterno', 'carnet_identidad')
     ordering = ('apellido_paterno', 'nombre')
     list_per_page = 20
+    fieldsets = UserAdmin.fieldsets + (
+        ('Datos del Empleado', {'fields': ('nombre', 'apellido_paterno', 'apellido_materno', 'cargo', 'carnet_identidad', 'numero_celular', 'salario', 'fecha_contratacion')}),
+    )
 
 
 @admin.register(Cliente)
@@ -66,20 +69,11 @@ class ProgresoAdmin(admin.ModelAdmin):
     list_per_page = 20
 
 
-@admin.register(ContratoEmpleado)
-class ContratoEmpleadoAdmin(admin.ModelAdmin):
-    list_display = ('empleado', 'proyecto', 'fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'activo')
-    list_filter = ('activo',)
-    search_fields = ('empleado__nombre', 'empleado__apellido_paterno', 'proyecto__nombre')
-    ordering = ('-created',)
-    list_per_page = 20
-
-
-@admin.register(ContratoProyecto)
-class ContratoProyectoAdmin(admin.ModelAdmin):
-    list_display = ('proyecto', 'fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'activo')
-    list_filter = ('activo',)
-    search_fields = ('proyecto__nombre', 'proyecto__codigo')
+@admin.register(Contrato)
+class ContratoAdmin(admin.ModelAdmin):
+    list_display = ('tipo', 'empleado', 'proyecto', 'fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'activo')
+    list_filter = ('activo', 'tipo')
+    search_fields = ('empleado__nombre', 'empleado__apellido_paterno', 'proyecto__nombre', 'proyecto__codigo')
     ordering = ('-created',)
     list_per_page = 20
 

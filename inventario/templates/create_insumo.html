@@ -49,6 +49,11 @@
               <div class="text-danger small mt-1">{% for err in form.marca.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
             </div>
+
+            <div class="mb-3">
+              <label class="form-label">Modelo</label>
+              {{ form.modelo }}
+            </div>
           </div>
           <div class="col-lg-6">
             <div class="mb-3">
@@ -59,7 +64,7 @@
               {% endif %}
             </div>
             <div class="mb-3">
-              <label class="form-label">Costo Unitario (Bs.) <span class="text-danger">*</span></label>
+              <label class="form-label">Costo Unitario referencial (Bs.)</label>
               {{ form.costo_unitario }}
               {% if form.costo_unitario.errors %}
               <div class="text-danger small mt-1">{% for err in form.costo_unitario.errors %}{{ err }}{% endfor %}</div>
@@ -68,7 +73,12 @@
             <div class="mb-3">
               <label class="form-label">Stock mínimo de alerta</label>
               {{ form.stock_minimo }}
-              <div class="form-text text-muted small">Recibirás advertencia cuando el stock baje hasta este nivel. 0 = sin alerta.</div>
+              <div class="form-text text-muted small">
+                Cuando el stock llegue a este número, aparecerá el badge
+                <span class="badge bg-warning text-dark" style="font-size:0.7rem;">Stock bajo</span>
+                en el catálogo. Ej: si pones 3, con 3 o menos unidades se activa la alerta.
+                Deja en 0 para no usar alerta.
+              </div>
               {% if form.stock_minimo.errors %}
               <div class="text-danger small mt-1">{% for err in form.stock_minimo.errors %}{{ err }}{% endfor %}</div>
               {% endif %}

@@ -86,7 +86,12 @@
       <!-- BOTONES -->
       <div class="d-flex justify-content-between mt-4">
         <a href="{% url 'employees' %}" class="btn btn-outline-secondary">Volver</a>
-        <a href="{% url 'employee_detail' employee.id %}" class="btn btn-primary">Editar</a>
+        <div class="d-flex gap-2">
+          <a href="{% url 'employee_view' employee.id %}?pdf" target="_blank" class="btn btn-outline-danger btn-sm">
+            <i class="bi bi-file-earmark-pdf me-1"></i>Ficha PDF
+          </a>
+          <a href="{% url 'employee_detail' employee.id %}" class="btn btn-primary">Editar</a>
+        </div>
       </div>
     </div>
   </div>

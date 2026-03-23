@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ficha de Proyecto — {{ project.codigo }}</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 18px 22px;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 9px;
+      color: #222;
+      background-color: #ffffff;
+    }
+
+    /* ── Secciones ── */
+    .section {
+      margin-bottom: 10px;
+    }
+    .section-title {
+      background-color: #1B4D90;
+      color: #D4B84A;
+      font-size: 9px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 4px 8px;
+      margin-bottom: 5px;
+    }
+
+    /* ── Tabla de datos ── */
+    table.data {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    table.data td {
+      padding: 4px 7px;
+      border: 1px solid #dde2ed;
+      font-size: 9px;
+      vertical-align: top;
+    }
+    table.data td.lbl {
+      font-weight: bold;
+      color: #0F2D5A;
+      background-color: #f1f3f6;
+      width: 28%;
+      white-space: nowrap;
+    }
+    table.data tr:nth-child(even) td.lbl { background-color: #eaecf2; }
+
+    /* ── Tabla lista ── */
+    table.list {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    table.list thead tr { background-color: #0F2D5A; }
+    table.list th {
+      padding: 4px 6px;
+      font-size: 8px;
+      font-weight: bold;
+      color: #D4B84A;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    table.list td {
+      padding: 4px 6px;
+      border-bottom: 1px solid #dde2ed;
+      font-size: 9px;
+    }
+    table.list tr:nth-child(even) td { background-color: #f1f3f6; }
+    table.list tfoot td {
+      font-weight: bold;
+      border-top: 2px solid #0F2D5A;
+      background-color: #e8edf5;
+      color: #0F2D5A;
+      padding: 4px 6px;
+      font-size: 9px;
+    }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+
+    /* ── Badges ── */
+    .badge {
+      padding: 2px 6px;
+      border-radius: 2px;
+      font-size: 8px;
+      font-weight: bold;
+    }
+    .badge-ok    { background-color: #d4edda; color: #155724; }
+    .badge-warn  { background-color: #fff3cd; color: #856404; }
+    .badge-info  { background-color: #dce8f8; color: #0F2D5A; }
+    .badge-muted { background-color: #e9e9e9; color: #333; }
+
+    /* ── Resumen financiero ── */
+    table.fin {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    table.fin td {
+      padding: 5px 8px;
+      border: 1px solid #dde2ed;
+      font-size: 9px;
+    }
+    table.fin td.fin-lbl {
+      background-color: #f1f3f6;
+      font-weight: bold;
+      color: #0F2D5A;
+      width: 50%;
+    }
+    table.fin td.fin-val {
+      text-align: right;
+      width: 50%;
+    }
+    table.fin tr.fin-total td {
+      background-color: #0F2D5A;
+      color: #D4B84A;
+      font-weight: bold;
+      font-size: 10px;
+    }
+    table.fin tr.fin-total td.fin-val { text-align: right; }
+
+    /* ── Barra de info ── */
+    .infobar {
+      background-color: #f1f3f6;
+      border: 1px solid #dde2ed;
+      padding: 4px 10px;
+      font-size: 8px;
+      color: #555;
+      margin-bottom: 10px;
+    }
+
+    /* ── Dos columnas ── */
+    table.two-col {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    table.two-col > tr > td {
+      vertical-align: top;
+      padding: 0;
+    }
+    table.two-col > tr > td:first-child { padding-right: 6px; }
+
+    .no-data {
+      color: #888;
+      font-style: italic;
+      padding: 6px 8px;
+      font-size: 9px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══ ENCABEZADO ══ -->
+  <table width="100%" style="border-collapse:collapse; margin-bottom:8px; background-color:#0F2D5A;">
+    <tr>
+      <td style="padding:0; width:6px; background-color:#D4B84A;"></td>
+      <td style="padding:6px 12px; vertical-align:middle;">
+        <div style="font-size:8px; color:#D4B84A; text-transform:uppercase; letter-spacing:0.1em; font-weight:bold; margin-bottom:1px;">SOBOTEC S.R.L. — Ficha de Proyecto</div>
+        <div style="font-size:16px; font-weight:bold; color:#ffffff;">{{ project.nombre }}</div>
+        <div style="font-size:9px; color:#a0b8d8;">{{ project.codigo }} &nbsp;|&nbsp; {{ project.get_tipo_proyecto_display }} &nbsp;|&nbsp; {{ project.get_estado_proyecto_display }}</div>
+      </td>
+      <td style="padding:6px 14px; vertical-align:middle; text-align:right; white-space:nowrap; width:140px;">
+        <div style="font-size:8px; color:#D4B84A; text-transform:uppercase; letter-spacing:0.06em;">Generado el</div>
+        <div style="font-size:11px; font-weight:bold; color:#ffffff;">{{ now|date:"d/m/Y" }}</div>
+        <div style="font-size:10px; color:#a0b8d8;">{{ now|date:"H:i" }} hrs</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- ══ BARRA INFO ══ -->
+  <div class="infobar">
+    <b style="color:#0F2D5A;">Generado por:</b> {{ generado_por }}
+  </div>
+
+  <!-- ══ DOS COLUMNAS: DATOS GENERALES + ESTADO FINANCIERO ══ -->
+  <table class="two-col" style="margin-bottom:10px;">
+    <tr>
+      <!-- Columna izquierda: datos del proyecto -->
+      <td style="width:55%;">
+        <div class="section-title">Datos del Proyecto</div>
+        <table class="data">
+          <tr>
+            <td class="lbl">Cliente</td>
+            <td>{% if project.cliente %}{{ project.cliente.nombre }} {{ project.cliente.apellido_paterno }}{% else %}—{% endif %}</td>
+          </tr>
+          <tr>
+            <td class="lbl">Tipo</td>
+            <td>{{ project.get_tipo_proyecto_display }}</td>
+          </tr>
+          <tr>
+            <td class="lbl">Estado</td>
+            <td>
+              {% if project.estado_proyecto == 'completado' %}<span class="badge badge-ok">Completado</span>
+              {% elif project.estado_proyecto == 'en_progreso' %}<span class="badge badge-info">En Progreso</span>
+              {% else %}<span class="badge badge-warn">Pendiente</span>{% endif %}
+            </td>
+          </tr>
+          <tr>
+            <td class="lbl">Avance actual</td>
+            <td><b>{{ porcentaje_actual }}%</b></td>
+          </tr>
+          <tr>
+            <td class="lbl">Fecha inicio</td>
+            <td>{{ project.fecha_inicio|date:"d/m/Y"|default:"—" }}</td>
+          </tr>
+          <tr>
+            <td class="lbl">Fecha fin</td>
+            <td>{{ project.fecha_fin|date:"d/m/Y"|default:"—" }}</td>
+          </tr>
+          <tr>
+            <td class="lbl">Responsable</td>
+            <td>{% if project.user %}{{ project.user.get_full_name|default:project.user.username }}{% else %}—{% endif %}</td>
+          </tr>
+        </table>
+      </td>
+      <!-- Columna derecha: resumen financiero -->
+      <td style="width:45%; padding-left:6px;">
+        <div class="section-title">Resumen Financiero</div>
+        <table class="fin">
+          <tr>
+            <td class="fin-lbl">Monto Contratado</td>
+            <td class="fin-val">Bs. {{ ingresos|floatformat:2 }}</td>
+          </tr>
+          <tr>
+            <td class="fin-lbl">Pagado por cliente</td>
+            <td class="fin-val">Bs. {{ total_pagado_cliente|floatformat:2 }}</td>
+          </tr>
+          <tr>
+            <td class="fin-lbl">Saldo cliente</td>
+            <td class="fin-val">Bs. {{ saldo_cliente|floatformat:2 }}</td>
+          </tr>
+          <tr>
+            <td class="fin-lbl">Costo insumos</td>
+            <td class="fin-val">Bs. {{ total_insumos|floatformat:2 }}</td>
+          </tr>
+          <tr>
+            <td class="fin-lbl">Costo personal</td>
+            <td class="fin-val">Bs. {{ costo_personal|floatformat:2 }}</td>
+          </tr>
+          <tr class="fin-total">
+            <td class="fin-lbl" style="color:#D4B84A;">Rentabilidad ({{ margen }}%)</td>
+            <td class="fin-val" style="color:#D4B84A;">Bs. {{ rentabilidad|floatformat:2 }}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <!-- ══ PROGRESO ══ -->
+  <div class="section">
+    <div class="section-title">Historial de Progreso</div>
+    {% if progresos %}
+    <table class="list">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th class="text-center">% Avance</th>
+          <th>Descripción</th>
+          <th>Observación</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in progresos %}
+        <tr>
+          <td>{{ p.fecha|date:"d/m/Y" }}</td>
+          <td class="text-center"><b>{{ p.porcentaje }}%</b></td>
+          <td>{{ p.descripcion|default:"—" }}</td>
+          <td>{{ p.observacion|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="no-data">Sin registros de progreso.</p>
+    {% endif %}
+  </div>
+
+  <!-- ══ PAGOS DEL CLIENTE ══ -->
+  <div class="section">
+    <div class="section-title">Pagos del Cliente</div>
+    {% if pagos_cliente %}
+    <table class="list">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th class="text-right">Monto (Bs.)</th>
+          <th>Estado</th>
+          <th>Tipo</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pago in pagos_cliente %}
+        <tr>
+          <td>{{ pago.fecha|date:"d/m/Y" }}</td>
+          <td class="text-right">{{ pago.monto|floatformat:2 }}</td>
+          <td>
+            {% if pago.estado == 'pagado' %}<span class="badge badge-ok">Pagado</span>
+            {% else %}<span class="badge badge-warn">Pendiente</span>{% endif %}
+          </td>
+          <td>
+            {% if pago.tipo_pago == 'completo' %}<span class="badge badge-info">Completo</span>
+            {% else %}<span class="badge badge-muted">Parcial</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td>TOTAL</td>
+          <td class="text-right">{{ total_pagado_cliente|floatformat:2 }}</td>
+          <td colspan="2"></td>
+        </tr>
+      </tfoot>
+    </table>
+    {% else %}
+    <p class="no-data">Sin pagos registrados.</p>
+    {% endif %}
+  </div>
+
+  <!-- ══ CONTRATOS EMPLEADOS ══ -->
+  <div class="section">
+    <div class="section-title">Contratos de Empleados</div>
+    {% if contratos_con_pagos %}
+    {% for item in contratos_con_pagos %}
+    <table class="data" style="margin-bottom:6px;">
+      <tr>
+        <td class="lbl">Empleado</td>
+        <td>{{ item.contrato.empleado.nombre }} {{ item.contrato.empleado.apellido_paterno }} — <i>{{ item.contrato.empleado.get_cargo_display }}</i></td>
+        <td class="lbl">Monto acordado</td>
+        <td class="text-right">Bs. {{ item.contrato.monto_acordado|floatformat:2 }}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Total pagado</td>
+        <td class="text-right">Bs. {{ item.total_pagado|floatformat:2 }}</td>
+        <td class="lbl">Saldo pendiente</td>
+        <td class="text-right">Bs. {{ item.saldo_pendiente|floatformat:2 }}</td>
+      </tr>
+      {% if item.pagos %}
+      <tr>
+        <td colspan="4" style="padding:0;">
+          <table class="list" style="margin:0;">
+            <thead>
+              <tr>
+                <th>Fecha pago</th>
+                <th class="text-right">Monto (Bs.)</th>
+                <th>Concepto</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for pago in item.pagos %}
+              <tr>
+                <td>{{ pago.fecha|date:"d/m/Y" }}</td>
+                <td class="text-right">{{ pago.monto|floatformat:2 }}</td>
+                <td>{{ pago.concepto|default:"—" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </td>
+      </tr>
+      {% endif %}
+    </table>
+    {% endfor %}
+    {% else %}
+    <p class="no-data">Sin contratos de empleados.</p>
+    {% endif %}
+  </div>
+
+  <!-- ══ INSUMOS ══ -->
+  <div class="section">
+    <div class="section-title">Insumos / Equipos Asignados</div>
+    {% if insumos_proyecto %}
+    <table class="list">
+      <thead>
+        <tr>
+          <th>Insumo</th>
+          <th>Categoría</th>
+          <th class="text-center">Cantidad</th>
+          <th class="text-right">Costo Unit. (Bs.)</th>
+          <th class="text-right">Subtotal (Bs.)</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in insumos_proyecto %}
+        <tr>
+          <td>{{ r.insumo.nombre }}</td>
+          <td>{{ r.insumo.get_categoria_display }}</td>
+          <td class="text-center">{{ r.cantidad }}</td>
+          <td class="text-right">{{ r.costo_unitario|floatformat:2 }}</td>
+          <td class="text-right">{{ r.subtotal|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4" class="text-right">TOTAL INSUMOS</td>
+          <td class="text-right">{{ total_insumos|floatformat:2 }}</td>
+        </tr>
+      </tfoot>
+    </table>
+    {% else %}
+    <p class="no-data">Sin insumos asignados.</p>
+    {% endif %}
+  </div>
+
+  <!-- ══ CONTRATO CON CLIENTE ══ -->
+  {% if contrato_proyecto %}
+  <div class="section">
+    <div class="section-title">Contrato con Cliente</div>
+    <table class="data">
+      <tr>
+        <td class="lbl">Fecha inicio</td>
+        <td>{{ contrato_proyecto.fecha_inicio|date:"d/m/Y"|default:"—" }}</td>
+        <td class="lbl">Fecha fin</td>
+        <td>{{ contrato_proyecto.fecha_fin|date:"d/m/Y"|default:"—" }}</td>
+      </tr>
+      <tr>
+        <td class="lbl">Monto acordado</td>
+        <td>Bs. {{ contrato_proyecto.monto_acordado|floatformat:2 }}</td>
+        <td class="lbl">Observaciones</td>
+        <td>{{ contrato_proyecto.observaciones|default:"—" }}</td>
+      </tr>
+    </table>
+  </div>
+  {% endif %}
+
+</body>
+</html>

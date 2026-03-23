@@ -1,8 +1,7 @@
 from django.forms import ModelForm
 from django import forms
 from django.db.models import Max
-from .models import Proyecto, Empleado, Cliente, Progreso, ContratoEmpleado, ContratoProyecto
-from django.contrib.auth.models import User
+from .models import Proyecto, Empleado, Cliente, Progreso, Contrato
 import re
 from decimal import Decimal, InvalidOperation
 
@@ -17,11 +16,11 @@ class ProjectForm(forms.ModelForm):
         error_messages={'required': 'Debe seleccionar un cliente.'}
     )
     monto_total = forms.CharField(
-        required=True,
-        label="Monto Total (Bs.)",
+        required=False,
+        label="Monto Estimado (Bs.)",
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Ej: 5000 o 5000.50',
+            'placeholder': 'Ej: 5000 o 5000.50 (opcional si se registra contrato)',
         })
     )
 
@@ -29,28 +28,28 @@ class ProjectForm(forms.ModelForm):
         model = Proyecto
         fields = ['codigo', 'nombre', 'descripcion', 'observacion', 'estado_proyecto', 'tipo_proyecto', 'monto_total', 'cliente']
         widgets = {
-            'codigo': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el codigo'}),
-            'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el nombre'}),
-            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Escribe la descripción'}),
-            'observacion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Notas operativas, observaciones internas...'}),
-            'estado_proyecto': forms.Select(attrs={'class': 'form-select'}),
-            'tipo_proyecto': forms.Select(attrs={'class': 'form-select'}),
-            'cliente': forms.Select(attrs={'class': 'form-select'}),
+            'codigo':           forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el codigo'}),
+            'nombre':           forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el nombre'}),
+            'descripcion':      forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Escribe la descripción'}),
+            'observacion':      forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Notas operativas, observaciones internas...'}),
+            'estado_proyecto':  forms.Select(attrs={'class': 'form-select'}),
+            'tipo_proyecto':    forms.Select(attrs={'class': 'form-select'}),
+            'cliente':          forms.Select(attrs={'class': 'form-select'}),
         }
 
     def clean_monto_total(self):
         valor = self.cleaned_data.get('monto_total')
-        if not valor:
-            raise forms.ValidationError('El monto es obligatorio.')
+        if not valor or str(valor).strip() == '':
+            return 0
         valor_str = str(valor).strip()
         if not re.fullmatch(DECIMAL_REGEX, valor_str):
-            raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 5000 o 5000.50). No use comas ni separadores de miles.')
+            raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 5000 o 5000.50).')
         try:
             resultado = Decimal(valor_str)
         except InvalidOperation:
             raise forms.ValidationError('Ingrese un número válido.')
-        if resultado <= 0:
-            raise forms.ValidationError('El monto debe ser mayor a cero.')
+        if resultado < 0:
+            raise forms.ValidationError('El monto no puede ser negativo.')
         return resultado
 
 class EmpleadoForm(forms.ModelForm):
@@ -89,14 +88,6 @@ class EmpleadoForm(forms.ModelForm):
             'minlength': '7',
         })
     )
-    salario = forms.CharField(
-        required=False,
-        label="Salario",
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'Salario Ej: 1500 o 1500.50',
-        })
-    )
     correo = forms.EmailField(
         required=False,
         label="Correo Electrónico",
@@ -105,7 +96,7 @@ class EmpleadoForm(forms.ModelForm):
 
     class Meta:
         model = Empleado
-        fields = ['nombre', 'apellido_paterno', 'apellido_materno', 'numero_celular', 'fecha_contratacion', 'salario', 'cargo', 'carnet_identidad']
+        fields = ['nombre', 'apellido_paterno', 'apellido_materno', 'numero_celular', 'cargo', 'carnet_identidad']
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre', 'required': 'required'}),
             'apellido_paterno': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Apellido Paterno', 'required': 'required'}),
@@ -133,21 +124,6 @@ class EmpleadoForm(forms.ModelForm):
             raise forms.ValidationError('El carnet debe tener al menos 6 dígitos.')
         return ci_digits
 
-    def clean_salario(self):
-        valor = self.cleaned_data.get('salario')
-        if valor is None or valor == '':
-            return None
-        valor_str = str(valor).strip()
-        if not re.fullmatch(DECIMAL_REGEX, valor_str):
-            raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 1500 o 1500.50). No use separadores de miles ni comas.')
-        try:
-            resultado = Decimal(valor_str)
-        except InvalidOperation:
-            raise forms.ValidationError('Ingrese un número válido.')
-        if resultado < 0:
-            raise forms.ValidationError('El salario no puede ser negativo.')
-        return resultado
-
     def clean_numero_celular(self):
         celular = self.cleaned_data.get('numero_celular', '')
         if not celular:
@@ -161,7 +137,10 @@ class EmpleadoForm(forms.ModelForm):
 
     def clean_username(self):
         username = self.cleaned_data.get('username', '').strip()
-        if User.objects.filter(username=username).exists():
+        qs = Empleado.objects.filter(username=username)
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
             raise forms.ValidationError('Ese nombre de usuario ya está en uso.')
         return username
 
@@ -226,7 +205,7 @@ class ProgresoForm(forms.ModelForm):
         model = Progreso
         fields = ['fecha', 'porcentaje', 'descripcion', 'observacion']
         widgets = {
-            'fecha':       forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'fecha':       forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
             'porcentaje':  forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'max': '100', 'placeholder': 'Ej: 75'}),
             'descripcion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Resumen del avance'}),
             'observacion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Detalles adicionales, problemas encontrados, etc.'}),
@@ -255,7 +234,8 @@ class ProgresoForm(forms.ModelForm):
         return valor
 
 
-class ContratoEmpleadoForm(forms.ModelForm):
+class _ContratoBaseForm(forms.ModelForm):
+    """Campos y validaciones compartidas entre los dos tipos de contrato."""
     monto_acordado = forms.CharField(
         required=True,
         label="Monto Acordado (Bs.)",
@@ -263,91 +243,59 @@ class ContratoEmpleadoForm(forms.ModelForm):
     )
 
     class Meta:
-        model = ContratoEmpleado
-        fields = ['empleado', 'fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'observaciones', 'documento']
+        model = Contrato
+        fields = []  # cada subclase define sus fields
         widgets = {
-            'empleado':    forms.Select(attrs={'class': 'form-select'}),
-            'fecha_firma': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'fecha_inicio': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'fecha_fin':   forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'empleado':      forms.Select(attrs={'class': 'form-select'}),
+            'fecha_firma':   forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+            'fecha_inicio':  forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+            'fecha_fin':     forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
             'observaciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Observaciones adicionales...'}),
-            'documento':   forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'documento':     forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        }
+
+    def clean_monto_acordado(self):
+        valor = str(self.cleaned_data.get('monto_acordado', '')).strip()
+        if not re.fullmatch(DECIMAL_REGEX, valor):
+            raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 5000 o 5000.50).')
+        resultado = Decimal(valor)
+        if resultado <= 0:
+            raise forms.ValidationError('El monto debe ser mayor a cero.')
+        return resultado
+
+    def clean_documento(self):
+        doc = self.cleaned_data.get('documento')
+        if doc and hasattr(doc, 'name'):
+            if not doc.name.lower().endswith(('.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp')):
+                raise forms.ValidationError('Solo se permiten archivos PDF o imágenes (JPG, PNG, GIF, WEBP).')
+        return doc
+
+    def clean(self):
+        cleaned_data = super().clean()
+        fecha_inicio = cleaned_data.get('fecha_inicio')
+        fecha_fin    = cleaned_data.get('fecha_fin')
+        fecha_firma  = cleaned_data.get('fecha_firma')
+        if fecha_inicio and fecha_fin and fecha_fin < fecha_inicio:
+            self.add_error('fecha_fin', 'La fecha de fin no puede ser anterior a la fecha de inicio.')
+        if fecha_firma and fecha_inicio and fecha_firma > fecha_inicio:
+            self.add_error('fecha_firma', 'La fecha de firma no puede ser posterior a la fecha de inicio.')
+        return cleaned_data
+
+
+class ContratoEmpleadoForm(_ContratoBaseForm):
+    class Meta(_ContratoBaseForm.Meta):
+        fields = ['empleado', 'fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'tipo_salario', 'observaciones', 'documento']
+        widgets = {
+            **_ContratoBaseForm.Meta.widgets,
+            'tipo_salario': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['empleado'].queryset = Empleado.objects.filter(activo=True)
+        self.fields['empleado'].queryset = Empleado.objects.filter(is_active=True)
         self.fields['empleado'].empty_label = None
 
-    def clean_monto_acordado(self):
-        valor = str(self.cleaned_data.get('monto_acordado', '')).strip()
-        if not re.fullmatch(DECIMAL_REGEX, valor):
-            raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 5000 o 5000.50).')
-        resultado = Decimal(valor)
-        if resultado <= 0:
-            raise forms.ValidationError('El monto debe ser mayor a cero.')
-        return resultado
 
-    def clean_documento(self):
-        doc = self.cleaned_data.get('documento')
-        if doc and hasattr(doc, 'name'):
-            if not doc.name.lower().endswith(('.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp')):
-                raise forms.ValidationError('Solo se permiten archivos PDF o imágenes (JPG, PNG, GIF, WEBP).')
-        return doc
-
-    def clean(self):
-        cleaned_data = super().clean()
-        fecha_inicio = cleaned_data.get('fecha_inicio')
-        fecha_fin    = cleaned_data.get('fecha_fin')
-        fecha_firma  = cleaned_data.get('fecha_firma')
-        if fecha_inicio and fecha_fin and fecha_fin < fecha_inicio:
-            self.add_error('fecha_fin', 'La fecha de fin no puede ser anterior a la fecha de inicio.')
-        if fecha_firma and fecha_inicio and fecha_firma > fecha_inicio:
-            self.add_error('fecha_firma', 'La fecha de firma no puede ser posterior a la fecha de inicio.')
-        return cleaned_data
-
-
-class ContratoProyectoForm(forms.ModelForm):
-    monto_acordado = forms.CharField(
-        required=True,
-        label="Monto Acordado (Bs.)",
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 5000 o 5000.50'})
-    )
-
-    class Meta:
-        model = ContratoProyecto
+class ContratoProyectoForm(_ContratoBaseForm):
+    class Meta(_ContratoBaseForm.Meta):
         fields = ['fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'observaciones', 'documento']
-        widgets = {
-            'fecha_firma':  forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'fecha_inicio': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'fecha_fin':    forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'observaciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Observaciones adicionales...'}),
-            'documento':    forms.ClearableFileInput(attrs={'class': 'form-control'}),
-        }
-
-    def clean_monto_acordado(self):
-        valor = str(self.cleaned_data.get('monto_acordado', '')).strip()
-        if not re.fullmatch(DECIMAL_REGEX, valor):
-            raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 5000 o 5000.50).')
-        resultado = Decimal(valor)
-        if resultado <= 0:
-            raise forms.ValidationError('El monto debe ser mayor a cero.')
-        return resultado
-
-    def clean_documento(self):
-        doc = self.cleaned_data.get('documento')
-        if doc and hasattr(doc, 'name'):
-            if not doc.name.lower().endswith(('.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp')):
-                raise forms.ValidationError('Solo se permiten archivos PDF o imágenes (JPG, PNG, GIF, WEBP).')
-        return doc
-
-    def clean(self):
-        cleaned_data = super().clean()
-        fecha_inicio = cleaned_data.get('fecha_inicio')
-        fecha_fin    = cleaned_data.get('fecha_fin')
-        fecha_firma  = cleaned_data.get('fecha_firma')
-        if fecha_inicio and fecha_fin and fecha_fin < fecha_inicio:
-            self.add_error('fecha_fin', 'La fecha de fin no puede ser anterior a la fecha de inicio.')
-        if fecha_firma and fecha_inicio and fecha_firma > fecha_inicio:
-            self.add_error('fecha_firma', 'La fecha de firma no puede ser posterior a la fecha de inicio.')
-        return cleaned_data

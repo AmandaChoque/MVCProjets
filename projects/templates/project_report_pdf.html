@@ -4,122 +4,179 @@
   <meta charset="UTF-8">
   <title>Reporte de Proyectos</title>
   <style>
+    @page {
+      size: A4 landscape;
+      margin: 20px 24px;
+    }
     body {
       font-family: Arial, sans-serif;
-      font-size: 11px;
-      margin: 30px;
-      color: #333;
+      font-size: 10px;
+      color: #222;
+      background-color: #f1f3f6;
     }
+
+    /* ── RESUMEN ── */
     .summary {
       width: 100%;
       border-collapse: collapse;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
     .summary td {
-      width: 20%;
-      padding: 10px 12px;
-      border: 1px solid #ddd;
+      padding: 8px 10px;
+      border: 1px solid #dde2ed;
+      border-left: 3px solid #c0c8d8;
       text-align: center;
-      background-color: #f9f9f9;
+      background-color: #ffffff;
     }
+
     .summary .label {
-      font-size: 9px;
+      font-size: 8px;
       text-transform: uppercase;
-      color: #666;
-      letter-spacing: 0.04em;
+      color: #888;
+      letter-spacing: 0.05em;
     }
     .summary .value {
-      font-size: 15px;
+      font-size: 14px;
       font-weight: bold;
       margin-top: 3px;
+      color: #333;
     }
-    .value.completado { color: #2e7d32; }
-    .value.progreso   { color: #1565c0; }
-    .value.pendiente  { color: #f57c00; }
-    table {
+    .value.completado { color: #333; }
+    .value.progreso   { color: #333; }
+    .value.pendiente  { color: #333; }
+    .value.cobrado    { color: #333; }
+    .value.saldo      { color: #333; }
+
+    /* ── TABLA PRINCIPAL ── */
+    table.main {
       width: 100%;
       border-collapse: collapse;
       margin-top: 8px;
     }
-    thead { background-color: #f0f0f0; }
-    th {
-      padding: 6px 8px;
+    table.main thead tr {
+      background-color: #0F2D5A;
+    }
+    table.main th {
+      padding: 6px 7px;
       text-align: left;
-      font-size: 9px;
+      font-size: 8px;
       text-transform: uppercase;
-      border-bottom: 1px solid #ccc;
+      color: #D4B84A;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
     }
-    td {
-      padding: 5px 8px;
-      border-bottom: 1px solid #eee;
-      font-size: 10px;
-    }
-    tr:nth-child(even) td { background-color: #fafafa; }
-    tfoot td {
-      font-weight: bold;
-      border-top: 2px solid #333;
-      background-color: #f0f0f0;
-    }
-    .footer {
-      margin-top: 20px;
+    table.main th.text-right { text-align: right; }
+    table.main td {
+      padding: 5px 7px;
+      border-bottom: 1px solid #dde2ed;
       font-size: 9px;
+      background-color: #ffffff;
+    }
+    table.main tr:nth-child(even) td { background-color: #f1f3f6; }
+    table.main tfoot td {
+      font-weight: bold;
+      border-top: 2px solid #0F2D5A;
+      background-color: #e8edf5;
+      font-size: 9px;
+      color: #0F2D5A;
+    }
+
+    /* ── BADGES ── */
+    .badge {
+      padding: 2px 7px;
+      border-radius: 3px;
+      font-size: 8px;
+      font-weight: bold;
+    }
+    .badge-completado  { background-color: #e9e9e9; color: #333; }
+    .badge-en-progreso { background-color: #e9e9e9; color: #333; }
+    .badge-pendiente   { background-color: #e9e9e9; color: #333; }
+    .badge-pagado      { background-color: #e9e9e9; color: #333; }
+    .badge-parcial     { background-color: #e9e9e9; color: #333; }
+    .badge-sin-pago    { background-color: #e9e9e9; color: #333; }
+
+    .text-right { text-align: right; }
+
+    .footer {
+      margin-top: 14px;
+      font-size: 8px;
       color: #888;
       text-align: right;
+      border-top: 1px solid #D4B84A;
+      padding-top: 5px;
     }
   </style>
 </head>
 <body>
 
-  <!-- ENCABEZADO -->
-  <table width="100%" bgcolor="#1a1a2e" style="margin-bottom:16px;">
+  <!-- ══ ENCABEZADO ══ -->
+  <table width="100%" style="border-collapse:collapse; margin-bottom:14px; background-color:#0F2D5A;">
     <tr>
-      <td style="padding:14px 18px; vertical-align:middle;">
-        <div style="font-size:20px; font-weight:bold; color:#ffffff; margin-bottom:2px;">Reporte de Proyectos</div>
-        <div style="font-size:10px; color:#aab0c0;">Sistema de Gestión de Proyectos</div>
-        {% if start_date or project_type or project_status %}
-        <div style="margin-top:8px; padding-top:8px; border-top:1px solid #3a3a5c; font-size:9px; color:#aab0c0;">
-          {% if start_date %}Período: <b style="color:#ffffff;">{{ start_date }} — {{ end_date|default:"hoy" }}</b>{% endif %}
-          {% if project_type %}&nbsp;&nbsp;|&nbsp;&nbsp;Tipo: <b style="color:#ffffff;">{{ project_type }}</b>{% endif %}
-          {% if project_status %}&nbsp;&nbsp;|&nbsp;&nbsp;Estado: <b style="color:#ffffff;">{{ project_status }}</b>{% endif %}
-        </div>
-        {% endif %}
+      <td style="padding:0; width:7px; background-color:#D4B84A;"></td>
+      <td style="padding:4px 12px; vertical-align:middle;">
+        <div style="font-size:9px; font-weight:bold; color:#D4B84A; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:1px;">SOBOTEC S.R.L. — Sistema de Gestión de Proyectos</div>
+        <div style="font-size:14px; font-weight:bold; color:#ffffff; margin-bottom:0px;">Reporte de Proyectos</div>
       </td>
-      <td style="padding:14px 18px; vertical-align:middle; text-align:right; width:140px;">
-        <div style="font-size:9px; color:#aab0c0;">Generado el</div>
-        <div style="font-size:14px; font-weight:bold; color:#ffffff;">{{ now|date:"d/m/Y" }}</div>
-        <div style="font-size:9px; color:#aab0c0;">{{ now|date:"H:i" }} hrs</div>
+      <td style="padding:4px 12px; vertical-align:middle; text-align:right; white-space:nowrap; width:150px;">
+        <div style="font-size:8px; color:#D4B84A; text-transform:uppercase; letter-spacing:0.06em;">Generado el</div>
+        <div style="font-size:11px; font-weight:bold; color:#ffffff;">{{ now|date:"d/m/Y" }}</div>
+        <div style="font-size:10px; color:#a0b8d8;">{{ now|date:"H:i" }} hrs</div>
       </td>
     </tr>
   </table>
 
-  <!-- RESUMEN -->
+  <!-- ══ BARRA DE INFO ══ -->
+  <table width="100%" style="border-collapse:collapse; margin-bottom:10px; background-color:#f1f3f6; border:1px solid #dde2ed;">
+    <tr>
+      <td style="padding:5px 12px; font-size:9px; color:#444;">
+        <b style="color:#0F2D5A;">Generado por:</b> {{ generado_por }}
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <b style="color:#0F2D5A;">Filtros:</b>
+        {% if search_nombre %} Nombre: <b>{{ search_nombre }}</b>{% endif %}
+        {% if project_type %} &nbsp;|&nbsp; Tipo: <b>{{ project_type }}</b>{% endif %}
+        {% if project_status %} &nbsp;|&nbsp; Estado: <b>{{ project_status }}</b>{% endif %}
+        {% if filter_estado_pago %} &nbsp;|&nbsp; Pago: <b>{{ filter_estado_pago }}</b>{% endif %}
+        {% if not search_nombre and not project_type and not project_status and not filter_estado_pago %} <i style="color:#888;">Sin filtros aplicados</i>{% endif %}
+      </td>
+    </tr>
+  </table>
+
+  <!-- ══ RESUMEN ══ -->
   <table class="summary">
     <tr>
-      <td>
+      <td class="col-total">
         <div class="label">Total Proyectos</div>
         <div class="value">{{ projects|length }}</div>
       </td>
-      <td>
-        <div class="label">Monto Total</div>
+      <td class="col-monto">
+        <div class="label">Monto Contratado</div>
         <div class="value">Bs. {{ monto_total|floatformat:2 }}</div>
       </td>
-      <td>
+      <td class="col-cobrado">
+        <div class="label">Cobrado</div>
+        <div class="value cobrado">Bs. {{ total_cobrado|floatformat:2 }}</div>
+      </td>
+      <td class="col-saldo">
+        <div class="label">Saldo Pendiente</div>
+        <div class="value saldo">Bs. {{ total_saldo|floatformat:2 }}</div>
+      </td>
+      <td class="col-comp">
         <div class="label">Completados</div>
         <div class="value completado">{{ count_completado }}</div>
       </td>
-      <td>
+      <td class="col-prog">
         <div class="label">En Progreso</div>
         <div class="value progreso">{{ count_en_progreso }}</div>
       </td>
-      <td>
+      <td class="col-pend">
         <div class="label">Pendientes</div>
         <div class="value pendiente">{{ count_pendiente }}</div>
       </td>
     </tr>
   </table>
 
-  <!-- TABLA -->
-  <table>
+  <!-- ══ TABLA ══ -->
+  <table class="main">
     <thead>
       <tr>
         <th>Código</th>
@@ -127,29 +184,53 @@
         <th>Contratante</th>
         <th>Tipo</th>
         <th>Estado</th>
+        <th>Avance</th>
         <th>Estado Pago</th>
-        <th>Monto Total (Bs.)</th>
+        <th class="text-right">Monto (Bs.)</th>
+        <th class="text-right">Cobrado (Bs.)</th>
+        <th class="text-right">Saldo (Bs.)</th>
+        <th>Inicio</th>
+        <th>Fin</th>
       </tr>
     </thead>
     <tbody>
       {% for project in projects %}
       <tr>
-        <td>{{ project.codigo }}</td>
+        <td style="font-weight:bold;">{{ project.codigo }}</td>
         <td><strong>{{ project.nombre }}</strong></td>
         <td>
-          {% if project.cliente %}
-            {{ project.cliente.nombre }} {{ project.cliente.apellido_paterno }}
-          {% else %}—{% endif %}
+          {% if project.cliente %}{{ project.cliente.nombre }} {{ project.cliente.apellido_paterno }}{% else %}—{% endif %}
         </td>
         <td>{{ project.get_tipo_proyecto_display }}</td>
-        <td>{{ project.get_estado_proyecto_display }}</td>
-        <td>{{ project.get_estado_pago_display }}</td>
-        <td>{{ project.monto_total|floatformat:2 }}</td>
+        <td>
+          {% if project.estado_proyecto == 'completado' %}
+            <span class="badge badge-completado">Completado</span>
+          {% elif project.estado_proyecto == 'en_progreso' %}
+            <span class="badge badge-en-progreso">En Progreso</span>
+          {% else %}
+            <span class="badge badge-pendiente">Pendiente</span>
+          {% endif %}
+        </td>
+        <td>{{ project.ultimo_avance|default:0 }}%</td>
+        <td>
+          {% if project.estado_pago == 'pagado' %}
+            <span class="badge badge-pagado">Pagado</span>
+          {% elif project.estado_pago == 'parcial' %}
+            <span class="badge badge-parcial">Parcial</span>
+          {% else %}
+            <span class="badge badge-sin-pago">Sin Pago</span>
+          {% endif %}
+        </td>
+        <td class="text-right">{{ project.monto_total|floatformat:2 }}</td>
+        <td class="text-right">{{ project.monto_cobrado|default:0|floatformat:2 }}</td>
+        <td class="text-right">{{ project.monto_saldo|floatformat:2 }}</td>
+        <td>{{ project.fecha_inicio|date:"d/m/Y"|default:"—" }}</td>
+        <td>{{ project.fecha_fin|date:"d/m/Y"|default:"—" }}</td>
       </tr>
       {% empty %}
       <tr>
-        <td colspan="7" style="text-align:center; color:#888; padding:12px;">
-          No se encontraron proyectos con los filtros seleccionados.
+        <td colspan="12" style="text-align:center; color:#888; padding:12px;">
+          No se encontraron proyectos.
         </td>
       </tr>
       {% endfor %}
@@ -157,16 +238,16 @@
     {% if projects %}
     <tfoot>
       <tr>
-        <td colspan="6" style="text-align:right;">TOTAL:</td>
-        <td>{{ monto_total|floatformat:2 }}</td>
+        <td colspan="7" class="text-right">TOTAL:</td>
+        <td class="text-right">{{ monto_total|floatformat:2 }}</td>
+        <td class="text-right">{{ total_cobrado|floatformat:2 }}</td>
+        <td class="text-right">{{ total_saldo|floatformat:2 }}</td>
+        <td colspan="2"></td>
       </tr>
     </tfoot>
     {% endif %}
   </table>
 
-  <div class="footer">
-    Reporte generado por el Sistema de Gestión de Proyectos — {{ now|date:"d/m/Y H:i" }}
-  </div>
 
 </body>
 </html>

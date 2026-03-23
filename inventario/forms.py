@@ -37,29 +37,29 @@ class ProveedorForm(forms.ModelForm):
 
 class InsumoForm(forms.ModelForm):
     costo_unitario = forms.CharField(
-        required=True,
-        label="Costo Unitario (Bs.)",
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 150 o 150.50'})
+        required=False,
+        label="Costo Unitario referencial (Bs.)",
+        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Opcional — se puede definir al registrar compras'})
     )
 
     class Meta:
         model = Insumo
-        fields = ['nombre', 'marca', 'categoria', 'costo_unitario', 'stock_minimo']
+        fields = ['nombre', 'marca', 'modelo', 'categoria', 'costo_unitario', 'stock_minimo']
         widgets = {
             'nombre':      forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del insumo', 'required': 'required'}),
             'marca':       forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Marca'}),
+            'modelo':      forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: IPC-HDW2831T-AS'}),
             'categoria':   forms.Select(attrs={'class': 'form-select'}),
-            'stock_minimo': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'placeholder': 'Ej: 2'}),
+            'stock_minimo': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'placeholder': 'Ej: 5'}),
         }
 
     def clean_costo_unitario(self):
-        valor = str(self.cleaned_data.get('costo_unitario', '')).strip()
+        valor = str(self.cleaned_data.get('costo_unitario', '') or '').strip()
+        if not valor:
+            return Decimal('0')
         if not re.fullmatch(DECIMAL_REGEX, valor):
             raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 150 o 150.50).')
-        resultado = Decimal(valor)
-        if resultado <= 0:
-            raise forms.ValidationError('El costo debe ser mayor a cero.')
-        return resultado
+        return Decimal(valor)
 
 
 class RequerirForm(forms.ModelForm):
@@ -120,7 +120,7 @@ class RealizarForm(forms.ModelForm):
             'proveedor': forms.Select(attrs={'class': 'form-select'}),
             'insumo':    forms.Select(attrs={'class': 'form-select'}),
             'cantidad':  forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'placeholder': 'Cantidad'}),
-            'fecha':     forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'fecha':     forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
         }
 
     def __init__(self, *args, **kwargs):

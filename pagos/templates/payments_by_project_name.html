@@ -8,13 +8,16 @@
     <h5 class="fw-semibold text-secondary mb-0">Reporte de Pagos</h5>
     <div class="d-flex gap-2">
       <a href="?pdf=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}"
-         target="_blank"
-         class="btn btn-outline-secondary btn-sm">
-        Vista previa PDF
+         target="_blank" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-file-earmark-pdf me-1"></i>Vista previa PDF
       </a>
       <a href="?pdf=1&download=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}"
          class="btn btn-outline-danger btn-sm">
-        ↓ Descargar PDF
+        <i class="bi bi-download me-1"></i>PDF
+      </a>
+      <a href="?excel=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}"
+         class="btn btn-outline-success btn-sm">
+        <i class="bi bi-file-earmark-excel me-1"></i>Excel
       </a>
     </div>
   </div>

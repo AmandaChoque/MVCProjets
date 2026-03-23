@@ -70,6 +70,10 @@
 
           <div class="col-lg-6">
             <div class="mb-3">
+              <label class="form-label">Tipo de Pago <span class="text-danger">*</span></label>
+              {{ form.tipo_salario }}
+            </div>
+            <div class="mb-3">
               <label class="form-label">Monto Acordado (Bs.) <span class="text-danger">*</span></label>
               {{ form.monto_acordado }}
               {% if form.monto_acordado.errors %}

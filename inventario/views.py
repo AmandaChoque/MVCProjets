@@ -172,7 +172,7 @@ def deactivate_insumo(request, id_insumo):
 def create_requiere(request, id_project):
     project = get_object_or_404(Proyecto, pk=id_project)
     insumos_activos = Insumo.objects.filter(activo=True)
-    insumos_con_precio = {str(i.id): str(i.costo_unitario) for i in insumos_activos}
+    insumos_con_precio = {str(i.id): str(i.costo_promedio) for i in insumos_activos}
     insumos_con_stock  = {str(i.id): i.stock for i in insumos_activos}
     for i in insumos_activos:
         insumos_con_stock[f'min_{i.id}'] = i.stock_minimo
@@ -202,7 +202,7 @@ def requiere_detail(request, id_requiere):
     requiere = get_object_or_404(Requiere, pk=id_requiere)
     project = requiere.proyecto
     insumos_activos = Insumo.objects.filter(activo=True)
-    insumos_con_precio = {str(i.id): str(i.costo_unitario) for i in insumos_activos}
+    insumos_con_precio = {str(i.id): str(i.costo_promedio) for i in insumos_activos}
 
     ctx = {
         'requiere': requiere,
@@ -227,8 +227,11 @@ def deactivate_requiere(request, id_requiere):
     requiere = get_object_or_404(Requiere, pk=id_requiere)
     id_project = requiere.proyecto.id
     if request.method == 'POST':
-        requiere.delete()
-        messages.success(request, 'Insumo eliminado del proyecto.')
+        requiere.activo = False
+        requiere.deleted_at = timezone.now()
+        requiere.deleted_by = request.user
+        requiere.save()
+        messages.success(request, f'{requiere.cantidad} unidad(es) de "{requiere.insumo.nombre}" devueltas al stock.')
     return redirect('project_view', id_project=id_project)
 
 
@@ -275,13 +278,7 @@ def create_realizar(request):
         return render(request, 'create_realizar.html', {'form': RealizarForm()})
     form = RealizarForm(request.POST)
     if form.is_valid():
-        compra = form.save(commit=False)
-        compra.costo_total = compra.cantidad * compra.costo_unitario
-        compra.save()
-        # Actualizar el precio del catálogo con el precio real de esta compra
-        compra.insumo.costo_unitario = compra.costo_unitario
-        compra.insumo.save(update_fields=['costo_unitario'])
-        compra.insumo.recalculate_stock()
+        compra = form.save()
         messages.success(request, f'Compra registrada: {compra.insumo.nombre} x{compra.cantidad} de {compra.proveedor.nombre}.')
         return redirect('compras')
     return render(request, 'create_realizar.html', {'form': form})
@@ -297,12 +294,7 @@ def realizar_detail(request, id_realizar):
         })
     form = RealizarForm(request.POST, instance=compra)
     if form.is_valid():
-        compra = form.save(commit=False)
-        compra.costo_total = compra.cantidad * compra.costo_unitario
-        compra.save()
-        # Actualizar el precio del catálogo con el precio real de esta compra
-        compra.insumo.costo_unitario = compra.costo_unitario
-        compra.insumo.save(update_fields=['costo_unitario'])
+        compra = form.save()
         messages.success(request, 'Compra actualizada correctamente.')
         return redirect('compras')
     return render(request, 'realizar_detail.html', {'compra': compra, 'form': form})
@@ -316,6 +308,5 @@ def deactivate_realizar(request, id_realizar):
         compra.deleted_at = timezone.now()
         compra.deleted_by = request.user
         compra.save()
-        compra.insumo.recalculate_stock()
         messages.success(request, 'Compra inhabilitada correctamente.')
     return redirect('compras')

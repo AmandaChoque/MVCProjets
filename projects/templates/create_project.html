@@ -81,6 +81,14 @@
               <div class="text-danger small mt-1">{% for err in form.cliente.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
             </div>
+            <div class="mb-3">
+              <label class="form-label">Monto Estimado (Bs.)</label>
+              {{ form.monto_total }}
+              {% if form.monto_total.errors %}
+              <div class="text-danger small mt-1">{% for err in form.monto_total.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+              <div class="form-text text-muted">Si registras un contrato, el monto se tomará de ahí automáticamente.</div>
+            </div>
           </div>
         </div>
       </div>
@@ -93,7 +101,7 @@
         <div class="form-check form-switch mb-0">
           <input class="form-check-input" type="checkbox" id="toggleContrato"
                  name="adjuntar_contrato" role="switch"
-                 {% if adjuntar_contrato %}checked{% else %}checked{% endif %}>
+                 {% if adjuntar_contrato %}checked{% endif %}>
           <label class="form-check-label small text-muted" for="toggleContrato">Registrar contrato ahora</label>
         </div>
       </div>
@@ -176,7 +184,11 @@
   const seccion = document.getElementById('seccionContrato');
 
   function actualizarSeccion() {
-    seccion.style.display = toggle.checked ? 'block' : 'none';
+    const visible = toggle.checked;
+    seccion.style.display = visible ? 'block' : 'none';
+    seccion.querySelectorAll('input, select, textarea').forEach(function (el) {
+      el.disabled = !visible;
+    });
   }
 
   toggle.addEventListener('change', actualizarSeccion);

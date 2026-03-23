@@ -48,6 +48,9 @@
         <i class="bi bi-arrow-left me-1"></i>Volver
       </a>
       {% if not es_instalador_tecnico %}
+      <a href="{% url 'project_view' project.id %}?pdf" target="_blank" class="btn btn-outline-danger btn-sm">
+        <i class="bi bi-file-earmark-pdf me-1"></i>Ficha PDF
+      </a>
       <a href="{% url 'project_detail' project.id %}" class="btn btn-primary btn-sm">
         <i class="bi bi-pencil me-1"></i>Editar
       </a>
@@ -327,9 +330,9 @@
                         <li><a class="dropdown-item" href="{% url 'requiere_detail' req.id %}">Editar</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
-                          <button class="dropdown-item text-danger"
+                          <button class="dropdown-item text-warning"
                             data-bs-toggle="modal" data-bs-target="#deleteInsumoModal"
-                            data-id="{{ req.id }}" data-nombre="{{ req.insumo.nombre }}">Eliminar</button>
+                            data-id="{{ req.id }}" data-nombre="{{ req.insumo.nombre }}" data-cantidad="{{ req.cantidad }}">Devolver al stock</button>
                         </li>
                       </ul>
                     </div>
@@ -503,22 +506,23 @@
 
 </main>
 
-<!-- Modal Eliminar Insumo -->
+<!-- Modal Devolver Insumo al Stock -->
 <div class="modal fade" id="deleteInsumoModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h6 class="modal-title">Confirmar Eliminación</h6>
+        <h6 class="modal-title">Devolver insumo al stock</h6>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        ¿Eliminar el insumo <strong id="insumoNombre"></strong> de este proyecto?
+        <p>¿Devolver <strong id="insumoCantidad"></strong> unidad(es) de <strong id="insumoNombre"></strong> al stock?</p>
+        <p class="text-muted small mb-0">El insumo se quitará del proyecto y el stock disponible aumentará.</p>
       </div>
       <div class="modal-footer">
         <form method="POST" id="deleteInsumoForm">
           {% csrf_token %}
           <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+          <button type="submit" class="btn btn-warning btn-sm">Devolver al stock</button>
         </form>
       </div>
     </div>
@@ -534,6 +538,7 @@
     deleteInsumoModal.addEventListener('show.bs.modal', function (e) {
       const btn = e.relatedTarget;
       document.getElementById('insumoNombre').textContent = btn.getAttribute('data-nombre');
+      document.getElementById('insumoCantidad').textContent = btn.getAttribute('data-cantidad');
       document.getElementById('deleteInsumoForm').action = `/insumos-proyecto/${btn.getAttribute('data-id')}/eliminar/`;
     });
   }

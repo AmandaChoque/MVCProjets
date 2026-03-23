@@ -40,6 +40,30 @@
           <!-- COLUMNA IZQUIERDA -->
           <div class="col-lg-6">
             <div class="mb-3">
+              <label class="form-label">Proyecto <span class="text-danger">*</span></label>
+              {{ form.proyecto }}
+              {% if form.proyecto.errors %}
+              <div class="text-danger small mt-1">
+                {% for err in form.proyecto.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </div>
+              {% endif %}
+              <div id="proyecto-info" class="mt-2 p-2 rounded border small" style="display:none; background:#f8f9fa;">
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted">Monto acordado:</span>
+                  <span class="fw-semibold">Bs. <span id="info-total">—</span></span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted">Ya pagado:</span>
+                  <span class="text-success fw-semibold">Bs. <span id="info-pagado">—</span></span>
+                </div>
+                <div class="d-flex justify-content-between border-top mt-1 pt-1">
+                  <span class="fw-semibold">Saldo pendiente:</span>
+                  <span class="fw-bold text-danger">Bs. <span id="info-saldo">—</span></span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mb-3">
               <label class="form-label">Monto (Bs.) <span class="text-danger">*</span></label>
               {{ form.monto }}
               {% if form.monto.errors %}
@@ -48,7 +72,10 @@
               </div>
               {% endif %}
             </div>
+          </div>
 
+          <!-- COLUMNA DERECHA -->
+          <div class="col-lg-6">
             <div class="mb-3">
               <label class="form-label">Fecha <span class="text-danger">*</span></label>
               {{ form.fecha }}
@@ -63,23 +90,10 @@
               <label class="form-label">Estado <span class="text-danger">*</span></label>
               {{ form.estado }}
             </div>
-          </div>
 
-          <!-- COLUMNA DERECHA -->
-          <div class="col-lg-6">
             <div class="mb-3">
               <label class="form-label">Tipo de Pago <span class="text-danger">*</span></label>
               {{ form.tipo_pago }}
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Proyecto <span class="text-danger">*</span></label>
-              {{ form.proyecto }}
-              {% if form.proyecto.errors %}
-              <div class="text-danger small mt-1">
-                {% for err in form.proyecto.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
-              </div>
-              {% endif %}
             </div>
           </div>
         </div>
@@ -104,6 +118,27 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+  const proyectosData = {{ proyectos_data|safe }};
+  const selectProyecto = document.getElementById('id_proyecto');
+  const infoBox = document.getElementById('proyecto-info');
+
+  function updateProyectoInfo() {
+    const val = selectProyecto.value;
+    if (val && proyectosData[val]) {
+      const d = proyectosData[val];
+      document.getElementById('info-total').textContent  = d.monto_total.toFixed(2);
+      document.getElementById('info-pagado').textContent = d.pagado.toFixed(2);
+      document.getElementById('info-saldo').textContent  = d.saldo.toFixed(2);
+      infoBox.style.display = 'block';
+    } else {
+      infoBox.style.display = 'none';
+    }
+  }
+
+  selectProyecto.addEventListener('change', updateProyectoInfo);
+  updateProyectoInfo();
+</script>
 <script>
   // Pintar de rojo los campos con errores del servidor
   document.querySelectorAll('.text-danger.small.mt-1').forEach(function (errorDiv) {
