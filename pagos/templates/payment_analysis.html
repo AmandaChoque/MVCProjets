@@ -46,7 +46,7 @@
   <!-- ======================= GRÁFICO ======================= -->
   <div class="card mb-3">
     <div class="card-header bg-light py-2">
-      <span class="fw-semibold small">Distribución de Pagos por Estado</span>
+      <span class="fw-semibold small">Distribución de Pagos por Tipo</span>
     </div>
     <div class="card-body text-center py-3">
       <img src="data:image/png;base64,{{ graphic }}" alt="Gráfico de Torta"
@@ -56,42 +56,6 @@
 
   <!-- ======================= TABLAS RESUMEN ======================= -->
   <div class="row g-3">
-
-    <div class="col-md-6">
-      <div class="card">
-        <div class="card-header bg-light py-2">
-          <span class="fw-semibold small">Conteo por Estado</span>
-        </div>
-        <div class="card-body p-0">
-          <table class="table table-sm table-hover align-middle small mb-0">
-            <thead class="table-light text-uppercase fw-semibold">
-              <tr>
-                <th>Estado del Pago</th>
-                <th class="text-center">Cantidad</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for status in payment_status_counts %}
-              <tr>
-                <td>
-                  {% if status.estado == 'pagado' %}
-                    <span class="badge bg-success">Pagado</span>
-                  {% else %}
-                    <span class="badge bg-warning text-dark">Pendiente</span>
-                  {% endif %}
-                </td>
-                <td class="text-center fw-semibold">{{ status.count }}</td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="2" class="text-center text-muted py-2">Sin datos</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
 
     <div class="col-md-6">
       <div class="card">
@@ -110,10 +74,10 @@
               {% for type in payment_type_counts %}
               <tr>
                 <td>
-                  {% if type.tipo_pago == 'completo' %}
-                    <span class="badge bg-primary">Completo</span>
+                  {% if type.tipo_pago == 'transferencia' %}
+                    <span class="badge bg-primary">Transferencia</span>
                   {% else %}
-                    <span class="badge bg-info text-dark">Parcial</span>
+                    <span class="badge bg-info text-dark">Efectivo</span>
                   {% endif %}
                 </td>
                 <td class="text-center fw-semibold">{{ type.count }}</td>

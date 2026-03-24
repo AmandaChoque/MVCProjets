@@ -33,25 +33,21 @@
             </div>
             <div class="col-md-6">
               <div class="row mb-2">
-                <div class="col-sm-5"><strong>Estado:</strong></div>
+                <div class="col-sm-5"><strong>Método de Pago:</strong></div>
                 <div class="col-sm-7">
-                  {% if payment.estado == 'pagado' %}
-                    <span class="badge bg-success">Pagado</span>
+                  {% if payment.tipo_pago == 'transferencia' %}
+                    <span class="badge bg-primary">Transferencia</span>
                   {% else %}
-                    <span class="badge bg-warning text-dark">Pendiente</span>
+                    <span class="badge bg-info text-dark">Efectivo</span>
                   {% endif %}
                 </div>
               </div>
+              {% if payment.numero_referencia %}
               <div class="row mb-2">
-                <div class="col-sm-5"><strong>Tipo de Pago:</strong></div>
-                <div class="col-sm-7">
-                  {% if payment.tipo_pago == 'completo' %}
-                    <span class="badge bg-primary">Completo</span>
-                  {% else %}
-                    <span class="badge bg-info text-dark">Parcial</span>
-                  {% endif %}
-                </div>
+                <div class="col-sm-5"><strong>N° Referencia:</strong></div>
+                <div class="col-sm-7">{{ payment.numero_referencia }}</div>
               </div>
+              {% endif %}
             </div>
           </div>
         </div>

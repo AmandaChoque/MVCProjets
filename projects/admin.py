@@ -43,8 +43,8 @@ class ClienteAdmin(admin.ModelAdmin):
 
 @admin.register(Pago)
 class PagoAdmin(admin.ModelAdmin):
-    list_display = ('id', 'monto', 'fecha', 'estado', 'tipo_pago', 'proyecto', 'activo', 'created')
-    list_filter = ('activo', 'estado', 'tipo_pago')
+    list_display = ('id', 'monto', 'fecha', 'tipo_pago', 'numero_referencia', 'proyecto', 'activo', 'created')
+    list_filter = ('activo', 'tipo_pago')
     search_fields = ('proyecto__nombre', 'proyecto__codigo')
     ordering = ('-fecha',)
     list_per_page = 20

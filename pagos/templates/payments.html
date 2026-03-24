@@ -24,7 +24,6 @@
     <div class="d-flex align-items-center gap-3">
       <form method="GET" action="{% url 'payments' %}" class="d-flex align-items-center">
         <input type="hidden" name="search_proyecto" value="{{ search_proyecto }}">
-        <input type="hidden" name="filter_estado" value="{{ filter_estado }}">
         <input type="hidden" name="filter_tipo" value="{{ filter_tipo }}">
         <input type="hidden" name="page" value="1">
 
@@ -55,7 +54,7 @@
       <form method="GET" action="{% url 'payments' %}" class="row g-2">
         <input type="hidden" name="per_page" value="{{ per_page }}">
 
-        <div class="col-md-4">
+        <div class="col-md-5">
           <input
             type="text"
             class="form-control form-control-sm"
@@ -66,18 +65,10 @@
         </div>
 
         <div class="col-md-3">
-          <select class="form-select form-select-sm" name="filter_estado">
-            <option value="">Estado</option>
-            <option value="pagado" {% if filter_estado == "pagado" %}selected{% endif %}>Pagado</option>
-            <option value="pendiente" {% if filter_estado == "pendiente" %}selected{% endif %}>Pendiente</option>
-          </select>
-        </div>
-
-        <div class="col-md-2">
           <select class="form-select form-select-sm" name="filter_tipo">
-            <option value="">Tipo</option>
-            <option value="parcial" {% if filter_tipo == "parcial" %}selected{% endif %}>Parcial</option>
-            <option value="completo" {% if filter_tipo == "completo" %}selected{% endif %}>Completo</option>
+            <option value="">Método de Pago</option>
+            <option value="efectivo"      {% if filter_tipo == "efectivo"      %}selected{% endif %}>Efectivo</option>
+            <option value="transferencia" {% if filter_tipo == "transferencia" %}selected{% endif %}>Transferencia</option>
           </select>
         </div>
 
@@ -85,7 +76,7 @@
           <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
         </div>
 
-        <div class="col-md-1">
+        <div class="col-md-2">
           <a href="{% url 'payments' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
         </div>
       </form>
@@ -101,8 +92,7 @@
           <th>Proyecto</th>
           <th>Monto (Bs.)</th>
           <th>Fecha</th>
-          <th>Estado</th>
-          <th>Tipo</th>
+          <th>Método</th>
           <th class="text-end" style="width: 60px;">Acciones</th>
         </tr>
       </thead>
@@ -111,22 +101,14 @@
         {% for payment in payments %}
         <tr>
           <td class="small fw-semibold">{{ payment.proyecto.nombre }}</td>
-          <td class="small">{{ payment.monto }}</td>
+          <td class="small">{{ payment.monto|floatformat:2 }}</td>
           <td class="small">{{ payment.fecha|date:"d/m/Y" }}</td>
 
           <td>
-            {% if payment.estado == 'pagado' %}
-              <span class="badge bg-success small">Pagado</span>
+            {% if payment.tipo_pago == 'transferencia' %}
+              <span class="badge bg-primary small">Transferencia</span>
             {% else %}
-              <span class="badge bg-warning text-dark small">Pendiente</span>
-            {% endif %}
-          </td>
-
-          <td>
-            {% if payment.tipo_pago == 'completo' %}
-              <span class="badge bg-primary small">Completo</span>
-            {% else %}
-              <span class="badge bg-info text-dark small">Parcial</span>
+              <span class="badge bg-info text-dark small">Efectivo</span>
             {% endif %}
           </td>
 
@@ -157,7 +139,7 @@
 
         {% empty %}
         <tr>
-          <td colspan="6" class="text-center text-muted py-3 small">
+          <td colspan="5" class="text-center text-muted py-3 small">
             No existen pagos registrados.
           </td>
         </tr>
@@ -173,7 +155,7 @@
 
       {% if payments.has_previous %}
       <li class="page-item">
-        <a class="page-link" href="?page={{ payments.previous_page_number }}&per_page={{ per_page }}&search_proyecto={{ search_proyecto }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}">
+        <a class="page-link" href="?page={{ payments.previous_page_number }}&per_page={{ per_page }}&search_proyecto={{ search_proyecto }}&filter_tipo={{ filter_tipo }}">
           Anterior
         </a>
       </li>
@@ -186,7 +168,7 @@
           <li class="page-item active"><span class="page-link">{{ num }}</span></li>
         {% elif num > payments.number|add:'-3' and num < payments.number|add:'3' %}
           <li class="page-item">
-            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&search_proyecto={{ search_proyecto }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}">
+            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&search_proyecto={{ search_proyecto }}&filter_tipo={{ filter_tipo }}">
               {{ num }}
             </a>
           </li>
@@ -195,7 +177,7 @@
 
       {% if payments.has_next %}
       <li class="page-item">
-        <a class="page-link" href="?page={{ payments.next_page_number }}&per_page={{ per_page }}&search_proyecto={{ search_proyecto }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}">
+        <a class="page-link" href="?page={{ payments.next_page_number }}&per_page={{ per_page }}&search_proyecto={{ search_proyecto }}&filter_tipo={{ filter_tipo }}">
           Siguiente
         </a>
       </li>

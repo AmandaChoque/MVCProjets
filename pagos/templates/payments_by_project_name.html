@@ -7,15 +7,15 @@
   <div class="mb-2 d-flex justify-content-between align-items-center">
     <h5 class="fw-semibold text-secondary mb-0">Reporte de Pagos</h5>
     <div class="d-flex gap-2">
-      <a href="?pdf=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}"
+      <a href="?pdf=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}&filter_tipo={{ filter_tipo }}"
          target="_blank" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-file-earmark-pdf me-1"></i>Vista previa PDF
       </a>
-      <a href="?pdf=1&download=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}"
+      <a href="?pdf=1&download=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}&filter_tipo={{ filter_tipo }}"
          class="btn btn-outline-danger btn-sm">
         <i class="bi bi-download me-1"></i>PDF
       </a>
-      <a href="?excel=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}"
+      <a href="?excel=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}&filter_tipo={{ filter_tipo }}"
          class="btn btn-outline-success btn-sm">
         <i class="bi bi-file-earmark-excel me-1"></i>Excel
       </a>
@@ -54,20 +54,11 @@
         </div>
 
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Estado del pago</label>
-          <select class="form-select form-select-sm" name="filter_estado">
-            <option value="">Todos</option>
-            <option value="pagado" {% if filter_estado == "pagado" %}selected{% endif %}>Pagado</option>
-            <option value="pendiente" {% if filter_estado == "pendiente" %}selected{% endif %}>Pendiente</option>
-          </select>
-        </div>
-
-        <div class="col-md-1">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Tipo de pago</label>
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Método de pago</label>
           <select class="form-select form-select-sm" name="filter_tipo">
             <option value="">Todos</option>
-            <option value="parcial" {% if filter_tipo == "parcial" %}selected{% endif %}>Parcial</option>
-            <option value="completo" {% if filter_tipo == "completo" %}selected{% endif %}>Completo</option>
+            <option value="efectivo"      {% if filter_tipo == "efectivo"      %}selected{% endif %}>Efectivo</option>
+            <option value="transferencia" {% if filter_tipo == "transferencia" %}selected{% endif %}>Transferencia</option>
           </select>
         </div>
 
@@ -111,9 +102,9 @@
     <div class="col-md-3">
       <div class="card border-0 shadow-sm h-100">
         <div class="card-body py-3">
-          <div class="text-muted small text-uppercase fw-semibold mb-1">Monto Pagado</div>
-          <div class="fs-4 fw-bold text-success">Bs. {{ monto_pagado|floatformat:2 }}</div>
-          <div class="small text-muted">{{ count_pagado }} pago(s) confirmados</div>
+          <div class="text-muted small text-uppercase fw-semibold mb-1">En Efectivo</div>
+          <div class="fs-4 fw-bold text-info">Bs. {{ monto_efectivo|floatformat:2 }}</div>
+          <div class="small text-muted">{{ count_efectivo }} pago(s)</div>
         </div>
       </div>
     </div>
@@ -121,9 +112,9 @@
     <div class="col-md-3">
       <div class="card border-0 shadow-sm h-100">
         <div class="card-body py-3">
-          <div class="text-muted small text-uppercase fw-semibold mb-1">Monto Pendiente</div>
-          <div class="fs-4 fw-bold text-warning">Bs. {{ monto_pendiente|floatformat:2 }}</div>
-          <div class="small text-muted">{{ count_pendiente }} pago(s) pendientes</div>
+          <div class="text-muted small text-uppercase fw-semibold mb-1">Transferencia</div>
+          <div class="fs-4 fw-bold text-primary">Bs. {{ monto_transferencia|floatformat:2 }}</div>
+          <div class="small text-muted">{{ count_transferencia }} pago(s)</div>
         </div>
       </div>
     </div>
@@ -148,7 +139,6 @@
             <th>Monto Total Proy. (Bs.)</th>
             <th>Monto Pago (Bs.)</th>
             <th>Fecha</th>
-            <th>Estado Pago</th>
             <th>Tipo Pago</th>
           </tr>
         </thead>
@@ -188,24 +178,16 @@
             <td>{{ payment.fecha|date:"d/m/Y" }}</td>
 
             <td>
-              {% if payment.estado == 'pagado' %}
-                <span class="badge bg-success">Pagado</span>
+              {% if payment.tipo_pago == 'transferencia' %}
+                <span class="badge bg-primary">Transferencia</span>
               {% else %}
-                <span class="badge bg-warning text-dark">Pendiente</span>
-              {% endif %}
-            </td>
-
-            <td>
-              {% if payment.tipo_pago == 'completo' %}
-                <span class="badge bg-primary">Completo</span>
-              {% else %}
-                <span class="badge bg-info text-dark">Parcial</span>
+                <span class="badge bg-info text-dark">Efectivo</span>
               {% endif %}
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="9" class="text-center text-muted py-3 small">
+            <td colspan="8" class="text-center text-muted py-3 small">
               No se encontraron pagos con los filtros seleccionados.
             </td>
           </tr>
@@ -217,7 +199,7 @@
           <tr>
             <td colspan="5" class="text-end text-muted">Totales:</td>
             <td class="text-end">Bs. {{ total_monto|floatformat:2 }}</td>
-            <td colspan="3"></td>
+            <td colspan="2"></td>
           </tr>
         </tfoot>
         {% endif %}

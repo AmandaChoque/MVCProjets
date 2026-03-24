@@ -205,7 +205,7 @@ def project_report(request):
     ).order_by('-fecha', '-id').values('porcentaje')[:1]
 
     projects = Proyecto.objects.filter(activo=True).select_related('cliente').annotate(
-        monto_cobrado=Sum('pagos__monto', filter=Q(pagos__activo=True, pagos__estado='pagado')),
+        monto_cobrado=Sum('pagos__monto', filter=Q(pagos__activo=True)),
         ultimo_avance=Subquery(ultimo_avance_qs),
     ).order_by('-id')
 
@@ -220,7 +220,7 @@ def project_report(request):
 
     agg = projects.aggregate(
         total_monto=Sum('monto_total'),
-        total_cobrado=Sum('pagos__monto', filter=Q(pagos__activo=True, pagos__estado='pagado')),
+        total_cobrado=Sum('pagos__monto', filter=Q(pagos__activo=True)),
     )
     monto_total          = agg['total_monto'] or 0
     total_cobrado        = agg['total_cobrado'] or 0
@@ -903,7 +903,7 @@ def dashboard_home(request):
 
     # ── Finanzas ───────────────────────────────────────────────────────────────
     total_facturado = proyectos_qs.aggregate(total=Sum('monto_total'))['total'] or 0
-    total_cobrado   = Pago.objects.filter(activo=True, estado='pagado').aggregate(total=Sum('monto'))['total'] or 0
+    total_cobrado   = Pago.objects.filter(activo=True).aggregate(total=Sum('monto'))['total'] or 0
     por_cobrar      = total_facturado - total_cobrado
 
     # ── Entidades ──────────────────────────────────────────────────────────────

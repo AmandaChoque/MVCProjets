@@ -159,7 +159,7 @@ class Proyecto(AuditModel):
         """
         Actualiza el estado de pago del proyecto basado en los pagos realizados.
         """
-        total_pagado = self.pagos.filter(estado='pagado', activo=True).aggregate(total_pagado=Sum('monto'))['total_pagado'] or 0
+        total_pagado = self.pagos.filter(activo=True).aggregate(total_pagado=Sum('monto'))['total_pagado'] or 0
 
         if total_pagado >= self.monto_total:
             self.estado_pago = 'pagado'
@@ -187,6 +187,7 @@ class HistorialPago(models.Model):
     class Meta:
         verbose_name = 'Historial Pago'
         verbose_name_plural = 'Historiales de Pagos'
+        db_table = 'projects_historialpago'
 
     def __str__(self):
         return f"Historial de Pago - Modificado en {self.fecha_modificacion}"

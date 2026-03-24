@@ -5,38 +5,30 @@ from projects.models import AuditModel, Proyecto, Contrato
 
 
 class Pago(AuditModel):
-    PAYMENT_STATUS_CHOICES = [
-        ('pagado',    'Pagado'),
-        ('pendiente', 'Pendiente'),
-    ]
     PAYMENT_TYPE_CHOICES = [
-        ('parcial',  'Parcial'),
-        ('completo', 'Completo'),
+        ('efectivo',      'Efectivo'),
+        ('transferencia', 'Transferencia'),
     ]
 
-    monto     = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Monto")
-    fecha     = models.DateField(verbose_name="Fecha Pago")
-    estado    = models.CharField(max_length=10, choices=PAYMENT_STATUS_CHOICES, default='pagado', verbose_name="Estado Pago")
-    tipo_pago = models.CharField(max_length=10, choices=PAYMENT_TYPE_CHOICES, default='parcial', verbose_name="Tipo Pago")
-    proyecto  = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='pagos', verbose_name="Proyecto")
+    monto              = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto")
+    fecha              = models.DateField(db_index=True, verbose_name="Fecha Pago")
+    tipo_pago          = models.CharField(max_length=15, choices=PAYMENT_TYPE_CHOICES, default='efectivo', verbose_name="Método de Pago")
+    numero_referencia  = models.CharField(max_length=100, blank=True, default='', verbose_name="N° Referencia / Comprobante")
+    proyecto           = models.ForeignKey(Proyecto, on_delete=models.PROTECT, related_name='pagos', verbose_name="Proyecto")
 
     class Meta:
         verbose_name_plural = 'Pagos'
         db_table = 'projects_pago'
+        ordering = ['-fecha']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(monto__gt=0),
+                name='pago_monto_positivo',
+            )
+        ]
 
     def __str__(self):
-        return f"Pago de {self.monto} - {self.estado}"
-
-    def is_payment_complete(self):
-        return self.monto >= self.proyecto.monto_total
-
-    def update_payment_status(self):
-        if self.monto >= self.proyecto.monto_total:
-            self.estado = 'pagado'
-        else:
-            self.estado = 'pendiente'
-        self.save()
-        self.proyecto.update_payment_status()
+        return f"Pago de {self.monto} ({self.get_tipo_pago_display()})"
 
 
 class PagoEmpleado(AuditModel):
@@ -48,11 +40,11 @@ class PagoEmpleado(AuditModel):
     ]
 
     contrato = models.ForeignKey(
-        Contrato, on_delete=models.CASCADE,
+        Contrato, on_delete=models.PROTECT,
         related_name='pagos', verbose_name="Contrato"
     )
     monto    = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto (Bs.)")
-    fecha    = models.DateField(verbose_name="Fecha de Pago")
+    fecha    = models.DateField(db_index=True, verbose_name="Fecha de Pago")
     concepto = models.CharField(max_length=20, choices=CONCEPTO_CHOICES, verbose_name="Concepto")
 
     class Meta:
@@ -60,15 +52,27 @@ class PagoEmpleado(AuditModel):
         verbose_name_plural = 'Pagos a Empleados'
         ordering = ['-fecha']
         db_table = 'projects_pagoempleado'
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(monto__gt=0),
+                name='pagoempleado_monto_positivo',
+            ),
+            models.UniqueConstraint(
+                fields=['contrato'],
+                condition=models.Q(activo=True, concepto='saldo_final'),
+                name='unique_pago_empleado_saldo_final_activo',
+            ),
+        ]
 
     def __str__(self):
         return f"Bs. {self.monto} — {self.concepto} ({self.fecha})"
 
 
-# Señal: actualizar estado_pago del proyecto al guardar un Pago
-from django.db.models.signals import post_save
+# Señal: actualizar estado_pago del proyecto al guardar o eliminar un Pago
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 
 @receiver(post_save, sender=Pago)
+@receiver(post_delete, sender=Pago)
 def update_project_payment_status(sender, instance, **kwargs):
     instance.proyecto.update_payment_status()

@@ -29,7 +29,6 @@ from .forms import PaymentForm, PagoEmpleadoForm
 @login_required
 def payment_list(request):
     search_proyecto = request.GET.get('search_proyecto', '')
-    filter_estado   = request.GET.get('filter_estado', '')
     filter_tipo     = request.GET.get('filter_tipo', '')
     page     = request.GET.get('page', 1)
     per_page = request.GET.get('per_page', 10)
@@ -43,11 +42,9 @@ def payment_list(request):
     except ValueError:
         per_page = 10
 
-    payments = Pago.objects.filter(activo=True).order_by('-id')
+    payments = Pago.objects.filter(activo=True).select_related('proyecto').order_by('-fecha')
     if search_proyecto:
         payments = payments.filter(proyecto__nombre__icontains=search_proyecto)
-    if filter_estado:
-        payments = payments.filter(estado=filter_estado)
     if filter_tipo:
         payments = payments.filter(tipo_pago=filter_tipo)
 
@@ -62,7 +59,6 @@ def payment_list(request):
         'payments': payments_page,
         'total_payments': total_payments,
         'search_proyecto': search_proyecto,
-        'filter_estado': filter_estado,
         'filter_tipo': filter_tipo,
         'per_page': per_page,
     })
@@ -72,7 +68,7 @@ def _proyectos_data():
     proyectos = Proyecto.objects.filter(activo=True).prefetch_related('pagos')
     data = {}
     for p in proyectos:
-        pagado = p.pagos.filter(activo=True, estado='pagado').aggregate(t=Sum('monto'))['t'] or 0
+        pagado = p.pagos.filter(activo=True).aggregate(t=Sum('monto'))['t'] or 0
         data[str(p.id)] = {
             'monto_total': float(p.monto_total),
             'pagado': float(pagado),
@@ -98,19 +94,17 @@ def create_payment(request):
 @cargo_required(*ROLES_ADMIN_SEC)
 def payment_detail(request, id_payment):
     payment = get_object_or_404(Pago, pk=id_payment, activo=True)
-    proyectos_data = _proyectos_data()
     if request.method == 'GET':
         return render(request, 'payment_detail.html', {
             'payment': payment,
-            'form': PaymentForm(instance=payment),
-            'proyectos_data': proyectos_data,
+            'form': PaymentForm(instance=payment, edit_mode=True),
         })
-    form = PaymentForm(request.POST, instance=payment)
+    form = PaymentForm(request.POST, instance=payment, edit_mode=True)
     if form.is_valid():
         form.save()
         messages.success(request, f"El pago del proyecto '{payment.proyecto.nombre}' fue actualizado exitosamente.")
         return redirect('payments')
-    return render(request, 'payment_detail.html', {'payment': payment, 'form': form, 'proyectos_data': proyectos_data, 'error': 'Error al actualizar el pago'})
+    return render(request, 'payment_detail.html', {'payment': payment, 'form': form, 'error': 'Error al actualizar el pago'})
 
 
 @login_required
@@ -134,13 +128,12 @@ def deactivate_payment(request, id_payment):
 
 @login_required
 def filter_payments_by_project_name(request):
-    project_name  = request.GET.get('project_name', '')
-    start_date    = request.GET.get('start_date', '')
-    end_date      = request.GET.get('end_date', '')
-    filter_estado = request.GET.get('filter_estado', '')
-    filter_tipo   = request.GET.get('filter_tipo', '')
+    project_name = request.GET.get('project_name', '')
+    start_date   = request.GET.get('start_date', '')
+    end_date     = request.GET.get('end_date', '')
+    filter_tipo  = request.GET.get('filter_tipo', '')
 
-    projects = Proyecto.objects.values('nombre').distinct()
+    projects = Proyecto.objects.filter(activo=True).values('nombre').distinct()
     payments = Pago.objects.filter(activo=True).select_related('proyecto', 'proyecto__cliente')
 
     if project_name:
@@ -149,16 +142,14 @@ def filter_payments_by_project_name(request):
         payments = payments.filter(fecha__gte=start_date)
     if end_date:
         payments = payments.filter(fecha__lte=end_date)
-    if filter_estado:
-        payments = payments.filter(estado=filter_estado)
     if filter_tipo:
         payments = payments.filter(tipo_pago=filter_tipo)
 
-    total_monto      = payments.aggregate(total=Sum('monto'))['total'] or 0
-    monto_pagado     = payments.filter(estado='pagado').aggregate(total=Sum('monto'))['total'] or 0
-    monto_pendiente  = payments.filter(estado='pendiente').aggregate(total=Sum('monto'))['total'] or 0
-    count_pagado     = payments.filter(estado='pagado').count()
-    count_pendiente  = payments.filter(estado='pendiente').count()
+    total_monto        = payments.aggregate(total=Sum('monto'))['total'] or 0
+    monto_efectivo     = payments.filter(tipo_pago='efectivo').aggregate(total=Sum('monto'))['total'] or 0
+    monto_transferencia = payments.filter(tipo_pago='transferencia').aggregate(total=Sum('monto'))['total'] or 0
+    count_efectivo     = payments.filter(tipo_pago='efectivo').count()
+    count_transferencia = payments.filter(tipo_pago='transferencia').count()
 
     context = {
         'payments': payments,
@@ -166,13 +157,12 @@ def filter_payments_by_project_name(request):
         'project_name': project_name,
         'start_date': start_date,
         'end_date': end_date,
-        'filter_estado': filter_estado,
         'filter_tipo': filter_tipo,
         'total_monto': total_monto,
-        'monto_pagado': monto_pagado,
-        'monto_pendiente': monto_pendiente,
-        'count_pagado': count_pagado,
-        'count_pendiente': count_pendiente,
+        'monto_efectivo': monto_efectivo,
+        'monto_transferencia': monto_transferencia,
+        'count_efectivo': count_efectivo,
+        'count_transferencia': count_transferencia,
         'now': timezone.now(),
         'generado_por': request.user.get_full_name() or request.user.username,
     }
@@ -189,7 +179,7 @@ def filter_payments_by_project_name(request):
         return response
 
     if 'excel' in request.GET:
-        NUM_COLS = 8
+        NUM_COLS = 7
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = 'Pagos Clientes'
@@ -228,11 +218,10 @@ def filter_payments_by_project_name(request):
         # Fila 2 — generado por + filtros
         gen_por  = request.user.get_full_name() or request.user.username
         info_str = f'Generado por: {gen_por}  |  Fecha: {timezone.now().strftime("%d/%m/%Y %H:%M")}'
-        if project_name:  info_str += f'  |  Proyecto: {project_name}'
-        if start_date:    info_str += f'  |  Desde: {start_date}'
-        if end_date:      info_str += f'  |  Hasta: {end_date}'
-        if filter_estado: info_str += f'  |  Estado: {filter_estado}'
-        if filter_tipo:   info_str += f'  |  Tipo: {filter_tipo}'
+        if project_name: info_str += f'  |  Proyecto: {project_name}'
+        if start_date:   info_str += f'  |  Desde: {start_date}'
+        if end_date:     info_str += f'  |  Hasta: {end_date}'
+        if filter_tipo:  info_str += f'  |  Tipo: {filter_tipo}'
         ws.append([info_str])
         ws.merge_cells(f'A2:{openpyxl.utils.get_column_letter(NUM_COLS)}2')
         ws['A2'].font      = info_font
@@ -246,7 +235,7 @@ def filter_payments_by_project_name(request):
 
         # Fila 4 — encabezados
         headers = ['Proyecto', 'Cliente', 'Estado Proyecto', 'Monto Total Proy. (Bs.)',
-                   'Monto Pago (Bs.)', 'Fecha', 'Estado Pago', 'Tipo de Pago']
+                   'Monto Pago (Bs.)', 'Fecha', 'Tipo de Pago']
         ws.append(headers)
         for cell in ws[4]:
             cell.font = header_font; cell.fill = header_fill
@@ -265,7 +254,6 @@ def filter_payments_by_project_name(request):
                 float(p.proyecto.monto_total),
                 float(p.monto),
                 p.fecha.strftime('%d/%m/%Y') if p.fecha else '—',
-                p.get_estado_display(),
                 p.get_tipo_pago_display(),
             ])
             row_fill = alt_fill if i % 2 == 0 else None
@@ -283,7 +271,7 @@ def filter_payments_by_project_name(request):
 
         # Fila de totales
         total_row = last_row + 1
-        ws.append(['', 'TOTAL', '', '', float(total_monto), '', '', ''])
+        ws.append(['', 'TOTAL', '', '', float(total_monto), '', ''])
         for j, cell in enumerate(ws[total_row], start=1):
             cell.font = total_font; cell.fill = total_fill; cell.border = total_border
             if j in (4, 5):
@@ -293,7 +281,7 @@ def filter_payments_by_project_name(request):
         ws.row_dimensions[total_row].height = 18
 
         # Anchos de columna
-        col_widths = [30, 25, 16, 20, 18, 12, 14, 16]
+        col_widths = [30, 25, 16, 20, 18, 12, 16]
         for col_idx, width in enumerate(col_widths, start=1):
             ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = width
 
@@ -314,7 +302,7 @@ def filter_payments_by_project_name(request):
 def payment_analysis(request):
     start_date = request.GET.get('start_date')
     end_date   = request.GET.get('end_date')
-    payments   = Pago.objects.all()
+    payments   = Pago.objects.filter(activo=True)
 
     if start_date:
         try:
@@ -327,14 +315,13 @@ def payment_analysis(request):
         except ValueError:
             pass
 
-    payment_status_counts = payments.values('estado').annotate(count=Count('estado'))
-    payment_type_counts   = payments.values('tipo_pago').annotate(count=Count('tipo_pago'))
+    payment_type_counts = payments.values('tipo_pago').annotate(count=Count('tipo_pago'))
 
-    status_labels = [s['estado'] for s in payment_status_counts]
-    status_values = [s['count'] for s in payment_status_counts]
+    type_labels = [t['tipo_pago'] for t in payment_type_counts]
+    type_values = [t['count'] for t in payment_type_counts]
 
     fig, ax = plt.subplots()
-    ax.pie(status_values, labels=status_labels, autopct='%1.1f%%', startangle=90)
+    ax.pie(type_values, labels=type_labels, autopct='%1.1f%%', startangle=90)
     ax.axis('equal')
     buf = io.BytesIO()
     plt.savefig(buf, format='png')
@@ -344,7 +331,6 @@ def payment_analysis(request):
 
     return render(request, 'payment_analysis.html', {
         'graphic': graphic,
-        'payment_status_counts': payment_status_counts,
         'payment_type_counts': payment_type_counts,
         'start_date': start_date,
         'end_date': end_date,
@@ -421,7 +407,7 @@ def create_pago_empleado(request, id_contrato):
             'contrato': contrato,
             'resumen': resumen,
         })
-    form = PagoEmpleadoForm(request.POST)
+    form = PagoEmpleadoForm(request.POST, contrato=contrato)
     if form.is_valid():
         pago = form.save(commit=False)
         pago.contrato = contrato
@@ -439,12 +425,12 @@ def pago_empleado_detail(request, id_pago):
     resumen  = _contrato_resumen(contrato, excluir_pago_id=pago.id)
     if request.method == 'GET':
         return render(request, 'pago_empleado_detail.html', {
-            'form': PagoEmpleadoForm(instance=pago),
+            'form': PagoEmpleadoForm(instance=pago, contrato=contrato, excluir_pago_id=pago.id),
             'pago': pago,
             'contrato': contrato,
             'resumen': resumen,
         })
-    form = PagoEmpleadoForm(request.POST, instance=pago)
+    form = PagoEmpleadoForm(request.POST, instance=pago, contrato=contrato, excluir_pago_id=pago.id)
     if form.is_valid():
         form.save()
         messages.success(request, 'Pago actualizado correctamente.')

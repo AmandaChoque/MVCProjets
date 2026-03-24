@@ -93,11 +93,10 @@
           <a href="{% url 'project_view' contrato.proyecto.id %}" class="btn btn-outline-secondary">Cancelar</a>
           <div class="d-flex gap-2">
             {% if es_admin %}
-            <form method="POST" action="{% url 'pago_empleado_deactivate' pago.id %}" class="d-inline"
-                  onsubmit="return confirm('¿Eliminar este pago?')">
-              {% csrf_token %}
-              <button type="submit" class="btn btn-outline-danger">Eliminar</button>
-            </form>
+            <button type="button" class="btn btn-outline-danger"
+                    data-bs-toggle="modal" data-bs-target="#deleteModal">
+              Eliminar
+            </button>
             {% endif %}
             <button class="btn btn-primary px-4" type="submit">Guardar Cambios</button>
           </div>
@@ -106,6 +105,30 @@
     </div>
   </div>
 </main>
+
+{% if es_admin %}
+<div class="modal fade" id="deleteModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Confirmar Eliminación</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        ¿Está seguro que desea eliminar el pago de
+        <strong>Bs. {{ pago.monto|floatformat:2 }}</strong> ({{ pago.get_concepto_display }})?
+      </div>
+      <div class="modal-footer">
+        <form method="POST" action="{% url 'pago_empleado_deactivate' pago.id %}">
+          {% csrf_token %}
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
