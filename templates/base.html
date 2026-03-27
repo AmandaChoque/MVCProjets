@@ -320,6 +320,12 @@
                   <i class="bi bi-person-plus-fill me-2"></i>Crear
                 </a>
               </li>
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'employee_workload' %}active-link{% endif %}"
+                   href="{% url 'employee_workload' %}">
+                  <i class="bi bi-bar-chart-steps me-2"></i>Carga de Trabajo
+                </a>
+              </li>
             </ul>
           </div>
         </li>
@@ -333,11 +339,11 @@
 
         <li class="nav-item">
           <a class="nav-link" data-bs-toggle="collapse" href="#insumoSubmenu"
-             aria-expanded="{% if '/insumos' in request.path %}true{% else %}false{% endif %}">
+             aria-expanded="{% if '/insumos' in request.path or request.resolver_match.url_name == 'inventario_report' %}true{% else %}false{% endif %}">
             <i class="bi bi-box-seam me-2"></i>Insumos
             <i class="bi bi-chevron-down chevron"></i>
           </a>
-          <div class="collapse submenu {% if '/insumos' in request.path %}show{% endif %}" id="insumoSubmenu">
+          <div class="collapse submenu {% if '/insumos' in request.path or request.resolver_match.url_name == 'inventario_report' %}show{% endif %}" id="insumoSubmenu">
             <ul class="nav flex-column ms-2">
               <li>
                 <a class="nav-link {% if request.resolver_match.url_name == 'insumos' %}active-link{% endif %}"
@@ -349,6 +355,12 @@
                 <a class="nav-link {% if request.resolver_match.url_name == 'create_insumo' %}active-link{% endif %}"
                    href="{% url 'create_insumo' %}">
                   <i class="bi bi-plus-circle me-2"></i>Nuevo insumo
+                </a>
+              </li>
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'inventario_report' %}active-link{% endif %}"
+                   href="{% url 'inventario_report' %}">
+                  <i class="bi bi-file-earmark-bar-graph me-2"></i>Reporte
                 </a>
               </li>
             </ul>
@@ -585,17 +597,15 @@
       }
 
       function doLogout() {
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]');
+        const csrfValue = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = '/signout/';
-        if (csrfToken) {
-          const input = document.createElement('input');
-          input.type = 'hidden';
-          input.name = 'csrfmiddlewaretoken';
-          input.value = csrfToken.value;
-          form.appendChild(input);
-        }
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'csrfmiddlewaretoken';
+        input.value = csrfValue;
+        form.appendChild(input);
         document.body.appendChild(form);
         form.submit();
       }

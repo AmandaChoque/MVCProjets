@@ -441,7 +441,7 @@
               <table class="table table-sm align-middle small mb-0">
                 <thead class="table-light text-uppercase fw-semibold" style="font-size:0.7rem;">
                   <tr>
-                    <th>Fecha</th><th>Concepto</th><th class="text-end">Monto (Bs.)</th>
+                    <th>Fecha</th><th>Concepto</th><th>Método</th><th class="text-end">Monto (Bs.)</th>
                     {% if es_admin %}<th class="text-end" style="width:60px;">Acción</th>{% endif %}
                   </tr>
                 </thead>
@@ -450,6 +450,13 @@
                   <tr>
                     <td>{{ pago.fecha|date:"d/m/Y" }}</td>
                     <td>{{ pago.concepto }}</td>
+                    <td>
+                      {% if pago.tipo_pago == 'transferencia' %}
+                      <span class="badge bg-info text-dark">Transferencia</span>
+                      {% else %}
+                      <span class="badge bg-secondary">Efectivo</span>
+                      {% endif %}
+                    </td>
                     <td class="text-end fw-semibold">{{ pago.monto|floatformat:2 }}</td>
                     {% if es_admin %}
                     <td class="text-end"><a href="{% url 'pago_empleado_detail' pago.id %}" class="btn btn-sm btn-light py-0">Editar</a></td>
@@ -486,7 +493,7 @@
               <tbody>
                 {% for h in historial_monto %}
                 <tr>
-                  <td class="px-3 text-muted">{{ h.created|date:"d/m/Y H:i" }}</td>
+                  <td class="px-3 text-muted">{{ h.fecha_modificacion|date:"d/m/Y H:i" }}</td>
                   <td class="text-end text-danger">{{ h.monto_anterior|floatformat:2 }}</td>
                   <td class="text-end text-success fw-semibold">{{ h.monto_actual|floatformat:2 }}</td>
                   <td class="text-muted">{{ h.motivo_cambio }}</td>

@@ -9,7 +9,7 @@ from django.http import HttpResponse, JsonResponse
 from django.db import IntegrityError
 
 from .form import ProjectForm, EmpleadoForm, ClienteForm, ProgresoForm, ContratoEmpleadoForm, ContratoProyectoForm
-from .models import Proyecto, Empleado, Cliente, Progreso, Contrato, HistorialPago
+from .models import Proyecto, Empleado, Cliente, Progreso, Contrato, HistorialPresupuesto
 from inventario.models import Insumo, Requiere
 from pagos.models import Pago, PagoEmpleado
 from django.contrib.auth.decorators import login_required
@@ -21,7 +21,10 @@ from xhtml2pdf import pisa
 import matplotlib.pyplot as plt
 import io
 import urllib, base64
-from django.db.models import Q, Count, Sum, OuterRef, Subquery
+from django.db.models import Q, Count, Sum, OuterRef, Subquery, F
+from django.db.models.functions import TruncMonth
+import json
+from datetime import timedelta
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
@@ -104,6 +107,21 @@ def cambiar_contrasena(request):
     return render(request, 'cambiar_contrasena.html', {'form': form})
 
 
+def csrf_failure(request, reason=""):
+    """
+    Vista personalizada para fallos de CSRF.
+    En lugar de mostrar la página de error de Django, redirige al login
+    con un mensaje claro. Ocurre típicamente cuando la sesión expiró y
+    el usuario intenta enviar un formulario con un token antiguo.
+    """
+    messages.error(
+        request,
+        "Tu sesión expiró o la página quedó desactualizada. "
+        "Por favor inicia sesión nuevamente."
+    )
+    return redirect('signin')
+
+
 @login_required
 def extend_session(request):
     """
@@ -146,48 +164,66 @@ def reporte_analisis_view(request):
 @cargo_required(*ROLES_ADMIN_SEC)
 def project_analysis(request):
     projects = Proyecto.objects.filter(activo=True)
+    total = projects.count()
 
-    project_counts = {
+    if total == 0:
+        return render(request, 'project_analysis.html', {'message': "No existen proyectos registrados."})
+
+    # ── Por tipo ──────────────────────────────────────────────────────────────
+    tipo_counts = {
         item['tipo_proyecto']: item['total']
         for item in projects.values('tipo_proyecto').annotate(total=Count('tipo_proyecto'))
     }
-    instalacion_count   = project_counts.get('instalacion_nueva', 0)
-    ampliacion_count    = project_counts.get('ampliacion', 0)
-    mantenimiento_count = project_counts.get('mantenimiento', 0)
-    emergencia_count    = project_counts.get('emergencia', 0)
+    instalacion_count   = tipo_counts.get('instalacion_nueva', 0)
+    ampliacion_count    = tipo_counts.get('ampliacion', 0)
+    mantenimiento_count = tipo_counts.get('mantenimiento', 0)
+    emergencia_count    = tipo_counts.get('emergencia', 0)
 
-    sizes = [instalacion_count, ampliacion_count, mantenimiento_count, emergencia_count]
+    # ── Por estado del proyecto ───────────────────────────────────────────────
+    estado_counts = {
+        item['estado_proyecto']: item['total']
+        for item in projects.values('estado_proyecto').annotate(total=Count('estado_proyecto'))
+    }
+    pendiente_count   = estado_counts.get('pendiente', 0)
+    en_progreso_count = estado_counts.get('en_progreso', 0)
+    completado_count  = estado_counts.get('completado', 0)
 
-    if sum(sizes) == 0:
-        return render(request, 'project_analysis.html', {
-            'message': "No existen proyectos registrados.",
-            'instalacion_count': 0, 'ampliacion_count': 0,
-            'mantenimiento_count': 0, 'emergencia_count': 0,
-        })
+    # ── Por estado de pago ────────────────────────────────────────────────────
+    pago_counts = {
+        item['estado_pago']: item['total']
+        for item in projects.values('estado_pago').annotate(total=Count('estado_pago'))
+    }
+    no_pagado_count = pago_counts.get('no_pagado', 0)
+    parcial_count   = pago_counts.get('parcial', 0)
+    pagado_count    = pago_counts.get('pagado', 0)
 
-    labels  = ['Instalación Nueva', 'Ampliación', 'Mantenimiento', 'Emergencia']
-    colors  = ['#66b3ff', '#99ff99', '#ffcc99', '#ff9999']
-    # Solo explotar segmentos con valor > 0
-    explode = tuple(0.05 if s > 0 else 0 for s in sizes)
-
-    plt.figure(figsize=(6, 6))
-    plt.pie(sizes, explode=explode, labels=labels, colors=colors, autopct='%1.1f%%', shadow=True, startangle=140)
-    plt.axis('equal')
-
-    buffer = io.BytesIO()
-    plt.savefig(buffer, format='png')
-    buffer.seek(0)
-    image_png = buffer.getvalue()
-    buffer.close()
-    plt.close()
-    graphic = base64.b64encode(image_png).decode('utf-8')
+    # ── Proyectos por mes (últimos 12 meses) ──────────────────────────────────
+    MESES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+    doce_meses_atras = timezone.now() - timedelta(days=365)
+    monthly_qs = (
+        projects.filter(created__gte=doce_meses_atras)
+        .annotate(mes=TruncMonth('created'))
+        .values('mes')
+        .annotate(total=Count('id'))
+        .order_by('mes')
+    )
+    monthly_labels = [f"{MESES_ES[m['mes'].month - 1]} {m['mes'].year}" for m in monthly_qs]
+    monthly_values = [m['total'] for m in monthly_qs]
 
     context = {
-        'graphic': graphic,
+        'total': total,
         'instalacion_count': instalacion_count,
         'ampliacion_count': ampliacion_count,
         'mantenimiento_count': mantenimiento_count,
         'emergencia_count': emergencia_count,
+        'pendiente_count': pendiente_count,
+        'en_progreso_count': en_progreso_count,
+        'completado_count': completado_count,
+        'no_pagado_count': no_pagado_count,
+        'parcial_count': parcial_count,
+        'pagado_count': pagado_count,
+        'monthly_labels': json.dumps(monthly_labels),
+        'monthly_values': json.dumps(monthly_values),
     }
     return render(request, 'project_analysis.html', context)
 
@@ -195,13 +231,15 @@ def project_analysis(request):
 @login_required
 @cargo_required(*ROLES_ADMIN_SEC)
 def project_report(request):
-    project_type     = request.GET.get('project_type') or None
-    project_status   = request.GET.get('project_status') or None
+    project_type       = request.GET.get('project_type') or None
+    project_status     = request.GET.get('project_status') or None
     filter_estado_pago = request.GET.get('filter_estado_pago') or None
-    search_nombre    = request.GET.get('search_nombre', '').strip()
+    filter_cumplimiento = request.GET.get('filter_cumplimiento') or None
+    search_nombre      = request.GET.get('search_nombre', '').strip()
+    hoy = timezone.now().date()
 
     ultimo_avance_qs = Progreso.objects.filter(
-        proyecto=OuterRef('pk')
+        proyecto=OuterRef('pk'), activo=True
     ).order_by('-fecha', '-id').values('porcentaje')[:1]
 
     projects = Proyecto.objects.filter(activo=True).select_related('cliente').annotate(
@@ -217,6 +255,21 @@ def project_report(request):
         projects = projects.filter(estado_proyecto=project_status)
     if filter_estado_pago:
         projects = projects.filter(estado_pago=filter_estado_pago)
+    if filter_cumplimiento == 'vencido':
+        projects = projects.filter(
+            estado_proyecto__in=['pendiente', 'en_progreso'],
+            fecha_fin__isnull=False, fecha_fin__lt=hoy,
+        )
+    elif filter_cumplimiento == 'en_plazo':
+        projects = projects.filter(
+            estado_proyecto__in=['pendiente', 'en_progreso'],
+            fecha_fin__isnull=False, fecha_fin__gte=hoy,
+        )
+    elif filter_cumplimiento == 'sin_fecha':
+        projects = projects.filter(
+            estado_proyecto__in=['pendiente', 'en_progreso'],
+            fecha_fin__isnull=True,
+        )
 
     agg = projects.aggregate(
         total_monto=Sum('monto_total'),
@@ -229,16 +282,33 @@ def project_report(request):
     count_en_progreso    = projects.filter(estado_proyecto='en_progreso').count()
     count_pendiente      = projects.filter(estado_proyecto='pendiente').count()
 
-    # Pre-compute saldo per project (can't subtract in Django templates)
+    # Pre-compute saldo y cumplimiento por proyecto
     projects_list = list(projects)
     for p in projects_list:
         p.monto_saldo = p.monto_total - (p.monto_cobrado or 0)
+        if p.estado_proyecto == 'completado':
+            p.cumplimiento = 'completado'
+            p.dias_info = None
+        elif not p.fecha_fin:
+            p.cumplimiento = 'sin_fecha'
+            p.dias_info = None
+        elif p.fecha_fin < hoy:
+            p.cumplimiento = 'vencido'
+            p.dias_info = (hoy - p.fecha_fin).days
+        else:
+            p.cumplimiento = 'en_plazo'
+            p.dias_info = (p.fecha_fin - hoy).days
+
+    count_vencidos   = sum(1 for p in projects_list if p.cumplimiento == 'vencido')
+    count_en_plazo   = sum(1 for p in projects_list if p.cumplimiento == 'en_plazo')
+    count_sin_fecha  = sum(1 for p in projects_list if p.cumplimiento == 'sin_fecha')
 
     context = {
         'projects': projects_list,
         'project_type': project_type,
         'project_status': project_status,
         'filter_estado_pago': filter_estado_pago,
+        'filter_cumplimiento': filter_cumplimiento,
         'search_nombre': search_nombre,
         'monto_total': monto_total,
         'total_cobrado': total_cobrado,
@@ -246,6 +316,9 @@ def project_report(request):
         'count_completado': count_completado,
         'count_en_progreso': count_en_progreso,
         'count_pendiente': count_pendiente,
+        'count_vencidos': count_vencidos,
+        'count_en_plazo': count_en_plazo,
+        'count_sin_fecha': count_sin_fecha,
         'now': timezone.now(),
         'generado_por': request.user.get_full_name() or request.user.username,
     }
@@ -478,7 +551,7 @@ def project_detail(request, id_project):
 @login_required
 def project_view(request, id_project):
     project = get_object_or_404(Proyecto, pk=id_project)
-    progresos = project.progresos.all().order_by('-fecha', '-created')
+    progresos = project.progresos.filter(activo=True).order_by('-fecha', '-created')
     ultimo_progreso = progresos.first()
     porcentaje_actual = ultimo_progreso.porcentaje if ultimo_progreso else 0
     contratos_empleados = project.contratos.filter(tipo='empleado', activo=True).select_related('empleado')
@@ -499,7 +572,7 @@ def project_view(request, id_project):
         })
 
     # ── Historial de cambios de monto ──────────────────────────────────────────
-    historial_monto = HistorialPago.objects.filter(proyecto=project).order_by('-fecha_modificacion')
+    historial_monto = HistorialPresupuesto.objects.filter(proyecto=project).order_by('-fecha_modificacion')
 
     # ── Rentabilidad ───────────────────────────────────────────────────────────
     costo_personal = contratos_empleados.aggregate(total=Sum('monto_acordado'))['total'] or 0
@@ -697,23 +770,84 @@ def employee_view(request, id_employee):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN)
+def employee_workload(request):
+    """Vista de carga de trabajo: muestra cuántos proyectos activos tiene cada empleado."""
+    empleados = Empleado.objects.filter(is_active=True).annotate(
+        proyectos_activos=Count(
+            'contratos',
+            filter=Q(
+                contratos__tipo='empleado',
+                contratos__activo=True,
+                contratos__proyecto__estado_proyecto__in=['pendiente', 'en_progreso'],
+                contratos__proyecto__activo=True,
+            )
+        ),
+        proyectos_completados=Count(
+            'contratos',
+            filter=Q(
+                contratos__tipo='empleado',
+                contratos__activo=True,
+                contratos__proyecto__estado_proyecto='completado',
+                contratos__proyecto__activo=True,
+            )
+        ),
+        monto_contratos=Sum(
+            'contratos__monto_acordado',
+            filter=Q(contratos__tipo='empleado', contratos__activo=True)
+        ),
+    ).order_by('-proyectos_activos', 'nombre')
+
+    # Proyectos activos por empleado (para el detalle)
+    empleados_list = list(empleados)
+    for emp in empleados_list:
+        contratos = list(Contrato.objects.filter(
+            empleado=emp,
+            tipo='empleado',
+            activo=True,
+            proyecto__estado_proyecto__in=['pendiente', 'en_progreso'],
+            proyecto__activo=True,
+        ).select_related('proyecto').order_by('proyecto__estado_proyecto', 'proyecto__nombre'))
+
+        # Adjuntar el contrato del proyecto (tipo='proyecto') para obtener sus fechas
+        proyecto_ids = [c.proyecto_id for c in contratos]
+        contratos_proyecto_map = {
+            cp.proyecto_id: cp
+            for cp in Contrato.objects.filter(
+                proyecto_id__in=proyecto_ids,
+                tipo='proyecto',
+                activo=True,
+            )
+        }
+        for c in contratos:
+            c.contrato_proyecto = contratos_proyecto_map.get(c.proyecto_id)
+
+        emp.contratos_activos_list = contratos
+
+    context = {'empleados': empleados_list}
+    return render(request, 'employee_workload.html', context)
+
+
+@login_required
 @cargo_required('administrador')
 def employee_detail(request, id_employee):
     empleado = get_object_or_404(Empleado, pk=id_employee)
     if request.method == 'GET':
-        initial = {'correo': empleado.user.email if empleado.user else ''}
-        form = EmpleadoForm(instance=empleado, initial=initial)
+        form = EmpleadoForm(instance=empleado, initial={'correo': empleado.email})
         return render(request, 'employee_detail.html', {'employee': empleado, 'form': form})
     else:
         form = EmpleadoForm(request.POST, instance=empleado)
         if form.is_valid():
             empleado = form.save()
-            if empleado.user:
-                apellido_materno = form.cleaned_data.get('apellido_materno') or ''
-                empleado.user.first_name = form.cleaned_data['nombre']
-                empleado.user.last_name = f"{form.cleaned_data['apellido_paterno']} {apellido_materno}".strip()
-                empleado.user.email = form.cleaned_data.get('correo') or ''
-                empleado.user.save(update_fields=['first_name', 'last_name', 'email'])
+            apellido_materno = form.cleaned_data.get('apellido_materno') or ''
+            empleado.first_name = form.cleaned_data['nombre']
+            empleado.last_name = f"{form.cleaned_data['apellido_paterno']} {apellido_materno}".strip()
+            empleado.email = form.cleaned_data.get('correo') or ''
+            nueva_password = form.cleaned_data.get('password1')
+            if nueva_password:
+                empleado.set_password(nueva_password)
+                update_session_auth_hash(request, empleado)
+            empleado.save(update_fields=['first_name', 'last_name', 'email', 'password'])
             messages.success(request, f"El empleado {empleado.nombre} {empleado.apellido_paterno} fue actualizado exitosamente.")
             return redirect('employees')
         return render(request, 'employee_detail.html', {'employee': empleado, 'form': form})
@@ -913,43 +1047,134 @@ def dashboard_home(request):
     # ── Insumos / Stock ────────────────────────────────────────────────────────
     insumos_qs         = Insumo.objects.filter(activo=True)
     total_insumos      = insumos_qs.count()
-    insumos_agotados   = [i for i in insumos_qs if i.stock_status == 'agotado']
-    insumos_stock_bajo = [i for i in insumos_qs if i.stock_status == 'bajo']
+    insumos_agotados   = list(insumos_qs.filter(stock__lte=0))
+    insumos_stock_bajo = list(insumos_qs.filter(stock__gt=0, stock__lte=F('stock_minimo'), stock_minimo__gt=0))
     insumos_criticos   = insumos_agotados + insumos_stock_bajo
 
-    # ── Alertas ────────────────────────────────────────────────────────────────
-    alertas = []
-    completados_sin_pago = proyectos_qs.filter(
-        estado_proyecto='completado', estado_pago='no_pagado'
-    )
-    for p in completados_sin_pago:
-        alertas.append({'tipo': 'danger', 'msg': f'Proyecto "{p.nombre}" está completado pero sin cobrar.'})
+    # ── Plazos basados en ContratoProyecto.fecha_fin (el plazo real acordado) ──
+    # Nota: Proyecto.fecha_fin se asigna automáticamente al completar (no es el plazo)
+    hoy = timezone.now().date()
+    en_30_dias = hoy + timedelta(days=30)
 
-    parciales_completados = proyectos_qs.filter(
-        estado_proyecto='completado', estado_pago='parcial'
-    )
-    for p in parciales_completados:
-        alertas.append({'tipo': 'warning', 'msg': f'Proyecto "{p.nombre}" completado con pago parcial pendiente.'})
-
-    for i in insumos_agotados:
-        alertas.append({'tipo': 'danger', 'msg': f'Insumo "{i.nombre}" sin stock disponible (0 unidades).'})
-    for i in insumos_stock_bajo:
-        alertas.append({'tipo': 'warning', 'msg': f'Insumo "{i.nombre}" con stock bajo ({i.stock} unidades, mínimo {i.stock_minimo}).'})
-
-    # Empleados con pago pendiente en proyectos completados
-    contratos_completados = Contrato.objects.filter(
-        tipo='empleado',
+    contratos_proyecto_qs = Contrato.objects.filter(
+        tipo='proyecto',
         activo=True,
-        proyecto__estado_proyecto='completado'
-    ).select_related('empleado', 'proyecto')
+        proyecto__activo=True,
+        proyecto__estado_proyecto__in=['pendiente', 'en_progreso'],
+    ).select_related('proyecto')
+
+    contratos_vencidos = contratos_proyecto_qs.filter(
+        fecha_fin__lt=hoy,
+    ).order_by('fecha_fin')
+    cnt_vencidos = contratos_vencidos.count()
+
+    # ── Alertas clasificadas por categoría ────────────────────────────────────
+    # Categoría 1: Plazos vencidos — 3 sub-grupos por antigüedad
+    vencidos_hoy     = []   # venció hoy exacto
+    vencidos_semana  = []   # venció hace 1-7 días
+    vencidos_antiguo = []   # venció hace más de 7 días
+
+    for c in contratos_vencidos:
+        dias = (hoy - c.fecha_fin).days
+        entrada = {
+            'nombre': c.proyecto.nombre,
+            'fecha': c.fecha_fin.strftime('%d/%m/%Y'),
+            'estado': c.proyecto.get_estado_proyecto_display(),
+            'url': f'/projects/{c.proyecto.id}/view/',
+            'dias': dias,
+        }
+        if dias == 0:
+            vencidos_hoy.append(entrada)
+        elif dias <= 7:
+            vencidos_semana.append(entrada)
+        else:
+            vencidos_antiguo.append(entrada)
+
+    alertas_plazos = vencidos_hoy + vencidos_semana + vencidos_antiguo
+
+    # Categoría 2: Cobros pendientes de proyectos completados
+    alertas_cobros = []
+    for p in proyectos_qs.filter(estado_proyecto='completado', estado_pago='no_pagado'):
+        alertas_cobros.append({
+            'tipo': 'danger',
+            'icono': 'bi-cash-coin',
+            'msg': f'"{p.nombre}" está completado pero sin cobrar.',
+            'url': f'/projects/{p.id}/view/',
+        })
+    for p in proyectos_qs.filter(estado_proyecto='completado', estado_pago='parcial'):
+        alertas_cobros.append({
+            'tipo': 'warning',
+            'icono': 'bi-cash-coin',
+            'msg': f'"{p.nombre}" completado con pago parcial pendiente.',
+            'url': f'/projects/{p.id}/view/',
+        })
+
+    # Categoría 3: Stock de inventario
+    alertas_inventario = []
+    for i in insumos_agotados:
+        alertas_inventario.append({
+            'tipo': 'danger',
+            'icono': 'bi-box-seam',
+            'msg': f'"{i.nombre}" sin stock disponible (0 unidades).',
+            'url': f'/insumos/{i.id}/',
+        })
+    for i in insumos_stock_bajo:
+        alertas_inventario.append({
+            'tipo': 'warning',
+            'icono': 'bi-box-seam',
+            'msg': f'"{i.nombre}" con stock bajo ({i.stock} uds., mínimo {i.stock_minimo}).',
+            'url': f'/insumos/{i.id}/',
+        })
+
+    # Categoría 4: Pagos pendientes a empleados
+    alertas_empleados = []
+    pagado_subq = PagoEmpleado.objects.filter(
+        contrato=OuterRef('pk'), activo=True
+    ).values('contrato').annotate(t=Sum('monto')).values('t')
+    contratos_completados = Contrato.objects.filter(
+        tipo='empleado', activo=True, proyecto__estado_proyecto='completado'
+    ).select_related('empleado', 'proyecto').annotate(
+        total_pagado=Subquery(pagado_subq)
+    )
     for contrato in contratos_completados:
-        pagado = PagoEmpleado.objects.filter(contrato=contrato, activo=True).aggregate(t=Sum('monto'))['t'] or 0
+        pagado = contrato.total_pagado or 0
         if pagado < contrato.monto_acordado:
             pendiente = contrato.monto_acordado - pagado
-            alertas.append({
+            alertas_empleados.append({
                 'tipo': 'warning',
-                'msg': f'Empleado {contrato.empleado.nombre} {contrato.empleado.apellido_paterno} tiene Bs. {pendiente:.2f} pendientes de cobro en el proyecto "{contrato.proyecto.nombre}".'
+                'icono': 'bi-person-exclamation',
+                'msg': f'{contrato.empleado.nombre} {contrato.empleado.apellido_paterno} tiene Bs. {pendiente:.2f} pendientes en "{contrato.proyecto.nombre}".',
+                'url': f'/employees/{contrato.empleado.id}/view/',
             })
+
+    # Categoría 5: Próximos a vencer — 3 sub-grupos por urgencia (ContratoProyecto)
+    proximos_hoy     = []   # vence hoy o mañana (0-1 días)
+    proximos_semana  = []   # vence esta semana  (2-7 días)
+    proximos_mes     = []   # vence este mes     (8-30 días)
+
+    for c in contratos_proyecto_qs.filter(
+        fecha_fin__gte=hoy,
+        fecha_fin__lte=en_30_dias,
+    ).order_by('fecha_fin'):
+        dias_restantes = (c.fecha_fin - hoy).days
+        entrada = {
+            'icono': 'bi-hourglass-split',
+            'nombre': c.proyecto.nombre,
+            'fecha': c.fecha_fin.strftime('%d/%m/%Y'),
+            'estado': c.proyecto.get_estado_proyecto_display(),
+            'url': f'/projects/{c.proyecto.id}/view/',
+            'dias': dias_restantes,
+        }
+        if dias_restantes <= 1:
+            proximos_hoy.append(entrada)
+        elif dias_restantes <= 7:
+            proximos_semana.append(entrada)
+        else:
+            proximos_mes.append(entrada)
+
+    alertas_proximos = proximos_hoy + proximos_semana + proximos_mes
+
+    total_alertas = len(alertas_plazos) + len(alertas_proximos) + len(alertas_cobros) + len(alertas_inventario) + len(alertas_empleados)
 
     # ── Últimos 5 proyectos ────────────────────────────────────────────────────
     ultimos_proyectos = proyectos_qs.select_related('cliente').order_by('-created')[:5]
@@ -977,7 +1202,19 @@ def dashboard_home(request):
         'cnt_agotados':         len(insumos_agotados),
         'cnt_stock_bajo':       len(insumos_stock_bajo),
         'insumos_criticos':     insumos_criticos,
-        'alertas':              alertas,
+        'alertas_plazos':       alertas_plazos,
+        'vencidos_hoy':         vencidos_hoy,
+        'vencidos_semana':      vencidos_semana,
+        'vencidos_antiguo':     vencidos_antiguo,
+        'alertas_proximos':     alertas_proximos,
+        'proximos_hoy':         proximos_hoy,
+        'proximos_semana':      proximos_semana,
+        'proximos_mes':         proximos_mes,
+        'alertas_cobros':       alertas_cobros,
+        'alertas_inventario':   alertas_inventario,
+        'alertas_empleados':    alertas_empleados,
+        'total_alertas':        total_alertas,
+        'cnt_vencidos':         cnt_vencidos,
         'ultimos_proyectos':    ultimos_proyectos,
         'tipos_labels':         tipos_labels,
         'tipos_values':         tipos_values,
@@ -1021,7 +1258,7 @@ def create_progreso(request, id_project):
 
 @login_required
 def progreso_detail(request, id_progreso):
-    progreso = get_object_or_404(Progreso, pk=id_progreso)
+    progreso = get_object_or_404(Progreso, pk=id_progreso, activo=True)
     project = progreso.proyecto
     if request.method == 'GET':
         form = ProgresoForm(instance=progreso, proyecto=project)
@@ -1048,10 +1285,13 @@ def progreso_detail(request, id_progreso):
 
 @login_required
 def deactivate_progreso(request, id_progreso):
-    progreso = get_object_or_404(Progreso, pk=id_progreso)
+    progreso = get_object_or_404(Progreso, pk=id_progreso, activo=True)
     id_project = progreso.proyecto.id
     if request.method == 'POST':
-        progreso.delete()
+        progreso.activo = False
+        progreso.deleted_at = timezone.now()
+        progreso.deleted_by = request.user
+        progreso.save()
         messages.success(request, 'Registro de progreso eliminado.')
     return redirect('project_view', id_project=id_project)
 

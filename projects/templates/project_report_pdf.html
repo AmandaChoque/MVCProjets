@@ -172,6 +172,14 @@
         <div class="label">Pendientes</div>
         <div class="value pendiente">{{ count_pendiente }}</div>
       </td>
+      <td class="col-venc">
+        <div class="label">Plazo Vencido</div>
+        <div class="value" style="color:#c0392b;">{{ count_vencidos }}</div>
+      </td>
+      <td class="col-plazo">
+        <div class="label">En Plazo</div>
+        <div class="value" style="color:#27ae60;">{{ count_en_plazo }}</div>
+      </td>
     </tr>
   </table>
 
@@ -191,6 +199,7 @@
         <th class="text-right">Saldo (Bs.)</th>
         <th>Inicio</th>
         <th>Fin</th>
+        <th>Cumplimiento</th>
       </tr>
     </thead>
     <tbody>
@@ -226,10 +235,21 @@
         <td class="text-right">{{ project.monto_saldo|floatformat:2 }}</td>
         <td>{{ project.fecha_inicio|date:"d/m/Y"|default:"—" }}</td>
         <td>{{ project.fecha_fin|date:"d/m/Y"|default:"—" }}</td>
+        <td>
+          {% if project.cumplimiento == 'completado' %}
+            <span class="badge" style="background:#e9e9e9;color:#333;">Completado</span>
+          {% elif project.cumplimiento == 'vencido' %}
+            <span class="badge" style="background:#fde8e8;color:#c0392b;">Vencido ({{ project.dias_info }}d)</span>
+          {% elif project.cumplimiento == 'en_plazo' %}
+            <span class="badge" style="background:#e8f8f0;color:#27ae60;">En plazo ({{ project.dias_info }}d)</span>
+          {% else %}
+            <span class="badge" style="background:#e9e9e9;color:#888;">Sin fecha</span>
+          {% endif %}
+        </td>
       </tr>
       {% empty %}
       <tr>
-        <td colspan="12" style="text-align:center; color:#888; padding:12px;">
+        <td colspan="13" style="text-align:center; color:#888; padding:12px;">
           No se encontraron proyectos.
         </td>
       </tr>
@@ -242,7 +262,7 @@
         <td class="text-right">{{ monto_total|floatformat:2 }}</td>
         <td class="text-right">{{ total_cobrado|floatformat:2 }}</td>
         <td class="text-right">{{ total_saldo|floatformat:2 }}</td>
-        <td colspan="2"></td>
+        <td colspan="3"></td>
       </tr>
     </tfoot>
     {% endif %}

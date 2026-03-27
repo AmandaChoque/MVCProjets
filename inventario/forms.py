@@ -10,21 +10,36 @@ DECIMAL_REGEX = r'\d+(\.\d{1,2})?'
 class ProveedorForm(forms.ModelForm):
     class Meta:
         model = Proveedor
-        fields = ['nombre', 'rubro', 'celular', 'correo', 'direccion', 'nit']
+        fields = [
+            'nombre', 'rubro', 'nit', 'telefono', 'correo', 'direccion',
+            'encargado_nombre', 'encargado_cargo', 'encargado_celular', 'encargado_correo',
+        ]
         widgets = {
-            'nombre':    forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del proveedor', 'required': 'required'}),
+            'nombre':    forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: DIGIPORT S.R.L.', 'required': 'required'}),
             'rubro':     forms.Select(attrs={'class': 'form-select'}),
-            'celular':   forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Número de celular', 'inputmode': 'numeric', 'pattern': '[0-9]+', 'title': 'Ingrese solo números', 'required': 'required', 'minlength': '7'}),
-            'correo':    forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'ejemplo@correo.com'}),
-            'direccion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Dirección'}),
-            'nit':       forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'NIT del proveedor', 'inputmode': 'numeric', 'pattern': '[0-9]*', 'title': 'Ingrese solo números'}),
+            'nit':       forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'NIT de la empresa', 'inputmode': 'numeric', 'pattern': '[0-9]*', 'title': 'Ingrese solo números'}),
+            'telefono':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Teléfono de la empresa', 'inputmode': 'numeric', 'pattern': '[0-9]+', 'title': 'Ingrese solo números', 'required': 'required', 'minlength': '7'}),
+            'correo':    forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'correo@empresa.com'}),
+            'direccion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Dirección de la empresa'}),
+            'encargado_nombre':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre completo del encargado'}),
+            'encargado_cargo':   forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Vendedor, Gerente Comercial'}),
+            'encargado_celular': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Celular del encargado', 'inputmode': 'numeric', 'pattern': '[0-9]+', 'minlength': '7'}),
+            'encargado_correo':  forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'correo@encargado.com'}),
         }
 
-    def clean_celular(self):
-        celular = self.cleaned_data.get('celular', '').replace(' ', '')
-        if not celular.isdigit():
+    def clean_telefono(self):
+        telefono = self.cleaned_data.get('telefono', '').replace(' ', '')
+        if not telefono.isdigit():
+            raise forms.ValidationError('El teléfono debe contener solo números.')
+        if len(telefono) < 7:
+            raise forms.ValidationError('El teléfono debe tener al menos 7 dígitos.')
+        return telefono
+
+    def clean_encargado_celular(self):
+        celular = self.cleaned_data.get('encargado_celular', '').replace(' ', '')
+        if celular and not celular.isdigit():
             raise forms.ValidationError('El celular debe contener solo números.')
-        if len(celular) < 7:
+        if celular and len(celular) < 7:
             raise forms.ValidationError('El celular debe tener al menos 7 dígitos.')
         return celular
 

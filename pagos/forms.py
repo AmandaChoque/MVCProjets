@@ -52,10 +52,11 @@ class PagoEmpleadoForm(forms.ModelForm):
 
     class Meta:
         model = PagoEmpleado
-        fields = ['monto', 'fecha', 'concepto']
+        fields = ['monto', 'fecha', 'concepto', 'tipo_pago']
         widgets = {
-            'fecha':    forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'concepto': forms.Select(attrs={'class': 'form-select'}),
+            'fecha':     forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'concepto':  forms.Select(attrs={'class': 'form-select'}),
+            'tipo_pago': forms.Select(attrs={'class': 'form-select'}),
         }
 
     def __init__(self, *args, contrato=None, excluir_pago_id=None, **kwargs):

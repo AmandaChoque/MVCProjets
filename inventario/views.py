@@ -5,6 +5,11 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Q, F, Sum
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.http import HttpResponse
+from django.template.loader import get_template
+from xhtml2pdf import pisa
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 from projects.models import Proyecto
 from projects.decorators import cargo_required, ROLES_CAMPO
@@ -350,3 +355,196 @@ def deactivate_compra(request, id_compra):
         compra.save()
         messages.success(request, 'Compra inhabilitada correctamente.')
     return redirect('compras')
+
+
+# ── Reporte de Inventario ─────────────────────────────────────────────────────
+
+@login_required
+@cargo_required(*ROLES_CAMPO)
+def inventario_report(request):
+    search_nombre    = request.GET.get('search_nombre', '').strip()
+    filter_categoria = request.GET.get('filter_categoria', '')
+    filter_stock     = request.GET.get('filter_stock', '')
+
+    qs = Insumo.objects.filter(activo=True).order_by('categoria', 'nombre')
+    if search_nombre:
+        qs = qs.filter(Q(nombre__icontains=search_nombre) | Q(marca__icontains=search_nombre))
+    if filter_categoria:
+        qs = qs.filter(categoria=filter_categoria)
+    if filter_stock == 'agotado':
+        qs = qs.filter(stock__lte=0)
+    elif filter_stock == 'bajo':
+        qs = qs.filter(stock__gt=0, stock_minimo__gt=0, stock__lte=F('stock_minimo'))
+    elif filter_stock == 'ok':
+        qs = qs.exclude(stock__lte=0).exclude(stock_minimo__gt=0, stock__lte=F('stock_minimo'))
+
+    insumos_list = list(qs)
+    for ins in insumos_list:
+        ins.valor_stock = ins.stock * ins.costo_unitario
+        ins.estado = ins.stock_status  # 'agotado', 'bajo', 'ok'
+
+    total_insumos = len(insumos_list)
+    cnt_agotados  = sum(1 for i in insumos_list if i.estado == 'agotado')
+    cnt_bajo      = sum(1 for i in insumos_list if i.estado == 'bajo')
+    cnt_ok        = sum(1 for i in insumos_list if i.estado == 'ok')
+    valor_total   = sum(i.valor_stock for i in insumos_list)
+
+    # ── Datos para gráficos (solo en vista HTML, no en PDF/Excel) ─────────────
+    # Gráfico 1: cantidad de ítems por categoría
+    from collections import defaultdict
+    cat_counts  = defaultdict(int)
+    cat_valores = defaultdict(float)
+    cat_labels_map = dict(Insumo.CATEGORIA_CHOICES)
+    for ins in insumos_list:
+        label = cat_labels_map.get(ins.categoria, ins.categoria)
+        cat_counts[label]  += 1
+        cat_valores[label] += float(ins.valor_stock)
+
+    chart_cat_labels = json.dumps(list(cat_counts.keys()))
+    chart_cat_counts = json.dumps(list(cat_counts.values()))
+    chart_cat_valores = json.dumps([round(v, 2) for v in cat_valores.values()])
+
+    # Gráfico 2: top 8 insumos por valor en stock
+    top_insumos = sorted(insumos_list, key=lambda x: x.valor_stock, reverse=True)[:8]
+    chart_top_labels = json.dumps([f"{i.nombre[:20]}" for i in top_insumos])
+    chart_top_valores = json.dumps([float(i.valor_stock) for i in top_insumos])
+
+    context = {
+        'insumos':           insumos_list,
+        'total_insumos':     total_insumos,
+        'cnt_agotados':      cnt_agotados,
+        'cnt_bajo':          cnt_bajo,
+        'cnt_ok':            cnt_ok,
+        'valor_total':       valor_total,
+        'search_nombre':     search_nombre,
+        'filter_categoria':  filter_categoria,
+        'filter_stock':      filter_stock,
+        'categorias':        Insumo.CATEGORIA_CHOICES,
+        'now':               timezone.now(),
+        'generado_por':      request.user.get_full_name() or request.user.username,
+        'chart_cat_labels':  chart_cat_labels,
+        'chart_cat_counts':  chart_cat_counts,
+        'chart_cat_valores': chart_cat_valores,
+        'chart_top_labels':  chart_top_labels,
+        'chart_top_valores': chart_top_valores,
+    }
+
+    if 'pdf' in request.GET:
+        template = get_template('inventario_report_pdf.html')
+        html = template.render(context)
+        response = HttpResponse(content_type='application/pdf')
+        disposition = 'attachment' if 'download' in request.GET else 'inline'
+        response['Content-Disposition'] = f'{disposition}; filename="reporte_inventario.pdf"'
+        pisa_status = pisa.CreatePDF(html, dest=response)
+        if pisa_status.err:
+            return HttpResponse('Error al generar el PDF', status=500)
+        return response
+
+    if 'excel' in request.GET:
+        NUM_COLS = 8
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Inventario'
+
+        title_fill  = PatternFill(start_color='0F2D5A', end_color='0F2D5A', fill_type='solid')
+        title_font  = Font(bold=True, size=14, color='D4B84A')
+        info_fill   = PatternFill(start_color='1B4D90', end_color='1B4D90', fill_type='solid')
+        info_font   = Font(size=9, color='FFFFFF')
+        header_fill = PatternFill(start_color='0F2D5A', end_color='0F2D5A', fill_type='solid')
+        header_font = Font(bold=True, color='D4B84A', size=10)
+        alt_fill    = PatternFill(start_color='EFF2F8', end_color='EFF2F8', fill_type='solid')
+        total_fill  = PatternFill(start_color='E8EDF5', end_color='E8EDF5', fill_type='solid')
+        total_font  = Font(bold=True, size=10, color='0F2D5A')
+        center      = Alignment(horizontal='center', vertical='center')
+        left        = Alignment(horizontal='left',   vertical='center')
+        right_al    = Alignment(horizontal='right',  vertical='center')
+        cell_border = Border(
+            left=Side(style='thin', color='C0C8D8'), right=Side(style='thin', color='C0C8D8'),
+            top=Side(style='thin', color='C0C8D8'),  bottom=Side(style='thin', color='C0C8D8'),
+        )
+        total_border = Border(
+            left=Side(style='thin', color='C0C8D8'), right=Side(style='thin', color='C0C8D8'),
+            top=Side(style='medium', color='0F2D5A'), bottom=Side(style='medium', color='0F2D5A'),
+        )
+        money_fmt = '#,##0.00'
+
+        ws.append(['Reporte de Inventario — SOBOTEC S.R.L.'])
+        ws.merge_cells(f'A1:{openpyxl.utils.get_column_letter(NUM_COLS)}1')
+        ws['A1'].font = title_font; ws['A1'].fill = title_fill
+        ws['A1'].alignment = Alignment(horizontal='left', vertical='center', indent=1)
+        ws.row_dimensions[1].height = 26
+
+        gen_por  = request.user.get_full_name() or request.user.username
+        info_str = f'Generado por: {gen_por}  |  Fecha: {timezone.now().strftime("%d/%m/%Y %H:%M")}'
+        if search_nombre:      info_str += f'  |  Nombre: {search_nombre}'
+        if filter_categoria:   info_str += f'  |  Categoría: {filter_categoria}'
+        if filter_stock:       info_str += f'  |  Stock: {filter_stock}'
+        ws.append([info_str])
+        ws.merge_cells(f'A2:{openpyxl.utils.get_column_letter(NUM_COLS)}2')
+        ws['A2'].font = info_font; ws['A2'].fill = info_fill
+        ws['A2'].alignment = Alignment(horizontal='left', vertical='center', indent=1)
+        ws.row_dimensions[2].height = 18
+
+        ws.append([])
+        ws.row_dimensions[3].height = 6
+
+        headers = ['Categoría', 'Nombre', 'Marca / Modelo', 'Stock Actual',
+                   'Stock Mínimo', 'Estado', 'Costo Unit. (Bs.)', 'Valor en Stock (Bs.)']
+        ws.append(headers)
+        for cell in ws[4]:
+            cell.font = header_font; cell.fill = header_fill
+            cell.alignment = center; cell.border = cell_border
+        ws.row_dimensions[4].height = 22
+
+        last_row = 4
+        for i, ins in enumerate(insumos_list, start=5):
+            marca_modelo = ins.marca
+            if ins.modelo:
+                marca_modelo += f' / {ins.modelo}'
+            estado_str = {'agotado': 'Sin Stock', 'bajo': 'Stock Bajo', 'ok': 'OK'}.get(ins.estado, ins.estado)
+            ws.append([
+                ins.get_categoria_display(),
+                ins.nombre,
+                marca_modelo,
+                ins.stock,
+                ins.stock_minimo,
+                estado_str,
+                float(ins.costo_unitario),
+                float(ins.valor_stock),
+            ])
+            row_fill = alt_fill if i % 2 == 0 else None
+            for j, cell in enumerate(ws[i], start=1):
+                if row_fill: cell.fill = row_fill
+                cell.border = cell_border
+                if j in (4, 5): cell.alignment = center
+                elif j in (7, 8):
+                    cell.alignment = right_al; cell.number_format = money_fmt
+                else: cell.alignment = left
+            ws.row_dimensions[i].height = 16
+            last_row = i
+
+        total_row = last_row + 1
+        ws.append(['', 'TOTAL', '', '', '', '', '', float(valor_total)])
+        for j, cell in enumerate(ws[total_row], start=1):
+            cell.font = total_font; cell.fill = total_fill; cell.border = total_border
+            if j == 8:
+                cell.alignment = right_al; cell.number_format = money_fmt
+            else:
+                cell.alignment = left
+        ws.row_dimensions[total_row].height = 18
+
+        col_widths = [20, 28, 22, 14, 14, 12, 18, 20]
+        for col_idx, width in enumerate(col_widths, start=1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = width
+
+        ws.freeze_panes = 'A5'
+        ws.auto_filter.ref = f'A4:{openpyxl.utils.get_column_letter(NUM_COLS)}4'
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="reporte_inventario.xlsx"'
+        wb.save(response)
+        return response
+
+    return render(request, 'inventario_report.html', context)

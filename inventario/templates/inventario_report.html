@@ -1,0 +1,164 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container-fluid py-3">
+
+  <div class="mb-2 d-flex justify-content-between align-items-center">
+    <h5 class="fw-semibold text-secondary mb-0">Reporte de Inventario</h5>
+    <div class="d-flex gap-2">
+      <a href="?pdf=1&search_nombre={{ search_nombre }}&filter_categoria={{ filter_categoria }}&filter_stock={{ filter_stock }}"
+         target="_blank" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-file-earmark-pdf me-1"></i>Vista previa PDF
+      </a>
+      <a href="?pdf=1&download=1&search_nombre={{ search_nombre }}&filter_categoria={{ filter_categoria }}&filter_stock={{ filter_stock }}"
+         class="btn btn-outline-danger btn-sm">
+        <i class="bi bi-download me-1"></i>PDF
+      </a>
+      <a href="?excel=1&search_nombre={{ search_nombre }}&filter_categoria={{ filter_categoria }}&filter_stock={{ filter_stock }}"
+         class="btn btn-outline-success btn-sm">
+        <i class="bi bi-file-earmark-excel me-1"></i>Excel
+      </a>
+    </div>
+  </div>
+
+  <!-- FILTROS -->
+  <div class="card mb-3">
+    <div class="card-body py-2">
+      <form method="get" class="row g-2 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Nombre / Marca</label>
+          <input type="text" name="search_nombre" class="form-control form-control-sm"
+                 value="{{ search_nombre }}" placeholder="Buscar...">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Categoría</label>
+          <select name="filter_categoria" class="form-select form-select-sm">
+            <option value="">Todas</option>
+            {% for val, label in categorias %}
+            <option value="{{ val }}" {% if filter_categoria == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Estado Stock</label>
+          <select name="filter_stock" class="form-select form-select-sm">
+            <option value="">Todos</option>
+            <option value="agotado" {% if filter_stock == 'agotado' %}selected{% endif %}>Sin Stock</option>
+            <option value="bajo"    {% if filter_stock == 'bajo'    %}selected{% endif %}>Stock Bajo</option>
+            <option value="ok"      {% if filter_stock == 'ok'      %}selected{% endif %}>OK</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
+        </div>
+        <div class="col-md-2">
+          <a href="{% url 'inventario_report' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="card mb-3 border-0 shadow-sm">
+    <div class="card-body py-2 px-0">
+      <div class="d-flex flex-wrap">
+        <div class="flex-fill text-center px-3 py-1 border-end">
+          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Total Ítems</div>
+          <div class="fw-bold fs-5 mt-1">{{ total_insumos }}</div>
+          <div class="text-muted" style="font-size:0.7rem;">insumos</div>
+        </div>
+        <div class="flex-fill text-center px-3 py-1 border-end">
+          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Valor Total Stock</div>
+          <div class="fw-bold fs-5 mt-1 text-primary">Bs. {{ valor_total|floatformat:2 }}</div>
+          <div class="text-muted" style="font-size:0.7rem;">en inventario</div>
+        </div>
+        <div class="flex-fill text-center px-3 py-1 border-end">
+          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Sin Stock</div>
+          <div class="fw-bold fs-5 mt-1 text-danger">{{ cnt_agotados }}</div>
+          <div class="text-muted" style="font-size:0.7rem;">ítems agotados</div>
+        </div>
+        <div class="flex-fill text-center px-3 py-1 border-end">
+          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Stock Bajo</div>
+          <div class="fw-bold fs-5 mt-1 text-warning">{{ cnt_bajo }}</div>
+          <div class="text-muted" style="font-size:0.7rem;">requieren reposición</div>
+        </div>
+        <div class="flex-fill text-center px-3 py-1">
+          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Stock OK</div>
+          <div class="fw-bold fs-5 mt-1 text-success">{{ cnt_ok }}</div>
+          <div class="text-muted" style="font-size:0.7rem;">ítems disponibles</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLA -->
+  <div class="card">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+      <span class="fw-semibold small">Detalle de Insumos</span>
+      <span class="text-muted small">{{ insumos|length }} registro(s)</span>
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle small mb-0">
+        <thead class="table-light text-uppercase fw-semibold" style="font-size:0.71rem;">
+          <tr>
+            <th>Categoría</th>
+            <th>Nombre</th>
+            <th>Marca / Modelo</th>
+            <th class="text-center">Stock</th>
+            <th class="text-center">Mínimo</th>
+            <th class="text-center">Estado</th>
+            <th class="text-end">Costo Unit. (Bs.)</th>
+            <th class="text-end">Valor Stock (Bs.)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ins in insumos %}
+          <tr>
+            <td><span class="badge bg-secondary fw-normal">{{ ins.get_categoria_display }}</span></td>
+            <td class="fw-semibold">
+              <a href="{% url 'insumo_view' ins.id %}" class="text-decoration-none">{{ ins.nombre }}</a>
+            </td>
+            <td class="text-muted">
+              {{ ins.marca }}{% if ins.modelo %} <span class="text-muted">/</span> {{ ins.modelo }}{% endif %}
+            </td>
+            <td class="text-center fw-semibold
+              {% if ins.estado == 'agotado' %}text-danger
+              {% elif ins.estado == 'bajo' %}text-warning
+              {% else %}text-success{% endif %}">
+              {{ ins.stock }}
+            </td>
+            <td class="text-center text-muted">{{ ins.stock_minimo }}</td>
+            <td class="text-center">
+              {% if ins.estado == 'agotado' %}
+                <span class="badge bg-danger">Sin Stock</span>
+              {% elif ins.estado == 'bajo' %}
+                <span class="badge bg-warning text-dark">Stock Bajo</span>
+              {% else %}
+                <span class="badge bg-success">OK</span>
+              {% endif %}
+            </td>
+            <td class="text-end">{{ ins.costo_unitario|floatformat:2 }}</td>
+            <td class="text-end fw-semibold">{{ ins.valor_stock|floatformat:2 }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="text-center text-muted py-3 small">
+              No se encontraron insumos con los filtros seleccionados.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        {% if insumos %}
+        <tfoot class="table-light fw-semibold small">
+          <tr>
+            <td colspan="7" class="text-end text-muted">Total Valor en Stock:</td>
+            <td class="text-end text-primary">Bs. {{ valor_total|floatformat:2 }}</td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

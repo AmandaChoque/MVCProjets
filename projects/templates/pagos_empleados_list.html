@@ -72,6 +72,7 @@
           <th>Empleado</th>
           <th>Proyecto</th>
           <th>Concepto</th>
+          <th>Método</th>
           <th>Fecha</th>
           <th class="text-end">Monto (Bs.)</th>
           <th class="text-end" style="width:60px;">Acciones</th>
@@ -90,6 +91,13 @@
             </a>
           </td>
           <td class="small">{{ pago.concepto }}</td>
+          <td class="small">
+            {% if pago.tipo_pago == 'transferencia' %}
+            <span class="badge bg-info text-dark">Transferencia</span>
+            {% else %}
+            <span class="badge bg-secondary">Efectivo</span>
+            {% endif %}
+          </td>
           <td class="small">{{ pago.fecha|date:"d/m/Y" }}</td>
           <td class="text-end fw-semibold">{{ pago.monto|floatformat:2 }}</td>
           <td class="text-end">
@@ -107,7 +115,7 @@
       {% if pagos %}
       <tfoot class="table-light">
         <tr>
-          <td colspan="4" class="text-end fw-semibold">Total (Bs.):</td>
+          <td colspan="5" class="text-end fw-semibold">Total (Bs.):</td>
           <td class="text-end fw-bold">{{ total_monto|floatformat:2 }}</td>
           <td></td>
         </tr>

@@ -20,12 +20,19 @@ class Proveedor(AuditModel):
         ('otro',                'Otro'),
     ]
 
-    nombre    = models.CharField(max_length=200, verbose_name="Nombre")
+    # ── Datos de la empresa ──────────────────────────────────────────────────
+    nombre    = models.CharField(max_length=200, verbose_name="Razón Social / Nombre de la Empresa")
     rubro     = models.CharField(max_length=30, choices=RUBRO_CHOICES, verbose_name="Rubro")
-    celular   = models.CharField(max_length=15, verbose_name="Celular")
-    correo    = models.EmailField(max_length=100, blank=True, verbose_name="Correo Electrónico")
-    direccion = models.CharField(max_length=255, blank=True, verbose_name="Dirección")
     nit       = models.CharField(max_length=20, blank=True, verbose_name="NIT")
+    telefono  = models.CharField(max_length=15, verbose_name="Teléfono de la Empresa")
+    correo    = models.EmailField(max_length=100, blank=True, verbose_name="Correo de la Empresa")
+    direccion = models.CharField(max_length=255, blank=True, verbose_name="Dirección")
+
+    # ── Encargado / Contacto (opcional) ──────────────────────────────────────
+    encargado_nombre  = models.CharField(max_length=150, blank=True, default='', verbose_name="Nombre del Encargado")
+    encargado_cargo   = models.CharField(max_length=100, blank=True, default='', verbose_name="Cargo del Encargado")
+    encargado_celular = models.CharField(max_length=15,  blank=True, default='', verbose_name="Celular del Encargado")
+    encargado_correo  = models.EmailField(blank=True,    default='', verbose_name="Correo del Encargado")
 
     class Meta:
         verbose_name = 'Proveedor'
@@ -65,10 +72,13 @@ class Insumo(AuditModel):
     modelo         = models.CharField(max_length=100, blank=True, default='', verbose_name="Modelo")
     categoria      = models.CharField(max_length=30, choices=CATEGORIA_CHOICES, verbose_name="Categoría")
     costo_unitario = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, verbose_name="Costo Unitario (Bs.)")
+    # Desnormalización controlada: calculado desde compras - asignados.
+    # Mantenido automáticamente por señales. Nunca modificar directamente.
     stock          = models.IntegerField(default=0, verbose_name="Stock actual")
     stock_minimo   = models.PositiveIntegerField(default=5, verbose_name="Stock mínimo de alerta")
 
-    def recalculate_stock(self):
+    def _recalculate_stock(self):
+        """Uso exclusivo de señales — no llamar desde vistas ni formularios."""
         compras   = self.compras.filter(activo=True).aggregate(t=Sum('cantidad'))['t'] or 0
         asignados = self.proyectos.filter(activo=True).aggregate(t=Sum('cantidad'))['t'] or 0
         self.stock = compras - asignados
@@ -152,6 +162,8 @@ class Compra(AuditModel):
     fecha          = models.DateField(verbose_name="Fecha de Compra")
 
     def save(self, *args, **kwargs):
+        # Desnormalización controlada: costo_total se deriva de cantidad × costo_unitario.
+        # Se recalcula aquí para que la BD nunca tenga valores inconsistentes.
         self.costo_total = self.cantidad * self.costo_unitario
         super().save(*args, **kwargs)
 
@@ -179,7 +191,7 @@ def compra_recalculate_stock(sender, instance, **kwargs):
     if instance.insumo is None:
         return
     insumo = instance.insumo
-    insumo.recalculate_stock()
+    insumo._recalculate_stock()
     # Actualizar costo_unitario al último precio de compra registrado
     ultima_compra = Compra.objects.filter(insumo=insumo, activo=True).order_by('-fecha', '-created').first()
     if ultima_compra:
@@ -191,4 +203,4 @@ def compra_recalculate_stock(sender, instance, **kwargs):
 def requiere_recalculate_stock(sender, instance, **kwargs):
     if instance.insumo is None:
         return
-    instance.insumo.recalculate_stock()
+    instance.insumo._recalculate_stock()

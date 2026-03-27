@@ -3,16 +3,28 @@ from django.db.models import Sum
 
 from projects.models import AuditModel, Proyecto, Contrato
 
+METODOS_PAGO = [
+    ('efectivo',      'Efectivo'),
+    ('transferencia', 'Transferencia'),
+]
 
-class Pago(AuditModel):
-    PAYMENT_TYPE_CHOICES = [
-        ('efectivo',      'Efectivo'),
-        ('transferencia', 'Transferencia'),
-    ]
 
-    monto              = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto")
-    fecha              = models.DateField(db_index=True, verbose_name="Fecha Pago")
-    tipo_pago          = models.CharField(max_length=15, choices=PAYMENT_TYPE_CHOICES, default='efectivo', verbose_name="Método de Pago")
+class PagoBase(AuditModel):
+    """
+    Clase base abstracta para todos los pagos del sistema.
+    Centraliza los atributos comunes: monto, fecha y método de pago.
+    Subclases: Pago (cliente→proyecto) y PagoEmpleado (empresa→empleado).
+    """
+    monto     = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto (Bs.)")
+    fecha     = models.DateField(db_index=True, verbose_name="Fecha de Pago")
+    tipo_pago = models.CharField(max_length=15, choices=METODOS_PAGO, default='efectivo', verbose_name="Método de Pago")
+
+    class Meta(AuditModel.Meta):
+        abstract = True
+        ordering = ['-fecha']
+
+
+class Pago(PagoBase):
     numero_referencia  = models.CharField(max_length=100, blank=True, default='', verbose_name="N° Referencia / Comprobante")
     proyecto           = models.ForeignKey(Proyecto, on_delete=models.PROTECT, related_name='pagos', verbose_name="Proyecto")
 
@@ -31,7 +43,7 @@ class Pago(AuditModel):
         return f"Pago de {self.monto} ({self.get_tipo_pago_display()})"
 
 
-class PagoEmpleado(AuditModel):
+class PagoEmpleado(PagoBase):
     CONCEPTO_CHOICES = [
         ('anticipo',    'Anticipo'),
         ('mensualidad', 'Mensualidad'),
@@ -43,8 +55,6 @@ class PagoEmpleado(AuditModel):
         Contrato, on_delete=models.PROTECT,
         related_name='pagos', verbose_name="Contrato"
     )
-    monto    = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto (Bs.)")
-    fecha    = models.DateField(db_index=True, verbose_name="Fecha de Pago")
     concepto = models.CharField(max_length=20, choices=CONCEPTO_CHOICES, verbose_name="Concepto")
 
     class Meta:
@@ -75,4 +85,4 @@ from django.dispatch import receiver
 @receiver(post_save, sender=Pago)
 @receiver(post_delete, sender=Pago)
 def update_project_payment_status(sender, instance, **kwargs):
-    instance.proyecto.update_payment_status()
+    instance.proyecto._sync_estado_pago()

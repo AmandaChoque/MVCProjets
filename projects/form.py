@@ -60,12 +60,13 @@ class EmpleadoForm(forms.ModelForm):
     )
     password1 = forms.CharField(
         label="Contraseña",
-        required=True,
-        widget=forms.PasswordInput(attrs={'class': 'form-control', 'autocomplete': 'new-password'})
+        required=False,
+        widget=forms.PasswordInput(attrs={'class': 'form-control', 'autocomplete': 'new-password'}),
+        help_text="Dejar en blanco para mantener la contraseña actual (solo en edición)."
     )
     password2 = forms.CharField(
         label="Confirmar contraseña",
-        required=True,
+        required=False,
         widget=forms.PasswordInput(attrs={'class': 'form-control', 'autocomplete': 'new-password'})
     )
 
@@ -101,7 +102,6 @@ class EmpleadoForm(forms.ModelForm):
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre', 'required': 'required'}),
             'apellido_paterno': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Apellido Paterno', 'required': 'required'}),
             'apellido_materno': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Apellido Materno'}),
-            'fecha_contratacion': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'carnet_identidad': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Carnet de Identidad',
@@ -148,6 +148,9 @@ class EmpleadoForm(forms.ModelForm):
         cleaned_data = super().clean()
         p1 = cleaned_data.get('password1')
         p2 = cleaned_data.get('password2')
+        is_create = not (self.instance and self.instance.pk)
+        if is_create and not p1:
+            self.add_error('password1', 'La contraseña es obligatoria al crear un empleado.')
         if p1 and p2 and p1 != p2:
             self.add_error('password2', 'Las contraseñas no coinciden.')
         return cleaned_data
@@ -222,7 +225,7 @@ class ProgresoForm(forms.ModelForm):
         if valor < 0 or valor > 100:
             raise forms.ValidationError('El porcentaje debe estar entre 0 y 100.')
         if self.proyecto:
-            qs = self.proyecto.progresos.all()
+            qs = self.proyecto.progresos.filter(activo=True)
             if self.instance and self.instance.pk:
                 qs = qs.exclude(pk=self.instance.pk)
             max_porcentaje = qs.aggregate(maximo=Max('porcentaje'))['maximo']

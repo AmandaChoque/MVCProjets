@@ -82,6 +82,13 @@
               <div class="text-danger small mt-1">{% for err in form.concepto.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
             </div>
+            <div class="mb-3">
+              <label class="form-label">Método de Pago <span class="text-danger">*</span></label>
+              {{ form.tipo_pago }}
+              {% if form.tipo_pago.errors %}
+              <div class="text-danger small mt-1">{% for err in form.tipo_pago.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+            </div>
           </div>
         </div>
 

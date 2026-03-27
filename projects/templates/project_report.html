@@ -64,6 +64,16 @@
           </select>
         </div>
 
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Cumplimiento</label>
+          <select name="filter_cumplimiento" class="form-select form-select-sm">
+            <option value="">Todos</option>
+            <option value="vencido"   {% if filter_cumplimiento == 'vencido'   %}selected{% endif %}>⚠ Plazo Vencido</option>
+            <option value="en_plazo"  {% if filter_cumplimiento == 'en_plazo'  %}selected{% endif %}>✓ En Plazo</option>
+            <option value="sin_fecha" {% if filter_cumplimiento == 'sin_fecha' %}selected{% endif %}>Sin Fecha Fin</option>
+          </select>
+        </div>
+
         <div class="col-md-1">
           <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
         </div>
@@ -116,10 +126,28 @@
           <div class="text-muted" style="font-size:0.7rem;">proyectos</div>
         </div>
 
-        <div class="flex-fill text-center px-3 py-1">
+        <div class="flex-fill text-center px-3 py-1 border-end">
           <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Pendientes</div>
           <div class="fw-bold fs-5 mt-1 text-warning">{{ count_pendiente }}</div>
           <div class="text-muted" style="font-size:0.7rem;">proyectos</div>
+        </div>
+
+        <div class="flex-fill text-center px-3 py-1 border-end">
+          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Plazo Vencido</div>
+          <div class="fw-bold fs-5 mt-1 text-danger">{{ count_vencidos }}</div>
+          <div class="text-muted" style="font-size:0.7rem;">retrasados</div>
+        </div>
+
+        <div class="flex-fill text-center px-3 py-1 border-end">
+          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">En Plazo</div>
+          <div class="fw-bold fs-5 mt-1 text-success">{{ count_en_plazo }}</div>
+          <div class="text-muted" style="font-size:0.7rem;">a tiempo</div>
+        </div>
+
+        <div class="flex-fill text-center px-3 py-1">
+          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Sin Fecha Fin</div>
+          <div class="fw-bold fs-5 mt-1 text-secondary">{{ count_sin_fecha }}</div>
+          <div class="text-muted" style="font-size:0.7rem;">sin plazo</div>
         </div>
 
       </div>
@@ -148,6 +176,7 @@
             <th class="text-end">Saldo (Bs.)</th>
             <th>Inicio</th>
             <th>Fin</th>
+            <th>Cumplimiento</th>
           </tr>
         </thead>
         <tbody>
@@ -198,11 +227,24 @@
             <td class="text-end text-danger fw-semibold">{{ project.monto_saldo|floatformat:2 }}</td>
             <td class="text-muted">{{ project.fecha_inicio|date:"d/m/Y"|default:"—" }}</td>
             <td class="text-muted">{{ project.fecha_fin|date:"d/m/Y"|default:"—" }}</td>
+            <td>
+              {% if project.cumplimiento == 'completado' %}
+                <span class="badge bg-success">Completado</span>
+              {% elif project.cumplimiento == 'vencido' %}
+                <span class="badge bg-danger">Vencido</span>
+                <div class="text-danger fw-semibold" style="font-size:0.68rem;">{{ project.dias_info }} día(s)</div>
+              {% elif project.cumplimiento == 'en_plazo' %}
+                <span class="badge bg-success bg-opacity-75">En plazo</span>
+                <div class="text-muted" style="font-size:0.68rem;">{{ project.dias_info }} día(s)</div>
+              {% else %}
+                <span class="badge bg-secondary">Sin fecha</span>
+              {% endif %}
+            </td>
           </tr>
           {% endwith %}
           {% empty %}
           <tr>
-            <td colspan="12" class="text-center text-muted py-3 small">
+            <td colspan="13" class="text-center text-muted py-3 small">
               No se encontraron proyectos con los filtros seleccionados.
             </td>
           </tr>
@@ -215,7 +257,7 @@
             <td class="text-end">Bs. {{ monto_total|floatformat:2 }}</td>
             <td class="text-end text-success">Bs. {{ total_cobrado|floatformat:2 }}</td>
             <td class="text-end text-danger">Bs. {{ total_saldo|floatformat:2 }}</td>
-            <td colspan="2"></td>
+            <td colspan="3"></td>
           </tr>
         </tfoot>
         {% endif %}

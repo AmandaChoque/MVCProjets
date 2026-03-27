@@ -3,59 +3,206 @@
 
 <div class="container-fluid py-3">
 
-  <!-- ======================= ENCABEZADO ======================= -->
-  <div class="mb-2 d-flex justify-content-between align-items-center">
+  <div class="mb-3 d-flex justify-content-between align-items-center">
     <h5 class="fw-semibold text-secondary mb-0">Análisis de Proyectos</h5>
   </div>
 
   {% if message %}
-  <div class="alert alert-info small" role="alert">
-    {{ message }}
-  </div>
+  <div class="alert alert-info small" role="alert">{{ message }}</div>
   {% else %}
 
-  <!-- ======================= GRÁFICO ======================= -->
-  <div class="card mb-3">
-    <div class="card-header bg-light py-2">
-      <span class="fw-semibold small">Distribución de Proyectos por Tipo</span>
+  <!-- ── KPIs ────────────────────────────────────────────────────────────── -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md">
+      <div class="card border-0 shadow-sm h-100" style="border-left:4px solid #1B4D90 !important;">
+        <div class="card-body py-3 px-3">
+          <div style="font-size:2rem;font-weight:700;line-height:1.1;" class="text-primary">{{ total }}</div>
+          <div style="font-size:0.75rem;color:#6c757d;text-transform:uppercase;">Total Proyectos</div>
+        </div>
+      </div>
     </div>
-    <div class="card-body text-center py-3">
-      <img src="data:image/png;base64,{{ graphic }}" alt="Gráfico de Torta"
-           class="img-fluid" style="max-height: 320px;">
+    <div class="col-6 col-md">
+      <div class="card border-0 shadow-sm h-100" style="border-left:4px solid #ffc107 !important;">
+        <div class="card-body py-3 px-3">
+          <div style="font-size:2rem;font-weight:700;line-height:1.1;" class="text-warning">{{ pendiente_count }}</div>
+          <div style="font-size:0.75rem;color:#6c757d;text-transform:uppercase;">Pendientes</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md">
+      <div class="card border-0 shadow-sm h-100" style="border-left:4px solid #0dcaf0 !important;">
+        <div class="card-body py-3 px-3">
+          <div style="font-size:2rem;font-weight:700;line-height:1.1;" class="text-info">{{ en_progreso_count }}</div>
+          <div style="font-size:0.75rem;color:#6c757d;text-transform:uppercase;">En Progreso</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md">
+      <div class="card border-0 shadow-sm h-100" style="border-left:4px solid #198754 !important;">
+        <div class="card-body py-3 px-3">
+          <div style="font-size:2rem;font-weight:700;line-height:1.1;" class="text-success">{{ completado_count }}</div>
+          <div style="font-size:0.75rem;color:#6c757d;text-transform:uppercase;">Completados</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md">
+      <div class="card border-0 shadow-sm h-100" style="border-left:4px solid #20c997 !important;">
+        <div class="card-body py-3 px-3">
+          <div style="font-size:2rem;font-weight:700;line-height:1.1;" class="text-success">{{ pagado_count }}</div>
+          <div style="font-size:0.75rem;color:#6c757d;text-transform:uppercase;">Pagados</div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- ======================= TABLA RESUMEN ======================= -->
-  <div class="row g-3">
-    <div class="col-md-6">
-      <div class="card">
+  <!-- ── FILA 1: Tipo + Mes ──────────────────────────────────────────────── -->
+  <div class="row g-3 mb-4">
+
+    <!-- Distribución por Tipo -->
+    <div class="col-md-5">
+      <div class="card border-0 shadow-sm h-100">
         <div class="card-header bg-light py-2">
-          <span class="fw-semibold small">Conteo por Tipo de Proyecto</span>
+          <span class="fw-semibold small">Distribución por Tipo de Proyecto</span>
+        </div>
+        <div class="card-body d-flex align-items-center justify-content-center" style="max-height:280px;">
+          <canvas id="chartTipo"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Proyectos por Mes -->
+    <div class="col-md-7">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-light py-2">
+          <span class="fw-semibold small">Proyectos Registrados por Mes (últimos 12 meses)</span>
+        </div>
+        <div class="card-body" style="max-height:280px;">
+          <canvas id="chartMensual"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── FILA 2: Estado + Pago ───────────────────────────────────────────── -->
+  <div class="row g-3 mb-4">
+
+    <!-- Estado del Proyecto -->
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-light py-2">
+          <span class="fw-semibold small">Estado de los Proyectos</span>
+        </div>
+        <div class="card-body d-flex align-items-center justify-content-center" style="max-height:260px;">
+          <canvas id="chartEstado"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Estado de Pago -->
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-light py-2">
+          <span class="fw-semibold small">Estado de Pago</span>
+        </div>
+        <div class="card-body d-flex align-items-center justify-content-center" style="max-height:260px;">
+          <canvas id="chartPago"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── FILA 3: Tablas de conteo ───────────────────────────────────────── -->
+  <div class="row g-3">
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light py-2">
+          <span class="fw-semibold small">Conteo por Tipo</span>
         </div>
         <div class="card-body p-0">
           <table class="table table-sm table-hover align-middle small mb-0">
-            <thead class="table-light small text-uppercase fw-semibold">
-              <tr>
-                <th>Tipo de Proyecto</th>
-                <th class="text-center">Cantidad</th>
-              </tr>
+            <thead class="table-light text-uppercase fw-semibold" style="font-size:0.7rem;">
+              <tr><th>Tipo</th><th class="text-center">Cant.</th><th class="text-center">%</th></tr>
             </thead>
             <tbody>
               <tr>
-                <td><span class="badge" style="background:#66b3ff">Instalación Nueva</span></td>
+                <td><span class="badge" style="background:#264653;">Instalación Nueva</span></td>
                 <td class="text-center fw-semibold">{{ instalacion_count }}</td>
+                <td class="text-center text-muted">{% if total %}{{ instalacion_count|floatformat:0 }}{% endif %}</td>
               </tr>
               <tr>
-                <td><span class="badge" style="background:#99ff99;color:#333">Ampliación</span></td>
+                <td><span class="badge" style="background:#2a9d8f;">Ampliación</span></td>
                 <td class="text-center fw-semibold">{{ ampliacion_count }}</td>
+                <td class="text-center text-muted"></td>
               </tr>
               <tr>
-                <td><span class="badge" style="background:#ffcc99;color:#333">Mantenimiento</span></td>
+                <td><span class="badge" style="background:#e9c46a;color:#333;">Mantenimiento</span></td>
                 <td class="text-center fw-semibold">{{ mantenimiento_count }}</td>
+                <td class="text-center text-muted"></td>
               </tr>
               <tr>
-                <td><span class="badge" style="background:#ff9999">Emergencia</span></td>
+                <td><span class="badge" style="background:#e76f51;">Emergencia</span></td>
                 <td class="text-center fw-semibold">{{ emergencia_count }}</td>
+                <td class="text-center text-muted"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light py-2">
+          <span class="fw-semibold small">Conteo por Estado</span>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-sm table-hover align-middle small mb-0">
+            <thead class="table-light text-uppercase fw-semibold" style="font-size:0.7rem;">
+              <tr><th>Estado</th><th class="text-center">Cant.</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="badge bg-warning text-dark">Pendiente</span></td>
+                <td class="text-center fw-semibold">{{ pendiente_count }}</td>
+              </tr>
+              <tr>
+                <td><span class="badge bg-primary">En Progreso</span></td>
+                <td class="text-center fw-semibold">{{ en_progreso_count }}</td>
+              </tr>
+              <tr>
+                <td><span class="badge bg-success">Completado</span></td>
+                <td class="text-center fw-semibold">{{ completado_count }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light py-2">
+          <span class="fw-semibold small">Conteo por Estado de Pago</span>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-sm table-hover align-middle small mb-0">
+            <thead class="table-light text-uppercase fw-semibold" style="font-size:0.7rem;">
+              <tr><th>Estado de Pago</th><th class="text-center">Cant.</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><span class="badge bg-danger">Sin Pago</span></td>
+                <td class="text-center fw-semibold">{{ no_pagado_count }}</td>
+              </tr>
+              <tr>
+                <td><span class="badge bg-info text-dark">Parcial</span></td>
+                <td class="text-center fw-semibold">{{ parcial_count }}</td>
+              </tr>
+              <tr>
+                <td><span class="badge bg-success">Pagado</span></td>
+                <td class="text-center fw-semibold">{{ pagado_count }}</td>
               </tr>
             </tbody>
           </table>
@@ -65,6 +212,97 @@
   </div>
 
   {% endif %}
-
 </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  const chartDefaults = {
+    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 14, boxWidth: 14 } } },
+    responsive: true,
+    maintainAspectRatio: true,
+  };
+
+  // ── Gráfico 1: Tipo de Proyecto (Donut) ──
+  new Chart(document.getElementById('chartTipo'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Instalación Nueva', 'Ampliación', 'Mantenimiento', 'Emergencia'],
+      datasets: [{
+        data: [{{ instalacion_count }}, {{ ampliacion_count }}, {{ mantenimiento_count }}, {{ emergencia_count }}],
+        backgroundColor: ['#264653', '#2a9d8f', '#e9c46a', '#e76f51'],
+        borderWidth: 2,
+        borderColor: '#fff',
+      }]
+    },
+    options: { ...chartDefaults }
+  });
+
+  // ── Gráfico 2: Proyectos por Mes (Barras) ──
+  new Chart(document.getElementById('chartMensual'), {
+    type: 'bar',
+    data: {
+      labels: {{ monthly_labels|safe }},
+      datasets: [{
+        label: 'Proyectos creados',
+        data: {{ monthly_values|safe }},
+        backgroundColor: 'rgba(27, 77, 144, 0.75)',
+        borderColor: '#1B4D90',
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } } },
+        x: { ticks: { font: { size: 10 } } }
+      }
+    }
+  });
+
+  // ── Gráfico 3: Estado del Proyecto (Donut) ──
+  new Chart(document.getElementById('chartEstado'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Pendiente', 'En Progreso', 'Completado'],
+      datasets: [{
+        data: [{{ pendiente_count }}, {{ en_progreso_count }}, {{ completado_count }}],
+        backgroundColor: ['#ffc107', '#0dcaf0', '#198754'],
+        borderWidth: 2,
+        borderColor: '#fff',
+      }]
+    },
+    options: { ...chartDefaults }
+  });
+
+  // ── Gráfico 4: Estado de Pago (Barras horizontales) ──
+  new Chart(document.getElementById('chartPago'), {
+    type: 'bar',
+    data: {
+      labels: ['Sin Pago', 'Parcial', 'Pagado'],
+      datasets: [{
+        label: 'Proyectos',
+        data: [{{ no_pagado_count }}, {{ parcial_count }}, {{ pagado_count }}],
+        backgroundColor: ['#dc3545', '#0dcaf0', '#198754'],
+        borderRadius: 5,
+        borderWidth: 0,
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } } },
+        y: { ticks: { font: { size: 12 } } }
+      }
+    }
+  });
+</script>
 {% endblock %}

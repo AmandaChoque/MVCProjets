@@ -1,15 +1,14 @@
-from django.utils import timezone
 from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.db.models import Q
 
 # Señal para actualizar automáticamente el estado del proyecto
-from django.db.models.signals import pre_save
+from django.db.models.signals import pre_save, post_save
 from django.dispatch import receiver
 
 from django.db.models import Sum
-from django.core.validators import MaxValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 # Create your models here.
 
 # Auditoria
@@ -140,11 +139,15 @@ class Proyecto(AuditModel):
     fecha_inicio = models.DateField(null=True, blank=True, verbose_name="Fecha de Inicio")
     fecha_fin = models.DateField(null=True, blank=True, verbose_name="Fecha de Finalización")
     observacion = models.TextField(blank=True, default='', verbose_name="Observación")
+    # Desnormalización controlada: valor calculado mantenido automáticamente
+    # por la señal post_save/post_delete de Pago. Nunca modificar directamente.
     estado_pago = models.CharField(max_length=20, choices=PAYMENT_STATE_CHOICES, default='no_pagado', db_index=True, verbose_name="Estado de Pago")
     creado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name="Creado por")
+    # null=True por compatibilidad de datos. El formulario lo exige siempre (blank=False en ProjectForm).
+    # Todo proyecto debe tener cliente asignado — esta restricción se refuerza en capa de formulario.
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Contratista")
 
-    monto_total = models.DecimalField(max_digits=10, decimal_places=2, default=0, verbose_name="Monto Total del Proyecto")
+    monto_total = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Monto Total del Proyecto")
 
     def __str__(self):
         username = self.creado_por.username if self.creado_por else 'N/A'
@@ -154,10 +157,18 @@ class Proyecto(AuditModel):
         verbose_name = 'Proyecto'
         verbose_name_plural = 'Proyectos'
         db_table = 'projects_project'
+        constraints = [
+            # Ambas fechas son opcionales; la restricción solo aplica cuando ambas están presentes
+            models.CheckConstraint(
+                condition=Q(fecha_fin__isnull=True) | Q(fecha_inicio__isnull=True) | Q(fecha_fin__gte=models.F('fecha_inicio')),
+                name='proyecto_fecha_fin_gte_inicio',
+            ),
+        ]
 
-    def update_payment_status(self):
+    def _sync_estado_pago(self):
         """
-        Actualiza el estado de pago del proyecto basado en los pagos realizados.
+        Recalcula y persiste el campo estado_pago.
+        Uso exclusivo de señales — no llamar desde vistas ni formularios.
         """
         total_pagado = self.pagos.filter(activo=True).aggregate(total_pagado=Sum('monto'))['total_pagado'] or 0
 
@@ -170,8 +181,8 @@ class Proyecto(AuditModel):
 
         self.save()
 
-# HistorialPagos
-class HistorialPago(models.Model):
+# Auditoría de cambios al presupuesto del proyecto
+class HistorialPresupuesto(models.Model):
     fecha_modificacion = models.DateTimeField(auto_now_add=True, verbose_name="Fecha Modificación")
     monto_anterior = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto Anterior")
     monto_actual = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto Actual")
@@ -182,45 +193,67 @@ class HistorialPago(models.Model):
         related_name='+',
         verbose_name="Modificado por"
     )
-    proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='historial_pagos', verbose_name="Proyecto")
+    proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='historial_presupuesto', verbose_name="Proyecto")
 
     class Meta:
-        verbose_name = 'Historial Pago'
-        verbose_name_plural = 'Historiales de Pagos'
-        db_table = 'projects_historialpago'
+        verbose_name = 'Historial Presupuesto'
+        verbose_name_plural = 'Historiales de Presupuesto'
+        db_table = 'projects_historialpresupuesto'
 
     def __str__(self):
-        return f"Historial de Pago - Modificado en {self.fecha_modificacion}"
+        return f"Presupuesto modificado — {self.fecha_modificacion}"
 
 @receiver(pre_save, sender=Proyecto)
 def registrar_cambio_monto_proyecto(sender, instance, **kwargs):
     """
-    Registra en HistorialPago cuando cambia el monto_total de un proyecto.
+    Registra en HistorialPresupuesto cuando cambia el monto_total.
+    Además marca el proyecto para que post_save recalcule estado_pago,
+    cerrando el ciclo: cambio de presupuesto → estado de cobro actualizado.
     """
     if not instance.pk:
-        return  # proyecto nuevo, no hay historial que registrar
+        return
     try:
         anterior = Proyecto.objects.get(pk=instance.pk)
     except Proyecto.DoesNotExist:
         return
     if anterior.monto_total != instance.monto_total:
-        HistorialPago.objects.create(
+        HistorialPresupuesto.objects.create(
             proyecto=anterior,
             monto_anterior=anterior.monto_total,
             monto_actual=instance.monto_total,
             motivo_cambio=f'Monto actualizado de Bs. {anterior.monto_total} a Bs. {instance.monto_total}.',
             modificado_por=getattr(instance, '_current_user', None),
         )
+        instance._recalcular_estado_pago = True  # bandera para post_save
+
+
+@receiver(post_save, sender=Proyecto)
+def sync_estado_pago_tras_cambio_monto(sender, instance, **kwargs):
+    """
+    Si el monto_total cambió, recalcula estado_pago para mantener consistencia.
+    Evita recursión usando update_fields para no disparar pre_save de nuevo.
+    """
+    if getattr(instance, '_recalcular_estado_pago', False):
+        instance._recalcular_estado_pago = False
+        total_pagado = instance.pagos.filter(activo=True).aggregate(
+            t=Sum('monto'))['t'] or 0
+        if total_pagado >= instance.monto_total:
+            nuevo_estado = 'pagado'
+        elif total_pagado > 0:
+            nuevo_estado = 'parcial'
+        else:
+            nuevo_estado = 'no_pagado'
+        if instance.estado_pago != nuevo_estado:
+            Proyecto.objects.filter(pk=instance.pk).update(estado_pago=nuevo_estado)
 
 
 # Progreso del Proyecto
-class Progreso(models.Model):
+class Progreso(AuditModel):
     proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='progresos', verbose_name="Proyecto")
     fecha = models.DateField(verbose_name="Fecha")
-    porcentaje = models.PositiveIntegerField(validators=[MaxValueValidator(100)], verbose_name="Porcentaje (%)")
+    porcentaje = models.PositiveIntegerField(validators=[MinValueValidator(0), MaxValueValidator(100)], verbose_name="Porcentaje (%)")
     descripcion = models.CharField(max_length=255, verbose_name="Descripción")
     observacion = models.TextField(blank=True, verbose_name="Observación")
-    created = models.DateTimeField(default=timezone.now)
 
     class Meta:
         verbose_name = 'Progreso'
@@ -268,7 +301,21 @@ class Contrato(AuditModel):
             models.CheckConstraint(
                 condition=~Q(tipo='empleado') | Q(empleado__isnull=False),
                 name='contrato_empleado_required_when_tipo_empleado',
-            )
+            ),
+            models.CheckConstraint(
+                condition=Q(fecha_fin__gte=models.F('fecha_inicio')),
+                name='contrato_fecha_fin_gte_inicio',
+            ),
+            models.CheckConstraint(
+                condition=Q(fecha_firma__lte=models.F('fecha_inicio')),
+                name='contrato_fecha_firma_lte_inicio',
+            ),
+            # Un proyecto solo puede tener un contrato con el cliente activo a la vez
+            models.UniqueConstraint(
+                fields=['proyecto'],
+                condition=Q(tipo='proyecto', activo=True),
+                name='unique_contrato_proyecto_activo',
+            ),
         ]
 
     def __str__(self):
@@ -277,8 +324,5 @@ class Contrato(AuditModel):
         return f"Contrato proyecto — {self.proyecto.nombre}"
 
 
-# Alias para compatibilidad con imports existentes
-ContratoEmpleado = Contrato
-ContratoProyecto = Contrato
 
 

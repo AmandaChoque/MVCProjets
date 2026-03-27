@@ -25,4 +25,6 @@ urlpatterns = [
     path('compras/nueva/',                       views.create_compra,        name='create_compra'),
     path('compras/<int:id_compra>/',             views.compra_detail,        name='compra_detail'),
     path('compras/<int:id_compra>/deactivate/',  views.deactivate_compra,    name='compra_deactivate'),
+
+    path('inventario/reporte/', views.inventario_report, name='inventario_report'),
 ]

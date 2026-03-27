@@ -60,6 +60,7 @@ urlpatterns = [
     # Employees
     path('employees/', views.employees, name='employees'),
     path('employees/create/', views.create_employee, name='create_employee'),
+    path('employees/carga/', views.employee_workload, name='employee_workload'),
     path('employees/<int:id_employee>/', views.employee_detail, name='employee_detail'),
     path('employees/<int:id_employee>/view/', views.employee_view, name='employee_view'),
     path('employees/<int:id_employee>/deactivate/', views.deactivate_employee, name='employee_deactivate'),

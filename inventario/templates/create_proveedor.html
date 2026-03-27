@@ -33,52 +33,63 @@
         </div>
         {% endif %}
 
-        <div class="row g-4">
+        <!-- Datos de la empresa -->
+        <p class="fw-semibold text-muted small text-uppercase mb-2">Datos de la Empresa</p>
+        <div class="row g-3 mb-4">
           <div class="col-lg-6">
-            <div class="mb-3">
-              <label class="form-label">Nombre <span class="text-danger">*</span></label>
-              {{ form.nombre }}
-              {% if form.nombre.errors %}
-              <div class="text-danger small mt-1">{% for err in form.nombre.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Rubro <span class="text-danger">*</span></label>
-              {{ form.rubro }}
-              {% if form.rubro.errors %}
-              <div class="text-danger small mt-1">{% for err in form.rubro.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Celular <span class="text-danger">*</span></label>
-              {{ form.celular }}
-              {% if form.celular.errors %}
-              <div class="text-danger small mt-1">{% for err in form.celular.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
-            </div>
+            <label class="form-label">Razón Social / Nombre <span class="text-danger">*</span></label>
+            {{ form.nombre }}
+            {% if form.nombre.errors %}<div class="text-danger small mt-1">{% for err in form.nombre.errors %}{{ err }}{% endfor %}</div>{% endif %}
           </div>
           <div class="col-lg-6">
-            <div class="mb-3">
-              <label class="form-label">Correo Electrónico</label>
-              {{ form.correo }}
-              {% if form.correo.errors %}
-              <div class="text-danger small mt-1">{% for err in form.correo.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Dirección</label>
-              {{ form.direccion }}
-              {% if form.direccion.errors %}
-              <div class="text-danger small mt-1">{% for err in form.direccion.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
-            </div>
-            <div class="mb-3">
-              <label class="form-label">NIT</label>
-              {{ form.nit }}
-              {% if form.nit.errors %}
-              <div class="text-danger small mt-1">{% for err in form.nit.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
-            </div>
+            <label class="form-label">Rubro <span class="text-danger">*</span></label>
+            {{ form.rubro }}
+            {% if form.rubro.errors %}<div class="text-danger small mt-1">{% for err in form.rubro.errors %}{{ err }}{% endfor %}</div>{% endif %}
+          </div>
+          <div class="col-lg-4">
+            <label class="form-label">NIT</label>
+            {{ form.nit }}
+            {% if form.nit.errors %}<div class="text-danger small mt-1">{% for err in form.nit.errors %}{{ err }}{% endfor %}</div>{% endif %}
+          </div>
+          <div class="col-lg-4">
+            <label class="form-label">Teléfono <span class="text-danger">*</span></label>
+            {{ form.telefono }}
+            {% if form.telefono.errors %}<div class="text-danger small mt-1">{% for err in form.telefono.errors %}{{ err }}{% endfor %}</div>{% endif %}
+          </div>
+          <div class="col-lg-4">
+            <label class="form-label">Correo de la Empresa</label>
+            {{ form.correo }}
+            {% if form.correo.errors %}<div class="text-danger small mt-1">{% for err in form.correo.errors %}{{ err }}{% endfor %}</div>{% endif %}
+          </div>
+          <div class="col-12">
+            <label class="form-label">Dirección</label>
+            {{ form.direccion }}
+            {% if form.direccion.errors %}<div class="text-danger small mt-1">{% for err in form.direccion.errors %}{{ err }}{% endfor %}</div>{% endif %}
+          </div>
+        </div>
+
+        <!-- Datos del encargado -->
+        <p class="fw-semibold text-muted small text-uppercase mb-2">Encargado / Contacto <span class="fw-normal text-muted">(opcional)</span></p>
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <label class="form-label">Nombre del Encargado</label>
+            {{ form.encargado_nombre }}
+            {% if form.encargado_nombre.errors %}<div class="text-danger small mt-1">{% for err in form.encargado_nombre.errors %}{{ err }}{% endfor %}</div>{% endif %}
+          </div>
+          <div class="col-lg-6">
+            <label class="form-label">Cargo del Encargado</label>
+            {{ form.encargado_cargo }}
+            {% if form.encargado_cargo.errors %}<div class="text-danger small mt-1">{% for err in form.encargado_cargo.errors %}{{ err }}{% endfor %}</div>{% endif %}
+          </div>
+          <div class="col-lg-6">
+            <label class="form-label">Celular del Encargado</label>
+            {{ form.encargado_celular }}
+            {% if form.encargado_celular.errors %}<div class="text-danger small mt-1">{% for err in form.encargado_celular.errors %}{{ err }}{% endfor %}</div>{% endif %}
+          </div>
+          <div class="col-lg-6">
+            <label class="form-label">Correo del Encargado</label>
+            {{ form.encargado_correo }}
+            {% if form.encargado_correo.errors %}<div class="text-danger small mt-1">{% for err in form.encargado_correo.errors %}{{ err }}{% endfor %}</div>{% endif %}
           </div>
         </div>
 

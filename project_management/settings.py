@@ -168,3 +168,6 @@ LOGOUT_REDIRECT_URL = '/'
 SESSION_COOKIE_AGE = 1800  # 30 minutes in seconds (30 * 60)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Cerrar sesión al cerrar el navegador
 SESSION_SAVE_EVERY_REQUEST = True  # Save session on every request to reset timeout
+
+# Vista personalizada para errores CSRF (token expirado, sesión vencida, etc.)
+CSRF_FAILURE_VIEW = 'projects.views.csrf_failure'

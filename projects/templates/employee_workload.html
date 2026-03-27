@@ -1,0 +1,240 @@
+{% extends 'base.html' %} {% block content %} {% csrf_token %}
+<div class="container-fluid py-3">
+  <!-- Encabezado -->
+  <div class="mb-3 d-flex justify-content-between align-items-center">
+    <h5 class="fw-semibold text-secondary mb-0">
+      Carga de Trabajo — Empleados
+    </h5>
+    <a href="{% url 'employees' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Volver a Empleados
+    </a>
+  </div>
+
+  <!-- Tabla principal -->
+  <div class="card border-0 shadow-sm">
+    <div
+      class="card-header bg-light py-2 d-flex justify-content-between align-items-center"
+    >
+      <span class="fw-semibold small">
+        <i class="bi bi-bar-chart-steps me-1"></i>Distribución de Proyectos por
+        Empleado
+      </span>
+      <span class="text-muted small"
+        >{{ empleados|length }} empleado(s) activo(s)</span
+      >
+    </div>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle small mb-0">
+        <thead
+          class="table-light text-uppercase fw-semibold"
+          style="font-size: 0.71rem"
+        >
+          <tr>
+            <th style="width: 24px"></th>
+            <th>Empleado</th>
+            <th>Cargo</th>
+            <th class="text-center">Proyectos Activos</th>
+            <th class="text-center">Proyectos Completados</th>
+            <th class="text-end">Monto Contratos (Bs.)</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for emp in empleados %}
+
+          <!-- Fila resumen del empleado -->
+          <tr
+            style="cursor: pointer"
+            data-bs-toggle="collapse"
+            data-bs-target="#proy_{{ emp.id }}"
+            aria-expanded="false"
+          >
+            <td class="text-center text-muted">
+              <i
+                class="bi bi-chevron-right"
+                id="chev_{{ emp.id }}"
+                style="font-size: 0.75rem"
+              ></i>
+            </td>
+            <td
+              class="{% if emp.proyectos_activos > 0 %}fw-semibold{% endif %}"
+            >
+              <a
+                href="{% url 'employee_view' emp.id %}"
+                class="text-decoration-none"
+                onclick="event.stopPropagation()"
+              >
+                {{ emp.nombre }} {{ emp.apellido_paterno }}{% if
+                emp.apellido_materno %} {{ emp.apellido_materno }}{% endif %}
+              </a>
+            </td>
+            <td>
+              {% if emp.cargo == 'administrador' %}<span class="badge bg-dark"
+                >Administrador</span
+              >
+              {% elif emp.cargo == 'gerente' %}<span class="badge bg-primary"
+                >Gerente</span
+              >
+              {% elif emp.cargo == 'instalador' %}<span class="badge bg-success"
+                >Instalador</span
+              >
+              {% elif emp.cargo == 'tecnico_soporte' %}<span
+                class="badge bg-info text-dark"
+                >Técnico</span
+              >
+              {% elif emp.cargo == 'secretaria' %}<span
+                class="badge bg-secondary"
+                >Secretaria</span
+              >
+              {% else %}<span class="badge bg-secondary"
+                >{{ emp.get_cargo_display }}</span
+              >
+              {% endif %}
+            </td>
+            <td class="text-center">
+              {% if emp.proyectos_activos > 0 %}
+              <span class="badge bg-primary rounded-pill"
+                >{{ emp.proyectos_activos }}</span
+              >
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              {% if emp.proyectos_completados > 0 %}
+              <span class="badge bg-success rounded-pill"
+                >{{ emp.proyectos_completados }}</span
+              >
+              {% else %}
+              <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td class="text-end">
+              {% if emp.monto_contratos %}Bs. {{
+              emp.monto_contratos|floatformat:2 }} {% else %}<span
+                class="text-muted"
+                >—</span
+              >
+              {% endif %}
+            </td>
+          </tr>
+
+          <!-- Fila expandible: proyectos activos del empleado -->
+          <tr>
+            <td colspan="6" class="p-0 border-0">
+              <div class="collapse" id="proy_{{ emp.id }}">
+                {% if emp.contratos_activos_list %}
+                <div
+                  class="bg-light border-start border-3 border-primary px-4 py-2"
+                >
+                  <p class="small fw-semibold text-primary mb-2">
+                    <i class="bi bi-folder2-open me-1"></i>Proyectos activos
+                    asignados ({{ emp.contratos_activos_list|length }}):
+                  </p>
+                  <table
+                    class="table table-sm table-borderless align-middle small mb-0"
+                  >
+                    <thead
+                      style="
+                        font-size: 0.68rem;
+                        text-transform: uppercase;
+                        color: #6c757d;
+                      "
+                    >
+                      <tr>
+                        <th>Proyecto</th>
+                        <th class="text-center">Estado</th>
+                        <th>Tipo</th>
+                        <th>Inicio Contrato</th>
+                        <th>Fin Contrato</th>
+                        <th class="text-end">Mi Contrato (Bs.)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for c in emp.contratos_activos_list %}
+                      <tr>
+                        <td>
+                          <a
+                            href="{% url 'project_view' c.proyecto.id %}"
+                            class="text-decoration-none fw-semibold"
+                          >
+                            {{ c.proyecto.nombre }}
+                          </a>
+                          <span
+                            class="text-muted ms-1"
+                            style="font-size: 0.68rem"
+                            >{{ c.proyecto.codigo }}</span
+                          >
+                        </td>
+                        <td class="text-center">
+                          {% if c.proyecto.estado_proyecto == 'en_progreso' %}
+                          <span class="badge bg-primary">En Progreso</span>
+                          {% else %}
+                          <span class="badge bg-warning text-dark"
+                            >Pendiente</span
+                          >
+                          {% endif %}
+                        </td>
+                        <td class="text-muted" style="font-size: 0.75rem">
+                          {{ c.proyecto.get_tipo_proyecto_display }}
+                        </td>
+                        <td class="text-muted">
+                          {% if c.contrato_proyecto %} {{
+                          c.contrato_proyecto.fecha_inicio|date:"d/m/Y" }} {%
+                          else %}—{% endif %}
+                        </td>
+                        <td class="text-muted">
+                          {% if c.contrato_proyecto %} {{
+                          c.contrato_proyecto.fecha_fin|date:"d/m/Y" }} {% else
+                          %}—{% endif %}
+                        </td>
+                        <td class="text-end fw-semibold">
+                          Bs. {{ c.monto_acordado|floatformat:2 }}
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+                {% else %}
+                <div
+                  class="bg-light px-4 py-2 text-muted small border-start border-2 border-secondary"
+                >
+                  <i class="bi bi-info-circle me-1"></i>Sin proyectos activos
+                  asignados.
+                </div>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+
+          {% empty %}
+          <tr>
+            <td colspan="6" class="text-center text-muted py-4 small">
+              No hay empleados activos registrados.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+<script>
+  document.querySelectorAll('[data-bs-toggle="collapse"]').forEach((row) => {
+    const targetId = row.getAttribute("data-bs-target").replace("#", "");
+    const empId = targetId.replace("proy_", "");
+    const chevron = document.getElementById("chev_" + empId);
+    const collapseEl = document.getElementById(targetId);
+    if (!collapseEl || !chevron) return;
+    collapseEl.addEventListener(
+      "show.bs.collapse",
+      () => (chevron.style.transform = "rotate(90deg)"),
+    );
+    collapseEl.addEventListener(
+      "hide.bs.collapse",
+      () => (chevron.style.transform = "rotate(0deg)"),
+    );
+  });
+</script>
+{% endblock %}

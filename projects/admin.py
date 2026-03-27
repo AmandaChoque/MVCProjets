@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from projects.models import (
-    Proyecto, Empleado, HistorialPago, Cliente, Progreso, Contrato,
+    Proyecto, Empleado, HistorialPresupuesto, Cliente, Progreso, Contrato,
 )
 from inventario.models import Proveedor, Insumo, Realizar
 from pagos.models import Pago, PagoEmpleado
@@ -25,7 +25,7 @@ class EmpleadoAdmin(UserAdmin):
     ordering = ('apellido_paterno', 'nombre')
     list_per_page = 20
     fieldsets = UserAdmin.fieldsets + (
-        ('Datos del Empleado', {'fields': ('nombre', 'apellido_paterno', 'apellido_materno', 'cargo', 'carnet_identidad', 'numero_celular', 'salario', 'fecha_contratacion')}),
+        ('Datos del Empleado', {'fields': ('nombre', 'apellido_paterno', 'apellido_materno', 'cargo', 'carnet_identidad', 'numero_celular')}),
     )
 
 
@@ -51,8 +51,8 @@ class PagoAdmin(admin.ModelAdmin):
 
 
 
-@admin.register(HistorialPago)
-class HistorialPagoAdmin(admin.ModelAdmin):
+@admin.register(HistorialPresupuesto)
+class HistorialPresupuestoAdmin(admin.ModelAdmin):
     list_display = ('proyecto', 'monto_anterior', 'monto_actual', 'motivo_cambio', 'fecha_modificacion')
     list_filter = ('proyecto',)
     search_fields = ('proyecto__nombre', 'motivo_cambio')
@@ -80,7 +80,7 @@ class ContratoAdmin(admin.ModelAdmin):
 
 @admin.register(Proveedor)
 class ProveedorAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'rubro', 'celular', 'nit', 'activo', 'created')
+    list_display = ('nombre', 'rubro', 'telefono', 'nit', 'encargado_nombre', 'activo', 'created')
     list_filter = ('activo',)
     search_fields = ('nombre', 'rubro', 'nit')
     ordering = ('nombre',)
@@ -110,7 +110,7 @@ class RealizarAdmin(admin.ModelAdmin):
 
 @admin.register(PagoEmpleado)
 class PagoEmpleadoAdmin(admin.ModelAdmin):
-    list_display = ('contrato', 'monto', 'fecha', 'concepto', 'activo', 'created')
+    list_display = ('contrato', 'monto', 'fecha', 'concepto', 'tipo_pago', 'activo', 'created')
     list_filter = ('activo',)
     search_fields = ('contrato__empleado__nombre', 'concepto')
     ordering = ('-fecha',)
