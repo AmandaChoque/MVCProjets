@@ -8,8 +8,8 @@ from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.db import IntegrityError
 
-from .form import ProjectForm, EmpleadoForm, ClienteForm, ProgresoForm, ContratoEmpleadoForm, ContratoProyectoForm
-from .models import Proyecto, Empleado, Cliente, Progreso, Contrato, HistorialPresupuesto
+from .form import ProjectForm, EmpleadoForm, ClienteForm, ProgresoForm, ContratoEmpleadoForm, ContratoEmpleadoDesdeEmpleadoForm, ContratoProyectoForm, JornadaEmpleadoForm
+from .models import Proyecto, Empleado, Cliente, Progreso, Contrato, HistorialPresupuesto, JornadaEmpleado
 from inventario.models import Insumo, Requiere
 from pagos.models import Pago, PagoEmpleado
 from django.contrib.auth.decorators import login_required
@@ -557,7 +557,7 @@ def project_view(request, id_project):
     contratos_empleados = project.contratos.filter(tipo='empleado', activo=True).select_related('empleado')
     contrato_proyecto = project.contratos.filter(tipo='proyecto', activo=True).first()
     insumos_proyecto = project.insumos.select_related('insumo').order_by('-created')
-    total_insumos = sum(r.subtotal for r in insumos_proyecto)
+    total_insumos = sum(r.costo_total for r in insumos_proyecto)
 
     # ── Pagos a empleados por contrato ─────────────────────────────────────────
     contratos_con_pagos = []
@@ -744,9 +744,23 @@ def employee_view(request, id_employee):
 
     saldo_global = total_acordado_global - total_pagado_global
 
+    # Balance por jornadas de cada contrato
+    contratos_con_jornadas = []
+    for item in contratos_con_pagos:
+        contrato = item['contrato']
+        jornadas = contrato.jornadas.filter(activo=True)
+        total_dias = jornadas.aggregate(t=Sum('dias'))['t'] or 0
+        total_ganado = total_dias * contrato.monto_diario
+        contratos_con_jornadas.append({
+            **item,
+            'total_dias': total_dias,
+            'total_ganado': total_ganado,
+            'saldo_jornadas': total_ganado - item['total_pagado'],
+        })
+
     context = {
         'employee': empleado,
-        'contratos_con_pagos': contratos_con_pagos,
+        'contratos_con_pagos': contratos_con_jornadas,
         'total_acordado_global': total_acordado_global,
         'total_pagado_global': total_pagado_global,
         'saldo_global': saldo_global,
@@ -1324,19 +1338,114 @@ def create_contrato_empleado(request, id_project):
 
 
 @login_required
+def create_contrato_from_employee(request, id_employee):
+    """Crea un contrato de empleado desde el perfil del empleado, sin proyecto asociado."""
+    empleado = get_object_or_404(Empleado, pk=id_employee, is_active=True)
+    if request.method == 'GET':
+        form = ContratoEmpleadoDesdeEmpleadoForm()
+    else:
+        form = ContratoEmpleadoDesdeEmpleadoForm(request.POST, request.FILES)
+        if form.is_valid():
+            contrato = form.save(commit=False)
+            contrato.tipo = 'empleado'
+            contrato.empleado = empleado
+            contrato.proyecto = None
+            contrato.save()
+            messages.success(request, f'Contrato registrado para {empleado.nombre} {empleado.apellido_paterno}.')
+            return redirect('employee_view', id_employee=empleado.id)
+    return render(request, 'create_contrato_desde_empleado.html', {'form': form, 'employee': empleado})
+
+
+@login_required
 def contrato_empleado_detail(request, id_contrato):
     contrato = get_object_or_404(Contrato, pk=id_contrato, tipo='empleado', activo=True)
     project = contrato.proyecto
+
+    # Balance de jornadas
+    jornadas = contrato.jornadas.filter(activo=True).select_related('proyecto').order_by('-fecha')
+    total_dias = jornadas.aggregate(t=Sum('dias'))['t'] or 0
+    total_ganado = total_dias * contrato.monto_diario
+    total_pagado = contrato.pagos.filter(activo=True).aggregate(t=Sum('monto'))['t'] or 0
+    saldo_pendiente = total_ganado - total_pagado
+
     if request.method == 'GET':
         form = ContratoEmpleadoForm(instance=contrato)
-        return render(request, 'contrato_empleado_detail.html', {'form': form, 'contrato': contrato, 'project': project})
     else:
         form = ContratoEmpleadoForm(request.POST, request.FILES, instance=contrato)
         if form.is_valid():
             form.save()
             messages.success(request, 'Contrato actualizado correctamente.')
             return redirect('project_view', id_project=project.id)
-        return render(request, 'contrato_empleado_detail.html', {'form': form, 'contrato': contrato, 'project': project})
+
+    return render(request, 'contrato_empleado_detail.html', {
+        'form': form, 'contrato': contrato, 'project': project,
+        'jornadas': jornadas,
+        'total_dias': total_dias,
+        'total_ganado': total_ganado,
+        'total_pagado': total_pagado,
+        'saldo_pendiente': saldo_pendiente,
+    })
+
+
+@login_required
+def create_jornada(request, id_contrato):
+    contrato = get_object_or_404(Contrato, pk=id_contrato, tipo='empleado', activo=True)
+    jornadas = contrato.jornadas.filter(activo=True).select_related('proyecto').order_by('-fecha')
+    total_dias = jornadas.aggregate(t=Sum('dias'))['t'] or 0
+    total_ganado = total_dias * contrato.monto_diario
+    total_pagado = contrato.pagos.filter(activo=True).aggregate(t=Sum('monto'))['t'] or 0
+    saldo_pendiente = total_ganado - total_pagado
+
+    if request.method == 'GET':
+        form = JornadaEmpleadoForm()
+    else:
+        form = JornadaEmpleadoForm(request.POST)
+        if form.is_valid():
+            jornada = form.save(commit=False)
+            jornada.contrato = contrato
+            jornada.dias = form.cleaned_data['dias']
+            jornada.save()
+            messages.success(request, 'Jornada registrada correctamente.')
+            return redirect('contrato_empleado_detail', id_contrato=contrato.id)
+
+    return render(request, 'create_jornada.html', {
+        'form': form, 'contrato': contrato,
+        'jornadas': jornadas,
+        'total_dias': total_dias,
+        'total_ganado': total_ganado,
+        'total_pagado': total_pagado,
+        'saldo_pendiente': saldo_pendiente,
+    })
+
+
+@login_required
+def jornada_detail(request, id_jornada):
+    jornada = get_object_or_404(JornadaEmpleado, pk=id_jornada, activo=True)
+    contrato = jornada.contrato
+    if request.method == 'GET':
+        form = JornadaEmpleadoForm(instance=jornada)
+    else:
+        form = JornadaEmpleadoForm(request.POST, instance=jornada)
+        if form.is_valid():
+            j = form.save(commit=False)
+            j.dias = form.cleaned_data['dias']
+            j.save()
+            messages.success(request, 'Jornada actualizada correctamente.')
+            return redirect('contrato_empleado_detail', id_contrato=contrato.id)
+    return render(request, 'jornada_detail.html', {'form': form, 'jornada': jornada, 'contrato': contrato})
+
+
+@login_required
+def deactivate_jornada(request, id_jornada):
+    jornada = get_object_or_404(JornadaEmpleado, pk=id_jornada, activo=True)
+    id_contrato = jornada.contrato.id
+    if request.method == 'POST':
+        jornada.activo = False
+        jornada.deleted_at = timezone.now()
+        jornada.deleted_by = request.user
+        jornada.save()
+        messages.success(request, 'Jornada eliminada.')
+    return redirect('contrato_empleado_detail', id_contrato=id_contrato)
 
 
 @login_required

@@ -76,6 +76,13 @@
               <label class="form-label">Total calculado</label>
               <div class="form-control bg-light fw-semibold" id="totalDisplay">Bs. 0.00</div>
             </div>
+            <div class="mb-3">
+              <label class="form-label">N° Factura / Comprobante</label>
+              {{ form.numero_factura }}
+              {% if form.numero_factura.errors %}
+              <div class="text-danger small mt-1">{% for err in form.numero_factura.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+            </div>
           </div>
         </div>
 

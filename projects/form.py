@@ -1,7 +1,7 @@
 from django.forms import ModelForm
 from django import forms
 from django.db.models import Max
-from .models import Proyecto, Empleado, Cliente, Progreso, Contrato
+from .models import Proyecto, Empleado, Cliente, Progreso, Contrato, JornadaEmpleado
 import re
 from decimal import Decimal, InvalidOperation
 
@@ -302,3 +302,44 @@ class ContratoEmpleadoForm(_ContratoBaseForm):
 class ContratoProyectoForm(_ContratoBaseForm):
     class Meta(_ContratoBaseForm.Meta):
         fields = ['fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'observaciones', 'documento']
+
+
+class ContratoEmpleadoDesdeEmpleadoForm(_ContratoBaseForm):
+    """Contrato de empleado creado desde el perfil del empleado (sin campo empleado ni proyecto)."""
+    class Meta(_ContratoBaseForm.Meta):
+        fields = ['fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'tipo_salario', 'observaciones', 'documento']
+        widgets = {
+            **_ContratoBaseForm.Meta.widgets,
+            'tipo_salario': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+
+class JornadaEmpleadoForm(forms.ModelForm):
+    dias = forms.ChoiceField(
+        choices=JornadaEmpleado.DIAS_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label='Días trabajados',
+    )
+    fecha = forms.DateField(
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        label='Fecha',
+    )
+    observacion = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        label='Observación',
+    )
+
+    class Meta:
+        model = JornadaEmpleado
+        fields = ['proyecto', 'fecha', 'dias', 'observacion']
+        widgets = {
+            'proyecto': forms.Select(attrs={'class': 'form-select'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['proyecto'].queryset = Proyecto.objects.filter(
+            activo=True, estado_proyecto__in=['pendiente', 'en_progreso']
+        )
+        self.fields['proyecto'].empty_label = '— Seleccionar proyecto —'

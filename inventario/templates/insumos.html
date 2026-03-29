@@ -84,7 +84,6 @@
           <th>Marca</th>
           <th>Modelo</th>
           <th>Categoría</th>
-          <th class="text-end">Costo Prom. (Bs.)</th>
           <th class="text-center">Stock</th>
           <th class="text-end" style="width: 60px;">Acciones</th>
         </tr>
@@ -116,7 +115,6 @@
               <span class="badge bg-light text-dark small">{{ insumo.get_categoria_display }}</span>
             {% endif %}
           </td>
-          <td class="text-end small">{{ insumo.costo_promedio|floatformat:2 }}</td>
           <td class="text-center">
             {% if insumo.stock_status == 'agotado' %}
               <span class="badge bg-danger">Sin stock ({{ insumo.stock }})</span>
@@ -148,7 +146,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="7" class="text-center text-muted py-3 small">No hay insumos registrados.</td>
+          <td colspan="6" class="text-center text-muted py-3 small">No hay insumos registrados.</td>
         </tr>
         {% endfor %}
       </tbody>

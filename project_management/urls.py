@@ -52,10 +52,17 @@ urlpatterns = [
     path('projects/<int:id_project>/contratos/empleado/nuevo/', views.create_contrato_empleado, name='create_contrato_empleado'),
     path('contratos/empleado/<int:id_contrato>/', views.contrato_empleado_detail, name='contrato_empleado_detail'),
     path('contratos/empleado/<int:id_contrato>/deactivate/', views.deactivate_contrato_empleado, name='contrato_empleado_deactivate'),
+    # Jornadas de Empleados
+    path('contratos/empleado/<int:id_contrato>/jornadas/nueva/', views.create_jornada, name='create_jornada'),
+    path('jornadas/<int:id_jornada>/', views.jornada_detail, name='jornada_detail'),
+    path('jornadas/<int:id_jornada>/eliminar/', views.deactivate_jornada, name='deactivate_jornada'),
     # Contrato del Proyecto
     path('projects/<int:id_project>/contrato-proyecto/nuevo/', views.create_contrato_proyecto, name='create_contrato_proyecto'),
     path('contratos/proyecto/<int:id_contrato>/', views.contrato_proyecto_detail, name='contrato_proyecto_detail'),
     path('contratos/proyecto/<int:id_contrato>/deactivate/', views.deactivate_contrato_proyecto, name='contrato_proyecto_deactivate'),
+
+    # Contrato desde perfil del empleado
+    path('employees/<int:id_employee>/contratos/nuevo/', views.create_contrato_from_employee, name='create_contrato_from_employee'),
 
     # Employees
     path('employees/', views.employees, name='employees'),

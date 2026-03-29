@@ -378,8 +378,7 @@
           <th>Insumo</th>
           <th>Categoría</th>
           <th class="text-center">Cantidad</th>
-          <th class="text-right">Costo Unit. (Bs.)</th>
-          <th class="text-right">Subtotal (Bs.)</th>
+          <th class="text-right">Total (Bs.)</th>
         </tr>
       </thead>
       <tbody>
@@ -388,14 +387,13 @@
           <td>{{ r.insumo.nombre }}</td>
           <td>{{ r.insumo.get_categoria_display }}</td>
           <td class="text-center">{{ r.cantidad }}</td>
-          <td class="text-right">{{ r.costo_unitario|floatformat:2 }}</td>
-          <td class="text-right">{{ r.subtotal|floatformat:2 }}</td>
+          <td class="text-right">{{ r.costo_total|floatformat:2 }}</td>
         </tr>
         {% endfor %}
       </tbody>
       <tfoot>
         <tr>
-          <td colspan="4" class="text-right">TOTAL INSUMOS</td>
+          <td colspan="3" class="text-right">TOTAL INSUMOS</td>
           <td class="text-right">{{ total_insumos|floatformat:2 }}</td>
         </tr>
       </tfoot>

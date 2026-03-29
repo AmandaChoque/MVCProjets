@@ -1,24 +1,2 @@
-from django.db.models.signals import post_save, post_delete
-from django.dispatch import receiver
-
-from .models import Realizar, Requiere
-
-
-@receiver(post_save, sender=Realizar)
-def realizar_post_save(sender, instance, **kwargs):
-    instance.insumo.recalculate_stock()
-
-
-@receiver(post_delete, sender=Realizar)
-def realizar_post_delete(sender, instance, **kwargs):
-    instance.insumo.recalculate_stock()
-
-
-@receiver(post_save, sender=Requiere)
-def requiere_post_save(sender, instance, **kwargs):
-    instance.insumo.recalculate_stock()
-
-
-@receiver(post_delete, sender=Requiere)
-def requiere_post_delete(sender, instance, **kwargs):
-    instance.insumo.recalculate_stock()
+# Los handlers de señales para Compra y Requiere están definidos en inventario/models.py.
+# Este archivo se mantiene por el import en apps.py pero no contiene lógica adicional.

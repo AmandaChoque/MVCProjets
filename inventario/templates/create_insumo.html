@@ -64,13 +64,6 @@
               {% endif %}
             </div>
             <div class="mb-3">
-              <label class="form-label">Costo Unitario referencial (Bs.)</label>
-              {{ form.costo_unitario }}
-              {% if form.costo_unitario.errors %}
-              <div class="text-danger small mt-1">{% for err in form.costo_unitario.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
-            </div>
-            <div class="mb-3">
               <label class="form-label">Stock mínimo de alerta</label>
               {{ form.stock_minimo }}
               <div class="form-text text-muted small">

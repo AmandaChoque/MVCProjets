@@ -109,7 +109,7 @@
             <span class="badge badge-ok">OK</span>
           {% endif %}
         </td>
-        <td class="text-right">{{ ins.costo_unitario|floatformat:2 }}</td>
+        <td class="text-right">{{ ins.ultimo_precio_compra|floatformat:2 }}</td>
         <td class="text-right"><strong>{{ ins.valor_stock|floatformat:2 }}</strong></td>
       </tr>
       {% empty %}

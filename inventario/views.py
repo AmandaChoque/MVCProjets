@@ -13,7 +13,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 from projects.models import Proyecto
 from projects.decorators import cargo_required, ROLES_CAMPO
-from .models import Proveedor, Insumo, Requiere, Compra
+from .models import Proveedor, Insumo, Requiere, Compra, RequiereLote, calcular_costo_fifo
 from .forms import ProveedorForm, InsumoForm, RequerirForm, CompraForm
 
 
@@ -203,6 +203,23 @@ def deactivate_insumo(request, id_insumo):
 
 # ── Requiere (insumos por proyecto) ──────────────────────────────────────────
 
+def _lotes_fifo_json(insumos_activos, excluir_requiere_pk=None):
+    """Construye el JSON de lotes FIFO por insumo para el cálculo client-side."""
+    resultado = {}
+    for insumo in insumos_activos:
+        lotes = []
+        for compra in Compra.objects.filter(insumo=insumo, activo=True).order_by('fecha', 'created'):
+            consumido_qs = RequiereLote.objects.filter(compra=compra, requiere__activo=True)
+            if excluir_requiere_pk:
+                consumido_qs = consumido_qs.exclude(requiere_id=excluir_requiere_pk)
+            consumido = consumido_qs.aggregate(t=Sum('cantidad'))['t'] or 0
+            disponible = max(0, compra.cantidad - consumido)
+            if disponible > 0:
+                lotes.append({'d': disponible, 'p': float(compra.costo_unitario)})
+        resultado[str(insumo.id)] = lotes
+    return json.dumps(resultado)
+
+
 @login_required
 def create_requiere(request, id_project):
     project = get_object_or_404(Proyecto, pk=id_project)
@@ -210,16 +227,15 @@ def create_requiere(request, id_project):
         messages.error(request, 'No se pueden agregar insumos a un proyecto completado. Los precios quedan bloqueados.')
         return redirect('project_view', id_project=project.id)
     insumos_activos = Insumo.objects.filter(activo=True)
-    insumos_con_precio = {str(i.id): str(i.costo_promedio) for i in insumos_activos}
-    insumos_con_stock  = {str(i.id): i.stock for i in insumos_activos}
+    insumos_con_stock = {str(i.id): i.stock for i in insumos_activos}
     for i in insumos_activos:
         insumos_con_stock[f'min_{i.id}'] = i.stock_minimo
 
     ctx = {
         'form': RequerirForm(),
         'project': project,
-        'insumos_con_precio': json.dumps(insumos_con_precio),
-        'insumos_con_stock':  json.dumps(insumos_con_stock),
+        'lotes_fifo':      _lotes_fifo_json(insumos_activos),
+        'insumos_con_stock': json.dumps(insumos_con_stock),
     }
     if request.method == 'GET':
         return render(request, 'create_requiere.html', ctx)
@@ -227,10 +243,35 @@ def create_requiere(request, id_project):
     form = RequerirForm(request.POST)
     ctx['form'] = form
     if form.is_valid():
+        insumo   = form.cleaned_data['insumo']
+        cantidad = form.cleaned_data['cantidad']
+
+        if Requiere.objects.filter(proyecto=project, insumo=insumo, activo=True).exists():
+            form.add_error('insumo', f'"{insumo.nombre}" ya está asignado a este proyecto.')
+            return render(request, 'create_requiere.html', ctx)
+
+        try:
+            lotes_consumo = calcular_costo_fifo(insumo, cantidad)
+        except ValueError as e:
+            form.add_error('cantidad', str(e))
+            return render(request, 'create_requiere.html', ctx)
+
+        costo_total = sum(l['cantidad'] * l['compra'].costo_unitario for l in lotes_consumo)
+
         requiere = form.save(commit=False)
         requiere.proyecto = project
+        requiere.costo_total = costo_total
         requiere.save()
-        messages.success(request, f'Insumo "{requiere.insumo.nombre}" agregado al proyecto.')
+
+        for lote_info in lotes_consumo:
+            RequiereLote.objects.create(
+                requiere=requiere,
+                compra=lote_info['compra'],
+                cantidad=lote_info['cantidad'],
+                costo_unitario=lote_info['compra'].costo_unitario,
+            )
+
+        messages.success(request, f'Insumo "{requiere.insumo.nombre}" agregado al proyecto (total: Bs. {costo_total}).')
         return redirect('project_view', id_project=project.id)
     return render(request, 'create_requiere.html', ctx)
 
@@ -243,12 +284,13 @@ def requiere_detail(request, id_requiere):
         messages.error(request, 'Los insumos de un proyecto completado no pueden modificarse. Los precios están bloqueados.')
         return redirect('project_view', id_project=project.id)
     insumos_activos = Insumo.objects.filter(activo=True)
-    insumos_con_precio = {str(i.id): str(i.costo_promedio) for i in insumos_activos}
+    insumos_con_stock = {str(i.id): i.stock for i in insumos_activos}
 
     ctx = {
         'requiere': requiere,
         'project': project,
-        'insumos_con_precio': json.dumps(insumos_con_precio),
+        'lotes_fifo':      _lotes_fifo_json(insumos_activos, excluir_requiere_pk=requiere.pk),
+        'insumos_con_stock': json.dumps(insumos_con_stock),
     }
     if request.method == 'GET':
         ctx['form'] = RequerirForm(instance=requiere)
@@ -257,7 +299,31 @@ def requiere_detail(request, id_requiere):
     form = RequerirForm(request.POST, instance=requiere)
     ctx['form'] = form
     if form.is_valid():
-        form.save()
+        insumo   = form.cleaned_data['insumo']
+        cantidad = form.cleaned_data['cantidad']
+        try:
+            lotes_consumo = calcular_costo_fifo(insumo, cantidad, excluir_requiere_pk=requiere.pk)
+        except ValueError as e:
+            form.add_error('cantidad', str(e))
+            return render(request, 'requiere_detail.html', ctx)
+
+        costo_total = sum(l['cantidad'] * l['compra'].costo_unitario for l in lotes_consumo)
+
+        # Reemplazar lotes anteriores con los nuevos
+        requiere.lotes.all().delete()
+
+        updated = form.save(commit=False)
+        updated.costo_total = costo_total
+        updated.save()
+
+        for lote_info in lotes_consumo:
+            RequiereLote.objects.create(
+                requiere=updated,
+                compra=lote_info['compra'],
+                cantidad=lote_info['cantidad'],
+                costo_unitario=lote_info['compra'].costo_unitario,
+            )
+
         messages.success(request, 'Insumo del proyecto actualizado correctamente.')
         return redirect('project_view', id_project=project.id)
     return render(request, 'requiere_detail.html', ctx)
@@ -380,7 +446,7 @@ def inventario_report(request):
 
     insumos_list = list(qs)
     for ins in insumos_list:
-        ins.valor_stock = ins.stock * ins.costo_unitario
+        ins.valor_stock = ins.stock * ins.ultimo_precio_compra
         ins.estado = ins.stock_status  # 'agotado', 'bajo', 'ok'
 
     total_insumos = len(insumos_list)
@@ -509,7 +575,7 @@ def inventario_report(request):
                 ins.stock,
                 ins.stock_minimo,
                 estado_str,
-                float(ins.costo_unitario),
+                float(ins.ultimo_precio_compra),
                 float(ins.valor_stock),
             ])
             row_fill = alt_fill if i % 2 == 0 else None

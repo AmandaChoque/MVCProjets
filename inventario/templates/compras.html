@@ -68,6 +68,7 @@
           <th class="text-end">Costo Unit. (Bs.)</th>
           <th class="text-end">Costo Total (Bs.)</th>
           <th class="text-center">Fecha</th>
+          <th>N° Factura</th>
           <th class="text-end" style="width: 60px;">Acciones</th>
         </tr>
       </thead>
@@ -80,6 +81,7 @@
           <td class="text-end small">{{ compra.costo_unitario|floatformat:2 }}</td>
           <td class="text-end small fw-semibold">{{ compra.costo_total|floatformat:2 }}</td>
           <td class="text-center small">{{ compra.fecha|date:"d/m/Y" }}</td>
+          <td class="small text-muted">{{ compra.numero_factura|default:"—" }}</td>
           <td class="text-end">
             <div class="dropdown">
               <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
@@ -101,7 +103,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="7" class="text-center text-muted py-3 small">No hay compras registradas.</td>
+          <td colspan="8" class="text-center text-muted py-3 small">No hay compras registradas.</td>
         </tr>
         {% endfor %}
       </tbody>

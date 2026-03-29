@@ -305,8 +305,7 @@
                   <th>Categoría</th><th>Insumo</th><th>Marca</th>
                   <th class="text-center">Cantidad</th>
                   {% if not es_instalador_tecnico %}
-                  <th class="text-end">Costo Unit. (Bs.)</th>
-                  <th class="text-end">Subtotal (Bs.)</th>
+                  <th class="text-end">Total (Bs.)</th>
                   {% endif %}
                   <th class="text-end" style="width:70px;">Acciones</th>
                 </tr>
@@ -319,8 +318,7 @@
                   <td class="text-muted">{{ req.insumo.marca }}</td>
                   <td class="text-center">{{ req.cantidad }}</td>
                   {% if not es_instalador_tecnico %}
-                  <td class="text-end">{{ req.costo_unitario|floatformat:2 }}</td>
-                  <td class="text-end fw-semibold">{{ req.subtotal|floatformat:2 }}</td>
+                  <td class="text-end fw-semibold">{{ req.costo_total|floatformat:2 }}</td>
                   {% endif %}
                   <td class="text-end">
                     {% if not es_instalador_tecnico %}

@@ -20,106 +20,176 @@
 <main class="container-fluid px-5 py-4">
   <div class="mb-4">
     <h4 class="fw-semibold mb-1">Contratos de Empleados</h4>
-    <span class="text-muted">Editar contrato — {{ project.nombre }}</span>
+    <span class="text-muted">
+      {{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }} —
+      {{ project.nombre }} —
+      <span class="badge bg-secondary fw-normal">{{ contrato.get_tipo_salario_display }}</span>
+      <span class="badge bg-primary fw-normal">Bs. {{ contrato.monto_diario|floatformat:2 }}/día</span>
+    </span>
   </div>
 
-  <div class="card border-0 shadow-sm rounded-3">
-    <div class="card-body p-4">
-      <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
-        {% csrf_token %}
-        {% if form.non_field_errors %}
-        <div class="alert alert-danger mt-2">
-          {% for err in form.non_field_errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+  <!-- Balance de jornadas -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center py-3">
+        <div class="fs-4 fw-bold text-primary">{{ total_dias }}</div>
+        <div class="text-muted small">Días trabajados</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center py-3">
+        <div class="fs-5 fw-bold text-success">Bs. {{ total_ganado|floatformat:2 }}</div>
+        <div class="text-muted small">Total devengado</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center py-3">
+        <div class="fs-5 fw-bold text-info">Bs. {{ total_pagado|floatformat:2 }}</div>
+        <div class="text-muted small">Total pagado</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm text-center py-3">
+        <div class="fs-5 fw-bold {% if saldo_pendiente > 0 %}text-danger{% else %}text-success{% endif %}">
+          Bs. {{ saldo_pendiente|floatformat:2 }}
         </div>
-        {% endif %}
+        <div class="text-muted small">Saldo pendiente</div>
+      </div>
+    </div>
+  </div>
 
-        <div class="row g-4">
-          <div class="col-lg-6">
+  <div class="row g-4">
+
+    <!-- Formulario del contrato -->
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-light fw-semibold small">Datos del Contrato</div>
+        <div class="card-body p-4">
+          <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger mt-2">
+              {% for err in form.non_field_errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+            </div>
+            {% endif %}
+
             <div class="mb-3">
               <label class="form-label">Empleado <span class="text-danger">*</span></label>
               {{ form.empleado }}
-              {% if form.empleado.errors %}
-              <div class="text-danger small mt-1">{% for err in form.empleado.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
+              {% if form.empleado.errors %}<div class="text-danger small mt-1">{% for err in form.empleado.errors %}{{ err }}{% endfor %}</div>{% endif %}
             </div>
-
             <div class="mb-3">
-              <label class="form-label">Fecha de Firma <span class="text-danger">*</span></label>
-              {{ form.fecha_firma }}
-              {% if form.fecha_firma.errors %}
-              <div class="text-danger small mt-1">{% for err in form.fecha_firma.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Fecha de Inicio <span class="text-danger">*</span></label>
-              {{ form.fecha_inicio }}
-              {% if form.fecha_inicio.errors %}
-              <div class="text-danger small mt-1">{% for err in form.fecha_inicio.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Fecha de Fin <span class="text-danger">*</span></label>
-              {{ form.fecha_fin }}
-              {% if form.fecha_fin.errors %}
-              <div class="text-danger small mt-1">{% for err in form.fecha_fin.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
-            </div>
-          </div>
-
-          <div class="col-lg-6">
-            <div class="mb-3">
-              <label class="form-label">Tipo de Pago <span class="text-danger">*</span></label>
+              <label class="form-label">Período del Contrato <span class="text-danger">*</span></label>
               {{ form.tipo_salario }}
+              <div class="form-text text-muted">Define el divisor para calcular el monto diario.</div>
             </div>
             <div class="mb-3">
               <label class="form-label">Monto Acordado (Bs.) <span class="text-danger">*</span></label>
               {{ form.monto_acordado }}
-              {% if form.monto_acordado.errors %}
-              <div class="text-danger small mt-1">{% for err in form.monto_acordado.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
+              {% if form.monto_acordado.errors %}<div class="text-danger small mt-1">{% for err in form.monto_acordado.errors %}{{ err }}{% endfor %}</div>{% endif %}
             </div>
-
+            <div class="row g-2">
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Fecha de Firma <span class="text-danger">*</span></label>
+                {{ form.fecha_firma }}
+                {% if form.fecha_firma.errors %}<div class="text-danger small mt-1">{% for err in form.fecha_firma.errors %}{{ err }}{% endfor %}</div>{% endif %}
+              </div>
+              <div class="col-md-6 mb-3">
+                <label class="form-label">Fecha de Inicio <span class="text-danger">*</span></label>
+                {{ form.fecha_inicio }}
+                {% if form.fecha_inicio.errors %}<div class="text-danger small mt-1">{% for err in form.fecha_inicio.errors %}{{ err }}{% endfor %}</div>{% endif %}
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Fecha de Fin <span class="text-danger">*</span>
+                <span class="text-muted fw-normal small ms-1">(ampliable editando esta fecha)</span>
+              </label>
+              {{ form.fecha_fin }}
+              {% if form.fecha_fin.errors %}<div class="text-danger small mt-1">{% for err in form.fecha_fin.errors %}{{ err }}{% endfor %}</div>{% endif %}
+            </div>
             <div class="mb-3">
               <label class="form-label">Documento <span class="text-muted small">(PDF o imagen)</span></label>
               {% if contrato.documento %}
-              <div class="mb-2">
-                <a href="{{ contrato.documento.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">Ver documento actual</a>
-              </div>
+              <div class="mb-2"><a href="{{ contrato.documento.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">Ver documento actual</a></div>
               {% endif %}
               {{ form.documento }}
-              {% if form.documento.errors %}
-              <div class="text-danger small mt-1">{% for err in form.documento.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
-              <div class="form-text text-muted">Formatos aceptados: PDF, JPG, PNG, GIF, WEBP</div>
+              <div class="form-text text-muted">Formatos: PDF, JPG, PNG, GIF, WEBP</div>
             </div>
-
             <div class="mb-3">
               <label class="form-label">Observaciones</label>
               {{ form.observaciones }}
-              {% if form.observaciones.errors %}
-              <div class="text-danger small mt-1">{% for err in form.observaciones.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
             </div>
-          </div>
-        </div>
 
-        <div class="text-muted small mt-2 mb-3">
-          <span class="text-danger">*</span> Campos obligatorios
+            <div class="d-flex justify-content-between mt-3">
+              <div class="d-flex gap-2">
+                <a href="{% url 'project_view' project.id %}" class="btn btn-outline-secondary">Cancelar</a>
+                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEliminar">Eliminar</button>
+              </div>
+              <button class="btn btn-primary px-4" type="submit">Actualizar contrato</button>
+            </div>
+          </form>
         </div>
-
-        <div class="d-flex justify-content-between mt-4">
-          <div class="d-flex gap-2">
-            <a href="{% url 'project_view' project.id %}" class="btn btn-outline-secondary">Cancelar</a>
-            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEliminar">
-              Eliminar
-            </button>
-          </div>
-          <button class="btn btn-primary px-4" type="submit">Actualizar contrato</button>
-        </div>
-      </form>
+      </div>
     </div>
+
+    <!-- Jornadas -->
+    <div class="col-lg-6">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <span class="fw-semibold small">Jornadas Diarias</span>
+          <a href="{% url 'create_jornada' contrato.id %}" class="btn btn-sm btn-primary py-0">
+            <i class="bi bi-plus-lg me-1"></i>Registrar jornada
+          </a>
+        </div>
+        <div class="card-body p-0">
+          {% if jornadas %}
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0 small">
+              <thead class="table-light text-uppercase" style="font-size:0.7rem;">
+                <tr>
+                  <th class="px-3">Fecha</th>
+                  <th>Proyecto</th>
+                  <th class="text-center">Días</th>
+                  <th class="text-end">Monto (Bs.)</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for j in jornadas %}
+                <tr>
+                  <td class="px-3">{{ j.fecha|date:"d/m/Y" }}</td>
+                  <td class="text-truncate" style="max-width:140px;">{{ j.proyecto.nombre }}</td>
+                  <td class="text-center">
+                    {% if j.dias == 1.0 %}
+                      <span class="badge bg-primary">Completo</span>
+                    {% else %}
+                      <span class="badge bg-secondary">Medio</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end fw-semibold">{{ j.monto|floatformat:2 }}</td>
+                  <td class="text-center">
+                    <a href="{% url 'jornada_detail' j.id %}" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:0.72rem;">Editar</a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+              <tfoot class="table-light fw-semibold small">
+                <tr>
+                  <td colspan="2" class="px-3">Total</td>
+                  <td class="text-center">{{ total_dias }} días</td>
+                  <td class="text-end">Bs. {{ total_ganado|floatformat:2 }}</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          {% else %}
+          <p class="text-muted small p-3 mb-0">Sin jornadas registradas aún.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
   </div>
 </main>
 

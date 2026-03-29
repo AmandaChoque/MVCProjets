@@ -23,6 +23,27 @@
     <span class="text-muted">Editar insumo — {{ project.nombre }}</span>
   </div>
 
+  {% if requiere.lotes.exists %}
+  <div class="alert alert-info small mb-3 py-2">
+    <i class="bi bi-layers me-1"></i>
+    <strong>Lotes FIFO actuales:</strong>
+    <table class="table table-sm mb-0 mt-1 small">
+      <thead><tr><th>Fecha compra</th><th class="text-end">Cantidad</th><th class="text-end">Precio unit.</th><th class="text-end">Subtotal</th></tr></thead>
+      <tbody>
+      {% for lote in requiere.lotes.all %}
+        <tr>
+          <td>{{ lote.compra.fecha }}</td>
+          <td class="text-end">{{ lote.cantidad }} u.</td>
+          <td class="text-end">Bs. {{ lote.costo_unitario|floatformat:2 }}</td>
+          <td class="text-end">Bs. {{ lote.subtotal|floatformat:2 }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+      <tfoot><tr><td colspan="3" class="fw-semibold text-end">Total registrado</td><td class="text-end fw-semibold">Bs. {{ requiere.costo_total|floatformat:2 }}</td></tr></tfoot>
+    </table>
+  </div>
+  {% endif %}
+
   <div class="card border-0 shadow-sm rounded-3">
     <div class="card-body p-4">
       <form method="POST" class="needs-validation" novalidate>
@@ -52,15 +73,14 @@
           </div>
           <div class="col-lg-6">
             <div class="mb-3">
-              <label class="form-label">Costo Unitario (Bs.) <span class="text-danger">*</span></label>
-              {{ form.costo_unitario }}
-              {% if form.costo_unitario.errors %}
-              <div class="text-danger small mt-1">{% for err in form.costo_unitario.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Subtotal estimado</label>
-              <div class="form-control bg-light fw-semibold" id="subtotalDisplay">Bs. 0.00</div>
+              <label class="form-label">Desglose de costo FIFO (nuevo)</label>
+              <div id="desgloseDisplay" class="p-2 bg-light rounded border" style="min-height:60px;">
+                <span class="text-muted">—</span>
+              </div>
+              <small class="text-muted">
+                <i class="bi bi-shield-check me-1"></i>
+                Calculado automáticamente desde las compras reales (FIFO). No editable.
+              </small>
             </div>
           </div>
         </div>
@@ -81,33 +101,73 @@
 
 {% block extra_js %}
 <script>
-  const precios = {{ insumos_con_precio|safe }};
+  const lotesPorInsumo = {{ lotes_fifo|safe }};
+  const stocks         = {{ insumos_con_stock|safe }};
 
   const insumoSelect  = document.getElementById('id_insumo');
-  const costoInput    = document.getElementById('id_costo_unitario');
   const cantidadInput = document.getElementById('id_cantidad');
-  const subtotalDiv   = document.getElementById('subtotalDisplay');
+  const desgloseDiv   = document.getElementById('desgloseDisplay');
+  const stockInfo     = document.getElementById('stockInfo');
 
-  function updateSubtotal() {
-    const costo    = parseFloat(costoInput.value) || 0;
-    const cantidad = parseInt(cantidadInput.value) || 0;
-    subtotalDiv.textContent = 'Bs. ' + (costo * cantidad).toFixed(2);
+  function calcularFifo(insumoId, cantidad) {
+    const lotes = lotesPorInsumo[insumoId] || [];
+    let restante = cantidad;
+    let filas = [];
+    let costoTotal = 0;
+    for (const lote of lotes) {
+      if (restante <= 0) break;
+      const tomar = Math.min(lote.d, restante);
+      filas.push({ cantidad: tomar, precio: lote.p, subtotal: tomar * lote.p });
+      costoTotal += tomar * lote.p;
+      restante -= tomar;
+    }
+    if (restante > 0) return null;
+    return { filas, total: costoTotal };
+  }
+
+  function updateDisplay() {
+    const id       = insumoSelect ? insumoSelect.value : '';
+    const cantidad = parseInt(cantidadInput ? cantidadInput.value : 0) || 0;
+
+    if (!id || cantidad <= 0) {
+      desgloseDiv.innerHTML = '<span class="text-muted">—</span>';
+      return;
+    }
+    const resultado = calcularFifo(id, cantidad);
+    if (resultado === null) {
+      desgloseDiv.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>Stock insuficiente</span>';
+      return;
+    }
+    let html = '<table class="table table-sm mb-0 small">';
+    html += '<thead><tr><th>Cantidad</th><th class="text-end">Precio unit.</th><th class="text-end">Subtotal</th></tr></thead><tbody>';
+    for (const f of resultado.filas) {
+      html += `<tr><td>${f.cantidad} u.</td><td class="text-end">Bs. ${f.precio.toFixed(2)}</td><td class="text-end">Bs. ${f.subtotal.toFixed(2)}</td></tr>`;
+    }
+    html += `</tbody><tfoot><tr><td colspan="2" class="fw-semibold text-end">Total</td><td class="text-end fw-semibold text-primary">Bs. ${resultado.total.toFixed(2)}</td></tr></tfoot></table>`;
+    desgloseDiv.innerHTML = html;
+  }
+
+  function updateStockInfo(id) {
+    if (!id || stocks[id] === undefined) { stockInfo.innerHTML = ''; return; }
+    const s = parseInt(stocks[id]);
+    if (s <= 0) {
+      stockInfo.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-circle-fill me-1"></i>Sin stock disponible (0 unidades)</span>';
+    } else if (stocks['min_' + id] && s <= parseInt(stocks['min_' + id])) {
+      stockInfo.innerHTML = `<span class="text-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i>Stock bajo — disponible: <strong>${s}</strong> unidades</span>`;
+    } else {
+      stockInfo.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Disponible: <strong>${s}</strong> unidades</span>`;
+    }
   }
 
   if (insumoSelect) {
     insumoSelect.addEventListener('change', function () {
-      const id = this.value;
-      if (id && precios[id]) {
-        costoInput.value = precios[id];
-      }
-      updateSubtotal();
+      updateStockInfo(this.value);
+      updateDisplay();
     });
   }
+  if (cantidadInput) cantidadInput.addEventListener('input', updateDisplay);
 
-  if (costoInput)    costoInput.addEventListener('input', updateSubtotal);
-  if (cantidadInput) cantidadInput.addEventListener('input', updateSubtotal);
-
-  updateSubtotal();
+  updateDisplay();
 
   document.querySelectorAll('.text-danger.small.mt-1').forEach(function (errorDiv) {
     var prev = errorDiv.previousElementSibling;

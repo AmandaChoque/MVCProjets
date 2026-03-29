@@ -271,13 +271,14 @@ class Contrato(AuditModel):
         ('proyecto', 'Contrato con Cliente'),
     ]
     TIPO_SALARIO_CHOICES = [
-        ('mensual', 'Mensual'),
-        ('diario',  'Diario'),
+        ('mensual', 'Mensual (30 días)'),
+        ('semanal', 'Semanal (7 días)'),
     ]
     tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, verbose_name="Tipo de Contrato")
     tipo_salario = models.CharField(max_length=10, choices=TIPO_SALARIO_CHOICES, default='mensual', null=True, blank=True, verbose_name="Tipo de Pago")
     proyecto = models.ForeignKey(
         Proyecto, on_delete=models.CASCADE,
+        null=True, blank=True,
         related_name='contratos', verbose_name="Proyecto"
     )
     # Solo para tipo='empleado'
@@ -303,6 +304,10 @@ class Contrato(AuditModel):
                 name='contrato_empleado_required_when_tipo_empleado',
             ),
             models.CheckConstraint(
+                condition=~Q(tipo='proyecto') | Q(proyecto__isnull=False),
+                name='contrato_proyecto_required_when_tipo_proyecto',
+            ),
+            models.CheckConstraint(
                 condition=Q(fecha_fin__gte=models.F('fecha_inicio')),
                 name='contrato_fecha_fin_gte_inicio',
             ),
@@ -320,9 +325,54 @@ class Contrato(AuditModel):
 
     def __str__(self):
         if self.tipo == 'empleado' and self.empleado:
-            return f"Contrato empleado — {self.empleado.nombre} {self.empleado.apellido_paterno} / {self.proyecto.nombre}"
+            proyecto_str = f" / {self.proyecto.nombre}" if self.proyecto else ""
+            return f"Contrato empleado — {self.empleado.nombre} {self.empleado.apellido_paterno}{proyecto_str}"
         return f"Contrato proyecto — {self.proyecto.nombre}"
 
+    @property
+    def monto_diario(self):
+        """Monto a pagar por cada día trabajado según el período del contrato."""
+        if self.tipo == 'empleado' and self.monto_acordado:
+            divisor = 7 if self.tipo_salario == 'semanal' else 30
+            return self.monto_acordado / divisor
+        return self.monto_acordado
 
+
+class JornadaEmpleado(AuditModel):
+    """Registro diario de trabajo de un empleado: en qué proyecto trabajó y cuánto."""
+    DIAS_CHOICES = [
+        ('0.5', 'Medio día (0.5)'),
+        ('1.0', 'Día completo (1.0)'),
+    ]
+
+    contrato = models.ForeignKey(
+        Contrato, on_delete=models.CASCADE,
+        related_name='jornadas', verbose_name="Contrato"
+    )
+    proyecto = models.ForeignKey(
+        'Proyecto', on_delete=models.PROTECT,
+        related_name='jornadas_empleados', verbose_name="Proyecto trabajado"
+    )
+    fecha = models.DateField(verbose_name="Fecha")
+    dias = models.DecimalField(
+        max_digits=3, decimal_places=1, default=1.0,
+        verbose_name="Días trabajados",
+        validators=[MinValueValidator(0.5), MaxValueValidator(1.0)],
+    )
+    observacion = models.TextField(blank=True, verbose_name="Observación")
+
+    class Meta:
+        verbose_name = 'Jornada de Empleado'
+        verbose_name_plural = 'Jornadas de Empleados'
+        ordering = ['-fecha']
+
+    def __str__(self):
+        emp = self.contrato.empleado
+        return f"{emp.nombre} {emp.apellido_paterno} — {self.fecha} ({self.dias}d) — {self.proyecto.nombre}"
+
+    @property
+    def monto(self):
+        """Monto a cobrar por esta jornada."""
+        return self.dias * self.contrato.monto_diario
 
 

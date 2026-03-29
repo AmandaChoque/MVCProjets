@@ -51,15 +51,9 @@ class ProveedorForm(forms.ModelForm):
 
 
 class InsumoForm(forms.ModelForm):
-    costo_unitario = forms.CharField(
-        required=False,
-        label="Costo Unitario referencial (Bs.)",
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Opcional — se puede definir al registrar compras'})
-    )
-
     class Meta:
         model = Insumo
-        fields = ['nombre', 'marca', 'modelo', 'categoria', 'costo_unitario', 'stock_minimo']
+        fields = ['nombre', 'marca', 'modelo', 'categoria', 'stock_minimo']
         widgets = {
             'nombre':      forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del insumo', 'required': 'required'}),
             'marca':       forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Marca'}),
@@ -68,25 +62,11 @@ class InsumoForm(forms.ModelForm):
             'stock_minimo': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'placeholder': 'Ej: 5'}),
         }
 
-    def clean_costo_unitario(self):
-        valor = str(self.cleaned_data.get('costo_unitario', '') or '').strip()
-        if not valor:
-            return Decimal('0')
-        if not re.fullmatch(DECIMAL_REGEX, valor):
-            raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 150 o 150.50).')
-        return Decimal(valor)
-
 
 class RequerirForm(forms.ModelForm):
-    costo_unitario = forms.CharField(
-        required=True,
-        label="Costo Unitario (Bs.)",
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 150 o 150.50'})
-    )
-
     class Meta:
         model = Requiere
-        fields = ['insumo', 'cantidad', 'costo_unitario']
+        fields = ['insumo', 'cantidad']
         widgets = {
             'insumo':   forms.Select(attrs={'class': 'form-select', 'id': 'id_insumo'}),
             'cantidad': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'placeholder': 'Cantidad'}),
@@ -111,15 +91,6 @@ class RequerirForm(forms.ModelForm):
                 )
         return cleaned_data
 
-    def clean_costo_unitario(self):
-        valor = str(self.cleaned_data.get('costo_unitario', '')).strip()
-        if not re.fullmatch(DECIMAL_REGEX, valor):
-            raise forms.ValidationError('Formato inválido. Use punto como separador decimal.')
-        resultado = Decimal(valor)
-        if resultado <= 0:
-            raise forms.ValidationError('El costo debe ser mayor a cero.')
-        return resultado
-
 
 class CompraForm(forms.ModelForm):
     costo_unitario = forms.CharField(
@@ -130,12 +101,13 @@ class CompraForm(forms.ModelForm):
 
     class Meta:
         model = Compra
-        fields = ['proveedor', 'insumo', 'cantidad', 'costo_unitario', 'fecha']
+        fields = ['proveedor', 'insumo', 'cantidad', 'costo_unitario', 'fecha', 'numero_factura']
         widgets = {
-            'proveedor': forms.Select(attrs={'class': 'form-select'}),
-            'insumo':    forms.Select(attrs={'class': 'form-select'}),
-            'cantidad':  forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'placeholder': 'Cantidad'}),
-            'fecha':     forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+            'proveedor':      forms.Select(attrs={'class': 'form-select'}),
+            'insumo':         forms.Select(attrs={'class': 'form-select'}),
+            'cantidad':       forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'placeholder': 'Cantidad'}),
+            'fecha':          forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+            'numero_factura': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: F-001234 (opcional)'}),
         }
 
     def __init__(self, *args, **kwargs):

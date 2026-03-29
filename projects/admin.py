@@ -3,7 +3,7 @@ from django.contrib.auth.admin import UserAdmin
 from projects.models import (
     Proyecto, Empleado, HistorialPresupuesto, Cliente, Progreso, Contrato,
 )
-from inventario.models import Proveedor, Insumo, Realizar
+from inventario.models import Proveedor, Insumo, Compra
 from pagos.models import Pago, PagoEmpleado
 
 
@@ -90,7 +90,7 @@ class ProveedorAdmin(admin.ModelAdmin):
 
 @admin.register(Insumo)
 class InsumoAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'marca', 'categoria', 'costo_unitario', 'stock', 'activo', 'created')
+    list_display = ('nombre', 'marca', 'categoria', 'ultimo_precio_compra', 'stock', 'activo', 'created')
     list_filter = ('activo', 'categoria')
     search_fields = ('nombre', 'marca')
     ordering = ('categoria', 'nombre')
@@ -98,11 +98,11 @@ class InsumoAdmin(admin.ModelAdmin):
     readonly_fields = ('created', 'updated_at', 'deleted_at', 'deleted_by')
 
 
-@admin.register(Realizar)
-class RealizarAdmin(admin.ModelAdmin):
-    list_display = ('insumo', 'proveedor', 'cantidad', 'costo_total', 'fecha', 'activo', 'created')
+@admin.register(Compra)
+class CompraAdmin(admin.ModelAdmin):
+    list_display = ('insumo', 'proveedor', 'cantidad', 'costo_total', 'fecha', 'numero_factura', 'activo', 'created')
     list_filter = ('activo',)
-    search_fields = ('insumo__nombre', 'proveedor__nombre')
+    search_fields = ('insumo__nombre', 'proveedor__nombre', 'numero_factura')
     ordering = ('-fecha',)
     list_per_page = 20
     readonly_fields = ('created', 'updated_at', 'deleted_at', 'deleted_by')

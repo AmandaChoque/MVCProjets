@@ -71,7 +71,9 @@ class Insumo(AuditModel):
     marca          = models.CharField(max_length=100, verbose_name="Marca")
     modelo         = models.CharField(max_length=100, blank=True, default='', verbose_name="Modelo")
     categoria      = models.CharField(max_length=30, choices=CATEGORIA_CHOICES, verbose_name="Categoría")
-    costo_unitario = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, verbose_name="Costo Unitario (Bs.)")
+    # Desnormalización controlada: actualizado automáticamente por señal al último precio de compra.
+    # Nunca modificar directamente.
+    ultimo_precio_compra = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, verbose_name="Último Precio Compra (Bs.)")
     # Desnormalización controlada: calculado desde compras - asignados.
     # Mantenido automáticamente por señales. Nunca modificar directamente.
     stock          = models.IntegerField(default=0, verbose_name="Stock actual")
@@ -83,16 +85,6 @@ class Insumo(AuditModel):
         asignados = self.proyectos.filter(activo=True).aggregate(t=Sum('cantidad'))['t'] or 0
         self.stock = compras - asignados
         self.save(update_fields=['stock'])
-
-    @property
-    def costo_promedio(self):
-        """Costo promedio ponderado calculado desde las compras activas."""
-        compras = self.compras.filter(activo=True)
-        total_cantidad = compras.aggregate(t=Sum('cantidad'))['t'] or 0
-        if total_cantidad == 0:
-            return self.costo_unitario or Decimal('0')
-        total_costo = sum(c.cantidad * c.costo_unitario for c in compras)
-        return round(total_costo / total_cantidad, 2)
 
     @property
     def stock_status(self):
@@ -127,7 +119,7 @@ class Requiere(AuditModel):
     proyecto       = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='insumos', verbose_name="Proyecto")
     insumo         = models.ForeignKey(Insumo, on_delete=models.SET_NULL, null=True, related_name='proyectos', verbose_name="Insumo")
     cantidad       = models.PositiveIntegerField(verbose_name="Cantidad")
-    costo_unitario = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Costo Unitario (Bs.)")
+    costo_total = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Costo Total (Bs.)")
 
     class Meta:
         verbose_name = 'Insumo del Proyecto'
@@ -143,10 +135,6 @@ class Requiere(AuditModel):
             )
         ]
 
-    @property
-    def subtotal(self):
-        return self.cantidad * self.costo_unitario
-
     def __str__(self):
         insumo = self.insumo.nombre if self.insumo else 'Insumo eliminado'
         return f"{insumo} x{self.cantidad} → {self.proyecto.nombre}"
@@ -159,7 +147,8 @@ class Compra(AuditModel):
     cantidad       = models.PositiveIntegerField(verbose_name="Cantidad")
     costo_unitario = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Costo Unitario (Bs.)")
     costo_total    = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Costo Total (Bs.)")
-    fecha          = models.DateField(verbose_name="Fecha de Compra")
+    fecha            = models.DateField(verbose_name="Fecha de Compra")
+    numero_factura   = models.CharField(max_length=100, blank=True, default='', verbose_name="N° Factura / Comprobante")
 
     def save(self, *args, **kwargs):
         # Desnormalización controlada: costo_total se deriva de cantidad × costo_unitario.
@@ -179,8 +168,78 @@ class Compra(AuditModel):
         return f"{insumo} x{self.cantidad} de {proveedor} ({self.fecha})"
 
 
-# ── Alias para compatibilidad (se puede eliminar cuando todas las referencias sean Compra) ──
-Realizar = Compra
+# ── Trazabilidad FIFO: registra qué unidades de qué lote de compra consume cada Requiere ──
+
+class RequiereLote(models.Model):
+    """
+    Relaciona un Requiere con las Compras (lotes) específicas que consume, en orden FIFO.
+    Permite saber exactamente a qué precio real se adquirió cada unidad asignada a un proyecto.
+    """
+    requiere       = models.ForeignKey(Requiere, on_delete=models.CASCADE, related_name='lotes', verbose_name="Requiere")
+    compra         = models.ForeignKey(Compra, on_delete=models.CASCADE, related_name='lotes_asignados', verbose_name="Lote de compra")
+    cantidad       = models.PositiveIntegerField(verbose_name="Cantidad consumida")
+    costo_unitario = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Costo unitario del lote")
+
+    class Meta:
+        db_table = 'inventario_requiere_lote'
+        verbose_name = 'Lote FIFO'
+        verbose_name_plural = 'Lotes FIFO'
+
+    @property
+    def subtotal(self):
+        return self.cantidad * self.costo_unitario
+
+    def __str__(self):
+        return f"{self.cantidad} u. de lote {self.compra_id} → {self.requiere_id}"
+
+
+def calcular_costo_fifo(insumo, cantidad, excluir_requiere_pk=None):
+    """
+    Calcula el costo FIFO para asignar `cantidad` unidades de `insumo` a un proyecto.
+
+    Consume unidades de las compras más antiguas (por fecha, luego por created) primero.
+
+    excluir_requiere_pk: al editar un Requiere existente, excluye sus lotes del conteo de
+        "ya consumido", para no contar sus propias unidades como bloqueadas.
+
+    Retorna:
+        lotes_consumo — lista de {'compra': <Compra>, 'cantidad': int}
+
+    Lanza ValueError si el stock disponible es insuficiente.
+    """
+    lotes_qs = Compra.objects.filter(
+        insumo=insumo,
+        activo=True,
+    ).order_by('fecha', 'created')
+
+    consumo = []
+    restante = cantidad
+
+    for lote in lotes_qs:
+        if restante <= 0:
+            break
+        consumido_qs = RequiereLote.objects.filter(
+            compra=lote,
+            requiere__activo=True,
+        )
+        if excluir_requiere_pk:
+            consumido_qs = consumido_qs.exclude(requiere_id=excluir_requiere_pk)
+        consumido = consumido_qs.aggregate(t=Sum('cantidad'))['t'] or 0
+        disponible = max(0, lote.cantidad - consumido)
+
+        if disponible <= 0:
+            continue
+
+        tomar = min(disponible, restante)
+        consumo.append({'compra': lote, 'cantidad': tomar})
+        restante -= tomar
+
+    if restante > 0:
+        raise ValueError(
+            f'Stock insuficiente (FIFO). Disponible: {cantidad - restante}, solicitado: {cantidad}.'
+        )
+
+    return consumo
 
 
 # ── Señales: recalcular stock automáticamente ─────────────────────────────────
@@ -195,7 +254,7 @@ def compra_recalculate_stock(sender, instance, **kwargs):
     # Actualizar costo_unitario al último precio de compra registrado
     ultima_compra = Compra.objects.filter(insumo=insumo, activo=True).order_by('-fecha', '-created').first()
     if ultima_compra:
-        Insumo.objects.filter(pk=insumo.pk).update(costo_unitario=ultima_compra.costo_unitario)
+        Insumo.objects.filter(pk=insumo.pk).update(ultimo_precio_compra=ultima_compra.costo_unitario)
 
 
 @receiver(post_save, sender=Requiere)
