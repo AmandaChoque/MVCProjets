@@ -1,7 +1,7 @@
 from django.forms import ModelForm
 from django import forms
-from django.db.models import Max
-from .models import Proyecto, Empleado, Cliente, Progreso, Contrato, JornadaEmpleado
+from django.db.models import Max, Sum
+from .models import Proyecto, Empleado, Cliente, Progreso, Contrato, JornadaEmpleado, Sede, FotoSede, TareaChecklist
 import re
 from decimal import Decimal, InvalidOperation
 
@@ -298,6 +298,38 @@ class ContratoEmpleadoForm(_ContratoBaseForm):
         self.fields['empleado'].queryset = Empleado.objects.filter(is_active=True)
         self.fields['empleado'].empty_label = None
 
+    def clean(self):
+        cleaned_data = super().clean()
+        empleado     = cleaned_data.get('empleado')
+        fecha_inicio = cleaned_data.get('fecha_inicio')
+        fecha_fin    = cleaned_data.get('fecha_fin')
+
+        if empleado:
+            qs_activo = Contrato.objects.filter(empleado=empleado, tipo='empleado', activo=True)
+            if self.instance and self.instance.pk:
+                qs_activo = qs_activo.exclude(pk=self.instance.pk)
+            if qs_activo.exists():
+                self.add_error('empleado', f'{empleado.nombre} {empleado.apellido_paterno} ya tiene un contrato activo.')
+
+            # Fix 3 — Detectar solapamiento de fechas con cualquier contrato del empleado
+            if fecha_inicio and fecha_fin:
+                qs_overlap = Contrato.objects.filter(
+                    empleado=empleado,
+                    tipo='empleado',
+                    fecha_inicio__lte=fecha_fin,
+                    fecha_fin__gte=fecha_inicio,
+                )
+                if self.instance and self.instance.pk:
+                    qs_overlap = qs_overlap.exclude(pk=self.instance.pk)
+                contrato_solapado = qs_overlap.first()
+                if contrato_solapado:
+                    self.add_error(
+                        'fecha_inicio',
+                        f'Las fechas se solapan con un contrato existente '
+                        f'({contrato_solapado.fecha_inicio} – {contrato_solapado.fecha_fin}).'
+                    )
+        return cleaned_data
+
 
 class ContratoProyectoForm(_ContratoBaseForm):
     class Meta(_ContratoBaseForm.Meta):
@@ -312,6 +344,42 @@ class ContratoEmpleadoDesdeEmpleadoForm(_ContratoBaseForm):
             **_ContratoBaseForm.Meta.widgets,
             'tipo_salario': forms.Select(attrs={'class': 'form-select'}),
         }
+
+    def __init__(self, *args, empleado=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._empleado = empleado
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self._empleado:
+            qs_activo = Contrato.objects.filter(empleado=self._empleado, tipo='empleado', activo=True)
+            if self.instance and self.instance.pk:
+                qs_activo = qs_activo.exclude(pk=self.instance.pk)
+            if qs_activo.exists():
+                raise forms.ValidationError(
+                    f'{self._empleado.nombre} {self._empleado.apellido_paterno} ya tiene un contrato activo.'
+                )
+
+            # Fix 3 — Detectar solapamiento de fechas con cualquier contrato del empleado
+            fecha_inicio = cleaned_data.get('fecha_inicio')
+            fecha_fin    = cleaned_data.get('fecha_fin')
+            if fecha_inicio and fecha_fin:
+                qs_overlap = Contrato.objects.filter(
+                    empleado=self._empleado,
+                    tipo='empleado',
+                    fecha_inicio__lte=fecha_fin,
+                    fecha_fin__gte=fecha_inicio,
+                )
+                if self.instance and self.instance.pk:
+                    qs_overlap = qs_overlap.exclude(pk=self.instance.pk)
+                contrato_solapado = qs_overlap.first()
+                if contrato_solapado:
+                    self.add_error(
+                        'fecha_inicio',
+                        f'Las fechas se solapan con un contrato existente '
+                        f'({contrato_solapado.fecha_inicio} – {contrato_solapado.fecha_fin}).'
+                    )
+        return cleaned_data
 
 
 class JornadaEmpleadoForm(forms.ModelForm):
@@ -337,9 +405,87 @@ class JornadaEmpleadoForm(forms.ModelForm):
             'proyecto': forms.Select(attrs={'class': 'form-select'}),
         }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, empleado=None, es_admin=False, contrato=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['proyecto'].queryset = Proyecto.objects.filter(
-            activo=True, estado_proyecto__in=['pendiente', 'en_progreso']
-        )
+        self._contrato = contrato
+        base_qs = Proyecto.objects.filter(activo=True, estado_proyecto__in=['pendiente', 'en_progreso'])
+        if es_admin or empleado is None:
+            self.fields['proyecto'].queryset = base_qs
+        else:
+            self.fields['proyecto'].queryset = base_qs.filter(equipo=empleado)
         self.fields['proyecto'].empty_label = '— Seleccionar proyecto —'
+
+    def clean(self):
+        cleaned_data = super().clean()
+        fecha = cleaned_data.get('fecha')
+        dias  = cleaned_data.get('dias')
+        contrato = self._contrato
+
+        if not fecha or not dias or not contrato:
+            return cleaned_data
+
+        dias_decimal = Decimal(str(dias))
+
+        # Fix 2 — La fecha debe estar dentro del rango del contrato
+        if not (contrato.fecha_inicio <= fecha <= contrato.fecha_fin):
+            self.add_error(
+                'fecha',
+                f'La fecha debe estar entre {contrato.fecha_inicio} y {contrato.fecha_fin} '
+                f'(rango del contrato).'
+            )
+
+        # Fix 1 — La suma de días registrados ese día no puede superar 1.0
+        qs = JornadaEmpleado.objects.filter(
+            contrato=contrato, fecha=fecha, activo=True
+        )
+        if self.instance and self.instance.pk:
+            qs = qs.exclude(pk=self.instance.pk)
+        dias_ya_registrados = qs.aggregate(t=Sum('dias'))['t'] or Decimal('0')
+        if dias_ya_registrados + dias_decimal > Decimal('1.0'):
+            disponible = Decimal('1.0') - dias_ya_registrados
+            self.add_error(
+                'dias',
+                f'Ya hay {dias_ya_registrados} día(s) registrado(s) en esta fecha. '
+                f'Solo puede agregar {disponible} día(s) más.'
+            )
+
+        return cleaned_data
+
+
+class SedeForm(forms.ModelForm):
+    class Meta:
+        model = Sede
+        fields = ['nombre', 'direccion', 'descripcion', 'latitud', 'longitud']
+        widgets = {
+            'nombre':      forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Casa #210 Calle 2, Edificio Central'}),
+            'direccion':   forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Dirección completa'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Indicaciones adicionales, referencias, instrucciones de acceso...'}),
+            'latitud':     forms.TextInput(attrs={'class': 'form-control form-control-sm', 'placeholder': 'Ej: -17.3935000', 'id': 'id_latitud'}),
+            'longitud':    forms.TextInput(attrs={'class': 'form-control form-control-sm', 'placeholder': 'Ej: -66.1570000', 'id': 'id_longitud'}),
+        }
+
+
+class FotoSedeForm(forms.ModelForm):
+    class Meta:
+        model = FotoSede
+        fields = ['foto', 'descripcion']
+        widgets = {
+            'foto':        forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': 'image/*', 'capture': 'environment'}),
+            'descripcion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Cámara exterior instalada, NVR configurado...'}),
+        }
+
+    def clean_foto(self):
+        foto = self.cleaned_data.get('foto')
+        if foto and hasattr(foto, 'name'):
+            if not foto.name.lower().endswith(('.jpg', '.jpeg', '.png', '.gif', '.webp')):
+                raise forms.ValidationError('Solo se permiten imágenes (JPG, PNG, GIF, WEBP).')
+        return foto
+
+
+class TareaChecklistForm(forms.ModelForm):
+    class Meta:
+        model = TareaChecklist
+        fields = ['descripcion']
+        widgets = {
+            'descripcion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Tender cable desde tablero, Montar cámara domo exterior...'}),
+        }

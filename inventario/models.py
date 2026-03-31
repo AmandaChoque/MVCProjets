@@ -3,6 +3,7 @@ from django.db.models import Q, Sum
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
+from django.core.exceptions import ValidationError
 from decimal import Decimal
 
 from projects.models import AuditModel, Proyecto
@@ -119,7 +120,13 @@ class Requiere(AuditModel):
     proyecto       = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='insumos', verbose_name="Proyecto")
     insumo         = models.ForeignKey(Insumo, on_delete=models.SET_NULL, null=True, related_name='proyectos', verbose_name="Insumo")
     cantidad       = models.PositiveIntegerField(verbose_name="Cantidad")
-    costo_total = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Costo Total (Bs.)")
+    costo_total    = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Costo Total (Bs.)")
+    # Sede de instalación: permite asignar insumos a un punto específico del proyecto.
+    # null = insumo general del proyecto (sin sede asignada).
+    sede           = models.ForeignKey(
+        'projects.Sede', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='insumos', verbose_name="Sede de instalación"
+    )
 
     class Meta:
         verbose_name = 'Insumo del Proyecto'
@@ -127,13 +134,31 @@ class Requiere(AuditModel):
         ordering = ['-created']
         db_table = 'inventario_requiere'
         constraints = [
-            # Solo un insumo activo por proyecto — los soft-deleted no bloquean la reasignación
+            # Un mismo insumo solo puede asignarse una vez al mismo proyecto+sede activo.
+            # sede=null representa insumos generales (sin sede específica).
             models.UniqueConstraint(
                 fields=['proyecto', 'insumo'],
-                condition=Q(activo=True),
-                name='unique_requiere_proyecto_insumo_activo',
-            )
+                condition=Q(activo=True, sede__isnull=True),
+                name='unique_requiere_proyecto_insumo_sin_sede',
+            ),
+            models.UniqueConstraint(
+                fields=['proyecto', 'insumo', 'sede'],
+                condition=Q(activo=True, sede__isnull=False),
+                name='unique_requiere_proyecto_insumo_sede',
+            ),
         ]
+
+    def clean(self):
+        # Fix 2: sede must belong to the same project
+        if self.sede_id and self.proyecto_id:
+            if self.sede.proyecto_id != self.proyecto_id:
+                raise ValidationError({'sede': 'La sede seleccionada no pertenece al proyecto asignado.'})
+        # Fix 5: stock must be sufficient (mirrors calcular_costo_fifo validation)
+        if self.insumo_id and self.cantidad:
+            try:
+                calcular_costo_fifo(self.insumo, self.cantidad, excluir_requiere_pk=self.pk if self.pk else None)
+            except ValueError as e:
+                raise ValidationError({'cantidad': str(e)})
 
     def __str__(self):
         insumo = self.insumo.nombre if self.insumo else 'Insumo eliminado'

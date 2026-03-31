@@ -8,6 +8,7 @@ def user_cargo_context(request):
         {% if es_admin_o_gerente %}  — administrador o gerente
         {% if es_admin_sec %}     — administrador, gerente o secretaria
         {% if es_campo %}         — administrador, gerente, instalador o tecnico_soporte
+        {{ notif_no_leidas }}     — conteo de notificaciones no leídas del usuario
     """
     if not request.user.is_authenticated:
         return {}
@@ -17,6 +18,15 @@ def user_cargo_context(request):
     else:
         cargo = getattr(request.user, 'cargo', None)
 
+    # Conteo de notificaciones no leídas (evita importar en cada vista)
+    try:
+        from .models import Notificacion
+        notif_no_leidas = Notificacion.objects.filter(
+            destinatario=request.user, leida=False
+        ).count()
+    except Exception:
+        notif_no_leidas = 0
+
     return {
         'user_cargo': cargo,
         'es_admin':               cargo == 'administrador',
@@ -24,4 +34,5 @@ def user_cargo_context(request):
         'es_admin_sec':           cargo in ('administrador', 'gerente', 'secretaria'),
         'es_campo':               cargo in ('administrador', 'gerente', 'instalador', 'tecnico_soporte'),
         'es_instalador_tecnico':  cargo in ('instalador', 'tecnico_soporte'),
+        'notif_no_leidas':        notif_no_leidas,
     }

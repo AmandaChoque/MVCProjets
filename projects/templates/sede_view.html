@@ -1,0 +1,388 @@
+{% extends 'base.html' %}
+{% load l10n %}
+{% block extra_css %}
+{% if sede.latitud and sede.longitud %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+{% endif %}
+<style>
+  #map-sede { height: 220px; border-radius: 8px; border: 1px solid #dee2e6; }
+  .tarea-item { transition: background .15s; }
+  .tarea-item.completada .tarea-desc { text-decoration: line-through; color: #adb5bd; }
+  .foto-thumb { width: 100px; height: 80px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid transparent; transition: border-color .15s; }
+  .foto-thumb:hover { border-color: #1B4D90; }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="container-fluid px-4 py-4" style="max-width: 900px;">
+
+  <!-- ENCABEZADO -->
+  <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
+    <div>
+      <div class="d-flex align-items-center gap-2 mb-1">
+        <a href="{% url 'project_view' project.id %}" class="btn btn-outline-secondary btn-sm py-0">
+          <i class="bi bi-arrow-left"></i>
+        </a>
+        <h5 class="mb-0 fw-semibold" style="color:#1B4D90;">{{ sede.nombre }}</h5>
+        {% if sede.estado == 'completado' %}
+          <span class="badge bg-success">Completada</span>
+        {% elif sede.estado == 'en_progreso' %}
+          <span class="badge bg-primary">En progreso</span>
+        {% else %}
+          <span class="badge bg-warning text-dark">Pendiente</span>
+        {% endif %}
+      </div>
+      <small class="text-muted"><i class="bi bi-geo-alt me-1"></i>{{ sede.direccion }}</small>
+      {% if sede.descripcion %}<div class="text-muted small mt-1">{{ sede.descripcion }}</div>{% endif %}
+    </div>
+    {% if es_admin %}
+    <div class="d-flex gap-2">
+      <a href="{% url 'sede_detail' sede.id %}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-pencil me-1"></i>Editar
+      </a>
+      <form method="POST" action="{% url 'sede_deactivate' sede.id %}" class="d-inline"
+        onsubmit="return confirm('¿Eliminar esta sede?')">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-danger btn-sm">
+          <i class="bi bi-trash"></i>
+        </button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- BARRA PROGRESO CHECKLIST -->
+  {% with pct=sede.porcentaje_checklist %}
+  <div class="mb-4">
+    <div class="d-flex justify-content-between small mb-1">
+      <span class="text-muted">Avance del checklist</span>
+      <span class="fw-semibold" id="pct-label">{{ pct }}%</span>
+    </div>
+    <div class="progress" style="height:12px; border-radius:8px;">
+      <div class="progress-bar {% if pct == 100 %}bg-success{% elif pct >= 50 %}bg-primary{% else %}bg-warning{% endif %}"
+           id="pct-bar" role="progressbar" style="width:{{ pct }}%;"
+           aria-valuenow="{{ pct }}" aria-valuemin="0" aria-valuemax="100"></div>
+    </div>
+  </div>
+  {% endwith %}
+
+  <div class="row g-4">
+
+    <!-- COLUMNA IZQUIERDA: checklist + fotos -->
+    <div class="col-lg-7">
+
+      <!-- CHECKLIST -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-semibold"><i class="bi bi-check2-square me-2"></i>Checklist de tareas</h6>
+          {% if es_admin %}
+          <button class="btn btn-sm btn-primary py-0" data-bs-toggle="collapse" data-bs-target="#panelNuevaTarea">
+            <i class="bi bi-plus-lg"></i> Tarea
+          </button>
+          {% endif %}
+        </div>
+        {% if es_admin %}
+        <div class="collapse" id="panelNuevaTarea">
+          <div class="card-body border-bottom bg-light py-2">
+            <form id="form-nueva-tarea" class="d-flex gap-2">
+              {% csrf_token %}
+              <input type="text" name="descripcion" class="form-control form-control-sm"
+                     placeholder="Ej: Montar cámara domo exterior, Tender cable BNC..." required>
+              <button type="submit" class="btn btn-sm btn-primary">Agregar</button>
+            </form>
+          </div>
+        </div>
+        {% endif %}
+        <div class="card-body p-0">
+          <ul class="list-group list-group-flush" id="lista-tareas">
+            {% for tarea in tareas %}
+            <li class="list-group-item tarea-item {% if tarea.completado %}completada{% endif %}" id="tarea-{{ tarea.id }}">
+              <div class="d-flex align-items-center gap-3">
+                <input type="checkbox" class="form-check-input fs-5 tarea-check"
+                       data-id="{{ tarea.id }}" {% if tarea.completado %}checked{% endif %}
+                       style="width:1.3em; height:1.3em; cursor:pointer;">
+                <div class="flex-grow-1">
+                  <span class="tarea-desc">{{ tarea.descripcion }}</span>
+                  {% if tarea.completado and tarea.completado_por %}
+                  <div class="text-muted" style="font-size:0.72rem;">
+                    <i class="bi bi-person-check me-1"></i>{{ tarea.completado_por.get_full_name|default:tarea.completado_por.username }}
+                    — {{ tarea.fecha_completado|date:"d/m/Y H:i" }}
+                  </div>
+                  {% endif %}
+                </div>
+                {% if es_admin %}
+                <button class="btn btn-sm btn-light text-danger py-0 btn-delete-tarea" data-id="{{ tarea.id }}">
+                  <i class="bi bi-x"></i>
+                </button>
+                {% endif %}
+              </div>
+            </li>
+            {% empty %}
+            <li class="list-group-item text-muted small py-3" id="empty-tareas">
+              Sin tareas. {% if es_admin %}Agrega la primera con el botón +.{% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+
+      <!-- FOTOS -->
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-semibold"><i class="bi bi-camera me-2"></i>Fotos de instalación</h6>
+          <button class="btn btn-sm btn-primary py-0" data-bs-toggle="collapse" data-bs-target="#panelFoto">
+            <i class="bi bi-plus-lg"></i> Foto
+          </button>
+        </div>
+        <div class="collapse" id="panelFoto">
+          <div class="card-body border-bottom bg-light py-2">
+            <form method="POST" action="{% url 'foto_upload' sede.id %}" enctype="multipart/form-data" class="row g-2 align-items-end">
+              {% csrf_token %}
+              <div class="col-12 col-sm-7">{{ foto_form.foto }}</div>
+              <div class="col-12 col-sm-5">{{ foto_form.descripcion }}</div>
+              <div class="col-12">
+                <button type="submit" class="btn btn-sm btn-primary">Subir foto</button>
+              </div>
+            </form>
+          </div>
+        </div>
+        <div class="card-body">
+          {% if fotos %}
+          <div class="d-flex flex-wrap gap-2" id="galeria-fotos">
+            {% for foto in fotos %}
+            <div class="position-relative" id="foto-{{ foto.id }}">
+              <img src="{{ foto.foto.url }}" alt="{{ foto.descripcion|default:'Foto' }}"
+                   class="foto-thumb" data-bs-toggle="modal" data-bs-target="#modalFoto"
+                   data-src="{{ foto.foto.url }}" data-desc="{{ foto.descripcion }}">
+              {% if es_admin %}
+              <button class="btn btn-danger btn-sm position-absolute top-0 end-0 py-0 px-1 btn-delete-foto"
+                      data-id="{{ foto.id }}" style="font-size:.7rem; border-radius:0 6px 0 4px;">
+                <i class="bi bi-x"></i>
+              </button>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <p class="text-muted small mb-0">Sin fotos aún. Sube la primera para documentar la instalación.</p>
+          {% endif %}
+        </div>
+      </div>
+
+    </div><!-- /col izquierda -->
+
+    <!-- COLUMNA DERECHA: insumos + mapa -->
+    <div class="col-lg-5">
+
+      <!-- INSUMOS POR SEDE -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-semibold"><i class="bi bi-box-seam me-2"></i>Insumos de esta sede</h6>
+        </div>
+        <div class="card-body {% if not insumos_sede %}{% endif %}">
+          {% if insumos_sede %}
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle small mb-0">
+              <thead class="table-light text-uppercase fw-semibold" style="font-size:.7rem;">
+                <tr><th>Insumo</th><th class="text-center">Cant.</th><th class="text-end">QR</th></tr>
+              </thead>
+              <tbody>
+                {% for req in insumos_sede %}
+                <tr>
+                  <td>
+                    <div class="fw-semibold">{{ req.insumo.nombre }}</div>
+                    <div class="text-muted" style="font-size:.75rem;">{{ req.insumo.marca }}{% if req.insumo.modelo %} · {{ req.insumo.modelo }}{% endif %}</div>
+                  </td>
+                  <td class="text-center">{{ req.cantidad }}</td>
+                  <td class="text-end">
+                    <a href="{% url 'qr_insumo' req.id %}" target="_blank" class="btn btn-sm btn-light py-0"
+                       title="Ver QR de este insumo">
+                      <i class="bi bi-qr-code"></i>
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <p class="text-muted small mb-0">Sin insumos asignados a esta sede.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- MAPA -->
+      {% if sede.latitud and sede.longitud %}
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-light"><h6 class="mb-0 fw-semibold"><i class="bi bi-map me-2"></i>Ubicación</h6></div>
+        <div class="card-body p-2">
+          <div id="map-sede"></div>
+        </div>
+      </div>
+      {% endif %}
+
+    </div><!-- /col derecha -->
+  </div>
+
+</main>
+
+<!-- Modal foto ampliada -->
+<div class="modal fade" id="modalFoto" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body p-2 text-center">
+        <img id="modalFotoImg" src="" class="img-fluid rounded" alt="">
+        <p class="text-muted small mt-2 mb-0" id="modalFotoDesc"></p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if sede.latitud and sede.longitud %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="application/json" id="sede-coords">
+  {"lat": {{ sede.latitud|unlocalize }}, "lng": {{ sede.longitud|unlocalize }}, "nombre": "{{ sede.nombre|escapejs }}", "direccion": "{{ sede.direccion|escapejs }}"}
+</script>
+<script>
+  (function() {
+    var coords = JSON.parse(document.getElementById('sede-coords').textContent);
+    var mapSede = L.map('map-sede', { zoomControl: true, scrollWheelZoom: false })
+      .setView([coords.lat, coords.lng], 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap'
+    }).addTo(mapSede);
+    L.marker([coords.lat, coords.lng])
+      .bindPopup('<b>' + coords.nombre + '</b><br>' + coords.direccion)
+      .addTo(mapSede).openPopup();
+  })();
+</script>
+{% endif %}
+
+<script>
+const CSRF = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+// ── Toggle tarea ────────────────────────────────────────────────────────────
+document.querySelectorAll('.tarea-check').forEach(chk => {
+  chk.addEventListener('change', function() {
+    const id = this.dataset.id;
+    fetch(`/tareas/${id}/toggle/`, {
+      method: 'POST',
+      headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'},
+    }).then(r => r.json()).then(data => {
+      if (!data.ok) return;
+      const li = document.getElementById(`tarea-${id}`);
+      li.classList.toggle('completada', data.completado);
+      // Actualizar barra progreso
+      document.getElementById('pct-label').textContent = data.porcentaje + '%';
+      const bar = document.getElementById('pct-bar');
+      bar.style.width = data.porcentaje + '%';
+      bar.className = 'progress-bar ' + (data.porcentaje == 100 ? 'bg-success' : data.porcentaje >= 50 ? 'bg-primary' : 'bg-warning');
+      // Guardar en cola offline si no pudo conectar
+    }).catch(() => {
+      // Offline: encolar
+      const queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
+      queue.push({url: `/tareas/${id}/toggle/`, method: 'POST'});
+      localStorage.setItem('offlineQueue', JSON.stringify(queue));
+      const li = document.getElementById(`tarea-${id}`);
+      li.title = 'Guardado offline — se sincronizará al reconectar';
+      li.style.opacity = '0.7';
+    });
+  });
+});
+
+// ── Eliminar tarea ──────────────────────────────────────────────────────────
+document.querySelectorAll('.btn-delete-tarea').forEach(btn => {
+  btn.addEventListener('click', function() {
+    if (!confirm('¿Eliminar esta tarea?')) return;
+    const id = this.dataset.id;
+    fetch(`/tareas/${id}/eliminar/`, {
+      method: 'POST',
+      headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'},
+    }).then(r => r.json()).then(data => {
+      if (data.ok) document.getElementById(`tarea-${id}`).remove();
+    });
+  });
+});
+
+// ── Nueva tarea ─────────────────────────────────────────────────────────────
+const formNuevaTarea = document.getElementById('form-nueva-tarea');
+if (formNuevaTarea) {
+  formNuevaTarea.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const desc = this.querySelector('[name=descripcion]').value.trim();
+    if (!desc) return;
+    fetch(`{% url 'tarea_create' sede.id %}`, {
+      method: 'POST',
+      headers: {
+        'X-CSRFToken': CSRF,
+        'X-Requested-With': 'XMLHttpRequest',
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: `descripcion=${encodeURIComponent(desc)}`,
+    }).then(r => r.json()).then(data => {
+      if (!data.ok) return;
+      const emptyMsg = document.getElementById('empty-tareas');
+      if (emptyMsg) emptyMsg.remove();
+      const li = document.createElement('li');
+      li.className = 'list-group-item tarea-item';
+      li.id = `tarea-${data.id}`;
+      li.innerHTML = `
+        <div class="d-flex align-items-center gap-3">
+          <input type="checkbox" class="form-check-input fs-5 tarea-check"
+                 data-id="${data.id}" style="width:1.3em; height:1.3em; cursor:pointer;">
+          <div class="flex-grow-1"><span class="tarea-desc">${data.descripcion}</span></div>
+          <button class="btn btn-sm btn-light text-danger py-0 btn-delete-tarea" data-id="${data.id}">
+            <i class="bi bi-x"></i>
+          </button>
+        </div>`;
+      document.getElementById('lista-tareas').appendChild(li);
+      // Re-bind events en el nuevo elemento
+      li.querySelector('.tarea-check').addEventListener('change', function() {
+        document.querySelectorAll('.tarea-check')[0].dispatchEvent; // trigger via delegado
+      });
+      this.querySelector('[name=descripcion]').value = '';
+      // Cerrar panel
+      const panel = document.getElementById('panelNuevaTarea');
+      if (panel) bootstrap.Collapse.getOrCreateInstance(panel).hide();
+    });
+  });
+}
+
+// ── Eliminar foto ───────────────────────────────────────────────────────────
+document.querySelectorAll('.btn-delete-foto').forEach(btn => {
+  btn.addEventListener('click', function() {
+    if (!confirm('¿Eliminar esta foto?')) return;
+    const id = this.dataset.id;
+    fetch(`/fotos/${id}/eliminar/`, {
+      method: 'POST',
+      headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'},
+    }).then(r => r.json()).then(data => {
+      if (data.ok) document.getElementById(`foto-${id}`).remove();
+    });
+  });
+});
+
+// ── Modal foto ──────────────────────────────────────────────────────────────
+document.querySelectorAll('.foto-thumb').forEach(img => {
+  img.addEventListener('click', function() {
+    document.getElementById('modalFotoImg').src = this.dataset.src;
+    document.getElementById('modalFotoDesc').textContent = this.dataset.desc || '';
+  });
+});
+
+// ── Sync offline queue al reconectar ────────────────────────────────────────
+window.addEventListener('online', function() {
+  const queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
+  if (!queue.length) return;
+  const promises = queue.map(item =>
+    fetch(item.url, { method: item.method, headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'} })
+  );
+  Promise.allSettled(promises).then(() => {
+    localStorage.removeItem('offlineQueue');
+    location.reload();
+  });
+});
+</script>
+{% endblock %}

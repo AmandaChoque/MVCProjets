@@ -45,10 +45,11 @@ class Pago(PagoBase):
 
 class PagoEmpleado(PagoBase):
     CONCEPTO_CHOICES = [
-        ('anticipo',    'Anticipo'),
-        ('mensualidad', 'Mensualidad'),
-        ('saldo_final', 'Saldo Final'),
-        ('otro',        'Otro'),
+        ('pago_jornada', 'Pago por jornada(s)'),
+        ('adelanto',     'Adelanto'),
+        ('liquidacion',  'Liquidación final'),
+        ('dia_extra',    'Día extra fuera del contrato'),
+        ('otro',         'Otro'),
     ]
 
     contrato = models.ForeignKey(
@@ -69,8 +70,8 @@ class PagoEmpleado(PagoBase):
             ),
             models.UniqueConstraint(
                 fields=['contrato'],
-                condition=models.Q(activo=True, concepto='saldo_final'),
-                name='unique_pago_empleado_saldo_final_activo',
+                condition=models.Q(activo=True, concepto='liquidacion'),
+                name='unique_pago_empleado_liquidacion_activo',
             ),
         ]
 

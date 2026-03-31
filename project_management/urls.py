@@ -48,8 +48,31 @@ urlpatterns = [
     path('progreso/<int:id_progreso>/', views.progreso_detail, name='progreso_detail'),
     path('progreso/<int:id_progreso>/eliminar/', views.deactivate_progreso, name='deactivate_progreso'),
 
+    # Sedes de Instalación
+    path('projects/<int:id_project>/sedes/nueva/', views.sede_create, name='sede_create'),
+    path('sedes/<int:id_sede>/', views.sede_detail, name='sede_detail'),
+    path('sedes/<int:id_sede>/ver/', views.sede_view, name='sede_view'),
+    path('sedes/<int:id_sede>/deactivate/', views.sede_deactivate, name='sede_deactivate'),
+    # Checklist de tareas
+    path('sedes/<int:id_sede>/tareas/nueva/', views.tarea_create, name='tarea_create'),
+    path('tareas/<int:id_tarea>/toggle/', views.tarea_toggle, name='tarea_toggle'),
+    path('tareas/<int:id_tarea>/eliminar/', views.tarea_delete, name='tarea_delete'),
+    # Fotos de sede
+    path('sedes/<int:id_sede>/fotos/subir/', views.foto_upload, name='foto_upload'),
+    path('fotos/<int:id_foto>/eliminar/', views.foto_delete, name='foto_delete'),
+    # QR por insumo instalado
+    path('insumos-proyecto/<int:id_requiere>/qr/', views.qr_insumo, name='qr_insumo'),
+    # Notificaciones
+    path('notificaciones/', views.notificaciones_list, name='notificaciones_list'),
+    path('notificaciones/<int:id_notif>/leer/', views.notificacion_marcar_leida, name='notificacion_leer'),
+    path('notificaciones/leer-todas/', views.notificaciones_marcar_todas, name='notificaciones_leer_todas'),
+    # Dashboard instalador
+    path('mi-trabajo/', views.instalador_dashboard, name='instalador_dashboard'),
+
+    # Equipo del Proyecto
+    path('projects/<int:id_project>/equipo/agregar/', views.equipo_add, name='equipo_add'),
+    path('projects/<int:id_project>/equipo/<int:id_employee>/remover/', views.equipo_remove, name='equipo_remove'),
     # Contratos de Empleados
-    path('projects/<int:id_project>/contratos/empleado/nuevo/', views.create_contrato_empleado, name='create_contrato_empleado'),
     path('contratos/empleado/<int:id_contrato>/', views.contrato_empleado_detail, name='contrato_empleado_detail'),
     path('contratos/empleado/<int:id_contrato>/deactivate/', views.deactivate_contrato_empleado, name='contrato_empleado_deactivate'),
     # Jornadas de Empleados

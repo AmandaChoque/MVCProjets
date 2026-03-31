@@ -1,0 +1,266 @@
+{% extends 'base.html' %}
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+  #map { height: 320px; border-radius: 8px; border: 1px solid #dee2e6; }
+  #map-hint { font-size: 0.8rem; color: #6c757d; margin-top: 4px; }
+
+  /* Buscador de dirección */
+  #search-wrapper { position: relative; }
+  #dir-search { border-radius: 8px; padding-right: 2.5rem; }
+  #search-spinner {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    display: none; color: #6c757d;
+  }
+  #search-results {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: #fff; border: 1px solid #dee2e6; border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,.12);
+    z-index: 9999; max-height: 220px; overflow-y: auto; display: none;
+  }
+  #search-results .sr-item {
+    padding: 9px 14px; font-size: 0.85rem; cursor: pointer;
+    border-bottom: 1px solid #f0f0f0; display: flex; gap: 8px; align-items: flex-start;
+  }
+  #search-results .sr-item:last-child { border-bottom: none; }
+  #search-results .sr-item:hover { background: #f0f6ff; }
+  #search-results .sr-main { font-weight: 600; color: #1B4D90; }
+  #search-results .sr-sub { font-size: 0.75rem; color: #6c757d; }
+  #search-no-results { padding: 10px 14px; font-size: 0.85rem; color: #6c757d; text-align: center; display: none; }
+  @keyframes spin { to { transform: translateY(-50%) rotate(360deg); } }
+  #search-spinner { animation: spin 0.8s linear infinite; }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="container py-4" style="max-width: 700px;">
+  <div class="d-flex align-items-center gap-2 mb-3">
+    <a href="{% url 'project_view' project.id %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left"></i>
+    </a>
+    <h5 class="mb-0 fw-semibold" style="color:#1B4D90;">
+      {{ accion }} Sede — <span class="text-muted fw-normal">{{ project.nombre }}</span>
+    </h5>
+  </div>
+
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-4">
+      <form method="POST">
+        {% csrf_token %}
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Nombre / Referencia <span class="text-danger">*</span></label>
+          {{ form.nombre }}
+          {% if form.nombre.errors %}<div class="text-danger small mt-1">{{ form.nombre.errors.0 }}</div>{% endif %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Dirección <span class="text-danger">*</span></label>
+          {{ form.direccion }}
+          {% if form.direccion.errors %}<div class="text-danger small mt-1">{{ form.direccion.errors.0 }}</div>{% endif %}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Descripción / Indicaciones</label>
+          {{ form.descripcion }}
+        </div>
+
+        <!-- Mapa Leaflet -->
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Ubicación en el mapa <span class="text-muted fw-normal">(opcional)</span></label>
+
+          <!-- Buscador de dirección -->
+          <div id="search-wrapper" class="mb-2">
+            <div class="input-group">
+              <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+              <input type="text" id="dir-search" class="form-control"
+                     placeholder="Buscar dirección, calle, lugar…" autocomplete="off">
+              <i class="bi bi-arrow-repeat spin" id="search-spinner"></i>
+            </div>
+            <div id="search-results">
+              <div id="search-no-results">Sin resultados. Intenta con otra dirección.</div>
+            </div>
+          </div>
+
+          <div id="map"></div>
+          <p id="map-hint" class="mb-2"><i class="bi bi-cursor-fill me-1"></i>Busca una dirección arriba o haz clic en el mapa para marcar el punto.</p>
+
+          <!-- Campos de coordenadas visibles -->
+          <div class="row g-2 align-items-end">
+            <div class="col">
+              <label class="form-label mb-1 small text-muted">Latitud</label>
+              {{ form.latitud }}
+            </div>
+            <div class="col">
+              <label class="form-label mb-1 small text-muted">Longitud</label>
+              {{ form.longitud }}
+            </div>
+            <div class="col-auto">
+              <button type="button" class="btn btn-outline-danger btn-sm" id="limpiar-pin" title="Quitar pin">
+                <i class="bi bi-x-lg"></i> Quitar pin
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 justify-content-end">
+          <a href="{% url 'project_view' project.id %}" class="btn btn-outline-secondary">Cancelar</a>
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-check-lg me-1"></i>{{ accion }} Sede
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</main>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const latInput = document.getElementById('id_latitud');
+  const lngInput = document.getElementById('id_longitud');
+
+  // Coordenadas iniciales: Bolivia (centro), o las guardadas
+  const initLat = parseFloat(latInput.value) || -17.3935;
+  const initLng = parseFloat(lngInput.value) || -66.1570;
+  const initZoom = latInput.value ? 16 : 6;
+
+  const map = L.map('map').setView([initLat, initLng], initZoom);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  let marker = null;
+
+  function setPin(lat, lng, updateInputs = true) {
+    if (marker) map.removeLayer(marker);
+    marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+    if (updateInputs) {
+      latInput.value = lat.toFixed(7);
+      lngInput.value = lng.toFixed(7);
+    }
+    // Al arrastrar el pin también actualiza los campos
+    marker.on('dragend', function(e) {
+      const pos = e.target.getLatLng();
+      latInput.value = pos.lat.toFixed(7);
+      lngInput.value = pos.lng.toFixed(7);
+    });
+  }
+
+  // Si ya tenía coordenadas, mostrar pin
+  if (latInput.value && lngInput.value) {
+    setPin(parseFloat(latInput.value), parseFloat(lngInput.value), false);
+  }
+
+  // Clic en el mapa → pone pin y actualiza campos
+  map.on('click', function(e) {
+    setPin(e.latlng.lat, e.latlng.lng);
+  });
+
+  // Escribir en los campos → mueve el pin en el mapa
+  function onCoordsInput() {
+    const lat = parseFloat(latInput.value);
+    const lng = parseFloat(lngInput.value);
+    if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
+      setPin(lat, lng, false);
+      map.setView([lat, lng], map.getZoom() < 12 ? 15 : map.getZoom());
+    }
+  }
+  latInput.addEventListener('change', onCoordsInput);
+  lngInput.addEventListener('change', onCoordsInput);
+
+  document.getElementById('limpiar-pin').addEventListener('click', function() {
+    if (marker) { map.removeLayer(marker); marker = null; }
+    latInput.value = '';
+    lngInput.value = '';
+  });
+
+  // ── Buscador de direcciones (Nominatim / OpenStreetMap) ──────────────────
+  const searchInput   = document.getElementById('dir-search');
+  const searchResults = document.getElementById('search-results');
+  const searchNoRes   = document.getElementById('search-no-results');
+  const searchSpinner = document.getElementById('search-spinner');
+  let searchTimeout   = null;
+
+  function clearResults() {
+    searchResults.style.display = 'none';
+    searchResults.querySelectorAll('.sr-item').forEach(el => el.remove());
+    searchNoRes.style.display = 'none';
+  }
+
+  function showResult(item) {
+    const div = document.createElement('div');
+    div.className = 'sr-item';
+
+    // Separar la primera parte (nombre) del resto (ciudad, país)
+    const parts = item.display_name.split(', ');
+    const main  = parts.slice(0, 2).join(', ');
+    const sub   = parts.slice(2).join(', ');
+
+    div.innerHTML = `
+      <i class="bi bi-geo-alt-fill text-primary mt-1" style="flex-shrink:0"></i>
+      <div>
+        <div class="sr-main">${main}</div>
+        ${sub ? `<div class="sr-sub">${sub}</div>` : ''}
+      </div>`;
+
+    div.addEventListener('mousedown', function(e) {
+      e.preventDefault(); // evitar que el input pierda foco antes del click
+      const lat = parseFloat(item.lat);
+      const lng = parseFloat(item.lon);
+      setPin(lat, lng);
+      map.setView([lat, lng], 17);
+
+      // Rellenar campo dirección si está vacío
+      const dirField = document.getElementById('id_direccion');
+      if (dirField && !dirField.value.trim()) {
+        dirField.value = item.display_name.split(', ').slice(0, 3).join(', ');
+      }
+
+      searchInput.value = main;
+      clearResults();
+    });
+
+    searchResults.insertBefore(div, searchNoRes);
+  }
+
+  async function buscarDireccion(q) {
+    if (q.length < 3) { clearResults(); return; }
+    searchSpinner.style.display = 'block';
+
+    try {
+      const url = `https://nominatim.openstreetmap.org/search?format=json&limit=6&addressdetails=0&q=${encodeURIComponent(q)}&countrycodes=bo&accept-language=es`;
+      const resp = await fetch(url, { headers: { 'Accept-Language': 'es' } });
+      const data = await resp.json();
+
+      clearResults();
+      searchResults.style.display = 'block';
+
+      if (data.length === 0) {
+        searchNoRes.style.display = 'block';
+      } else {
+        data.forEach(showResult);
+      }
+    } catch (err) {
+      clearResults();
+    } finally {
+      searchSpinner.style.display = 'none';
+    }
+  }
+
+  searchInput.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => buscarDireccion(this.value.trim()), 400);
+  });
+
+  // Cerrar al hacer clic fuera
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('#search-wrapper')) clearResults();
+  });
+
+  searchInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') clearResults();
+  });
+</script>
+{% endblock %}

@@ -8,8 +8,8 @@ from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.db import IntegrityError
 
-from .form import ProjectForm, EmpleadoForm, ClienteForm, ProgresoForm, ContratoEmpleadoForm, ContratoEmpleadoDesdeEmpleadoForm, ContratoProyectoForm, JornadaEmpleadoForm
-from .models import Proyecto, Empleado, Cliente, Progreso, Contrato, HistorialPresupuesto, JornadaEmpleado
+from .form import ProjectForm, EmpleadoForm, ClienteForm, ProgresoForm, ContratoEmpleadoForm, ContratoEmpleadoDesdeEmpleadoForm, ContratoProyectoForm, JornadaEmpleadoForm, SedeForm, FotoSedeForm, TareaChecklistForm
+from .models import Proyecto, Empleado, Cliente, Progreso, Contrato, HistorialPresupuesto, JornadaEmpleado, Sede, FotoSede, TareaChecklist, Notificacion
 from inventario.models import Insumo, Requiere
 from pagos.models import Pago, PagoEmpleado
 from django.contrib.auth.decorators import login_required
@@ -21,7 +21,8 @@ from xhtml2pdf import pisa
 import matplotlib.pyplot as plt
 import io
 import urllib, base64
-from django.db.models import Q, Count, Sum, OuterRef, Subquery, F
+from django.db.models import Q, Count, Sum, OuterRef, Subquery, F, Max as db_Max
+from django.db import models
 from django.db.models.functions import TruncMonth
 import json
 from datetime import timedelta
@@ -554,28 +555,37 @@ def project_view(request, id_project):
     progresos = project.progresos.filter(activo=True).order_by('-fecha', '-created')
     ultimo_progreso = progresos.first()
     porcentaje_actual = ultimo_progreso.porcentaje if ultimo_progreso else 0
-    contratos_empleados = project.contratos.filter(tipo='empleado', activo=True).select_related('empleado')
     contrato_proyecto = project.contratos.filter(tipo='proyecto', activo=True).first()
     insumos_proyecto = project.insumos.select_related('insumo').order_by('-created')
     total_insumos = sum(r.costo_total for r in insumos_proyecto)
 
-    # ── Pagos a empleados por contrato ─────────────────────────────────────────
-    contratos_con_pagos = []
-    for contrato in contratos_empleados:
-        pagos = contrato.pagos.filter(activo=True).order_by('-fecha')
-        total_pagado = pagos.aggregate(total=Sum('monto'))['total'] or 0
-        contratos_con_pagos.append({
-            'contrato': contrato,
-            'pagos': pagos,
-            'total_pagado': total_pagado,
-            'saldo_pendiente': contrato.monto_acordado - total_pagado,
+    # ── Equipo del proyecto (M2M) con estadísticas de jornadas ────────────────
+    miembros = project.equipo.filter(is_active=True)
+    equipo_proyecto = []
+    costo_personal = 0
+    for emp in miembros:
+        jornadas_emp = JornadaEmpleado.objects.filter(
+            proyecto=project, contrato__empleado=emp, activo=True
+        ).order_by('-fecha')
+        total_dias = jornadas_emp.aggregate(t=Sum('dias'))['t'] or 0
+        contrato_emp = emp.contratos.filter(tipo='empleado', activo=True).first()
+        costo = total_dias * contrato_emp.monto_diario if contrato_emp else 0
+        costo_personal += costo
+        equipo_proyecto.append({
+            'empleado': emp,
+            'total_dias': total_dias,
+            'costo': costo,
+            'ultima_fecha': jornadas_emp.values_list('fecha', flat=True).first(),
         })
+    # Empleados disponibles para agregar (activos y que no están ya en el equipo)
+    empleados_disponibles = Empleado.objects.filter(is_active=True).exclude(
+        pk__in=miembros.values_list('pk', flat=True)
+    ).order_by('apellido_paterno')
 
     # ── Historial de cambios de monto ──────────────────────────────────────────
     historial_monto = HistorialPresupuesto.objects.filter(proyecto=project).order_by('-fecha_modificacion')
 
     # ── Rentabilidad ───────────────────────────────────────────────────────────
-    costo_personal = contratos_empleados.aggregate(total=Sum('monto_acordado'))['total'] or 0
     ingresos = project.monto_total
     rentabilidad = ingresos - total_insumos - costo_personal
     margen = round((rentabilidad / ingresos * 100), 1) if ingresos > 0 else 0
@@ -586,12 +596,33 @@ def project_view(request, id_project):
     total_pagado_cliente = pagos_cliente.aggregate(total=Sum('monto'))['total'] or 0
     saldo_cliente = ingresos - total_pagado_cliente
 
+    # ── Sedes del proyecto ────────────────────────────────────────────────────
+    sedes = project.sedes.filter(activo=True).prefetch_related('tareas', 'fotos', 'insumos')
+    sedes_geo_json = json.dumps([
+        {
+            'lat': float(s.latitud), 'lng': float(s.longitud),
+            'nombre': s.nombre, 'direccion': s.direccion,
+            'estado': s.estado,
+            'url': f'/sedes/{s.id}/ver/',
+        }
+        for s in sedes if s.latitud and s.longitud
+    ])
+
+    # Progreso general basado en sedes: promedio de porcentaje_checklist
+    sedes_list = list(sedes)
+    if sedes_list:
+        progreso_sedes = round(sum(s.porcentaje_checklist for s in sedes_list) / len(sedes_list))
+        sedes_completadas = sum(1 for s in sedes_list if s.estado == 'completado')
+    else:
+        progreso_sedes = 0
+        sedes_completadas = 0
+
     context = {
         'project': project,
         'progresos': progresos,
         'porcentaje_actual': porcentaje_actual,
-        'contratos_empleados': contratos_empleados,
-        'contratos_con_pagos': contratos_con_pagos,
+        'equipo_proyecto': equipo_proyecto,
+        'empleados_disponibles': empleados_disponibles,
         'contrato_proyecto': contrato_proyecto,
         'insumos_proyecto': insumos_proyecto,
         'total_insumos': total_insumos,
@@ -604,6 +635,10 @@ def project_view(request, id_project):
         'pagos_cliente': pagos_cliente,
         'total_pagado_cliente': total_pagado_cliente,
         'saldo_cliente': saldo_cliente,
+        'sedes': sedes,
+        'sedes_geo_json': sedes_geo_json,
+        'progreso_sedes': progreso_sedes,
+        'sedes_completadas': sedes_completadas,
         'now': timezone.now(),
         'generado_por': request.user.get_full_name() or request.user.username,
     }
@@ -723,45 +758,35 @@ def deactivate_employee(request, id_employee):
 def employee_view(request, id_employee):
     empleado = get_object_or_404(Empleado, pk=id_employee)
 
-    # Contratos con sus pagos
+    # Contratos con balance por jornadas
     contratos = empleado.contratos.filter(activo=True).select_related('proyecto').order_by('-created')
     contratos_con_pagos = []
-    total_acordado_global = 0
-    total_pagado_global   = 0
+    total_ganado_global = 0
+    total_pagado_global = 0
 
     for contrato in contratos:
-        pagos = contrato.pagos.filter(activo=True).order_by('fecha')
+        pagos        = contrato.pagos.filter(activo=True).order_by('fecha')
         total_pagado = pagos.aggregate(t=Sum('monto'))['t'] or 0
-        saldo        = contrato.monto_acordado - total_pagado
-        total_acordado_global += contrato.monto_acordado
-        total_pagado_global   += total_pagado
-        contratos_con_pagos.append({
-            'contrato': contrato,
-            'pagos': pagos,
-            'total_pagado': total_pagado,
-            'saldo': saldo,
-        })
-
-    saldo_global = total_acordado_global - total_pagado_global
-
-    # Balance por jornadas de cada contrato
-    contratos_con_jornadas = []
-    for item in contratos_con_pagos:
-        contrato = item['contrato']
-        jornadas = contrato.jornadas.filter(activo=True)
-        total_dias = jornadas.aggregate(t=Sum('dias'))['t'] or 0
+        jornadas     = contrato.jornadas.filter(activo=True)
+        total_dias   = jornadas.aggregate(t=Sum('dias'))['t'] or 0
         total_ganado = total_dias * contrato.monto_diario
-        contratos_con_jornadas.append({
-            **item,
-            'total_dias': total_dias,
-            'total_ganado': total_ganado,
-            'saldo_jornadas': total_ganado - item['total_pagado'],
+        total_ganado_global += total_ganado
+        total_pagado_global += total_pagado
+        contratos_con_pagos.append({
+            'contrato':      contrato,
+            'pagos':         pagos,
+            'total_dias':    total_dias,
+            'total_ganado':  total_ganado,
+            'total_pagado':  total_pagado,
+            'saldo_jornadas': total_ganado - total_pagado,
         })
+
+    saldo_global = total_ganado_global - total_pagado_global
 
     context = {
         'employee': empleado,
-        'contratos_con_pagos': contratos_con_jornadas,
-        'total_acordado_global': total_acordado_global,
+        'contratos_con_pagos': contratos_con_pagos,
+        'total_ganado_global': total_ganado_global,
         'total_pagado_global': total_pagado_global,
         'saldo_global': saldo_global,
         'now': timezone.now(),
@@ -889,7 +914,18 @@ def employees(request):
     except ValueError:
         per_page = 10
 
-    empleados = Empleado.objects.filter(is_active=True).order_by('-id')
+    ultimo_proyecto = (
+        JornadaEmpleado.objects
+        .filter(contrato__empleado=OuterRef('pk'), activo=True)
+        .order_by('-fecha')
+        .values('proyecto__nombre')[:1]
+    )
+    empleados = (
+        Empleado.objects
+        .filter(is_active=True)
+        .annotate(proyecto_actual=Subquery(ultimo_proyecto))
+        .order_by('-id')
+    )
 
     if search_nombre:
         empleados = empleados.filter(
@@ -1238,9 +1274,24 @@ def dashboard_home(request):
 
 # ===================== PROGRESO =====================
 
+def _puede_registrar_progreso(user, proyecto):
+    """Admins/gerentes siempre pueden. Otros solo si tienen contrato activo en el proyecto."""
+    if user.is_superuser:
+        return True
+    cargo = getattr(user, 'cargo', None)
+    if cargo in ROLES_ADMIN:
+        return True
+    return Contrato.objects.filter(
+        empleado=user, proyecto=proyecto, tipo='empleado', activo=True
+    ).exists()
+
+
 @login_required
 def create_progreso(request, id_project):
     project = get_object_or_404(Proyecto, pk=id_project)
+    if not _puede_registrar_progreso(request.user, project):
+        messages.error(request, 'Solo puedes registrar progreso en proyectos donde tienes un contrato activo.')
+        return redirect('project_view', id_project=project.id)
     if request.method == 'GET':
         form = ProgresoForm(proyecto=project)
         return render(request, 'create_progreso.html', {'form': form, 'project': project})
@@ -1274,6 +1325,9 @@ def create_progreso(request, id_project):
 def progreso_detail(request, id_progreso):
     progreso = get_object_or_404(Progreso, pk=id_progreso, activo=True)
     project = progreso.proyecto
+    if not _puede_registrar_progreso(request.user, project):
+        messages.error(request, 'Solo puedes editar progreso en proyectos donde tienes un contrato activo.')
+        return redirect('project_view', id_project=project.id)
     if request.method == 'GET':
         form = ProgresoForm(instance=progreso, proyecto=project)
         return render(request, 'progreso_detail.html', {'form': form, 'progreso': progreso, 'project': project})
@@ -1312,39 +1366,16 @@ def deactivate_progreso(request, id_progreso):
 
 # ===================== CONTRATOS =====================
 
-@login_required
-def create_contrato_empleado(request, id_project):
-    project = get_object_or_404(Proyecto, pk=id_project)
-    empleados_data = {
-        str(e.id): {
-            'cargo': e.get_cargo_display(),
-            'celular': e.numero_celular or '—',
-        }
-        for e in Empleado.objects.filter(is_active=True)
-    }
-    if request.method == 'GET':
-        form = ContratoEmpleadoForm()
-        return render(request, 'create_contrato_empleado.html', {'form': form, 'project': project, 'empleados_data': empleados_data})
-    else:
-        form = ContratoEmpleadoForm(request.POST, request.FILES)
-        if form.is_valid():
-            contrato = form.save(commit=False)
-            contrato.tipo = 'empleado'
-            contrato.proyecto = project
-            contrato.save()
-            messages.success(request, f'Contrato registrado para {contrato.empleado.nombre} {contrato.empleado.apellido_paterno}.')
-            return redirect('project_view', id_project=project.id)
-        return render(request, 'create_contrato_empleado.html', {'form': form, 'project': project, 'empleados_data': empleados_data})
-
 
 @login_required
+@cargo_required(*ROLES_ADMIN)
 def create_contrato_from_employee(request, id_employee):
     """Crea un contrato de empleado desde el perfil del empleado, sin proyecto asociado."""
     empleado = get_object_or_404(Empleado, pk=id_employee, is_active=True)
     if request.method == 'GET':
-        form = ContratoEmpleadoDesdeEmpleadoForm()
+        form = ContratoEmpleadoDesdeEmpleadoForm(empleado=empleado)
     else:
-        form = ContratoEmpleadoDesdeEmpleadoForm(request.POST, request.FILES)
+        form = ContratoEmpleadoDesdeEmpleadoForm(request.POST, request.FILES, empleado=empleado)
         if form.is_valid():
             contrato = form.save(commit=False)
             contrato.tipo = 'empleado'
@@ -1357,6 +1388,7 @@ def create_contrato_from_employee(request, id_employee):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN)
 def contrato_empleado_detail(request, id_contrato):
     contrato = get_object_or_404(Contrato, pk=id_contrato, tipo='empleado', activo=True)
     project = contrato.proyecto
@@ -1365,7 +1397,8 @@ def contrato_empleado_detail(request, id_contrato):
     jornadas = contrato.jornadas.filter(activo=True).select_related('proyecto').order_by('-fecha')
     total_dias = jornadas.aggregate(t=Sum('dias'))['t'] or 0
     total_ganado = total_dias * contrato.monto_diario
-    total_pagado = contrato.pagos.filter(activo=True).aggregate(t=Sum('monto'))['t'] or 0
+    pagos = contrato.pagos.filter(activo=True).order_by('-fecha')
+    total_pagado = pagos.aggregate(t=Sum('monto'))['t'] or 0
     saldo_pendiente = total_ganado - total_pagado
 
     if request.method == 'GET':
@@ -1375,11 +1408,14 @@ def contrato_empleado_detail(request, id_contrato):
         if form.is_valid():
             form.save()
             messages.success(request, 'Contrato actualizado correctamente.')
-            return redirect('project_view', id_project=project.id)
+            if project:
+                return redirect('project_view', id_project=project.id)
+            return redirect('employee_view', id_employee=contrato.empleado.id)
 
     return render(request, 'contrato_empleado_detail.html', {
         'form': form, 'contrato': contrato, 'project': project,
         'jornadas': jornadas,
+        'pagos': pagos,
         'total_dias': total_dias,
         'total_ganado': total_ganado,
         'total_pagado': total_pagado,
@@ -1390,6 +1426,11 @@ def contrato_empleado_detail(request, id_contrato):
 @login_required
 def create_jornada(request, id_contrato):
     contrato = get_object_or_404(Contrato, pk=id_contrato, tipo='empleado', activo=True)
+    cargo = getattr(request.user, 'cargo', None)
+    if cargo not in ROLES_ADMIN and contrato.empleado != request.user:
+        messages.error(request, 'Solo puedes registrar jornadas en tu propio contrato.')
+        return redirect('dashboard')
+    es_admin = cargo in ROLES_ADMIN
     jornadas = contrato.jornadas.filter(activo=True).select_related('proyecto').order_by('-fecha')
     total_dias = jornadas.aggregate(t=Sum('dias'))['t'] or 0
     total_ganado = total_dias * contrato.monto_diario
@@ -1397,9 +1438,9 @@ def create_jornada(request, id_contrato):
     saldo_pendiente = total_ganado - total_pagado
 
     if request.method == 'GET':
-        form = JornadaEmpleadoForm()
+        form = JornadaEmpleadoForm(empleado=contrato.empleado, es_admin=es_admin, contrato=contrato)
     else:
-        form = JornadaEmpleadoForm(request.POST)
+        form = JornadaEmpleadoForm(request.POST, empleado=contrato.empleado, es_admin=es_admin, contrato=contrato)
         if form.is_valid():
             jornada = form.save(commit=False)
             jornada.contrato = contrato
@@ -1419,13 +1460,14 @@ def create_jornada(request, id_contrato):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN)
 def jornada_detail(request, id_jornada):
     jornada = get_object_or_404(JornadaEmpleado, pk=id_jornada, activo=True)
     contrato = jornada.contrato
     if request.method == 'GET':
-        form = JornadaEmpleadoForm(instance=jornada)
+        form = JornadaEmpleadoForm(instance=jornada, es_admin=True, contrato=contrato)
     else:
-        form = JornadaEmpleadoForm(request.POST, instance=jornada)
+        form = JornadaEmpleadoForm(request.POST, instance=jornada, es_admin=True, contrato=contrato)
         if form.is_valid():
             j = form.save(commit=False)
             j.dias = form.cleaned_data['dias']
@@ -1436,6 +1478,7 @@ def jornada_detail(request, id_jornada):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN)
 def deactivate_jornada(request, id_jornada):
     jornada = get_object_or_404(JornadaEmpleado, pk=id_jornada, activo=True)
     id_contrato = jornada.contrato.id
@@ -1449,6 +1492,30 @@ def deactivate_jornada(request, id_jornada):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN)
+def equipo_add(request, id_project):
+    project = get_object_or_404(Proyecto, pk=id_project)
+    if request.method == 'POST':
+        empleado_id = request.POST.get('empleado_id')
+        empleado = get_object_or_404(Empleado, pk=empleado_id, is_active=True)
+        project.equipo.add(empleado)
+        messages.success(request, f'{empleado.nombre} {empleado.apellido_paterno} agregado al equipo.')
+    return redirect('project_view', id_project=project.id)
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def equipo_remove(request, id_project, id_employee):
+    project = get_object_or_404(Proyecto, pk=id_project)
+    if request.method == 'POST':
+        empleado = get_object_or_404(Empleado, pk=id_employee)
+        project.equipo.remove(empleado)
+        messages.success(request, f'{empleado.nombre} {empleado.apellido_paterno} removido del equipo.')
+    return redirect('project_view', id_project=project.id)
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
 def deactivate_contrato_empleado(request, id_contrato):
     contrato = get_object_or_404(Contrato, pk=id_contrato, tipo='empleado', activo=True)
     if request.method == 'POST':
@@ -1457,7 +1524,9 @@ def deactivate_contrato_empleado(request, id_contrato):
         contrato.deleted_by = request.user
         contrato.save()
         messages.success(request, f'Contrato de {contrato.empleado.nombre} {contrato.empleado.apellido_paterno} inhabilitado.')
-    return redirect('project_view', id_project=contrato.proyecto.id)
+    if contrato.proyecto:
+        return redirect('project_view', id_project=contrato.proyecto.id)
+    return redirect('employee_view', id_employee=contrato.empleado.id)
 
 
 @login_required
@@ -1516,4 +1585,280 @@ def deactivate_contrato_proyecto(request, id_contrato):
         messages.success(request, 'Contrato del proyecto inhabilitado.')
     return redirect('project_view', id_project=contrato.proyecto.id)
 
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  SEDES DE INSTALACIÓN
+# ══════════════════════════════════════════════════════════════════════════════
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def sede_create(request, id_project):
+    project = get_object_or_404(Proyecto, pk=id_project)
+    if request.method == 'GET':
+        return render(request, 'sede_form.html', {'form': SedeForm(), 'project': project, 'accion': 'Crear'})
+    form = SedeForm(request.POST)
+    if form.is_valid():
+        sede = form.save(commit=False)
+        sede.proyecto = project
+        sede.save()
+        messages.success(request, f'Sede "{sede.nombre}" creada correctamente.')
+        return redirect('project_view', id_project=project.id)
+    return render(request, 'sede_form.html', {'form': form, 'project': project, 'accion': 'Crear'})
+
+
+@login_required
+def sede_view(request, id_sede):
+    sede = get_object_or_404(Sede, pk=id_sede, activo=True)
+    # Insumos asignados a esta sede
+    insumos_sede = sede.insumos.filter(activo=True).select_related('insumo')
+    # Tareas checklist
+    tareas = sede.tareas.filter(activo=True).order_by('orden', 'created')
+    # Fotos
+    fotos = sede.fotos.filter(activo=True)
+    # Formularios
+    foto_form = FotoSedeForm()
+    tarea_form = TareaChecklistForm()
+    context = {
+        'sede': sede,
+        'project': sede.proyecto,
+        'insumos_sede': insumos_sede,
+        'tareas': tareas,
+        'fotos': fotos,
+        'foto_form': foto_form,
+        'tarea_form': tarea_form,
+    }
+    return render(request, 'sede_view.html', context)
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def sede_detail(request, id_sede):
+    sede = get_object_or_404(Sede, pk=id_sede, activo=True)
+    project = sede.proyecto
+    if request.method == 'GET':
+        return render(request, 'sede_form.html', {'form': SedeForm(instance=sede), 'project': project, 'sede': sede, 'accion': 'Editar'})
+    form = SedeForm(request.POST, instance=sede)
+    if form.is_valid():
+        form.save()
+        messages.success(request, f'Sede "{sede.nombre}" actualizada.')
+        return redirect('sede_view', id_sede=sede.id)
+    return render(request, 'sede_form.html', {'form': form, 'project': project, 'sede': sede, 'accion': 'Editar'})
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def sede_deactivate(request, id_sede):
+    sede = get_object_or_404(Sede, pk=id_sede, activo=True)
+    id_project = sede.proyecto.id
+    if request.method == 'POST':
+        sede.activo = False
+        sede.deleted_at = timezone.now()
+        sede.deleted_by = request.user
+        sede.save()
+        messages.success(request, f'Sede "{sede.nombre}" eliminada.')
+    return redirect('project_view', id_project=id_project)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  CHECKLIST DE TAREAS
+# ══════════════════════════════════════════════════════════════════════════════
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def tarea_create(request, id_sede):
+    sede = get_object_or_404(Sede, pk=id_sede, activo=True)
+    if request.method == 'POST':
+        form = TareaChecklistForm(request.POST)
+        if form.is_valid():
+            tarea = form.save(commit=False)
+            tarea.sede = sede
+            # Asignar orden al final
+            ultimo_orden = sede.tareas.filter(activo=True).aggregate(m=db_Max('orden'))['m'] or 0
+            tarea.orden = ultimo_orden + 1
+            tarea.save()
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'ok': True, 'id': tarea.id, 'descripcion': tarea.descripcion, 'orden': tarea.orden})
+    return redirect('sede_view', id_sede=sede.id)
+
+
+@login_required
+def tarea_toggle(request, id_tarea):
+    """AJAX: marca/desmarca una tarea como completada."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'method not allowed'}, status=405)
+    tarea = get_object_or_404(TareaChecklist, pk=id_tarea, activo=True)
+    tarea.completado = not tarea.completado
+    if tarea.completado:
+        tarea.fecha_completado = timezone.now()
+        tarea.completado_por = request.user
+    else:
+        tarea.fecha_completado = None
+        tarea.completado_por = None
+    tarea.save()
+    # Sincroniza estado de la sede
+    tarea.sede._sync_estado()
+    pct = tarea.sede.porcentaje_checklist
+    return JsonResponse({
+        'ok': True,
+        'completado': tarea.completado,
+        'porcentaje': pct,
+        'estado_sede': tarea.sede.estado,
+    })
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def tarea_delete(request, id_tarea):
+    tarea = get_object_or_404(TareaChecklist, pk=id_tarea, activo=True)
+    id_sede = tarea.sede.id
+    if request.method == 'POST':
+        tarea.activo = False
+        tarea.save()
+        tarea.sede._sync_estado()
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'ok': True})
+    return redirect('sede_view', id_sede=id_sede)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  FOTOS DE SEDE
+# ══════════════════════════════════════════════════════════════════════════════
+
+@login_required
+def foto_upload(request, id_sede):
+    sede = get_object_or_404(Sede, pk=id_sede, activo=True)
+    if request.method == 'POST':
+        form = FotoSedeForm(request.POST, request.FILES)
+        if form.is_valid():
+            foto = form.save(commit=False)
+            foto.sede = sede
+            foto.subida_por = request.user
+            foto.save()
+            messages.success(request, 'Foto subida correctamente.')
+        else:
+            messages.error(request, 'Error al subir la foto. Verifica el formato.')
+    return redirect('sede_view', id_sede=sede.id)
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def foto_delete(request, id_foto):
+    foto = get_object_or_404(FotoSede, pk=id_foto, activo=True)
+    id_sede = foto.sede.id
+    if request.method == 'POST':
+        foto.activo = False
+        foto.save()
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'ok': True})
+    return redirect('sede_view', id_sede=id_sede)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  QR POR INSUMO INSTALADO
+# ══════════════════════════════════════════════════════════════════════════════
+
+@login_required
+def qr_insumo(request, id_requiere):
+    """Devuelve imagen PNG del QR que apunta al detalle del insumo asignado."""
+    from inventario.models import Requiere as RequiereModel
+    import qrcode
+    from io import BytesIO
+
+    req = get_object_or_404(RequiereModel, pk=id_requiere)
+    url = request.build_absolute_uri(f'/insumos-proyecto/{req.id}/')
+    img = qrcode.make(url)
+    buf = BytesIO()
+    img.save(buf, format='PNG')
+    buf.seek(0)
+    return HttpResponse(buf, content_type='image/png')
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  NOTIFICACIONES
+# ══════════════════════════════════════════════════════════════════════════════
+
+@login_required
+def notificaciones_list(request):
+    notifs = request.user.notificaciones.order_by('-fecha')
+    no_leidas = notifs.filter(leida=False).count()
+    return render(request, 'notificaciones.html', {
+        'notificaciones': notifs,
+        'no_leidas': no_leidas,
+    })
+
+
+@login_required
+def notificacion_marcar_leida(request, id_notif):
+    if request.method == 'POST':
+        notif = get_object_or_404(Notificacion, pk=id_notif, destinatario=request.user)
+        notif.leida = True
+        notif.save()
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            pendientes = request.user.notificaciones.filter(leida=False).count()
+            return JsonResponse({'ok': True, 'pendientes': pendientes})
+    return redirect('notificaciones_list')
+
+
+@login_required
+def notificaciones_marcar_todas(request):
+    if request.method == 'POST':
+        request.user.notificaciones.filter(leida=False).update(leida=True)
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'ok': True})
+    return redirect('notificaciones_list')
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  DASHBOARD DEL INSTALADOR (móvil optimizado)
+# ══════════════════════════════════════════════════════════════════════════════
+
+@login_required
+@cargo_required('instalador', 'tecnico_soporte', 'administrador', 'gerente')
+def instalador_dashboard(request):
+    user = request.user
+    cargo = getattr(user, 'cargo', None)
+
+    if cargo in ('administrador', 'gerente'):
+        # Admin/gerente ve todos los proyectos activos con sedes
+        proyectos = Proyecto.objects.filter(
+            activo=True,
+            estado_proyecto__in=['pendiente', 'en_progreso']
+        ).prefetch_related('sedes').order_by('-created')
+    else:
+        # Instalador solo ve proyectos donde está en el equipo
+        proyectos = Proyecto.objects.filter(
+            activo=True,
+            estado_proyecto__in=['pendiente', 'en_progreso'],
+            equipo=user,
+        ).prefetch_related('sedes').order_by('-created')
+
+    # Para cada proyecto armar resumen de sedes
+    proyectos_data = []
+    for p in proyectos:
+        sedes = p.sedes.filter(activo=True)
+        total_tareas = TareaChecklist.objects.filter(sede__in=sedes, activo=True).count()
+        tareas_ok    = TareaChecklist.objects.filter(sede__in=sedes, activo=True, completado=True).count()
+        proyectos_data.append({
+            'proyecto': p,
+            'sedes': sedes,
+            'total_tareas': total_tareas,
+            'tareas_ok': tareas_ok,
+            'pct_global': round(tareas_ok / total_tareas * 100) if total_tareas else 0,
+        })
+
+    # Tareas pendientes del usuario (completado por alguien del equipo)
+    mis_tareas_pendientes = TareaChecklist.objects.filter(
+        activo=True,
+        completado=False,
+        sede__proyecto__equipo=user,
+        sede__activo=True,
+        sede__proyecto__estado_proyecto__in=['pendiente', 'en_progreso'],
+    ).select_related('sede', 'sede__proyecto').order_by('sede__proyecto', 'sede', 'orden')
+
+    context = {
+        'proyectos_data': proyectos_data,
+        'mis_tareas_pendientes': mis_tareas_pendientes,
+        'no_leidas': user.notificaciones.filter(leida=False).count(),
+    }
+    return render(request, 'instalador_dashboard.html', context)
 

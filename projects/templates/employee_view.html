@@ -118,7 +118,7 @@
                     {% if item.contrato.proyecto %}
                       <a href="{% url 'project_view' item.contrato.proyecto.id %}" class="text-decoration-none small">{{ item.contrato.proyecto.nombre }}</a>
                     {% else %}
-                      <span class="text-muted small">Multi-proyecto</span>
+                      <span class="text-muted small">—</span>
                     {% endif %}
                   </td>
                   <td class="text-center text-muted small">

@@ -148,6 +148,11 @@ class Proyecto(AuditModel):
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Contratista")
 
     monto_total = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Monto Total del Proyecto")
+    equipo = models.ManyToManyField(
+        'Empleado', blank=True,
+        related_name='proyectos_asignados',
+        verbose_name="Equipo del Proyecto",
+    )
 
     def __str__(self):
         username = self.creado_por.username if self.creado_por else 'N/A'
@@ -321,6 +326,12 @@ class Contrato(AuditModel):
                 condition=Q(tipo='proyecto', activo=True),
                 name='unique_contrato_proyecto_activo',
             ),
+            # Un empleado solo puede tener un contrato activo a la vez
+            models.UniqueConstraint(
+                fields=['empleado'],
+                condition=Q(tipo='empleado', activo=True),
+                name='unique_contrato_empleado_activo',
+            ),
         ]
 
     def __str__(self):
@@ -360,6 +371,14 @@ class JornadaEmpleado(AuditModel):
         validators=[MinValueValidator(0.5), MaxValueValidator(1.0)],
     )
     observacion = models.TextField(blank=True, verbose_name="Observación")
+    # Trazabilidad: qué PagoEmpleado cubre esta jornada. NULL = pendiente de pago.
+    pago = models.ForeignKey(
+        'pagos.PagoEmpleado',
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='jornadas_cubiertas',
+        verbose_name="Pago que cubre esta jornada",
+    )
 
     class Meta:
         verbose_name = 'Jornada de Empleado'
@@ -375,4 +394,187 @@ class JornadaEmpleado(AuditModel):
         """Monto a cobrar por esta jornada."""
         return self.dias * self.contrato.monto_diario
 
+
+# ── Sede (punto de instalación dentro de un proyecto) ────────────────────────
+
+class Sede(AuditModel):
+    ESTADO_CHOICES = [
+        ('pendiente',   'Pendiente'),
+        ('en_progreso', 'En Progreso'),
+        ('completado',  'Completado'),
+    ]
+
+    proyecto    = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='sedes', verbose_name="Proyecto")
+    nombre      = models.CharField(max_length=200, verbose_name="Nombre / Referencia")
+    direccion   = models.CharField(max_length=500, verbose_name="Dirección")
+    descripcion = models.TextField(blank=True, verbose_name="Descripción / Indicaciones")
+    latitud     = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name="Latitud")
+    longitud    = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name="Longitud")
+    estado      = models.CharField(max_length=15, choices=ESTADO_CHOICES, default='pendiente', verbose_name="Estado")
+
+    class Meta:
+        verbose_name = 'Sede de Instalación'
+        verbose_name_plural = 'Sedes de Instalación'
+        ordering = ['nombre']
+
+    def __str__(self):
+        return f"{self.nombre} — {self.proyecto.nombre}"
+
+    @property
+    def porcentaje_checklist(self):
+        """Porcentaje de tareas completadas (0-100)."""
+        total = self.tareas.filter(activo=True).count()
+        if total == 0:
+            return 0
+        completadas = self.tareas.filter(activo=True, completado=True).count()
+        return round(completadas / total * 100)
+
+    def _sync_estado(self):
+        """Actualiza estado según tareas completadas. Llamar tras cada cambio de tarea."""
+        pct = self.porcentaje_checklist
+        if pct == 100:
+            nuevo = 'completado'
+        elif pct > 0:
+            nuevo = 'en_progreso'
+        else:
+            nuevo = 'pendiente'
+        if self.estado != nuevo:
+            self.estado = nuevo
+            self.save(update_fields=['estado'])
+
+
+# ── Foto de sede ──────────────────────────────────────────────────────────────
+
+class FotoSede(AuditModel):
+    sede        = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='fotos', verbose_name="Sede")
+    foto        = models.ImageField(upload_to='sedes/fotos/', verbose_name="Foto")
+    descripcion = models.CharField(max_length=255, blank=True, verbose_name="Descripción")
+    subida_por  = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
+        related_name='+', verbose_name="Subida por"
+    )
+
+    class Meta:
+        verbose_name = 'Foto de Sede'
+        verbose_name_plural = 'Fotos de Sede'
+        ordering = ['-created']
+
+    def __str__(self):
+        return f"Foto — {self.sede.nombre} ({self.created.date() if self.created else ''})"
+
+
+# ── Tarea de checklist por sede ───────────────────────────────────────────────
+
+class TareaChecklist(AuditModel):
+    sede              = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='tareas', verbose_name="Sede")
+    descripcion       = models.CharField(max_length=255, verbose_name="Tarea")
+    orden             = models.PositiveSmallIntegerField(default=0, verbose_name="Orden")
+    completado        = models.BooleanField(default=False, verbose_name="Completado")
+    fecha_completado  = models.DateTimeField(null=True, blank=True, verbose_name="Fecha completado")
+    completado_por    = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='+', verbose_name="Completado por"
+    )
+
+    class Meta:
+        verbose_name = 'Tarea Checklist'
+        verbose_name_plural = 'Tareas Checklist'
+        ordering = ['orden', 'created']
+        constraints = [
+            models.CheckConstraint(
+                condition=~Q(completado=True) | Q(completado_por__isnull=False),
+                name='tarea_completado_por_requerido_si_completado',
+            ),
+        ]
+
+    def __str__(self):
+        estado = '✓' if self.completado else '○'
+        return f"{estado} {self.descripcion} — {self.sede.nombre}"
+
+
+# ── Notificación interna ──────────────────────────────────────────────────────
+
+class Notificacion(models.Model):
+    TIPO_CHOICES = [
+        ('sede_completada',  'Sede completada'),
+        ('tarea_completada', 'Tarea completada'),
+        ('general',         'General'),
+    ]
+
+    destinatario = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='notificaciones', verbose_name="Destinatario"
+    )
+    tipo        = models.CharField(max_length=20, choices=TIPO_CHOICES, default='general', verbose_name="Tipo")
+    mensaje     = models.TextField(verbose_name="Mensaje")
+    leida       = models.BooleanField(default=False, db_index=True, verbose_name="Leída")
+    proyecto    = models.ForeignKey(Proyecto, on_delete=models.CASCADE, null=True, blank=True, related_name='+', verbose_name="Proyecto")
+    sede        = models.ForeignKey('Sede', on_delete=models.CASCADE, null=True, blank=True, related_name='+', verbose_name="Sede")
+    fecha       = models.DateTimeField(auto_now_add=True, verbose_name="Fecha")
+
+    class Meta:
+        verbose_name = 'Notificación'
+        verbose_name_plural = 'Notificaciones'
+        ordering = ['-fecha']
+        constraints = [
+            models.CheckConstraint(
+                condition=~Q(tipo='sede_completada') | Q(sede__isnull=False),
+                name='notificacion_sede_requerida_si_tipo_sede',
+            ),
+        ]
+
+    def __str__(self):
+        return f"[{self.tipo}] → {self.destinatario.username}: {self.mensaje[:60]}"
+
+
+# ── Señal: al completar todas las tareas de una sede, notificar a admins/gerentes ──
+
+@receiver(post_save, sender=TareaChecklist)
+def notificar_sede_completada(sender, instance, **kwargs):
+    """
+    Cuando una tarea se marca como completada, sincroniza el estado de la sede.
+    Si la sede llega a 100%, crea notificaciones para todos los admins/gerentes.
+    """
+    if not instance.activo:
+        return
+    sede = instance.sede
+    sede._sync_estado()
+    sede.refresh_from_db(fields=['estado'])
+
+    # ── Sincronizar estado_proyecto según progreso de sedes ───────────────────
+    proyecto = sede.proyecto
+    sedes_activas = list(proyecto.sedes.filter(activo=True))
+    if sedes_activas:
+        total = len(sedes_activas)
+        completadas = sum(1 for s in sedes_activas if s.estado == 'completado')
+        en_progreso = sum(1 for s in sedes_activas if s.estado == 'en_progreso')
+        if completadas == total:
+            nuevo_estado = 'completado'
+        elif completadas > 0 or en_progreso > 0:
+            nuevo_estado = 'en_progreso'
+        else:
+            nuevo_estado = 'pendiente'
+        if proyecto.estado_proyecto != nuevo_estado:
+            Proyecto.objects.filter(pk=proyecto.pk).update(estado_proyecto=nuevo_estado)
+
+    if sede.estado == 'completado':
+        admins = Empleado.objects.filter(
+            cargo__in=('administrador', 'gerente'), is_active=True
+        )
+        for admin in admins:
+            # Evitar notificación duplicada
+            ya_existe = Notificacion.objects.filter(
+                destinatario=admin,
+                sede=sede,
+                tipo='sede_completada',
+                leida=False,
+            ).exists()
+            if not ya_existe:
+                Notificacion.objects.create(
+                    destinatario=admin,
+                    tipo='sede_completada',
+                    mensaje=f'La sede "{sede.nombre}" del proyecto "{sede.proyecto.nombre}" fue completada al 100%.',
+                    proyecto=sede.proyecto,
+                    sede=sede,
+                )
 

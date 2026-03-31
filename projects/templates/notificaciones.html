@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block content %}
+<main class="container py-4" style="max-width: 700px;">
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0 fw-semibold" style="color:#1B4D90;">
+      <i class="bi bi-bell me-2"></i>Notificaciones
+      {% if no_leidas > 0 %}
+      <span class="badge bg-danger ms-1" style="font-size:.75rem;">{{ no_leidas }}</span>
+      {% endif %}
+    </h5>
+    {% if no_leidas > 0 %}
+    <form method="POST" action="{% url 'notificaciones_leer_todas' %}">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-check2-all me-1"></i>Marcar todas como leídas
+      </button>
+    </form>
+    {% endif %}
+  </div>
+
+  <div class="card border-0 shadow-sm rounded-3">
+    {% if notificaciones %}
+    <ul class="list-group list-group-flush">
+      {% for notif in notificaciones %}
+      <li class="list-group-item {% if not notif.leida %}bg-light{% endif %} py-3">
+        <div class="d-flex gap-3 align-items-start">
+          <!-- Icono por tipo -->
+          <div class="mt-1">
+            {% if notif.tipo == 'sede_completada' %}
+              <span class="badge bg-success rounded-circle p-2"><i class="bi bi-geo-alt-fill"></i></span>
+            {% elif notif.tipo == 'tarea_completada' %}
+              <span class="badge bg-primary rounded-circle p-2"><i class="bi bi-check-lg"></i></span>
+            {% else %}
+              <span class="badge bg-secondary rounded-circle p-2"><i class="bi bi-info-lg"></i></span>
+            {% endif %}
+          </div>
+
+          <div class="flex-grow-1">
+            <div class="{% if not notif.leida %}fw-semibold{% endif %}">{{ notif.mensaje }}</div>
+            <div class="text-muted small mt-1">
+              {{ notif.fecha|date:"d/m/Y H:i" }}
+              {% if notif.proyecto %}
+                &nbsp;·&nbsp;
+                <a href="{% url 'project_view' notif.proyecto.id %}" class="text-decoration-none text-muted">
+                  {{ notif.proyecto.nombre }}
+                </a>
+              {% endif %}
+              {% if notif.sede %}
+                &nbsp;·&nbsp;
+                <a href="{% url 'sede_view' notif.sede.id %}" class="text-decoration-none text-muted">
+                  {{ notif.sede.nombre }}
+                </a>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if not notif.leida %}
+          <form method="POST" action="{% url 'notificacion_leer' notif.id %}" class="flex-shrink-0">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-sm btn-light py-0" title="Marcar como leída">
+              <i class="bi bi-check2"></i>
+            </button>
+          </form>
+          {% else %}
+          <i class="bi bi-check2-all text-success mt-1 flex-shrink-0" title="Leída"></i>
+          {% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <div class="card-body text-center text-muted py-5">
+      <i class="bi bi-bell-slash" style="font-size:2rem;"></i>
+      <p class="mt-2 mb-0">Sin notificaciones.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</main>
+{% endblock %}

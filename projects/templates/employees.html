@@ -95,6 +95,7 @@
           <th>Cargo</th>
           <th>Carnet de Identidad</th>
           <th>Celular</th>
+          <th>Proyecto actual</th>
           <th>Fecha Contratación</th>
           <th class="text-end" style="width: 60px;">Acciones</th>
         </tr>
@@ -121,6 +122,13 @@
 
           <td class="small">{{ employee.carnet_identidad }}</td>
           <td class="small">{{ employee.numero_celular|default:"—" }}</td>
+          <td class="small">
+            {% if employee.proyecto_actual %}
+              <span class="badge bg-primary fw-normal">{{ employee.proyecto_actual }}</span>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
           <td class="small">{{ employee.fecha_contratacion|date:"d/m/Y"|default:"—" }}</td>
 
           <td class="text-end">
@@ -150,7 +158,7 @@
 
         {% empty %}
         <tr>
-          <td colspan="6" class="text-center text-muted py-3 small">
+          <td colspan="7" class="text-center text-muted py-3 small">
             No existen empleados registrados.
           </td>
         </tr>

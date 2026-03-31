@@ -18,7 +18,7 @@ from django.db.models import Q, Count, Sum
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from xhtml2pdf import pisa
 
-from projects.models import Proyecto, Contrato
+from projects.models import Proyecto, Contrato, JornadaEmpleado
 from projects.decorators import cargo_required, ROLES_ADMIN, ROLES_ADMIN_SEC
 from .models import Pago, PagoEmpleado
 from .forms import PaymentForm, PagoEmpleadoForm
@@ -388,33 +388,58 @@ def pagos_empleados_list(request):
     })
 
 def _contrato_resumen(contrato, excluir_pago_id=None):
+    from django.db.models import Sum as _Sum
     qs = PagoEmpleado.objects.filter(contrato=contrato, activo=True)
     if excluir_pago_id:
         qs = qs.exclude(pk=excluir_pago_id)
-    pagado = qs.aggregate(t=Sum('monto'))['t'] or 0
+    pagado      = qs.aggregate(t=_Sum('monto'))['t'] or 0
+    total_dias  = contrato.jornadas.filter(activo=True).aggregate(t=_Sum('dias'))['t'] or 0
+    ganado      = total_dias * contrato.monto_diario
     return {
-        'pagado': pagado,
-        'saldo': contrato.monto_acordado - pagado,
+        'pagado':     pagado,
+        'ganado':     ganado,
+        'total_dias': total_dias,
+        'saldo':      ganado - pagado,
     }
 
 @login_required
+@cargo_required(*ROLES_ADMIN)
 def create_pago_empleado(request, id_contrato):
     contrato = get_object_or_404(Contrato, pk=id_contrato, tipo='empleado', activo=True)
     resumen  = _contrato_resumen(contrato)
+    jornadas_pendientes = JornadaEmpleado.objects.filter(
+        contrato=contrato, activo=True, pago__isnull=True
+    ).select_related('proyecto').order_by('fecha')
+
     if request.method == 'GET':
         return render(request, 'create_pago_empleado.html', {
             'form': PagoEmpleadoForm(),
             'contrato': contrato,
             'resumen': resumen,
+            'jornadas_pendientes': jornadas_pendientes,
         })
-    form = PagoEmpleadoForm(request.POST, contrato=contrato)
+    form = PagoEmpleadoForm(request.POST)
     if form.is_valid():
         pago = form.save(commit=False)
         pago.contrato = contrato
         pago.save()
+        # Vincular las jornadas seleccionadas a este pago
+        ids_seleccionados = request.POST.getlist('jornadas')
+        if ids_seleccionados:
+            JornadaEmpleado.objects.filter(
+                pk__in=ids_seleccionados,
+                contrato=contrato,
+                activo=True,
+                pago__isnull=True,
+            ).update(pago=pago)
         messages.success(request, f'Pago de Bs. {pago.monto} registrado para {contrato.empleado.nombre}.')
-        return redirect('project_view', id_project=contrato.proyecto.id)
-    return render(request, 'create_pago_empleado.html', {'form': form, 'contrato': contrato, 'resumen': resumen})
+        if contrato.proyecto:
+            return redirect('project_view', id_project=contrato.proyecto.id)
+        return redirect('employee_view', id_employee=contrato.empleado.id)
+    return render(request, 'create_pago_empleado.html', {
+        'form': form, 'contrato': contrato, 'resumen': resumen,
+        'jornadas_pendientes': jornadas_pendientes,
+    })
 
 
 @login_required
@@ -423,30 +448,56 @@ def pago_empleado_detail(request, id_pago):
     pago     = get_object_or_404(PagoEmpleado, pk=id_pago, activo=True)
     contrato = pago.contrato
     resumen  = _contrato_resumen(contrato, excluir_pago_id=pago.id)
+    jornadas_cubiertas  = pago.jornadas_cubiertas.filter(activo=True).select_related('proyecto').order_by('fecha')
+    jornadas_pendientes = JornadaEmpleado.objects.filter(
+        contrato=contrato, activo=True, pago__isnull=True
+    ).select_related('proyecto').order_by('fecha')
+
     if request.method == 'GET':
         return render(request, 'pago_empleado_detail.html', {
-            'form': PagoEmpleadoForm(instance=pago, contrato=contrato, excluir_pago_id=pago.id),
+            'form': PagoEmpleadoForm(instance=pago),
             'pago': pago,
             'contrato': contrato,
             'resumen': resumen,
+            'jornadas_cubiertas': jornadas_cubiertas,
+            'jornadas_pendientes': jornadas_pendientes,
         })
-    form = PagoEmpleadoForm(request.POST, instance=pago, contrato=contrato, excluir_pago_id=pago.id)
+    form = PagoEmpleadoForm(request.POST, instance=pago)
     if form.is_valid():
         form.save()
+        # Re-vincular jornadas: desvincular las actuales y vincular las seleccionadas
+        pago.jornadas_cubiertas.filter(activo=True).update(pago=None)
+        ids_seleccionados = request.POST.getlist('jornadas')
+        if ids_seleccionados:
+            JornadaEmpleado.objects.filter(
+                pk__in=ids_seleccionados,
+                contrato=contrato,
+                activo=True,
+            ).update(pago=pago)
         messages.success(request, 'Pago actualizado correctamente.')
-        return redirect('project_view', id_project=contrato.proyecto.id)
-    return render(request, 'pago_empleado_detail.html', {'form': form, 'pago': pago, 'contrato': contrato, 'resumen': resumen})
+        if contrato.proyecto:
+            return redirect('project_view', id_project=contrato.proyecto.id)
+        return redirect('employee_view', id_employee=contrato.empleado.id)
+    return render(request, 'pago_empleado_detail.html', {
+        'form': form, 'pago': pago, 'contrato': contrato, 'resumen': resumen,
+        'jornadas_cubiertas': jornadas_cubiertas,
+        'jornadas_pendientes': jornadas_pendientes,
+    })
 
 
 @login_required
 @cargo_required(*ROLES_ADMIN)
 def deactivate_pago_empleado(request, id_pago):
     pago = get_object_or_404(PagoEmpleado, pk=id_pago)
-    id_project = pago.contrato.proyecto.id
+    contrato = pago.contrato
     if request.method == 'POST':
+        # Liberar jornadas vinculadas antes de anular el pago
+        pago.jornadas_cubiertas.filter(activo=True).update(pago=None)
         pago.activo = False
         pago.deleted_at = timezone.now()
         pago.deleted_by = request.user
         pago.save()
         messages.success(request, 'Pago eliminado correctamente.')
-    return redirect('project_view', id_project=id_project)
+    if contrato.proyecto:
+        return redirect('project_view', id_project=contrato.proyecto.id)
+    return redirect('employee_view', id_employee=contrato.empleado.id)

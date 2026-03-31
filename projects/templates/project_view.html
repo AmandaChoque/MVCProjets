@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
   .nav-tabs .nav-link { font-size: 0.85rem; color: #6c757d; border: none; border-bottom: 2px solid transparent; border-radius: 0; }
   .nav-tabs .nav-link:hover { color: #264653; background: transparent; }
@@ -7,9 +8,18 @@
   #tab-insumos.nav-link.active,
   button[data-bs-target="#tab-insumos"].active { color: #198754; border-bottom-color: #198754; }
   button[data-bs-target="#tab-finanzas"].active { color: #fd7e14; border-bottom-color: #fd7e14; }
+  button[data-bs-target="#tab-sedes"].active { color: #6f42c1; border-bottom-color: #6f42c1; }
   .tab-content { padding-top: 1.25rem; }
   .info-label { min-width: 160px; font-weight: 600; color: #495057; flex-shrink: 0; }
   .info-row { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
+  #map-project { height: 300px; border-radius: 8px; border: 1px solid #dee2e6; }
+  .text-sobotec { color: #1B4D90; }
+  .sede-card-completado  { border-left: 4px solid #198754 !important; border-radius: 8px; }
+  .sede-card-en_progreso { border-left: 4px solid #0d6efd !important; border-radius: 8px; }
+  .sede-card-pendiente   { border-left: 4px solid #ffc107 !important; border-radius: 8px; }
+  .sede-progress { height: 5px; border-radius: 4px; }
+  .sede-stats    { font-size: .72rem; color: #6c757d; }
+  .sede-foto-thumb { width: 36px; height: 28px; object-fit: cover; border-radius: 3px; }
 </style>
 {% endblock %}
 
@@ -68,7 +78,9 @@
     <li class="nav-item">
       <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-progreso" type="button">
         <i class="bi bi-graph-up me-1"></i>Progreso
-        {% if porcentaje_actual > 0 %}
+        {% if progreso_sedes > 0 %}
+        <span class="badge bg-secondary ms-1" style="font-size:0.7rem;">{{ progreso_sedes }}%</span>
+        {% elif porcentaje_actual > 0 %}
         <span class="badge bg-secondary ms-1" style="font-size:0.7rem;">{{ porcentaje_actual }}%</span>
         {% endif %}
       </button>
@@ -80,6 +92,14 @@
       </button>
     </li>
     {% endif %}
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-sedes" type="button">
+        <i class="bi bi-geo-alt me-1"></i>Sedes
+        {% if sedes %}
+        <span class="badge bg-secondary ms-1" style="font-size:0.7rem;">{{ sedes|length }}</span>
+        {% endif %}
+      </button>
+    </li>
     <li class="nav-item">
       <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-insumos" type="button">
         <i class="bi bi-box-seam me-1"></i>Insumos
@@ -153,9 +173,51 @@
           <a href="{% url 'create_progreso' project.id %}" class="btn btn-sm btn-primary">+ Registrar avance</a>
         </div>
         <div class="card-body">
+          <!-- ── Progreso principal: basado en sedes ── -->
+          {% if sedes %}
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-baseline mb-1">
+              <span class="fw-semibold small">Progreso general del proyecto</span>
+              <span class="fw-bold fs-5 {% if progreso_sedes == 100 %}text-success{% elif progreso_sedes >= 50 %}text-primary{% else %}text-warning{% endif %}">
+                {{ progreso_sedes }}%
+              </span>
+            </div>
+            <div class="progress mb-2" style="height:18px; border-radius:8px;">
+              <div class="progress-bar {% if progreso_sedes == 100 %}bg-success{% elif progreso_sedes >= 50 %}bg-primary{% else %}bg-warning{% endif %} fw-semibold"
+                   id="progresoSedesBar" data-width="{{ progreso_sedes }}"
+                   role="progressbar" style="font-size:0.75rem;"
+                   aria-valuenow="{{ progreso_sedes }}" aria-valuemin="0" aria-valuemax="100">
+                {% if progreso_sedes > 10 %}{{ progreso_sedes }}%{% endif %}
+              </div>
+            </div>
+            <!-- Desglose por sede -->
+            <div class="d-flex flex-column gap-1 mt-2">
+              {% for sede in sedes %}
+              <div class="d-flex align-items-center gap-2 small">
+                <a href="{% url 'sede_view' sede.id %}" class="text-decoration-none text-truncate" style="min-width:120px; max-width:180px;">
+                  <i class="bi bi-geo-alt-fill me-1 {% if sede.estado == 'completado' %}text-success{% elif sede.estado == 'en_progreso' %}text-primary{% else %}text-warning{% endif %}"></i>
+                  {{ sede.nombre }}
+                </a>
+                <div class="progress flex-grow-1" style="height:8px; border-radius:4px;">
+                  <div class="progress-bar sede-bar {% if sede.estado == 'completado' %}bg-success{% elif sede.estado == 'en_progreso' %}bg-primary{% else %}bg-warning{% endif %}"
+                       data-width="{{ sede.porcentaje_checklist }}"></div>
+                </div>
+                <span class="text-muted" style="min-width:36px; text-align:right;">{{ sede.porcentaje_checklist }}%</span>
+                {% if sede.estado == 'completado' %}
+                <i class="bi bi-check-circle-fill text-success"></i>
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+            <div class="text-muted small mt-2">
+              <i class="bi bi-info-circle me-1"></i>{{ sedes_completadas }} de {{ sedes|length }} sede{{ sedes|length|pluralize:"s" }} completada{{ sedes|length|pluralize:"s" }}
+            </div>
+          </div>
+          {% else %}
+          <!-- Sin sedes: mostrar progreso manual como principal -->
           <div class="mb-4">
             <div class="d-flex justify-content-between small mb-1">
-              <span class="text-muted">Avance actual</span>
+              <span class="text-muted">Avance registrado</span>
               <span class="fw-semibold">{{ porcentaje_actual }}%</span>
             </div>
             <div class="progress" style="height:14px; border-radius:8px;">
@@ -167,6 +229,7 @@
               </div>
             </div>
           </div>
+          {% endif %}
           {% if progresos %}
           <div class="table-responsive">
             <table class="table table-sm table-hover align-middle small mb-0">
@@ -245,49 +308,173 @@
         </div>
       </div>
 
-      <!-- Contratos de Empleados -->
+      <!-- Equipo del Proyecto -->
       <div class="card border-0 shadow-sm rounded-3">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0 fw-semibold">Contratos de Empleados</h6>
-          <a href="{% url 'create_contrato_empleado' project.id %}" class="btn btn-sm btn-primary">+ Agregar</a>
+          <h6 class="mb-0 fw-semibold">Equipo del Proyecto</h6>
+          {% if es_admin and empleados_disponibles %}
+          <button class="btn btn-sm btn-primary py-0" data-bs-toggle="collapse" data-bs-target="#panelAgregarMiembro">
+            <i class="bi bi-plus-lg me-1"></i>Agregar miembro
+          </button>
+          {% endif %}
         </div>
-        <div class="card-body">
-          {% if contratos_empleados %}
+        {% if es_admin and empleados_disponibles %}
+        <div class="collapse" id="panelAgregarMiembro">
+          <div class="card-body border-bottom bg-light py-2">
+            <form method="POST" action="{% url 'equipo_add' project.id %}" class="d-flex gap-2 align-items-center flex-wrap">
+              {% csrf_token %}
+              <select name="empleado_id" class="form-select form-select-sm" style="max-width:280px;" required>
+                <option value="">— Seleccionar empleado —</option>
+                {% for emp in empleados_disponibles %}
+                <option value="{{ emp.id }}">{{ emp.nombre }} {{ emp.apellido_paterno }} — {{ emp.get_cargo_display }}</option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="btn btn-sm btn-primary">Agregar</button>
+            </form>
+          </div>
+        </div>
+        {% endif %}
+        <div class="card-body {% if equipo_proyecto %}p-0{% endif %}">
+          {% if equipo_proyecto %}
           <div class="table-responsive">
             <table class="table table-sm table-hover align-middle small mb-0">
               <thead class="table-light text-uppercase fw-semibold" style="font-size:0.72rem;">
                 <tr>
-                  <th>Empleado</th><th>Cargo</th>
-                  <th class="text-center">Firma</th><th class="text-center">Inicio</th><th class="text-center">Fin</th>
-                  <th class="text-end">Monto (Bs.)</th><th class="text-center">Doc.</th>
-                  <th class="text-end" style="width:60px;">Acciones</th>
+                  <th class="px-3">Empleado</th>
+                  <th>Cargo</th>
+                  <th class="text-center">Última jornada</th>
+                  <th class="text-center">Días trab.</th>
+                  {% if not es_instalador_tecnico %}<th class="text-end">Costo (Bs.)</th>{% endif %}
+                  <th class="text-end px-3" style="width:100px;"></th>
                 </tr>
               </thead>
               <tbody>
-                {% for contrato in contratos_empleados %}
+                {% for item in equipo_proyecto %}
                 <tr>
-                  <td class="fw-semibold">{{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }}</td>
-                  <td class="text-muted">{{ contrato.empleado.get_cargo_display }}</td>
-                  <td class="text-center">{{ contrato.fecha_firma|date:"d/m/Y" }}</td>
-                  <td class="text-center">{{ contrato.fecha_inicio|date:"d/m/Y" }}</td>
-                  <td class="text-center">{{ contrato.fecha_fin|date:"d/m/Y" }}</td>
-                  <td class="text-end fw-semibold">{{ contrato.monto_acordado|floatformat:2 }}</td>
-                  <td class="text-center">
-                    {% if contrato.documento %}<a href="{{ contrato.documento.url }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0">Ver</a>{% else %}<span class="text-muted">—</span>{% endif %}
+                  <td class="px-3 fw-semibold">{{ item.empleado.nombre }} {{ item.empleado.apellido_paterno }}</td>
+                  <td class="text-muted">{{ item.empleado.get_cargo_display }}</td>
+                  <td class="text-center text-muted">{{ item.ultima_fecha|date:"d/m/Y"|default:"—" }}</td>
+                  <td class="text-center">{{ item.total_dias }}</td>
+                  {% if not es_instalador_tecnico %}<td class="text-end fw-semibold">{{ item.costo|floatformat:2 }}</td>{% endif %}
+                  <td class="text-end px-3">
+                    <div class="d-flex gap-1 justify-content-end">
+                      <a href="{% url 'employee_view' item.empleado.id %}" class="btn btn-sm btn-light py-0">Ver</a>
+                      {% if es_admin %}
+                      <form method="POST" action="{% url 'equipo_remove' project.id item.empleado.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger py-0"
+                          onclick="return confirm('¿Remover a {{ item.empleado.nombre }} del equipo?')">
+                          <i class="bi bi-x"></i>
+                        </button>
+                      </form>
+                      {% endif %}
+                    </div>
                   </td>
-                  <td class="text-end"><a href="{% url 'contrato_empleado_detail' contrato.id %}" class="btn btn-sm btn-light">Editar</a></td>
                 </tr>
                 {% endfor %}
               </tbody>
             </table>
           </div>
           {% else %}
-          <p class="text-muted small mb-0 mt-2">Sin contratos de empleados. <a href="{% url 'create_contrato_empleado' project.id %}">Agregar el primero</a>.</p>
+          <p class="text-muted small mb-0 mt-2">Sin miembros asignados aún.</p>
           {% endif %}
         </div>
       </div>
     </div>
     {% endif %}
+
+    <!-- ── TAB SEDES ──────────────────────────────────────────────────── -->
+    <div class="tab-pane fade" id="tab-sedes">
+
+      <!-- Mapa general del proyecto -->
+      {% with sedes_con_coords=sedes %}
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-semibold"><i class="bi bi-map me-2"></i>Puntos de instalación</h6>
+          {% if es_admin %}
+          <a href="{% url 'sede_create' project.id %}" class="btn btn-sm btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Nueva sede
+          </a>
+          {% endif %}
+        </div>
+        <div class="card-body p-2">
+          <div id="map-project"></div>
+        </div>
+      </div>
+      {% endwith %}
+
+      <!-- Lista de sedes -->
+      {% if sedes %}
+      <div class="row g-3">
+        {% for sede in sedes %}
+        <div class="col-md-6">
+          <div class="card border-0 shadow-sm h-100 sede-card-{{ sede.estado }}">
+            <div class="card-body pb-2">
+              <div class="d-flex justify-content-between align-items-start mb-1">
+                <div>
+                  <a href="{% url 'sede_view' sede.id %}" class="fw-semibold text-decoration-none text-sobotec">
+                    {{ sede.nombre }}
+                  </a>
+                  <div class="text-muted small"><i class="bi bi-geo-alt me-1"></i>{{ sede.direccion|truncatechars:55 }}</div>
+                </div>
+                {% if sede.estado == 'completado' %}
+                  <span class="badge bg-success ms-2 flex-shrink-0">Completada</span>
+                {% elif sede.estado == 'en_progreso' %}
+                  <span class="badge bg-primary ms-2 flex-shrink-0">{{ sede.porcentaje_checklist }}%</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark ms-2 flex-shrink-0">Pendiente</span>
+                {% endif %}
+              </div>
+
+              <!-- Mini barra de progreso checklist -->
+              {% with pct=sede.porcentaje_checklist total=sede.tareas.count %}
+              {% if total > 0 %}
+              <div class="progress my-2 sede-progress">
+                <div class="progress-bar {% if pct == 100 %}bg-success{% elif pct >= 50 %}bg-primary{% else %}bg-warning{% endif %}"
+                     data-width="{{ pct }}"></div>
+              </div>
+              <div class="d-flex justify-content-between sede-stats">
+                <span>{{ total }} tarea{{ total|pluralize:"s" }}</span>
+                <span>{{ pct }}% completado</span>
+              </div>
+              {% else %}
+              <div class="text-muted sede-stats">Sin tareas en checklist</div>
+              {% endif %}
+              {% endwith %}
+
+              <!-- Fotos en miniatura -->
+              {% if sede.fotos.all %}
+              <div class="d-flex gap-1 mt-2 flex-wrap">
+                {% for foto in sede.fotos.all %}
+                {% if foto.activo %}
+                <a href="{% url 'sede_view' sede.id %}">
+                  <img src="{{ foto.foto.url }}" alt="foto" class="sede-foto-thumb">
+                </a>
+                {% endif %}
+                {% endfor %}
+              </div>
+              {% endif %}
+
+              <div class="mt-2 pt-1 border-top">
+                <a href="{% url 'sede_view' sede.id %}" class="btn btn-sm btn-outline-secondary py-0">
+                  <i class="bi bi-eye me-1"></i>Ver detalle
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center text-muted py-4">
+        <i class="bi bi-geo-alt" style="font-size:2rem;"></i>
+        <p class="mt-2 mb-0">Sin sedes registradas.
+          {% if es_admin %}<a href="{% url 'sede_create' project.id %}">Agregar la primera</a>.{% endif %}
+        </p>
+      </div>
+      {% endif %}
+
+    </div>
 
     <!-- ── TAB INSUMOS ──────────────────────────────────────────────── -->
     <div class="tab-pane fade" id="tab-insumos">
@@ -411,67 +598,6 @@
         </div>
       </div>
 
-      <!-- Pagos a Empleados -->
-      {% if contratos_con_pagos %}
-      <div class="card border-0 shadow-sm rounded-3 mb-4">
-        <div class="card-header bg-light"><h6 class="mb-0 fw-semibold">Pagos a Empleados</h6></div>
-        <div class="card-body p-0">
-          {% for item in contratos_con_pagos %}
-          <div class="{% if not forloop.last %}border-bottom{% endif %} px-4 py-3">
-            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
-              <div>
-                <span class="fw-semibold">{{ item.contrato.empleado.nombre }} {{ item.contrato.empleado.apellido_paterno }}</span>
-                <span class="text-muted small ms-2">{{ item.contrato.empleado.get_cargo_display }}</span>
-              </div>
-              <div class="d-flex gap-3 align-items-center flex-wrap">
-                <span class="small text-muted">Acordado: <strong class="text-dark">Bs. {{ item.contrato.monto_acordado|floatformat:2 }}</strong></span>
-                <span class="small text-success">Pagado: <strong>Bs. {{ item.total_pagado|floatformat:2 }}</strong></span>
-                {% if item.saldo_pendiente > 0 %}
-                <span class="small text-danger">Pendiente: <strong>Bs. {{ item.saldo_pendiente|floatformat:2 }}</strong></span>
-                {% else %}<span class="badge bg-success">Completo</span>{% endif %}
-                {% if es_admin %}
-                <a href="{% url 'create_pago_empleado' item.contrato.id %}" class="btn btn-sm btn-outline-primary py-0">+ Pago</a>
-                {% endif %}
-              </div>
-            </div>
-            {% if item.pagos %}
-            <div class="table-responsive">
-              <table class="table table-sm align-middle small mb-0">
-                <thead class="table-light text-uppercase fw-semibold" style="font-size:0.7rem;">
-                  <tr>
-                    <th>Fecha</th><th>Concepto</th><th>Método</th><th class="text-end">Monto (Bs.)</th>
-                    {% if es_admin %}<th class="text-end" style="width:60px;">Acción</th>{% endif %}
-                  </tr>
-                </thead>
-                <tbody>
-                  {% for pago in item.pagos %}
-                  <tr>
-                    <td>{{ pago.fecha|date:"d/m/Y" }}</td>
-                    <td>{{ pago.concepto }}</td>
-                    <td>
-                      {% if pago.tipo_pago == 'transferencia' %}
-                      <span class="badge bg-info text-dark">Transferencia</span>
-                      {% else %}
-                      <span class="badge bg-secondary">Efectivo</span>
-                      {% endif %}
-                    </td>
-                    <td class="text-end fw-semibold">{{ pago.monto|floatformat:2 }}</td>
-                    {% if es_admin %}
-                    <td class="text-end"><a href="{% url 'pago_empleado_detail' pago.id %}" class="btn btn-sm btn-light py-0">Editar</a></td>
-                    {% endif %}
-                  </tr>
-                  {% endfor %}
-                </tbody>
-              </table>
-            </div>
-            {% else %}
-            <p class="text-muted small mb-0">Sin pagos aún. {% if es_admin %}<a href="{% url 'create_pago_empleado' item.contrato.id %}">Registrar el primero</a>.{% endif %}</p>
-            {% endif %}
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-      {% endif %}
 
       <!-- Historial de Cambios de Monto -->
       {% if historial_monto %}
@@ -549,9 +675,12 @@
   }
 
   // Barras de progreso
-  ['progresoBar', 'margenBar'].forEach(id => {
+  ['progresoBar', 'progresoSedesBar', 'margenBar'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.width = el.dataset.width + '%';
+  });
+  document.querySelectorAll('.sede-bar').forEach(el => {
+    el.style.width = (el.dataset.width || 0) + '%';
   });
 
   // Persistir tab activo por proyecto
@@ -564,6 +693,57 @@
   document.querySelectorAll('#projectTabs [data-bs-toggle="tab"]').forEach(btn => {
     btn.addEventListener('shown.bs.tab', () => localStorage.setItem(storageKey, btn.getAttribute('data-bs-target')));
   });
+
+  // Barras de progreso de sedes
+  document.querySelectorAll('.sede-progress .progress-bar').forEach(bar => {
+    if (bar.dataset.width !== undefined) bar.style.width = bar.dataset.width + '%';
+  });
 </script>
 
+<!-- Datos de sedes para el mapa (procesado server-side, leído por JS) -->
+<script type="application/json" id="sedes-geo-data">{{ sedes_geo_json|safe }}</script>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  const sedesData = JSON.parse(document.getElementById('sedes-geo-data').textContent || '[]');
+  const iconColor  = { completado: '#198754', en_progreso: '#0d6efd', pendiente: '#ffc107' };
+  let   mapProject = null;
+
+  function initMapProject() {
+    if (mapProject) { mapProject.invalidateSize(); return; }
+
+    mapProject = L.map('map-project', { scrollWheelZoom: false })
+      .setView([-17.3935, -66.1570], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(mapProject);
+
+    sedesData.forEach(function(s) {
+      var color = iconColor[s.estado] || '#6c757d';
+      var icon  = L.divIcon({
+        html: '<div style="background:' + color + ';width:14px;height:14px;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4);"></div>',
+        className: '', iconAnchor: [7, 7],
+      });
+      L.marker([s.lat, s.lng], { icon })
+        .bindPopup('<b>' + s.nombre + '</b><br><small>' + s.direccion + '</small><br><a href="' + s.url + '" class="btn btn-sm btn-primary mt-1 py-0">Ver sede</a>')
+        .addTo(mapProject);
+    });
+
+    if (sedesData.length > 0) {
+      var bounds = sedesData.map(function(s) { return [s.lat, s.lng]; });
+      mapProject.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
+    }
+  }
+
+  // Inicializar al mostrar el tab (el div ya es visible y tiene dimensiones)
+  document.querySelector('[data-bs-target="#tab-sedes"]').addEventListener('shown.bs.tab', initMapProject);
+
+  // Si el tab de sedes ya está activo al cargar (guardado en localStorage),
+  // esperar a que el navegador termine de pintar antes de inicializar Leaflet
+  window.addEventListener('load', function() {
+    if (document.getElementById('tab-sedes').classList.contains('active')) {
+      initMapProject();
+    }
+  });
+</script>
 {% endblock %}
