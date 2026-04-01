@@ -120,7 +120,6 @@ class Requiere(AuditModel):
     proyecto       = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='insumos', verbose_name="Proyecto")
     insumo         = models.ForeignKey(Insumo, on_delete=models.SET_NULL, null=True, related_name='proyectos', verbose_name="Insumo")
     cantidad       = models.PositiveIntegerField(verbose_name="Cantidad")
-    costo_total    = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Costo Total (Bs.)")
     # Sede de instalación: permite asignar insumos a un punto específico del proyecto.
     # null = insumo general del proyecto (sin sede asignada).
     sede           = models.ForeignKey(
@@ -163,6 +162,10 @@ class Requiere(AuditModel):
     def __str__(self):
         insumo = self.insumo.nombre if self.insumo else 'Insumo eliminado'
         return f"{insumo} x{self.cantidad} → {self.proyecto.nombre}"
+
+    @property
+    def costo_total(self):
+        return sum(lote.cantidad * lote.costo_unitario for lote in self.lotes.all())
 
 
 class Compra(AuditModel):

@@ -31,7 +31,7 @@
               </div>
               <div class="row mb-2">
                 <div class="col-sm-5"><strong>Registrado:</strong></div>
-                <div class="col-sm-7 text-muted small">{{ employee.created|date:"d/m/Y" }}</div>
+                <div class="col-sm-7 text-muted small">{{ employee.date_joined|date:"d/m/Y" }}</div>
               </div>
             </div>
             <div class="col-md-6">
@@ -63,20 +63,10 @@
               <div class="row mb-2">
                 <div class="col-sm-5"><strong>Correo:</strong></div>
                 <div class="col-sm-7">
-                  {% if employee.user.email %}
-                    <a href="mailto:{{ employee.user.email }}">{{ employee.user.email }}</a>
+                  {% if employee.email %}
+                    <a href="mailto:{{ employee.email }}">{{ employee.email }}</a>
                   {% else %}—{% endif %}
                 </div>
-              </div>
-              <div class="row mb-2">
-                <div class="col-sm-5"><strong>Fecha de contratación:</strong></div>
-                <div class="col-sm-7">{{ employee.fecha_contratacion|date:"d/m/Y"|default:"—" }}</div>
-              </div>
-            </div>
-            <div class="col-md-6">
-              <div class="row mb-2">
-                <div class="col-sm-5"><strong>Salario (Bs.):</strong></div>
-                <div class="col-sm-7">{{ employee.salario|default:"—" }}</div>
               </div>
             </div>
           </div>
@@ -98,7 +88,8 @@
               <thead class="table-light text-uppercase" style="font-size:0.7rem;">
                 <tr>
                   <th class="px-3">Período</th>
-                  <th>Proyecto</th>
+                  <th class="text-end">Monto acordado (Bs.)</th>
+                  <th class="text-center">Estado</th>
                   <th class="text-center">Vigencia</th>
                   <th class="text-center">Días trab.</th>
                   <th class="text-end">Devengado (Bs.)</th>
@@ -114,11 +105,12 @@
                     <span class="badge bg-secondary fw-normal">{{ item.contrato.get_tipo_salario_display }}</span>
                     <div class="text-muted" style="font-size:0.72rem;">Bs. {{ item.contrato.monto_diario|floatformat:2 }}/día</div>
                   </td>
-                  <td>
-                    {% if item.contrato.proyecto %}
-                      <a href="{% url 'project_view' item.contrato.proyecto.id %}" class="text-decoration-none small">{{ item.contrato.proyecto.nombre }}</a>
+                  <td class="text-end fw-semibold">{{ item.contrato.monto_acordado|floatformat:2 }}</td>
+                  <td class="text-center">
+                    {% if item.contrato.activo %}
+                      <span class="badge bg-success fw-normal">Activo</span>
                     {% else %}
-                      <span class="text-muted small">—</span>
+                      <span class="badge bg-secondary fw-normal">Inactivo</span>
                     {% endif %}
                   </td>
                   <td class="text-center text-muted small">

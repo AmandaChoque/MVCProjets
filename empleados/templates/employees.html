@@ -67,10 +67,11 @@
         <div class="col-md-3">
           <select class="form-select form-select-sm" name="filter_cargo">
             <option value="">Cargo</option>
-            <option value="gerente_general" {% if filter_cargo == "gerente_general" %}selected{% endif %}>Gerente General</option>
-            <option value="tecnico" {% if filter_cargo == "tecnico" %}selected{% endif %}>Técnico</option>
-            <option value="analista" {% if filter_cargo == "analista" %}selected{% endif %}>Analista</option>
-            <option value="desarrollador" {% if filter_cargo == "desarrollador" %}selected{% endif %}>Desarrollador</option>
+            <option value="administrador" {% if filter_cargo == "administrador" %}selected{% endif %}>Administrador</option>
+            <option value="gerente" {% if filter_cargo == "gerente" %}selected{% endif %}>Gerente</option>
+            <option value="instalador" {% if filter_cargo == "instalador" %}selected{% endif %}>Supervisor</option>
+            <option value="tecnico_soporte" {% if filter_cargo == "tecnico_soporte" %}selected{% endif %}>Técnico</option>
+            <option value="secretaria" {% if filter_cargo == "secretaria" %}selected{% endif %}>Secretaria</option>
           </select>
         </div>
 
@@ -107,14 +108,16 @@
           <td class="small fw-semibold">{{ employee.nombre }} {{ employee.apellido_paterno }}{% if employee.apellido_materno %} {{ employee.apellido_materno }}{% endif %}</td>
 
           <td>
-            {% if employee.cargo == 'gerente_general' %}
-              <span class="badge bg-primary small">Gerente General</span>
-            {% elif employee.cargo == 'tecnico' %}
-              <span class="badge bg-info text-dark small">Técnico</span>
-            {% elif employee.cargo == 'analista' %}
-              <span class="badge bg-warning text-dark small">Analista</span>
-            {% elif employee.cargo == 'desarrollador' %}
-              <span class="badge bg-success small">Desarrollador</span>
+            {% if employee.cargo == 'administrador' %}
+              <span class="badge bg-danger small">Administrador</span>
+            {% elif employee.cargo == 'gerente' %}
+              <span class="badge bg-primary small">Gerente</span>
+            {% elif employee.cargo == 'instalador' %}
+              <span class="badge bg-info text-dark small">Supervisor</span>
+            {% elif employee.cargo == 'tecnico_soporte' %}
+              <span class="badge bg-warning text-dark small">Técnico</span>
+            {% elif employee.cargo == 'secretaria' %}
+              <span class="badge bg-success small">Secretaria</span>
             {% else %}
               <span class="badge bg-secondary small">{{ employee.get_cargo_display }}</span>
             {% endif %}
@@ -129,7 +132,7 @@
               <span class="text-muted">—</span>
             {% endif %}
           </td>
-          <td class="small">{{ employee.fecha_contratacion|date:"d/m/Y"|default:"—" }}</td>
+          <td class="small">{{ employee.date_joined|date:"d/m/Y"|default:"—" }}</td>
 
           <td class="text-end">
             <div class="dropdown">

@@ -1,10 +1,9 @@
 from django.contrib import admin
-from django.contrib.auth.admin import UserAdmin
 from projects.models import (
-    Proyecto, Empleado, HistorialPresupuesto, Cliente, Progreso, Contrato,
+    Proyecto, HistorialPresupuesto, Cliente, Progreso, Pago,
 )
+from empleados.models import PagoEmpleado
 from inventario.models import Proveedor, Insumo, Compra
-from pagos.models import Pago, PagoEmpleado
 
 
 @admin.register(Proyecto)
@@ -15,18 +14,6 @@ class ProyectoAdmin(admin.ModelAdmin):
     search_fields = ('nombre', 'codigo', 'cliente__nombre', 'cliente__apellido_paterno')
     ordering = ('-created',)
     list_per_page = 20
-
-
-@admin.register(Empleado)
-class EmpleadoAdmin(UserAdmin):
-    list_display = ('username', 'nombre', 'apellido_paterno', 'cargo', 'carnet_identidad', 'is_active')
-    list_filter = ('is_active', 'cargo', 'is_staff')
-    search_fields = ('username', 'nombre', 'apellido_paterno', 'carnet_identidad')
-    ordering = ('apellido_paterno', 'nombre')
-    list_per_page = 20
-    fieldsets = UserAdmin.fieldsets + (
-        ('Datos del Empleado', {'fields': ('nombre', 'apellido_paterno', 'apellido_materno', 'cargo', 'carnet_identidad', 'numero_celular')}),
-    )
 
 
 @admin.register(Cliente)
@@ -68,14 +55,6 @@ class ProgresoAdmin(admin.ModelAdmin):
     ordering = ('-fecha',)
     list_per_page = 20
 
-
-@admin.register(Contrato)
-class ContratoAdmin(admin.ModelAdmin):
-    list_display = ('tipo', 'empleado', 'proyecto', 'fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'activo')
-    list_filter = ('activo', 'tipo')
-    search_fields = ('empleado__nombre', 'empleado__apellido_paterno', 'proyecto__nombre', 'proyecto__codigo')
-    ordering = ('-created',)
-    list_per_page = 20
 
 
 @admin.register(Proveedor)

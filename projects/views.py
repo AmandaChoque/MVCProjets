@@ -8,16 +8,18 @@ from django.contrib import messages
 from django.http import HttpResponse, JsonResponse
 from django.db import IntegrityError
 
-from .form import ProjectForm, EmpleadoForm, ClienteForm, ProgresoForm, ContratoEmpleadoForm, ContratoEmpleadoDesdeEmpleadoForm, ContratoProyectoForm, JornadaEmpleadoForm, SedeForm, FotoSedeForm, TareaChecklistForm
-from .models import Proyecto, Empleado, Cliente, Progreso, Contrato, HistorialPresupuesto, JornadaEmpleado, Sede, FotoSede, TareaChecklist, Notificacion
+from .form import ProjectForm, ClienteForm, ProgresoForm, ContratoProyectoForm, SedeForm, FotoSedeForm, TareaChecklistForm, PaymentForm
+from .models import Proyecto, Cliente, Progreso, HistorialPresupuesto, Sede, FotoSede, TareaChecklist, Notificacion, Pago
+from empleados.models import Empleado, ContratoEmpleado, ContratoProyecto, JornadaEmpleado, PagoEmpleado
 from inventario.models import Insumo, Requiere
-from pagos.models import Pago, PagoEmpleado
 from django.contrib.auth.decorators import login_required
 from .decorators import cargo_required, ROLES_ADMIN, ROLES_ADMIN_SEC, ROLES_CAMPO
 
 from django.utils import timezone
 from django.template.loader import get_template
 from xhtml2pdf import pisa
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import io
 import urllib, base64
@@ -25,6 +27,10 @@ from django.db.models import Q, Count, Sum, OuterRef, Subquery, F, Max as db_Max
 from django.db import models
 from django.db.models.functions import TruncMonth
 import json
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+from datetime import datetime
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from datetime import timedelta
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -485,10 +491,10 @@ def projects(request):
 
     qs = Proyecto.objects.filter(activo=True).select_related('cliente').order_by('-created')
 
-    # Instalador/Técnico solo ve proyectos donde tiene Contrato activo
+    # Instalador/Técnico solo ve proyectos donde tiene jornada activa
     cargo = getattr(request.user, 'cargo', None)
     if cargo in ('instalador', 'tecnico_soporte'):
-        qs = qs.filter(contratos__empleado=request.user, contratos__tipo='empleado', contratos__activo=True).distinct()
+        qs = qs.filter(jornadas_empleados__contrato__empleado=request.user, jornadas_empleados__activo=True).distinct()
 
     if search_nombre:
         qs = qs.filter(nombre__icontains=search_nombre)
@@ -555,7 +561,7 @@ def project_view(request, id_project):
     progresos = project.progresos.filter(activo=True).order_by('-fecha', '-created')
     ultimo_progreso = progresos.first()
     porcentaje_actual = ultimo_progreso.porcentaje if ultimo_progreso else 0
-    contrato_proyecto = project.contratos.filter(tipo='proyecto', activo=True).first()
+    contrato_proyecto = project.contratos.filter(activo=True).first()
     insumos_proyecto = project.insumos.select_related('insumo').order_by('-created')
     total_insumos = sum(r.costo_total for r in insumos_proyecto)
 
@@ -568,7 +574,7 @@ def project_view(request, id_project):
             proyecto=project, contrato__empleado=emp, activo=True
         ).order_by('-fecha')
         total_dias = jornadas_emp.aggregate(t=Sum('dias'))['t'] or 0
-        contrato_emp = emp.contratos.filter(tipo='empleado', activo=True).first()
+        contrato_emp = emp.contratos_empleado.filter(activo=True).first()
         costo = total_dias * contrato_emp.monto_diario if contrato_emp else 0
         costo_personal += costo
         equipo_proyecto.append({
@@ -705,7 +711,6 @@ def create_project(request):
 
         if adjuntar_contrato:
             contrato = contrato_form.save(commit=False)
-            contrato.tipo = 'proyecto'
             contrato.proyecto = project
             contrato.save()
             # El contrato sobreescribe el monto estimado ingresado
@@ -721,230 +726,6 @@ def create_project(request):
         'adjuntar_contrato': adjuntar_contrato,
     })
 
-
-@login_required
-@cargo_required('administrador')
-def create_employee(request):
-    if request.method == 'GET':
-        return render(request, 'create_employee.html', {'form': EmpleadoForm()})
-    else:
-        form = EmpleadoForm(request.POST)
-        if form.is_valid():
-            employee = form.save(commit=False)
-            employee.username = form.cleaned_data['username']
-            employee.email = form.cleaned_data.get('correo') or ''
-            employee.set_password(form.cleaned_data['password1'])
-            employee.save()
-            messages.success(request, f"El empleado {employee.nombre} {employee.apellido_paterno} fue registrado con acceso al sistema.")
-            return redirect('employees')
-        return render(request, 'create_employee.html', {
-            'form': form,
-            'error': 'Por favor, proporcione datos válidos'
-        })
-
-
-@login_required
-@cargo_required('administrador')
-def deactivate_employee(request, id_employee):
-    empleado = get_object_or_404(Empleado, id=id_employee, is_active=True)
-    if request.method == 'POST':
-        empleado.is_active = False
-        empleado.save()
-        messages.success(request, f"El empleado {empleado.nombre} {empleado.apellido_paterno} fue inhabilitado.")
-    return redirect('employees')
-
-
-@login_required
-def employee_view(request, id_employee):
-    empleado = get_object_or_404(Empleado, pk=id_employee)
-
-    # Contratos con balance por jornadas
-    contratos = empleado.contratos.filter(activo=True).select_related('proyecto').order_by('-created')
-    contratos_con_pagos = []
-    total_ganado_global = 0
-    total_pagado_global = 0
-
-    for contrato in contratos:
-        pagos        = contrato.pagos.filter(activo=True).order_by('fecha')
-        total_pagado = pagos.aggregate(t=Sum('monto'))['t'] or 0
-        jornadas     = contrato.jornadas.filter(activo=True)
-        total_dias   = jornadas.aggregate(t=Sum('dias'))['t'] or 0
-        total_ganado = total_dias * contrato.monto_diario
-        total_ganado_global += total_ganado
-        total_pagado_global += total_pagado
-        contratos_con_pagos.append({
-            'contrato':      contrato,
-            'pagos':         pagos,
-            'total_dias':    total_dias,
-            'total_ganado':  total_ganado,
-            'total_pagado':  total_pagado,
-            'saldo_jornadas': total_ganado - total_pagado,
-        })
-
-    saldo_global = total_ganado_global - total_pagado_global
-
-    context = {
-        'employee': empleado,
-        'contratos_con_pagos': contratos_con_pagos,
-        'total_ganado_global': total_ganado_global,
-        'total_pagado_global': total_pagado_global,
-        'saldo_global': saldo_global,
-        'now': timezone.now(),
-        'generado_por': request.user.get_full_name() or request.user.username,
-    }
-
-    if 'pdf' in request.GET:
-        template = get_template('employee_detail_pdf.html')
-        html = template.render(context)
-        response = HttpResponse(content_type='application/pdf')
-        disposition = 'attachment' if 'download' in request.GET else 'inline'
-        filename = f"ficha_empleado_{empleado.carnet_identidad}.pdf"
-        response['Content-Disposition'] = f'{disposition}; filename="{filename}"'
-        pisa_status = pisa.CreatePDF(html, dest=response)
-        if pisa_status.err:
-            return HttpResponse('Error al generar el PDF', status=500)
-        return response
-
-    return render(request, 'employee_view.html', context)
-
-
-@login_required
-@cargo_required(*ROLES_ADMIN)
-def employee_workload(request):
-    """Vista de carga de trabajo: muestra cuántos proyectos activos tiene cada empleado."""
-    empleados = Empleado.objects.filter(is_active=True).annotate(
-        proyectos_activos=Count(
-            'contratos',
-            filter=Q(
-                contratos__tipo='empleado',
-                contratos__activo=True,
-                contratos__proyecto__estado_proyecto__in=['pendiente', 'en_progreso'],
-                contratos__proyecto__activo=True,
-            )
-        ),
-        proyectos_completados=Count(
-            'contratos',
-            filter=Q(
-                contratos__tipo='empleado',
-                contratos__activo=True,
-                contratos__proyecto__estado_proyecto='completado',
-                contratos__proyecto__activo=True,
-            )
-        ),
-        monto_contratos=Sum(
-            'contratos__monto_acordado',
-            filter=Q(contratos__tipo='empleado', contratos__activo=True)
-        ),
-    ).order_by('-proyectos_activos', 'nombre')
-
-    # Proyectos activos por empleado (para el detalle)
-    empleados_list = list(empleados)
-    for emp in empleados_list:
-        contratos = list(Contrato.objects.filter(
-            empleado=emp,
-            tipo='empleado',
-            activo=True,
-            proyecto__estado_proyecto__in=['pendiente', 'en_progreso'],
-            proyecto__activo=True,
-        ).select_related('proyecto').order_by('proyecto__estado_proyecto', 'proyecto__nombre'))
-
-        # Adjuntar el contrato del proyecto (tipo='proyecto') para obtener sus fechas
-        proyecto_ids = [c.proyecto_id for c in contratos]
-        contratos_proyecto_map = {
-            cp.proyecto_id: cp
-            for cp in Contrato.objects.filter(
-                proyecto_id__in=proyecto_ids,
-                tipo='proyecto',
-                activo=True,
-            )
-        }
-        for c in contratos:
-            c.contrato_proyecto = contratos_proyecto_map.get(c.proyecto_id)
-
-        emp.contratos_activos_list = contratos
-
-    context = {'empleados': empleados_list}
-    return render(request, 'employee_workload.html', context)
-
-
-@login_required
-@cargo_required('administrador')
-def employee_detail(request, id_employee):
-    empleado = get_object_or_404(Empleado, pk=id_employee)
-    if request.method == 'GET':
-        form = EmpleadoForm(instance=empleado, initial={'correo': empleado.email})
-        return render(request, 'employee_detail.html', {'employee': empleado, 'form': form})
-    else:
-        form = EmpleadoForm(request.POST, instance=empleado)
-        if form.is_valid():
-            empleado = form.save()
-            apellido_materno = form.cleaned_data.get('apellido_materno') or ''
-            empleado.first_name = form.cleaned_data['nombre']
-            empleado.last_name = f"{form.cleaned_data['apellido_paterno']} {apellido_materno}".strip()
-            empleado.email = form.cleaned_data.get('correo') or ''
-            nueva_password = form.cleaned_data.get('password1')
-            if nueva_password:
-                empleado.set_password(nueva_password)
-                update_session_auth_hash(request, empleado)
-            empleado.save(update_fields=['first_name', 'last_name', 'email', 'password'])
-            messages.success(request, f"El empleado {empleado.nombre} {empleado.apellido_paterno} fue actualizado exitosamente.")
-            return redirect('employees')
-        return render(request, 'employee_detail.html', {'employee': empleado, 'form': form})
-
-
-@login_required
-@cargo_required(*ROLES_ADMIN)
-def employees(request):
-    search_nombre = request.GET.get('search_nombre', '')
-    filter_cargo = request.GET.get('filter_cargo', '')
-    page = request.GET.get('page', 1)
-    per_page = request.GET.get('per_page', 10)
-
-    try:
-        page = int(page)
-        if page < 1:
-            page = 1
-    except ValueError:
-        page = 1
-
-    try:
-        per_page = int(per_page)
-        if per_page not in [10, 20, 50, 100]:
-            per_page = 10
-    except ValueError:
-        per_page = 10
-
-    ultimo_proyecto = (
-        JornadaEmpleado.objects
-        .filter(contrato__empleado=OuterRef('pk'), activo=True)
-        .order_by('-fecha')
-        .values('proyecto__nombre')[:1]
-    )
-    empleados = (
-        Empleado.objects
-        .filter(is_active=True)
-        .annotate(proyecto_actual=Subquery(ultimo_proyecto))
-        .order_by('-id')
-    )
-
-    if search_nombre:
-        empleados = empleados.filter(
-            Q(nombre__icontains=search_nombre) |
-            Q(apellido_paterno__icontains=search_nombre) |
-            Q(apellido_materno__icontains=search_nombre)
-        )
-    if filter_cargo:
-        empleados = empleados.filter(cargo=filter_cargo)
-
-    paginator = Paginator(empleados, per_page)
-    employees_page = paginator.get_page(page)
-
-    return render(request, 'employees.html', {
-        'employees': employees_page,
-        'search_nombre': search_nombre,
-        'filter_cargo': filter_cargo,
-        'per_page': per_page,
-    })
 
 
 
@@ -1106,8 +887,7 @@ def dashboard_home(request):
     hoy = timezone.now().date()
     en_30_dias = hoy + timedelta(days=30)
 
-    contratos_proyecto_qs = Contrato.objects.filter(
-        tipo='proyecto',
+    contratos_proyecto_qs = ContratoProyecto.objects.filter(
         activo=True,
         proyecto__activo=True,
         proyecto__estado_proyecto__in=['pendiente', 'en_progreso'],
@@ -1181,11 +961,13 @@ def dashboard_home(request):
     pagado_subq = PagoEmpleado.objects.filter(
         contrato=OuterRef('pk'), activo=True
     ).values('contrato').annotate(t=Sum('monto')).values('t')
-    contratos_completados = Contrato.objects.filter(
-        tipo='empleado', activo=True, proyecto__estado_proyecto='completado'
-    ).select_related('empleado', 'proyecto').annotate(
+    contratos_completados = ContratoEmpleado.objects.filter(
+        activo=True,
+        jornadas__proyecto__estado_proyecto='completado',
+        jornadas__activo=True,
+    ).select_related('empleado').annotate(
         total_pagado=Subquery(pagado_subq)
-    )
+    ).distinct()
     for contrato in contratos_completados:
         pagado = contrato.total_pagado or 0
         if pagado < contrato.monto_acordado:
@@ -1193,7 +975,7 @@ def dashboard_home(request):
             alertas_empleados.append({
                 'tipo': 'warning',
                 'icono': 'bi-person-exclamation',
-                'msg': f'{contrato.empleado.nombre} {contrato.empleado.apellido_paterno} tiene Bs. {pendiente:.2f} pendientes en "{contrato.proyecto.nombre}".',
+                'msg': f'{contrato.empleado.nombre} {contrato.empleado.apellido_paterno} tiene Bs. {pendiente:.2f} pendientes.',
                 'url': f'/employees/{contrato.empleado.id}/view/',
             })
 
@@ -1281,8 +1063,8 @@ def _puede_registrar_progreso(user, proyecto):
     cargo = getattr(user, 'cargo', None)
     if cargo in ROLES_ADMIN:
         return True
-    return Contrato.objects.filter(
-        empleado=user, proyecto=proyecto, tipo='empleado', activo=True
+    return JornadaEmpleado.objects.filter(
+        contrato__empleado=user, proyecto=proyecto, activo=True
     ).exists()
 
 
@@ -1366,131 +1148,6 @@ def deactivate_progreso(request, id_progreso):
 
 # ===================== CONTRATOS =====================
 
-
-@login_required
-@cargo_required(*ROLES_ADMIN)
-def create_contrato_from_employee(request, id_employee):
-    """Crea un contrato de empleado desde el perfil del empleado, sin proyecto asociado."""
-    empleado = get_object_or_404(Empleado, pk=id_employee, is_active=True)
-    if request.method == 'GET':
-        form = ContratoEmpleadoDesdeEmpleadoForm(empleado=empleado)
-    else:
-        form = ContratoEmpleadoDesdeEmpleadoForm(request.POST, request.FILES, empleado=empleado)
-        if form.is_valid():
-            contrato = form.save(commit=False)
-            contrato.tipo = 'empleado'
-            contrato.empleado = empleado
-            contrato.proyecto = None
-            contrato.save()
-            messages.success(request, f'Contrato registrado para {empleado.nombre} {empleado.apellido_paterno}.')
-            return redirect('employee_view', id_employee=empleado.id)
-    return render(request, 'create_contrato_desde_empleado.html', {'form': form, 'employee': empleado})
-
-
-@login_required
-@cargo_required(*ROLES_ADMIN)
-def contrato_empleado_detail(request, id_contrato):
-    contrato = get_object_or_404(Contrato, pk=id_contrato, tipo='empleado', activo=True)
-    project = contrato.proyecto
-
-    # Balance de jornadas
-    jornadas = contrato.jornadas.filter(activo=True).select_related('proyecto').order_by('-fecha')
-    total_dias = jornadas.aggregate(t=Sum('dias'))['t'] or 0
-    total_ganado = total_dias * contrato.monto_diario
-    pagos = contrato.pagos.filter(activo=True).order_by('-fecha')
-    total_pagado = pagos.aggregate(t=Sum('monto'))['t'] or 0
-    saldo_pendiente = total_ganado - total_pagado
-
-    if request.method == 'GET':
-        form = ContratoEmpleadoForm(instance=contrato)
-    else:
-        form = ContratoEmpleadoForm(request.POST, request.FILES, instance=contrato)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Contrato actualizado correctamente.')
-            if project:
-                return redirect('project_view', id_project=project.id)
-            return redirect('employee_view', id_employee=contrato.empleado.id)
-
-    return render(request, 'contrato_empleado_detail.html', {
-        'form': form, 'contrato': contrato, 'project': project,
-        'jornadas': jornadas,
-        'pagos': pagos,
-        'total_dias': total_dias,
-        'total_ganado': total_ganado,
-        'total_pagado': total_pagado,
-        'saldo_pendiente': saldo_pendiente,
-    })
-
-
-@login_required
-def create_jornada(request, id_contrato):
-    contrato = get_object_or_404(Contrato, pk=id_contrato, tipo='empleado', activo=True)
-    cargo = getattr(request.user, 'cargo', None)
-    if cargo not in ROLES_ADMIN and contrato.empleado != request.user:
-        messages.error(request, 'Solo puedes registrar jornadas en tu propio contrato.')
-        return redirect('dashboard')
-    es_admin = cargo in ROLES_ADMIN
-    jornadas = contrato.jornadas.filter(activo=True).select_related('proyecto').order_by('-fecha')
-    total_dias = jornadas.aggregate(t=Sum('dias'))['t'] or 0
-    total_ganado = total_dias * contrato.monto_diario
-    total_pagado = contrato.pagos.filter(activo=True).aggregate(t=Sum('monto'))['t'] or 0
-    saldo_pendiente = total_ganado - total_pagado
-
-    if request.method == 'GET':
-        form = JornadaEmpleadoForm(empleado=contrato.empleado, es_admin=es_admin, contrato=contrato)
-    else:
-        form = JornadaEmpleadoForm(request.POST, empleado=contrato.empleado, es_admin=es_admin, contrato=contrato)
-        if form.is_valid():
-            jornada = form.save(commit=False)
-            jornada.contrato = contrato
-            jornada.dias = form.cleaned_data['dias']
-            jornada.save()
-            messages.success(request, 'Jornada registrada correctamente.')
-            return redirect('contrato_empleado_detail', id_contrato=contrato.id)
-
-    return render(request, 'create_jornada.html', {
-        'form': form, 'contrato': contrato,
-        'jornadas': jornadas,
-        'total_dias': total_dias,
-        'total_ganado': total_ganado,
-        'total_pagado': total_pagado,
-        'saldo_pendiente': saldo_pendiente,
-    })
-
-
-@login_required
-@cargo_required(*ROLES_ADMIN)
-def jornada_detail(request, id_jornada):
-    jornada = get_object_or_404(JornadaEmpleado, pk=id_jornada, activo=True)
-    contrato = jornada.contrato
-    if request.method == 'GET':
-        form = JornadaEmpleadoForm(instance=jornada, es_admin=True, contrato=contrato)
-    else:
-        form = JornadaEmpleadoForm(request.POST, instance=jornada, es_admin=True, contrato=contrato)
-        if form.is_valid():
-            j = form.save(commit=False)
-            j.dias = form.cleaned_data['dias']
-            j.save()
-            messages.success(request, 'Jornada actualizada correctamente.')
-            return redirect('contrato_empleado_detail', id_contrato=contrato.id)
-    return render(request, 'jornada_detail.html', {'form': form, 'jornada': jornada, 'contrato': contrato})
-
-
-@login_required
-@cargo_required(*ROLES_ADMIN)
-def deactivate_jornada(request, id_jornada):
-    jornada = get_object_or_404(JornadaEmpleado, pk=id_jornada, activo=True)
-    id_contrato = jornada.contrato.id
-    if request.method == 'POST':
-        jornada.activo = False
-        jornada.deleted_at = timezone.now()
-        jornada.deleted_by = request.user
-        jornada.save()
-        messages.success(request, 'Jornada eliminada.')
-    return redirect('contrato_empleado_detail', id_contrato=id_contrato)
-
-
 @login_required
 @cargo_required(*ROLES_ADMIN)
 def equipo_add(request, id_project):
@@ -1515,25 +1172,10 @@ def equipo_remove(request, id_project, id_employee):
 
 
 @login_required
-@cargo_required(*ROLES_ADMIN)
-def deactivate_contrato_empleado(request, id_contrato):
-    contrato = get_object_or_404(Contrato, pk=id_contrato, tipo='empleado', activo=True)
-    if request.method == 'POST':
-        contrato.activo = False
-        contrato.deleted_at = timezone.now()
-        contrato.deleted_by = request.user
-        contrato.save()
-        messages.success(request, f'Contrato de {contrato.empleado.nombre} {contrato.empleado.apellido_paterno} inhabilitado.')
-    if contrato.proyecto:
-        return redirect('project_view', id_project=contrato.proyecto.id)
-    return redirect('employee_view', id_employee=contrato.empleado.id)
-
-
-@login_required
 def create_contrato_proyecto(request, id_project):
     project = get_object_or_404(Proyecto, pk=id_project)
     # Check if project already has an active contract
-    existing = project.contratos.filter(tipo='proyecto', activo=True).first()
+    existing = project.contratos.filter(activo=True).first()
     if existing:
         messages.warning(request, 'Este proyecto ya tiene un contrato registrado.')
         return redirect('project_view', id_project=project.id)
@@ -1544,7 +1186,6 @@ def create_contrato_proyecto(request, id_project):
         form = ContratoProyectoForm(request.POST, request.FILES)
         if form.is_valid():
             contrato = form.save(commit=False)
-            contrato.tipo = 'proyecto'
             contrato.proyecto = project
             contrato.save()
             project.monto_total = contrato.monto_acordado
@@ -1557,7 +1198,7 @@ def create_contrato_proyecto(request, id_project):
 
 @login_required
 def contrato_proyecto_detail(request, id_contrato):
-    contrato = get_object_or_404(Contrato, pk=id_contrato, tipo='proyecto', activo=True)
+    contrato = get_object_or_404(ContratoProyecto, pk=id_contrato, activo=True)
     project = contrato.proyecto
     if request.method == 'GET':
         form = ContratoProyectoForm(instance=contrato)
@@ -1576,7 +1217,7 @@ def contrato_proyecto_detail(request, id_contrato):
 
 @login_required
 def deactivate_contrato_proyecto(request, id_contrato):
-    contrato = get_object_or_404(Contrato, pk=id_contrato, tipo='proyecto', activo=True)
+    contrato = get_object_or_404(ContratoProyecto, pk=id_contrato, activo=True)
     if request.method == 'POST':
         contrato.activo = False
         contrato.deleted_at = timezone.now()
@@ -1808,57 +1449,282 @@ def notificaciones_marcar_todas(request):
     return redirect('notificaciones_list')
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-#  DASHBOARD DEL INSTALADOR (móvil optimizado)
-# ══════════════════════════════════════════════════════════════════════════════
+# ── Pagos del cliente ─────────────────────────────────────────────────────────
 
 @login_required
-@cargo_required('instalador', 'tecnico_soporte', 'administrador', 'gerente')
-def instalador_dashboard(request):
-    user = request.user
-    cargo = getattr(user, 'cargo', None)
+def payment_list(request):
+    search_proyecto = request.GET.get('search_proyecto', '')
+    filter_tipo     = request.GET.get('filter_tipo', '')
+    page     = request.GET.get('page', 1)
+    per_page = request.GET.get('per_page', 10)
+    try:
+        page = max(int(page), 1)
+    except ValueError:
+        page = 1
+    try:
+        per_page = int(per_page) if int(per_page) in [10, 20, 50, 100] else 10
+    except ValueError:
+        per_page = 10
 
-    if cargo in ('administrador', 'gerente'):
-        # Admin/gerente ve todos los proyectos activos con sedes
-        proyectos = Proyecto.objects.filter(
-            activo=True,
-            estado_proyecto__in=['pendiente', 'en_progreso']
-        ).prefetch_related('sedes').order_by('-created')
-    else:
-        # Instalador solo ve proyectos donde está en el equipo
-        proyectos = Proyecto.objects.filter(
-            activo=True,
-            estado_proyecto__in=['pendiente', 'en_progreso'],
-            equipo=user,
-        ).prefetch_related('sedes').order_by('-created')
+    payments = Pago.objects.filter(activo=True).select_related('proyecto').order_by('-fecha')
+    if search_proyecto:
+        payments = payments.filter(proyecto__nombre__icontains=search_proyecto)
+    if filter_tipo:
+        payments = payments.filter(tipo_pago=filter_tipo)
 
-    # Para cada proyecto armar resumen de sedes
-    proyectos_data = []
+    total_payments = payments.count()
+    paginator = Paginator(payments, per_page)
+    try:
+        payments_page = paginator.page(page)
+    except (PageNotAnInteger, EmptyPage):
+        payments_page = paginator.page(1)
+
+    return render(request, 'payments.html', {
+        'payments': payments_page,
+        'total_payments': total_payments,
+        'search_proyecto': search_proyecto,
+        'filter_tipo': filter_tipo,
+        'per_page': per_page,
+    })
+
+
+def _proyectos_pago_data():
+    proyectos = Proyecto.objects.filter(activo=True).prefetch_related('pagos')
+    data = {}
     for p in proyectos:
-        sedes = p.sedes.filter(activo=True)
-        total_tareas = TareaChecklist.objects.filter(sede__in=sedes, activo=True).count()
-        tareas_ok    = TareaChecklist.objects.filter(sede__in=sedes, activo=True, completado=True).count()
-        proyectos_data.append({
-            'proyecto': p,
-            'sedes': sedes,
-            'total_tareas': total_tareas,
-            'tareas_ok': tareas_ok,
-            'pct_global': round(tareas_ok / total_tareas * 100) if total_tareas else 0,
-        })
+        pagado = p.pagos.filter(activo=True).aggregate(t=Sum('monto'))['t'] or 0
+        data[str(p.id)] = {
+            'monto_total': float(p.monto_total),
+            'pagado': float(pagado),
+            'saldo': float(p.monto_total - pagado),
+        }
+    return data
 
-    # Tareas pendientes del usuario (completado por alguien del equipo)
-    mis_tareas_pendientes = TareaChecklist.objects.filter(
-        activo=True,
-        completado=False,
-        sede__proyecto__equipo=user,
-        sede__activo=True,
-        sede__proyecto__estado_proyecto__in=['pendiente', 'en_progreso'],
-    ).select_related('sede', 'sede__proyecto').order_by('sede__proyecto', 'sede', 'orden')
+
+@login_required
+@cargo_required(*ROLES_ADMIN_SEC)
+def create_payment(request):
+    proyectos_data = _proyectos_pago_data()
+    if request.method == 'GET':
+        return render(request, 'create_payment.html', {'form': PaymentForm(), 'proyectos_data': proyectos_data})
+    form = PaymentForm(request.POST)
+    if form.is_valid():
+        payment = form.save()
+        messages.success(request, f'El pago de Bs. {payment.monto} fue registrado exitosamente.')
+        return redirect('payments')
+    return render(request, 'create_payment.html', {'form': form, 'proyectos_data': proyectos_data, 'error': 'Por favor, proporcione datos válidos'})
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN_SEC)
+def payment_detail(request, id_payment):
+    payment = get_object_or_404(Pago, pk=id_payment, activo=True)
+    if request.method == 'GET':
+        return render(request, 'payment_detail.html', {
+            'payment': payment,
+            'form': PaymentForm(instance=payment, edit_mode=True),
+        })
+    form = PaymentForm(request.POST, instance=payment, edit_mode=True)
+    if form.is_valid():
+        form.save()
+        messages.success(request, f"El pago del proyecto '{payment.proyecto.nombre}' fue actualizado exitosamente.")
+        return redirect('payments')
+    return render(request, 'payment_detail.html', {'payment': payment, 'form': form, 'error': 'Error al actualizar el pago'})
+
+
+@login_required
+def payment_view(request, id_payment):
+    payment = get_object_or_404(Pago, pk=id_payment, activo=True)
+    return render(request, 'payment_view.html', {'payment': payment})
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN_SEC)
+def deactivate_payment(request, id_payment):
+    payment = get_object_or_404(Pago, id=id_payment, activo=True)
+    if request.method == 'POST':
+        payment.activo = False
+        payment.deleted_at = timezone.now()
+        payment.deleted_by = request.user
+        payment.save()
+        messages.success(request, f"El pago de Bs. {payment.monto} del proyecto '{payment.proyecto.nombre}' ha sido inhabilitado.")
+    return redirect('payments')
+
+
+@login_required
+def filter_payments_by_project_name(request):
+    project_name = request.GET.get('project_name', '')
+    start_date   = request.GET.get('start_date', '')
+    end_date     = request.GET.get('end_date', '')
+    filter_tipo  = request.GET.get('filter_tipo', '')
+
+    projects = Proyecto.objects.filter(activo=True).values('nombre').distinct()
+    payments = Pago.objects.filter(activo=True).select_related('proyecto', 'proyecto__cliente')
+
+    if project_name:
+        payments = payments.filter(proyecto__nombre__icontains=project_name)
+    if start_date:
+        payments = payments.filter(fecha__gte=start_date)
+    if end_date:
+        payments = payments.filter(fecha__lte=end_date)
+    if filter_tipo:
+        payments = payments.filter(tipo_pago=filter_tipo)
+
+    total_monto         = payments.aggregate(total=Sum('monto'))['total'] or 0
+    monto_efectivo      = payments.filter(tipo_pago='efectivo').aggregate(total=Sum('monto'))['total'] or 0
+    monto_transferencia = payments.filter(tipo_pago='transferencia').aggregate(total=Sum('monto'))['total'] or 0
+    count_efectivo      = payments.filter(tipo_pago='efectivo').count()
+    count_transferencia = payments.filter(tipo_pago='transferencia').count()
 
     context = {
-        'proyectos_data': proyectos_data,
-        'mis_tareas_pendientes': mis_tareas_pendientes,
-        'no_leidas': user.notificaciones.filter(leida=False).count(),
+        'payments': payments,
+        'projects': projects,
+        'project_name': project_name,
+        'start_date': start_date,
+        'end_date': end_date,
+        'filter_tipo': filter_tipo,
+        'total_monto': total_monto,
+        'monto_efectivo': monto_efectivo,
+        'monto_transferencia': monto_transferencia,
+        'count_efectivo': count_efectivo,
+        'count_transferencia': count_transferencia,
+        'now': timezone.now(),
+        'generado_por': request.user.get_full_name() or request.user.username,
     }
-    return render(request, 'instalador_dashboard.html', context)
 
+    if 'pdf' in request.GET:
+        template = get_template('payments_report_pdf.html')
+        html = template.render(context)
+        response = HttpResponse(content_type='application/pdf')
+        disposition = 'attachment' if 'download' in request.GET else 'inline'
+        response['Content-Disposition'] = f'{disposition}; filename="reporte_pagos.pdf"'
+        pisa_status = pisa.CreatePDF(html, dest=response)
+        if pisa_status.err:
+            return HttpResponse('Error al generar el PDF', status=500)
+        return response
+
+    if 'excel' in request.GET:
+        NUM_COLS = 7
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Pagos Clientes'
+        title_fill   = PatternFill(start_color='0F2D5A', end_color='0F2D5A', fill_type='solid')
+        title_font   = Font(bold=True, size=14, color='D4B84A')
+        info_fill    = PatternFill(start_color='1B4D90', end_color='1B4D90', fill_type='solid')
+        info_font    = Font(size=9, color='FFFFFF')
+        header_fill  = PatternFill(start_color='0F2D5A', end_color='0F2D5A', fill_type='solid')
+        header_font  = Font(bold=True, color='D4B84A', size=10)
+        alt_fill     = PatternFill(start_color='EFF2F8', end_color='EFF2F8', fill_type='solid')
+        total_fill   = PatternFill(start_color='E8EDF5', end_color='E8EDF5', fill_type='solid')
+        total_font   = Font(bold=True, size=10, color='0F2D5A')
+        center       = Alignment(horizontal='center', vertical='center')
+        left         = Alignment(horizontal='left',   vertical='center')
+        right_al     = Alignment(horizontal='right',  vertical='center')
+        cell_border  = Border(
+            left=Side(style='thin', color='C0C8D8'), right=Side(style='thin', color='C0C8D8'),
+            top=Side(style='thin', color='C0C8D8'),  bottom=Side(style='thin', color='C0C8D8'),
+        )
+        total_border = Border(
+            left=Side(style='thin', color='C0C8D8'), right=Side(style='thin', color='C0C8D8'),
+            top=Side(style='medium', color='0F2D5A'), bottom=Side(style='medium', color='0F2D5A'),
+        )
+        money_fmt = '#,##0.00'
+        ws.append(['Reporte de Pagos de Clientes — SOBOTEC S.R.L.'])
+        ws.merge_cells(f'A1:{openpyxl.utils.get_column_letter(NUM_COLS)}1')
+        ws['A1'].font = title_font; ws['A1'].fill = title_fill
+        ws['A1'].alignment = Alignment(horizontal='left', vertical='center', indent=1)
+        ws.row_dimensions[1].height = 26
+        gen_por  = request.user.get_full_name() or request.user.username
+        info_str = f'Generado por: {gen_por}  |  Fecha: {timezone.now().strftime("%d/%m/%Y %H:%M")}'
+        if project_name: info_str += f'  |  Proyecto: {project_name}'
+        if start_date:   info_str += f'  |  Desde: {start_date}'
+        if end_date:     info_str += f'  |  Hasta: {end_date}'
+        if filter_tipo:  info_str += f'  |  Tipo: {filter_tipo}'
+        ws.append([info_str])
+        ws.merge_cells(f'A2:{openpyxl.utils.get_column_letter(NUM_COLS)}2')
+        ws['A2'].font = info_font; ws['A2'].fill = info_fill
+        ws['A2'].alignment = Alignment(horizontal='left', vertical='center', indent=1)
+        ws.row_dimensions[2].height = 18
+        ws.append([]); ws.row_dimensions[3].height = 6
+        headers = ['Proyecto', 'Cliente', 'Estado Proyecto', 'Monto Total Proy. (Bs.)',
+                   'Monto Pago (Bs.)', 'Fecha', 'Tipo de Pago']
+        ws.append(headers)
+        for cell in ws[4]:
+            cell.font = header_font; cell.fill = header_fill
+            cell.alignment = center; cell.border = cell_border
+        ws.row_dimensions[4].height = 22
+        last_row = 4
+        for i, p in enumerate(payments, start=5):
+            cliente_str = (f'{p.proyecto.cliente.nombre} {p.proyecto.cliente.apellido_paterno}'
+                           if p.proyecto.cliente else '—')
+            ws.append([
+                p.proyecto.nombre, cliente_str,
+                p.proyecto.get_estado_proyecto_display(),
+                float(p.proyecto.monto_total), float(p.monto),
+                p.fecha.strftime('%d/%m/%Y') if p.fecha else '—',
+                p.get_tipo_pago_display(),
+            ])
+            row_fill = alt_fill if i % 2 == 0 else None
+            for j, cell in enumerate(ws[i], start=1):
+                if row_fill: cell.fill = row_fill
+                cell.border = cell_border
+                if j in (4, 5):
+                    cell.alignment = right_al; cell.number_format = money_fmt
+                elif j == 6: cell.alignment = center
+                else:        cell.alignment = left
+            ws.row_dimensions[i].height = 16
+            last_row = i
+        total_row = last_row + 1
+        ws.append(['', 'TOTAL', '', '', float(total_monto), '', ''])
+        for j, cell in enumerate(ws[total_row], start=1):
+            cell.font = total_font; cell.fill = total_fill; cell.border = total_border
+            if j in (4, 5): cell.alignment = right_al; cell.number_format = money_fmt
+            else:            cell.alignment = left
+        ws.row_dimensions[total_row].height = 18
+        for col_idx, width in enumerate([30, 25, 16, 20, 18, 12, 16], start=1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = width
+        ws.freeze_panes = 'A5'
+        ws.auto_filter.ref = f'A4:{openpyxl.utils.get_column_letter(NUM_COLS)}4'
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="reporte_pagos.xlsx"'
+        wb.save(response)
+        return response
+
+    return render(request, 'payments_by_project_name.html', context)
+
+
+@login_required
+def payment_analysis(request):
+    start_date = request.GET.get('start_date')
+    end_date   = request.GET.get('end_date')
+    payments   = Pago.objects.filter(activo=True)
+    if start_date:
+        try:
+            payments = payments.filter(fecha__gte=datetime.strptime(start_date, "%Y-%m-%d").date())
+        except ValueError:
+            pass
+    if end_date:
+        try:
+            payments = payments.filter(fecha__lte=datetime.strptime(end_date, "%Y-%m-%d").date())
+        except ValueError:
+            pass
+    payment_type_counts = payments.values('tipo_pago').annotate(count=Count('tipo_pago'))
+    type_labels = [t['tipo_pago'] for t in payment_type_counts]
+    type_values = [t['count'] for t in payment_type_counts]
+    fig, ax = plt.subplots()
+    ax.pie(type_values, labels=type_labels, autopct='%1.1f%%', startangle=90)
+    ax.axis('equal')
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    graphic = base64.b64encode(buf.getvalue()).decode('utf-8')
+    plt.close(fig)
+    return render(request, 'payment_analysis.html', {
+        'graphic': graphic,
+        'payment_type_counts': payment_type_counts,
+        'start_date': start_date,
+        'end_date': end_date,
+        'message': None if payments.exists() else 'No hay pagos en este rango de fechas.',
+    })

@@ -1,10 +1,10 @@
 from django.conf import settings
 from django.db import models
-from django.contrib.auth.models import AbstractUser
+from django.contrib.auth import get_user_model
 from django.db.models import Q
 
 # Señal para actualizar automáticamente el estado del proyecto
-from django.db.models.signals import pre_save, post_save
+from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
 
 from django.db.models import Sum
@@ -79,38 +79,6 @@ class Cliente(AuditModel):
         self.save()
 
 
-# Empleado (es también el usuario del sistema)
-class Empleado(AbstractUser):
-    POSITION_CHOICES = [
-        ('administrador', 'Administrador'),
-        ('gerente', 'Gerente'),
-        ('instalador', 'Instalador'),
-        ('tecnico_soporte', 'Técnico de Soporte'),
-        ('secretaria', 'Secretaria'),
-    ]
-
-    nombre = models.CharField(max_length=100, verbose_name="Nombre")
-    apellido_paterno = models.CharField(max_length=100, verbose_name="Apellido Paterno")
-    apellido_materno = models.CharField(max_length=100, blank=True, null=True, verbose_name="Apellido Materno")
-    numero_celular = models.CharField(max_length=15, blank=True, verbose_name="Numero Celular")
-    cargo = models.CharField(
-        max_length=50,
-        choices=POSITION_CHOICES,
-        default='administrador',
-        verbose_name="Cargo"
-    )
-    carnet_identidad = models.CharField(max_length=20, unique=True, verbose_name="Carnet de Identidad")
-    # is_active ya existe en AbstractUser — no se repite aquí
-
-    class Meta:
-        verbose_name = 'Empleado'
-        verbose_name_plural = 'Empleados'
-
-    def __str__(self):
-        return f"{self.nombre} {self.apellido_paterno} {self.apellido_materno or ''} - CI: {self.carnet_identidad}"
-
-
-
 # Proyecto
 class Proyecto(AuditModel):
     PROJECT_STATUS_CHOICES = [
@@ -143,13 +111,11 @@ class Proyecto(AuditModel):
     # por la señal post_save/post_delete de Pago. Nunca modificar directamente.
     estado_pago = models.CharField(max_length=20, choices=PAYMENT_STATE_CHOICES, default='no_pagado', db_index=True, verbose_name="Estado de Pago")
     creado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name="Creado por")
-    # null=True por compatibilidad de datos. El formulario lo exige siempre (blank=False en ProjectForm).
-    # Todo proyecto debe tener cliente asignado — esta restricción se refuerza en capa de formulario.
-    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, null=True, blank=True, verbose_name="Contratista")
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, verbose_name="Contratista")
 
     monto_total = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Monto Total del Proyecto")
     equipo = models.ManyToManyField(
-        'Empleado', blank=True,
+        settings.AUTH_USER_MODEL, blank=True,
         related_name='proyectos_asignados',
         verbose_name="Equipo del Proyecto",
     )
@@ -167,6 +133,10 @@ class Proyecto(AuditModel):
             models.CheckConstraint(
                 condition=Q(fecha_fin__isnull=True) | Q(fecha_inicio__isnull=True) | Q(fecha_fin__gte=models.F('fecha_inicio')),
                 name='proyecto_fecha_fin_gte_inicio',
+            ),
+            models.CheckConstraint(
+                condition=Q(monto_total__gte=0),
+                name='proyecto_monto_total_no_negativo',
             ),
         ]
 
@@ -267,132 +237,6 @@ class Progreso(AuditModel):
 
     def __str__(self):
         return f"{self.proyecto.nombre} — {self.porcentaje}% ({self.fecha})"
-
-
-# Contrato unificado (con empleado o con cliente/proyecto)
-class Contrato(AuditModel):
-    TIPO_CHOICES = [
-        ('empleado', 'Contrato con Empleado'),
-        ('proyecto', 'Contrato con Cliente'),
-    ]
-    TIPO_SALARIO_CHOICES = [
-        ('mensual', 'Mensual (30 días)'),
-        ('semanal', 'Semanal (7 días)'),
-    ]
-    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, verbose_name="Tipo de Contrato")
-    tipo_salario = models.CharField(max_length=10, choices=TIPO_SALARIO_CHOICES, default='mensual', null=True, blank=True, verbose_name="Tipo de Pago")
-    proyecto = models.ForeignKey(
-        Proyecto, on_delete=models.CASCADE,
-        null=True, blank=True,
-        related_name='contratos', verbose_name="Proyecto"
-    )
-    # Solo para tipo='empleado'
-    empleado = models.ForeignKey(
-        Empleado, on_delete=models.CASCADE,
-        null=True, blank=True,
-        related_name='contratos', verbose_name="Empleado"
-    )
-    fecha_firma = models.DateField(verbose_name="Fecha de Firma")
-    fecha_inicio = models.DateField(verbose_name="Fecha de Inicio")
-    fecha_fin = models.DateField(verbose_name="Fecha de Fin")
-    monto_acordado = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto Acordado (Bs.)")
-    observaciones = models.TextField(blank=True, verbose_name="Observaciones")
-    documento = models.FileField(upload_to='contratos/', null=True, blank=True, verbose_name="Documento")
-
-    class Meta:
-        verbose_name = 'Contrato'
-        verbose_name_plural = 'Contratos'
-        ordering = ['-created']
-        constraints = [
-            models.CheckConstraint(
-                condition=~Q(tipo='empleado') | Q(empleado__isnull=False),
-                name='contrato_empleado_required_when_tipo_empleado',
-            ),
-            models.CheckConstraint(
-                condition=~Q(tipo='proyecto') | Q(proyecto__isnull=False),
-                name='contrato_proyecto_required_when_tipo_proyecto',
-            ),
-            models.CheckConstraint(
-                condition=Q(fecha_fin__gte=models.F('fecha_inicio')),
-                name='contrato_fecha_fin_gte_inicio',
-            ),
-            models.CheckConstraint(
-                condition=Q(fecha_firma__lte=models.F('fecha_inicio')),
-                name='contrato_fecha_firma_lte_inicio',
-            ),
-            # Un proyecto solo puede tener un contrato con el cliente activo a la vez
-            models.UniqueConstraint(
-                fields=['proyecto'],
-                condition=Q(tipo='proyecto', activo=True),
-                name='unique_contrato_proyecto_activo',
-            ),
-            # Un empleado solo puede tener un contrato activo a la vez
-            models.UniqueConstraint(
-                fields=['empleado'],
-                condition=Q(tipo='empleado', activo=True),
-                name='unique_contrato_empleado_activo',
-            ),
-        ]
-
-    def __str__(self):
-        if self.tipo == 'empleado' and self.empleado:
-            proyecto_str = f" / {self.proyecto.nombre}" if self.proyecto else ""
-            return f"Contrato empleado — {self.empleado.nombre} {self.empleado.apellido_paterno}{proyecto_str}"
-        return f"Contrato proyecto — {self.proyecto.nombre}"
-
-    @property
-    def monto_diario(self):
-        """Monto a pagar por cada día trabajado según el período del contrato."""
-        if self.tipo == 'empleado' and self.monto_acordado:
-            divisor = 7 if self.tipo_salario == 'semanal' else 30
-            return self.monto_acordado / divisor
-        return self.monto_acordado
-
-
-class JornadaEmpleado(AuditModel):
-    """Registro diario de trabajo de un empleado: en qué proyecto trabajó y cuánto."""
-    DIAS_CHOICES = [
-        ('0.5', 'Medio día (0.5)'),
-        ('1.0', 'Día completo (1.0)'),
-    ]
-
-    contrato = models.ForeignKey(
-        Contrato, on_delete=models.CASCADE,
-        related_name='jornadas', verbose_name="Contrato"
-    )
-    proyecto = models.ForeignKey(
-        'Proyecto', on_delete=models.PROTECT,
-        related_name='jornadas_empleados', verbose_name="Proyecto trabajado"
-    )
-    fecha = models.DateField(verbose_name="Fecha")
-    dias = models.DecimalField(
-        max_digits=3, decimal_places=1, default=1.0,
-        verbose_name="Días trabajados",
-        validators=[MinValueValidator(0.5), MaxValueValidator(1.0)],
-    )
-    observacion = models.TextField(blank=True, verbose_name="Observación")
-    # Trazabilidad: qué PagoEmpleado cubre esta jornada. NULL = pendiente de pago.
-    pago = models.ForeignKey(
-        'pagos.PagoEmpleado',
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='jornadas_cubiertas',
-        verbose_name="Pago que cubre esta jornada",
-    )
-
-    class Meta:
-        verbose_name = 'Jornada de Empleado'
-        verbose_name_plural = 'Jornadas de Empleados'
-        ordering = ['-fecha']
-
-    def __str__(self):
-        emp = self.contrato.empleado
-        return f"{emp.nombre} {emp.apellido_paterno} — {self.fecha} ({self.dias}d) — {self.proyecto.nombre}"
-
-    @property
-    def monto(self):
-        """Monto a cobrar por esta jornada."""
-        return self.dias * self.contrato.monto_diario
 
 
 # ── Sede (punto de instalación dentro de un proyecto) ────────────────────────
@@ -529,6 +373,44 @@ class Notificacion(models.Model):
 
 # ── Señal: al completar todas las tareas de una sede, notificar a admins/gerentes ──
 
+# ── Pago del cliente al proyecto ─────────────────────────────────────────────
+
+METODOS_PAGO = [
+    ('efectivo',      'Efectivo'),
+    ('transferencia', 'Transferencia'),
+]
+
+
+class Pago(AuditModel):
+    monto             = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto (Bs.)")
+    fecha             = models.DateField(db_index=True, verbose_name="Fecha de Pago")
+    tipo_pago         = models.CharField(max_length=15, choices=METODOS_PAGO, default='efectivo', verbose_name="Método de Pago")
+    numero_referencia = models.CharField(max_length=100, blank=True, default='', verbose_name="N° Referencia / Comprobante")
+    proyecto          = models.ForeignKey(Proyecto, on_delete=models.PROTECT, related_name='pagos', verbose_name="Proyecto")
+
+    class Meta:
+        verbose_name_plural = 'Pagos'
+        db_table = 'projects_pago'
+        ordering = ['-fecha']
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(monto__gt=0),
+                name='pago_monto_positivo',
+            )
+        ]
+
+    def __str__(self):
+        return f"Pago de {self.monto} ({self.get_tipo_pago_display()})"
+
+
+@receiver(post_save, sender='projects.Pago')
+@receiver(post_delete, sender='projects.Pago')
+def update_project_payment_status(sender, instance, **kwargs):
+    instance.proyecto._sync_estado_pago()
+
+
+# ── Señal: notificaciones de sede ────────────────────────────────────────────
+
 @receiver(post_save, sender=TareaChecklist)
 def notificar_sede_completada(sender, instance, **kwargs):
     """
@@ -558,7 +440,7 @@ def notificar_sede_completada(sender, instance, **kwargs):
             Proyecto.objects.filter(pk=proyecto.pk).update(estado_proyecto=nuevo_estado)
 
     if sede.estado == 'completado':
-        admins = Empleado.objects.filter(
+        admins = get_user_model().objects.filter(
             cargo__in=('administrador', 'gerente'), is_active=True
         )
         for admin in admins:

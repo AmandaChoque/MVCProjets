@@ -3,10 +3,9 @@ from datetime import date
 
 from django.test import TestCase
 
-from .models import Cliente, Proyecto, Empleado, Progreso
-from .form import ProgresoForm
-from pagos.models import Pago
-from pagos.forms import PaymentForm
+from .models import Cliente, Proyecto, Pago, Progreso
+from .form import ProgresoForm, PaymentForm
+from empleados.models import Empleado
 from inventario.forms import InsumoForm
 
 

@@ -24,6 +24,12 @@
       {{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }} —
       <span class="badge bg-secondary fw-normal">{{ contrato.get_tipo_salario_display }}</span>
       <span class="badge bg-primary fw-normal">Bs. {{ contrato.monto_diario|floatformat:2 }}/día</span>
+      <span class="badge bg-dark fw-normal">Monto acordado: Bs. {{ contrato.monto_acordado|floatformat:2 }}</span>
+      {% if contrato.activo %}
+        <span class="badge bg-success fw-normal">Activo</span>
+      {% else %}
+        <span class="badge bg-secondary fw-normal">Inactivo</span>
+      {% endif %}
     </span>
   </div>
 

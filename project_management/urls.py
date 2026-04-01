@@ -19,6 +19,7 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from projects import views
+from empleados import views as emp_views
 
 
 
@@ -66,34 +67,13 @@ urlpatterns = [
     path('notificaciones/', views.notificaciones_list, name='notificaciones_list'),
     path('notificaciones/<int:id_notif>/leer/', views.notificacion_marcar_leida, name='notificacion_leer'),
     path('notificaciones/leer-todas/', views.notificaciones_marcar_todas, name='notificaciones_leer_todas'),
-    # Dashboard instalador
-    path('mi-trabajo/', views.instalador_dashboard, name='instalador_dashboard'),
-
     # Equipo del Proyecto
     path('projects/<int:id_project>/equipo/agregar/', views.equipo_add, name='equipo_add'),
     path('projects/<int:id_project>/equipo/<int:id_employee>/remover/', views.equipo_remove, name='equipo_remove'),
-    # Contratos de Empleados
-    path('contratos/empleado/<int:id_contrato>/', views.contrato_empleado_detail, name='contrato_empleado_detail'),
-    path('contratos/empleado/<int:id_contrato>/deactivate/', views.deactivate_contrato_empleado, name='contrato_empleado_deactivate'),
-    # Jornadas de Empleados
-    path('contratos/empleado/<int:id_contrato>/jornadas/nueva/', views.create_jornada, name='create_jornada'),
-    path('jornadas/<int:id_jornada>/', views.jornada_detail, name='jornada_detail'),
-    path('jornadas/<int:id_jornada>/eliminar/', views.deactivate_jornada, name='deactivate_jornada'),
     # Contrato del Proyecto
     path('projects/<int:id_project>/contrato-proyecto/nuevo/', views.create_contrato_proyecto, name='create_contrato_proyecto'),
     path('contratos/proyecto/<int:id_contrato>/', views.contrato_proyecto_detail, name='contrato_proyecto_detail'),
     path('contratos/proyecto/<int:id_contrato>/deactivate/', views.deactivate_contrato_proyecto, name='contrato_proyecto_deactivate'),
-
-    # Contrato desde perfil del empleado
-    path('employees/<int:id_employee>/contratos/nuevo/', views.create_contrato_from_employee, name='create_contrato_from_employee'),
-
-    # Employees
-    path('employees/', views.employees, name='employees'),
-    path('employees/create/', views.create_employee, name='create_employee'),
-    path('employees/carga/', views.employee_workload, name='employee_workload'),
-    path('employees/<int:id_employee>/', views.employee_detail, name='employee_detail'),
-    path('employees/<int:id_employee>/view/', views.employee_view, name='employee_view'),
-    path('employees/<int:id_employee>/deactivate/', views.deactivate_employee, name='employee_deactivate'),
 
     # clientes
     path('clientes/', views.clientes, name='clientes'),
@@ -106,10 +86,19 @@ urlpatterns = [
     path('reporte-analisis/', views.project_analysis, name='project_analysis'),
     path('project_report/', views.project_report, name='project_report'),
 
+    # Módulo Empleados
+    path('', include('empleados.urls')),
+
     # Módulo Inventario
     path('', include('inventario.urls')),
 
-    # Módulo Pagos
-    path('', include('pagos.urls')),
+    # Pagos del cliente (proyecto)
+    path('payments/',                                views.payment_list,                      name='payments'),
+    path('payments/create/',                         views.create_payment,                    name='create_payment'),
+    path('payments/<int:id_payment>/',               views.payment_detail,                    name='payment_detail'),
+    path('payments/<int:id_payment>/view/',          views.payment_view,                      name='payment_view'),
+    path('payments/<int:id_payment>/deactivate/',    views.deactivate_payment,                name='payment_deactivate'),
+    path('payments/filter/',                         views.filter_payments_by_project_name,   name='filter_payments_by_project_name'),
+    path('payment-analysis/',                        views.payment_analysis,                  name='payment_analysis'),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
