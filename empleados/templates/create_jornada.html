@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% block content %}
+<main class="container-fluid px-5 py-4">
+  <div class="mb-4">
+    <h4 class="fw-semibold mb-1">Registrar Jornada</h4>
+    <span class="text-muted">
+      {{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }} —
+      Contrato {{ contrato.get_tipo_salario_display }} /
+      Bs. {{ contrato.monto_diario|floatformat:2 }} por día
+    </span>
+  </div>
+
+  <div class="row g-4">
+
+    <!-- Formulario -->
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-light fw-semibold small">Nueva Jornada</div>
+        <div class="card-body p-4">
+          <form method="POST">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger small">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>
+            {% endif %}
+
+            <div class="mb-3">
+              <label class="form-label">Proyecto <span class="text-danger">*</span></label>
+              {{ form.proyecto }}
+              {% if form.proyecto.errors %}<div class="text-danger small mt-1">{% for e in form.proyecto.errors %}{{ e }}{% endfor %}</div>{% endif %}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Fecha <span class="text-danger">*</span></label>
+              {{ form.fecha }}
+              {% if form.fecha.errors %}<div class="text-danger small mt-1">{% for e in form.fecha.errors %}{{ e }}{% endfor %}</div>{% endif %}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Días trabajados <span class="text-danger">*</span></label>
+              {{ form.dias }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Observación</label>
+              {{ form.observacion }}
+            </div>
+
+            <div class="d-flex justify-content-between mt-4">
+              <a href="{% url 'contrato_empleado_detail' contrato.id %}" class="btn btn-outline-secondary">Cancelar</a>
+              <button type="submit" class="btn btn-primary px-4">Guardar jornada</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Balance + historial reciente -->
+    <div class="col-lg-7">
+      <!-- Balance -->
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+          <div class="card border-0 shadow-sm text-center py-3">
+            <div class="fs-4 fw-bold text-primary">{{ total_dias }}</div>
+            <div class="text-muted small">Días trabajados</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card border-0 shadow-sm text-center py-3">
+            <div class="fs-5 fw-bold text-success">Bs. {{ total_ganado|floatformat:2 }}</div>
+            <div class="text-muted small">Total devengado</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card border-0 shadow-sm text-center py-3">
+            <div class="fs-5 fw-bold text-info">Bs. {{ total_pagado|floatformat:2 }}</div>
+            <div class="text-muted small">Total pagado</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card border-0 shadow-sm text-center py-3">
+            <div class="fs-5 fw-bold {% if saldo_pendiente > 0 %}text-danger{% else %}text-success{% endif %}">
+              Bs. {{ saldo_pendiente|floatformat:2 }}
+            </div>
+            <div class="text-muted small">Saldo pendiente</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Historial de jornadas -->
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light fw-semibold small">Jornadas registradas</div>
+        <div class="card-body p-0">
+          {% if jornadas %}
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0 small">
+              <thead class="table-light text-uppercase" style="font-size:0.7rem;">
+                <tr>
+                  <th class="px-3">Fecha</th>
+                  <th>Proyecto</th>
+                  <th class="text-center">Días</th>
+                  <th class="text-end px-3">Monto (Bs.)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for j in jornadas %}
+                <tr>
+                  <td class="px-3">{{ j.fecha|date:"d/m/Y" }}</td>
+                  <td>{{ j.proyecto.nombre }}</td>
+                  <td class="text-center">
+                    {% if j.dias == 1.0 %}
+                      <span class="badge bg-primary">Día completo</span>
+                    {% else %}
+                      <span class="badge bg-secondary">Medio día</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end px-3 fw-semibold">{{ j.monto|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+          {% else %}
+          <p class="text-muted small p-3 mb-0">Sin jornadas registradas aún.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+{% endblock %}

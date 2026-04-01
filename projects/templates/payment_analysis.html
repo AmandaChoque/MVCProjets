@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container-fluid py-3">
+
+  <!-- ======================= ENCABEZADO ======================= -->
+  <div class="mb-2 d-flex justify-content-between align-items-center">
+    <h5 class="fw-semibold text-secondary mb-0">Análisis de Pagos</h5>
+  </div>
+
+  <!-- ======================= FILTROS ======================= -->
+  <div class="card mb-3">
+    <div class="card-body py-2">
+      <form method="get" action="{% url 'payment_analysis' %}" class="row g-2 align-items-end">
+
+        <div class="col-md-4">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Fecha inicio</label>
+          <input type="date" name="start_date" class="form-control form-control-sm"
+                 value="{{ start_date }}">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Fecha fin</label>
+          <input type="date" name="end_date" class="form-control form-control-sm"
+                 value="{{ end_date }}">
+        </div>
+
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
+        </div>
+
+        <div class="col-md-2">
+          <a href="{% url 'payment_analysis' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  {% if message %}
+  <div class="alert alert-info small" role="alert">
+    {{ message }}
+  </div>
+  {% else %}
+
+  <!-- ======================= GRÁFICO ======================= -->
+  <div class="card mb-3">
+    <div class="card-header bg-light py-2">
+      <span class="fw-semibold small">Distribución de Pagos por Tipo</span>
+    </div>
+    <div class="card-body text-center py-3">
+      <img src="data:image/png;base64,{{ graphic }}" alt="Gráfico de Torta"
+           class="img-fluid" style="max-height: 320px;">
+    </div>
+  </div>
+
+  <!-- ======================= TABLAS RESUMEN ======================= -->
+  <div class="row g-3">
+
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header bg-light py-2">
+          <span class="fw-semibold small">Conteo por Tipo</span>
+        </div>
+        <div class="card-body p-0">
+          <table class="table table-sm table-hover align-middle small mb-0">
+            <thead class="table-light text-uppercase fw-semibold">
+              <tr>
+                <th>Tipo de Pago</th>
+                <th class="text-center">Cantidad</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for type in payment_type_counts %}
+              <tr>
+                <td>
+                  {% if type.tipo_pago == 'transferencia' %}
+                    <span class="badge bg-primary">Transferencia</span>
+                  {% else %}
+                    <span class="badge bg-info text-dark">Efectivo</span>
+                  {% endif %}
+                </td>
+                <td class="text-center fw-semibold">{{ type.count }}</td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="2" class="text-center text-muted py-2">Sin datos</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

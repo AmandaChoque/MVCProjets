@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ficha de Empleado — {{ employee.carnet_identidad }}</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 18px 22px;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 9px;
+      color: #222;
+      background-color: #ffffff;
+    }
+
+    .section { margin-bottom: 10px; }
+    .section-title {
+      background-color: #1B4D90;
+      color: #D4B84A;
+      font-size: 9px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 4px 8px;
+      margin-bottom: 5px;
+    }
+
+    table.data { width: 100%; border-collapse: collapse; }
+    table.data td {
+      padding: 4px 7px;
+      border: 1px solid #dde2ed;
+      font-size: 9px;
+      vertical-align: top;
+    }
+    table.data td.lbl {
+      font-weight: bold;
+      color: #0F2D5A;
+      background-color: #f1f3f6;
+      width: 30%;
+      white-space: nowrap;
+    }
+    table.data tr:nth-child(even) td.lbl { background-color: #eaecf2; }
+
+    table.list { width: 100%; border-collapse: collapse; }
+    table.list thead tr { background-color: #d0d8e8; }
+    table.list th {
+      padding: 4px 6px;
+      font-size: 8px;
+      font-weight: bold;
+      color: #0F2D5A;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    table.list td {
+      padding: 4px 6px;
+      border-bottom: 1px solid #dde2ed;
+      font-size: 9px;
+    }
+    table.list tr:nth-child(even) td { background-color: #f1f3f6; }
+    table.list tfoot td {
+      font-weight: bold;
+      border-top: 2px solid #aab8cc;
+      background-color: #f7f8fa;
+      color: #333;
+      padding: 4px 6px;
+      font-size: 9px;
+    }
+
+    /* Resumen financiero */
+    table.fin { width: 100%; border-collapse: collapse; }
+    table.fin td {
+      padding: 5px 8px;
+      border: 1px solid #dde2ed;
+      font-size: 9px;
+    }
+    table.fin td.fin-lbl {
+      background-color: #f1f3f6;
+      font-weight: bold;
+      color: #0F2D5A;
+      width: 50%;
+    }
+    table.fin td.fin-val { text-align: right; }
+    table.fin tr.fin-total td {
+      background-color: #0F2D5A;
+      color: #D4B84A;
+      font-weight: bold;
+      font-size: 10px;
+    }
+    table.fin tr.fin-total td.fin-val { text-align: right; }
+
+    table.two-col { width: 100%; border-collapse: collapse; }
+    table.two-col > tr > td { vertical-align: top; padding: 0; }
+    table.two-col > tr > td:first-child { padding-right: 6px; }
+
+    .infobar {
+      background-color: #f1f3f6;
+      border: 1px solid #dde2ed;
+      padding: 4px 10px;
+      font-size: 8px;
+      color: #555;
+      margin-bottom: 10px;
+    }
+
+    .contrato-header {
+      background-color: #f1f3f6;
+      border-left: 3px solid #aab8cc;
+      padding: 4px 8px;
+      font-size: 9px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 4px;
+    }
+    .contrato-block { margin-bottom: 10px; }
+
+    .badge {
+      padding: 2px 6px;
+      border-radius: 2px;
+      font-size: 8px;
+      font-weight: bold;
+    }
+    .badge-ok   { background-color: #d4edda; color: #155724; }
+    .badge-warn { background-color: #fff3cd; color: #856404; }
+    .badge-info { background-color: #dce8f8; color: #0F2D5A; }
+
+    .text-right  { text-align: right; }
+    .text-center { text-align: center; }
+    .no-data { color: #888; font-style: italic; padding: 6px 8px; font-size: 9px; }
+  </style>
+</head>
+<body>
+
+  <!-- ══ ENCABEZADO ══ -->
+  <table width="100%" style="border-collapse:collapse; margin-bottom:8px; background-color:#0F2D5A;">
+    <tr>
+      <td style="padding:0; width:6px; background-color:#D4B84A;"></td>
+      <td style="padding:6px 12px; vertical-align:middle;">
+        <div style="font-size:8px; color:#D4B84A; text-transform:uppercase; letter-spacing:0.1em; font-weight:bold; margin-bottom:1px;">SOBOTEC S.R.L. — Ficha de Empleado</div>
+        <div style="font-size:16px; font-weight:bold; color:#ffffff;">{{ employee.nombre }} {{ employee.apellido_paterno }} {{ employee.apellido_materno }}</div>
+        <div style="font-size:9px; color:#a0b8d8;">{{ employee.get_cargo_display }} &nbsp;|&nbsp; CI: {{ employee.carnet_identidad }}</div>
+      </td>
+      <td style="padding:6px 14px; vertical-align:middle; text-align:right; white-space:nowrap; width:140px;">
+        <div style="font-size:8px; color:#D4B84A; text-transform:uppercase; letter-spacing:0.06em;">Generado el</div>
+        <div style="font-size:11px; font-weight:bold; color:#ffffff;">{{ now|date:"d/m/Y" }}</div>
+        <div style="font-size:10px; color:#a0b8d8;">{{ now|date:"H:i" }} hrs</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- ══ BARRA INFO ══ -->
+  <div class="infobar">
+    <b style="color:#0F2D5A;">Generado por:</b> {{ generado_por }}
+  </div>
+
+  <!-- ══ DOS COLUMNAS: DATOS PERSONALES + RESUMEN ══ -->
+  <table class="two-col" style="margin-bottom:10px;">
+    <tr>
+      <td style="width:55%;">
+        <div class="section-title">Datos del Empleado</div>
+        <table class="data">
+          <tr>
+            <td class="lbl">Nombre completo</td>
+            <td>{{ employee.nombre }} {{ employee.apellido_paterno }} {{ employee.apellido_materno|default:"" }}</td>
+          </tr>
+          <tr>
+            <td class="lbl">Cargo</td>
+            <td>{{ employee.get_cargo_display }}</td>
+          </tr>
+          <tr>
+            <td class="lbl">Carnet de Identidad</td>
+            <td>{{ employee.carnet_identidad }}</td>
+          </tr>
+          <tr>
+            <td class="lbl">Celular</td>
+            <td>{{ employee.numero_celular|default:"—" }}</td>
+          </tr>
+          <tr>
+            <td class="lbl">Correo</td>
+            <td>{{ employee.user.email|default:"—" }}</td>
+          </tr>
+          <tr>
+            <td class="lbl">Fecha contratación</td>
+            <td>{{ employee.fecha_contratacion|date:"d/m/Y"|default:"—" }}</td>
+          </tr>
+          <tr>
+            <td class="lbl">Salario base</td>
+            <td>Bs. {{ employee.salario|floatformat:2|default:"—" }}</td>
+          </tr>
+        </table>
+      </td>
+      <td style="width:45%; padding-left:6px;">
+        <div class="section-title">Resumen de Pagos</div>
+        <table class="fin">
+          <tr>
+            <td class="fin-lbl">Total contratos</td>
+            <td class="fin-val">{{ contratos_con_pagos|length }}</td>
+          </tr>
+          <tr>
+            <td class="fin-lbl">Total acordado</td>
+            <td class="fin-val">Bs. {{ total_acordado_global|floatformat:2 }}</td>
+          </tr>
+          <tr>
+            <td class="fin-lbl">Total pagado</td>
+            <td class="fin-val">Bs. {{ total_pagado_global|floatformat:2 }}</td>
+          </tr>
+          <tr class="fin-total">
+            <td class="fin-lbl" style="color:#D4B84A;">Saldo pendiente</td>
+            <td class="fin-val" style="color:#D4B84A;">Bs. {{ saldo_global|floatformat:2 }}</td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+
+  <!-- ══ CONTRATOS Y PAGOS ══ -->
+  <div class="section">
+    <div class="section-title">Contratos y Pagos por Proyecto</div>
+
+    {% if contratos_con_pagos %}
+      {% for item in contratos_con_pagos %}
+      <div class="contrato-block">
+        <div class="contrato-header">
+          Proyecto: {{ item.contrato.proyecto.nombre }} &nbsp;|&nbsp; {{ item.contrato.proyecto.codigo }}
+          &nbsp;|&nbsp; Estado: {{ item.contrato.proyecto.get_estado_proyecto_display }}
+        </div>
+        <table class="data" style="margin-bottom:4px;">
+          <tr>
+            <td class="lbl" style="width:22%;">Período contrato</td>
+            <td style="width:28%;">{{ item.contrato.fecha_inicio|date:"d/m/Y"|default:"—" }} — {{ item.contrato.fecha_fin|date:"d/m/Y"|default:"—" }}</td>
+            <td class="lbl" style="width:22%;">Monto acordado</td>
+            <td style="width:28%; text-align:right;">Bs. {{ item.contrato.monto_acordado|floatformat:2 }}</td>
+          </tr>
+          <tr>
+            <td class="lbl" style="width:22%;">Total pagado</td>
+            <td style="width:28%; text-align:right;">Bs. {{ item.total_pagado|floatformat:2 }}</td>
+            <td class="lbl" style="width:22%;">Saldo pendiente</td>
+            <td style="width:28%; text-align:right;">Bs. {{ item.saldo|floatformat:2 }}</td>
+          </tr>
+          {% if item.contrato.observaciones %}
+          <tr>
+            <td class="lbl">Observaciones</td>
+            <td colspan="3">{{ item.contrato.observaciones }}</td>
+          </tr>
+          {% endif %}
+        </table>
+
+        {% if item.pagos %}
+        <table class="list">
+          <thead>
+            <tr>
+              <th style="width:22%;">Fecha</th>
+              <th style="width:25%; text-align:right;">Monto (Bs.)</th>
+              <th style="width:53%;">Concepto</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for pago in item.pagos %}
+            <tr>
+              <td>{{ pago.fecha|date:"d/m/Y" }}</td>
+              <td class="text-right">{{ pago.monto|floatformat:2 }}</td>
+              <td>{{ pago.concepto|default:"—" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td>TOTAL</td>
+              <td class="text-right">{{ item.total_pagado|floatformat:2 }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+        {% else %}
+        <p class="no-data">Sin pagos registrados para este contrato.</p>
+        {% endif %}
+      </div>
+      {% endfor %}
+    {% else %}
+    <p class="no-data">Este empleado no tiene contratos activos.</p>
+    {% endif %}
+  </div>
+
+</body>
+</html>

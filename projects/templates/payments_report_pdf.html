@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reporte de Pagos</title>
+  <style>
+    @page {
+      size: A4 landscape;
+      margin: 20px 24px;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 11px;
+      margin: 0;
+      color: #222;
+      background-color: #f1f3f6;
+    }
+
+    /* ── RESUMEN ── */
+    .summary {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+    }
+    .summary td {
+      width: 25%;
+      padding: 9px 12px;
+      border: 1px solid #dde2ed;
+      border-left: 3px solid #c0c8d8;
+      text-align: center;
+      background-color: #ffffff;
+    }
+
+    .summary .label {
+      font-size: 9px;
+      text-transform: uppercase;
+      color: #888;
+      letter-spacing: 0.05em;
+    }
+    .summary .value {
+      font-size: 16px;
+      font-weight: bold;
+      margin-top: 3px;
+      color: #333;
+    }
+    .value.pagado    { color: #333; }
+    .value.pendiente { color: #333; }
+    .value.monto     { color: #333; }
+
+    /* ── TABLA ── */
+    table.main {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px;
+    }
+    table.main thead tr {
+      background-color: #0F2D5A;
+    }
+    table.main th {
+      padding: 6px 8px;
+      text-align: left;
+      font-size: 9px;
+      text-transform: uppercase;
+      color: #D4B84A;
+      letter-spacing: 0.06em;
+      white-space: nowrap;
+    }
+    table.main td {
+      padding: 5px 8px;
+      border-bottom: 1px solid #dde2ed;
+      font-size: 10px;
+      background-color: #ffffff;
+    }
+    table.main tr:nth-child(even) td {
+      background-color: #f1f3f6;
+    }
+    table.main tfoot td {
+      font-weight: bold;
+      border-top: 2px solid #0F2D5A;
+      background-color: #e8edf5;
+      color: #0F2D5A;
+    }
+
+    /* ── BADGES ── */
+    .badge {
+      padding: 2px 7px;
+      border-radius: 3px;
+      font-size: 8px;
+      font-weight: bold;
+    }
+    .badge-pagado    { background-color: #e9e9e9; color: #333; }
+    .badge-pendiente { background-color: #e9e9e9; color: #333; }
+    .badge-transferencia { background-color: #e9e9e9; color: #333; }
+    .badge-efectivo      { background-color: #e9e9e9; color: #333; }
+
+    .text-right { text-align: right; }
+
+    .footer {
+      margin-top: 18px;
+      font-size: 9px;
+      color: #888;
+      text-align: right;
+      border-top: 1px solid #D4B84A;
+      padding-top: 6px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══ ENCABEZADO ══ -->
+  <table width="100%" style="border-collapse:collapse; margin-bottom:16px; background-color:#0F2D5A;">
+    <tr>
+      <td style="padding:0; width:7px; background-color:#D4B84A;"></td>
+      <td style="padding:4px 12px; vertical-align:middle;">
+        <div style="font-size:9px; font-weight:bold; color:#D4B84A; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:1px;">SOBOTEC S.R.L. — Sistema de Gestión de Proyectos</div>
+        <div style="font-size:14px; font-weight:bold; color:#ffffff; margin-bottom:0px;">Reporte de Pagos</div>
+      </td>
+      <td style="padding:4px 12px; vertical-align:middle; text-align:right; white-space:nowrap; width:150px;">
+        <div style="font-size:8px; color:#D4B84A; text-transform:uppercase; letter-spacing:0.06em;">Generado el</div>
+        <div style="font-size:11px; font-weight:bold; color:#ffffff;">{{ now|date:"d/m/Y" }}</div>
+        <div style="font-size:10px; color:#a0b8d8;">{{ now|date:"H:i" }} hrs</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- ══ BARRA DE INFO ══ -->
+  <table width="100%" style="border-collapse:collapse; margin-bottom:10px; background-color:#f1f3f6; border:1px solid #dde2ed;">
+    <tr>
+      <td style="padding:5px 12px; font-size:9px; color:#444;">
+        <b style="color:#0F2D5A;">Generado por:</b> {{ generado_por }}
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <b style="color:#0F2D5A;">Filtros:</b>
+        {% if project_name %} Proyecto: <b>{{ project_name }}</b>{% endif %}
+        {% if start_date %} &nbsp;|&nbsp; Período: <b>{{ start_date }} — {{ end_date|default:"hoy" }}</b>{% endif %}
+        {% if filter_tipo %} &nbsp;|&nbsp; Tipo: <b>{{ filter_tipo }}</b>{% endif %}
+        {% if not project_name and not start_date and not filter_tipo %} <i style="color:#888;">Sin filtros aplicados</i>{% endif %}
+      </td>
+    </tr>
+  </table>
+
+  <!-- ══ RESUMEN ══ -->
+  <table class="summary">
+    <tr>
+      <td class="col-total">
+        <div class="label">Total Registros</div>
+        <div class="value">{{ payments|length }}</div>
+      </td>
+      <td class="col-monto">
+        <div class="label">Monto Total</div>
+        <div class="value">Bs. {{ total_monto|floatformat:2 }}</div>
+      </td>
+      <td class="col-pagado">
+        <div class="label">En Efectivo</div>
+        <div class="value pagado">Bs. {{ monto_efectivo|floatformat:2 }}</div>
+      </td>
+      <td class="col-pend">
+        <div class="label">Transferencia</div>
+        <div class="value pendiente">Bs. {{ monto_transferencia|floatformat:2 }}</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- ══ TABLA ══ -->
+  <table class="main">
+    <thead>
+      <tr>
+        <th>Proyecto</th>
+        <th>Contratante</th>
+        <th>Estado Proyecto</th>
+        <th style="text-align:right;">Monto Total Proy. (Bs.)</th>
+        <th style="text-align:right;">Monto Pago (Bs.)</th>
+        <th>Fecha</th>
+        <th>Tipo Pago</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for payment in payments %}
+      <tr>
+        <td><strong>{{ payment.proyecto.nombre }}</strong></td>
+        <td>
+          {% if payment.proyecto.cliente %}
+            {{ payment.proyecto.cliente.nombre }} {{ payment.proyecto.cliente.apellido_paterno }}
+          {% else %}—{% endif %}
+        </td>
+        <td>{{ payment.proyecto.get_estado_proyecto_display }}</td>
+        <td style="text-align:right;">{{ payment.proyecto.monto_total|floatformat:2 }}</td>
+        <td style="text-align:right;"><strong>{{ payment.monto|floatformat:2 }}</strong></td>
+        <td>{{ payment.fecha|date:"d/m/Y" }}</td>
+        <td>
+          {% if payment.tipo_pago == 'transferencia' %}
+            <span class="badge badge-transferencia">Transferencia</span>
+          {% else %}
+            <span class="badge badge-efectivo">Efectivo</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7" style="text-align:center; color:#888; padding:12px;">
+          No se encontraron pagos con los filtros seleccionados.
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    {% if payments %}
+    <tfoot>
+      <tr>
+        <td colspan="4" class="text-right">TOTAL:</td>
+        <td style="text-align:right;">{{ total_monto|floatformat:2 }}</td>
+        <td colspan="2"></td>
+      </tr>
+    </tfoot>
+    {% endif %}
+  </table>
+
+
+</body>
+</html>

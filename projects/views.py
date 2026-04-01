@@ -491,10 +491,10 @@ def projects(request):
 
     qs = Proyecto.objects.filter(activo=True).select_related('cliente').order_by('-created')
 
-    # Instalador/Técnico solo ve proyectos donde tiene jornada activa
+    # Instalador/Técnico solo ve proyectos donde es miembro del equipo
     cargo = getattr(request.user, 'cargo', None)
     if cargo in ('instalador', 'tecnico_soporte'):
-        qs = qs.filter(jornadas_empleados__contrato__empleado=request.user, jornadas_empleados__activo=True).distinct()
+        qs = qs.filter(equipo=request.user).distinct()
 
     if search_nombre:
         qs = qs.filter(nombre__icontains=search_nombre)
@@ -669,6 +669,9 @@ def project_view(request, id_project):
 def project_complete(request, id_project):
     project = get_object_or_404(Proyecto, pk=id_project)
     if request.method == 'POST':
+        if not project.contratos.filter(activo=True).exists():
+            messages.error(request, 'No se puede completar el proyecto sin un contrato de proyecto activo.')
+            return redirect('project_view', id_project=project.id)
         project.estado_proyecto = 'completado'
         project.fecha_fin = timezone.now().date()
         project.save(update_fields=['estado_proyecto', 'fecha_fin'])
@@ -1093,6 +1096,9 @@ def create_progreso(request, id_project):
                 project.save(update_fields=['estado_proyecto', 'fecha_fin', 'fecha_inicio'])
                 messages.success(request, 'Progreso registrado. El proyecto fue marcado como completado automáticamente.')
             elif 0 < progreso.porcentaje < 100 and project.estado_proyecto == 'pendiente':
+                if not project.contratos.filter(activo=True).exists():
+                    messages.warning(request, 'Progreso registrado, pero el proyecto no puede iniciar sin un contrato de proyecto activo.')
+                    return redirect('project_view', id_project=project.id)
                 project.estado_proyecto = 'en_progreso'
                 project.fecha_inicio = timezone.now().date()
                 project.save(update_fields=['estado_proyecto', 'fecha_inicio'])
