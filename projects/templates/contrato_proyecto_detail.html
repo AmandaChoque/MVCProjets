@@ -26,6 +26,33 @@
     </ol>
   </nav>
 
+  {% with dias=contrato.dias_retraso pct=contrato.porcentaje_multa_sobre_contrato multa=contrato.multa_acumulada estado=contrato.estado_multa %}
+  {% if estado != 'normal' %}
+  <div class="alert {% if estado == 'critico' %}alert-danger{% else %}alert-warning{% endif %} d-flex align-items-start gap-3 mb-3">
+    <i class="bi {% if estado == 'critico' %}bi-exclamation-octagon-fill fs-4{% else %}bi-clock-history fs-4{% endif %}"></i>
+    <div class="flex-grow-1">
+      <div class="fw-semibold mb-1">
+        {% if estado == 'critico' %}
+          Multa crítica — se superó el 20% del contrato
+        {% else %}
+          Contrato en retraso
+        {% endif %}
+      </div>
+      <div class="d-flex flex-wrap gap-3 small">
+        <span><strong>Días de retraso:</strong> {{ dias }}</span>
+        <span><strong>Multa acumulada:</strong> Bs. {{ multa|floatformat:2 }}</span>
+        <span><strong>% sobre contrato:</strong> {{ pct|floatformat:2 }}%</span>
+      </div>
+      {% if estado == 'critico' %}
+      <div class="mt-1 small text-danger fw-semibold">
+        Superado el umbral del 20% — aplican multas mayores o inhabilitación según contrato.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+  {% endwith %}
+
   <div class="card border-0 shadow-sm rounded-3">
     <div class="card-body p-4">
       <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
@@ -70,6 +97,15 @@
               {% if form.monto_acordado.errors %}
               <div class="text-danger small mt-1">{% for err in form.monto_acordado.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label text-nowrap">% Multa Diaria por Retraso</label>
+              {{ form.porcentaje_multa_diaria }}
+              {% if form.porcentaje_multa_diaria.errors %}
+              <div class="text-danger small mt-1">{% for err in form.porcentaje_multa_diaria.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+              <div class="form-text text-muted">Porcentaje del monto que se aplica por cada día de retraso. Ej: 0.50 = 0.5% diario. Dejar vacío si no aplica.</div>
             </div>
 
             <div class="mb-3">

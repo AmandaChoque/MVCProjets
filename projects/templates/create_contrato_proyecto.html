@@ -73,6 +73,15 @@
             </div>
 
             <div class="mb-3">
+              <label class="form-label">% Multa Diaria por Retraso</label>
+              {{ form.porcentaje_multa_diaria }}
+              {% if form.porcentaje_multa_diaria.errors %}
+              <div class="text-danger small mt-1">{% for err in form.porcentaje_multa_diaria.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+              <div class="form-text text-muted">Porcentaje del monto que se aplica por cada día de retraso. Ej: 0.50. Dejar vacío si no aplica.</div>
+            </div>
+
+            <div class="mb-3">
               <label class="form-label">Documento <span class="text-muted small">(PDF o imagen)</span></label>
               {{ form.documento }}
               {% if form.documento.errors %}

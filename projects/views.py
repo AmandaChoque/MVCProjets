@@ -901,8 +901,33 @@ def dashboard_home(request):
     if getattr(request.user, 'cargo', None) in ('instalador', 'tecnico_soporte'):
         return redirect('projects')
 
+    # ── Filtros de período ─────────────────────────────────────────────────────
+    MESES_NOMBRES = [
+        '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+    ]
+    try:
+        filtro_anio = int(request.GET.get('anio', '')) or None
+    except ValueError:
+        filtro_anio = None
+    try:
+        _mes = int(request.GET.get('mes', ''))
+        filtro_mes = _mes if filtro_anio and 1 <= _mes <= 12 else None
+    except ValueError:
+        filtro_mes = None
+
+    anios_disponibles = sorted(set(
+        Proyecto.objects.filter(activo=True).values_list('created__year', flat=True)
+    ), reverse=True)
+    meses_lista = [{'num': i, 'nombre': MESES_NOMBRES[i]} for i in range(1, 13)]
+
     # ── Proyectos ──────────────────────────────────────────────────────────────
     proyectos_qs = Proyecto.objects.filter(activo=True)
+    if filtro_anio:
+        proyectos_qs = proyectos_qs.filter(created__year=filtro_anio)
+        if filtro_mes:
+            proyectos_qs = proyectos_qs.filter(created__month=filtro_mes)
+
     total_proyectos = proyectos_qs.count()
     pendientes      = proyectos_qs.filter(estado_proyecto='pendiente').count()
     en_progreso     = proyectos_qs.filter(estado_proyecto='en_progreso').count()
@@ -910,7 +935,12 @@ def dashboard_home(request):
 
     # ── Finanzas ───────────────────────────────────────────────────────────────
     total_facturado = proyectos_qs.aggregate(total=Sum('monto_total'))['total'] or 0
-    total_cobrado   = Pago.objects.filter(activo=True).aggregate(total=Sum('monto'))['total'] or 0
+    pagos_qs = Pago.objects.filter(activo=True)
+    if filtro_anio:
+        pagos_qs = pagos_qs.filter(fecha__year=filtro_anio)
+        if filtro_mes:
+            pagos_qs = pagos_qs.filter(fecha__month=filtro_mes)
+    total_cobrado   = pagos_qs.aggregate(total=Sum('monto'))['total'] or 0
     por_cobrar      = total_facturado - total_cobrado
 
     # ── Entidades ──────────────────────────────────────────────────────────────
@@ -1063,6 +1093,14 @@ def dashboard_home(request):
         proyectos_qs.filter(tipo_proyecto='emergencia').count(),
     ]
 
+    # ── Etiqueta del período activo ────────────────────────────────────────────
+    if filtro_anio and filtro_mes:
+        periodo_label = f'{MESES_NOMBRES[filtro_mes]} {filtro_anio}'
+    elif filtro_anio:
+        periodo_label = str(filtro_anio)
+    else:
+        periodo_label = None
+
     context = {
         'total_proyectos':      total_proyectos,
         'pendientes':           pendientes,
@@ -1093,6 +1131,11 @@ def dashboard_home(request):
         'ultimos_proyectos':    ultimos_proyectos,
         'tipos_labels':         tipos_labels,
         'tipos_values':         tipos_values,
+        'filtro_anio':          filtro_anio,
+        'filtro_mes':           filtro_mes,
+        'anios_disponibles':    anios_disponibles,
+        'meses_lista':          meses_lista,
+        'periodo_label':        periodo_label,
     }
     return render(request, 'home.html', context)
 

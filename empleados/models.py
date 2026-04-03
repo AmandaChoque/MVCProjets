@@ -1,4 +1,5 @@
 from decimal import Decimal
+from datetime import date
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
@@ -77,7 +78,12 @@ class ContratoProyecto(AuditModel):
     fecha_firma    = models.DateField(verbose_name="Fecha de Firma")
     fecha_inicio   = models.DateField(verbose_name="Fecha de Inicio")
     fecha_fin      = models.DateField(verbose_name="Fecha de Fin")
-    monto_acordado = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto Acordado (Bs.)")
+    monto_acordado          = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto Acordado (Bs.)")
+    porcentaje_multa_diaria = models.DecimalField(
+        max_digits=5, decimal_places=2, default=Decimal('0'),
+        verbose_name="% Multa Diaria",
+        validators=[MinValueValidator(Decimal('0')), MaxValueValidator(Decimal('100'))],
+    )
     observaciones  = models.TextField(blank=True, verbose_name="Observaciones")
     documento      = models.FileField(upload_to='contratos/', null=True, blank=True, verbose_name="Documento")
 
@@ -94,6 +100,39 @@ class ContratoProyecto(AuditModel):
 
     def __str__(self):
         return f"Contrato proyecto — {self.proyecto.nombre}"
+
+    @property
+    def dias_retraso(self):
+        """Días corridos desde fecha_fin hasta hoy. 0 si el proyecto ya está completado o no hay retraso."""
+        if self.proyecto.estado_proyecto == 'completado':
+            return 0
+        hoy = date.today()
+        if hoy > self.fecha_fin:
+            return (hoy - self.fecha_fin).days
+        return 0
+
+    @property
+    def multa_acumulada(self):
+        """Monto de multa acumulada en Bs. (días × % diario × monto_acordado)."""
+        if self.dias_retraso == 0 or not self.porcentaje_multa_diaria:
+            return Decimal('0')
+        return (self.porcentaje_multa_diaria / Decimal('100')) * self.monto_acordado * self.dias_retraso
+
+    @property
+    def porcentaje_multa_sobre_contrato(self):
+        """% que representa la multa acumulada sobre el monto acordado."""
+        if not self.monto_acordado:
+            return Decimal('0')
+        return (self.multa_acumulada / self.monto_acordado) * Decimal('100')
+
+    @property
+    def estado_multa(self):
+        """'normal' sin retraso, 'en_multa' con retraso < 20%, 'critico' >= 20%."""
+        if self.dias_retraso == 0:
+            return 'normal'
+        if self.porcentaje_multa_sobre_contrato >= Decimal('20'):
+            return 'critico'
+        return 'en_multa'
 
 
 class PagoEmpleado(AuditModel):

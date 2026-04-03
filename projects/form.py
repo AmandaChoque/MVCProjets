@@ -200,8 +200,28 @@ class _ContratoBaseForm(forms.ModelForm):
 
 
 class ContratoProyectoForm(_ContratoBaseForm):
+    porcentaje_multa_diaria = forms.CharField(
+        required=False,
+        label="% Multa Diaria por Retraso",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ej: 0.50 (deja vacío si no aplica)',
+        }),
+    )
+
     class Meta(_ContratoBaseForm.Meta):
-        fields = ['fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'observaciones', 'documento']
+        fields = ['fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'porcentaje_multa_diaria', 'observaciones', 'documento']
+
+    def clean_porcentaje_multa_diaria(self):
+        valor = str(self.cleaned_data.get('porcentaje_multa_diaria', '') or '').strip()
+        if not valor:
+            return Decimal('0')
+        if not re.fullmatch(DECIMAL_REGEX, valor):
+            raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 0.50).')
+        resultado = Decimal(valor)
+        if resultado < 0 or resultado > 100:
+            raise forms.ValidationError('El porcentaje debe estar entre 0 y 100.')
+        return resultado
 
 
 class PaymentForm(forms.ModelForm):

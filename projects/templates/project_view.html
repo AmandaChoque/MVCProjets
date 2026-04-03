@@ -297,6 +297,18 @@
         </div>
         <div class="card-body">
           {% if contrato_proyecto %}
+          {% with cp_estado=contrato_proyecto.estado_multa cp_dias=contrato_proyecto.dias_retraso cp_pct=contrato_proyecto.porcentaje_multa_sobre_contrato cp_multa=contrato_proyecto.multa_acumulada %}
+          {% if cp_estado != 'normal' %}
+          <div class="alert {% if cp_estado == 'critico' %}alert-danger{% else %}alert-warning{% endif %} py-2 px-3 mb-3 small d-flex align-items-center gap-2">
+            <i class="bi {% if cp_estado == 'critico' %}bi-exclamation-octagon-fill{% else %}bi-clock-history{% endif %}"></i>
+            <span>
+              <strong>{{ cp_dias }} día{{ cp_dias|pluralize:"s" }} de retraso</strong> —
+              Multa acumulada: Bs. {{ cp_multa|floatformat:2 }} ({{ cp_pct|floatformat:2 }}% del contrato)
+              {% if cp_estado == 'critico' %}<strong class="text-danger"> — umbral 20% superado</strong>{% endif %}
+            </span>
+          </div>
+          {% endif %}
+          {% endwith %}
           <div class="row g-3">
             <div class="col-md-6">
               <div class="info-row"><span class="info-label">Fecha de Firma:</span><span>{{ contrato_proyecto.fecha_firma|date:"d/m/Y" }}</span></div>
@@ -305,6 +317,9 @@
             </div>
             <div class="col-md-6">
               <div class="info-row"><span class="info-label">Monto Acordado (Bs.):</span><span class="fw-semibold">{{ contrato_proyecto.monto_acordado|floatformat:2 }}</span></div>
+              {% if contrato_proyecto.porcentaje_multa_diaria %}
+              <div class="info-row"><span class="info-label">% Multa Diaria:</span><span>{{ contrato_proyecto.porcentaje_multa_diaria }}%</span></div>
+              {% endif %}
               <div class="info-row">
                 <span class="info-label">Documento:</span>
                 <span>{% if contrato_proyecto.documento %}<a href="{{ contrato_proyecto.documento.url }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0">Ver</a>{% else %}<span class="text-muted">—</span>{% endif %}</span>

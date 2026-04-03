@@ -30,9 +30,35 @@
 <main class="container-fluid px-4 py-4">
 
   <!-- Encabezado -->
-  <div class="mb-4">
-    <h4 class="fw-bold mb-0" style="color:#1B4D90;">Panel de Control</h4>
-    <span class="text-muted small">Resumen general del sistema — SOBOTEC S.R.L.</span>
+  <div class="d-flex flex-wrap align-items-start justify-content-between gap-3 mb-4">
+    <div>
+      <h4 class="fw-bold mb-0" style="color:#1B4D90;">Panel de Control</h4>
+      <span class="text-muted small">Resumen general del sistema — SOBOTEC S.R.L.</span>
+    </div>
+    <!-- Filtro de período -->
+    <form method="get" class="d-flex align-items-center gap-2 flex-wrap" id="filtroForm">
+      <i class="bi bi-funnel text-secondary"></i>
+      <select name="anio" id="selectAnio" class="form-select form-select-sm" style="width:auto;"
+              onchange="onAnioChange(this)">
+        <option value="">Todo el tiempo</option>
+        {% for yr in anios_disponibles %}
+        <option value="{{ yr }}" {% if filtro_anio == yr %}selected{% endif %}>{{ yr }}</option>
+        {% endfor %}
+      </select>
+      <select name="mes" id="selectMes" class="form-select form-select-sm" style="width:auto;"
+              onchange="document.getElementById('filtroForm').submit()"
+              {% if not filtro_anio %}disabled{% endif %}>
+        <option value="">Todos los meses</option>
+        {% for m in meses_lista %}
+        <option value="{{ m.num }}" {% if filtro_mes == m.num %}selected{% endif %}>{{ m.nombre }}</option>
+        {% endfor %}
+      </select>
+      {% if filtro_anio %}
+      <a href="{% url 'dashboard' %}" class="btn btn-sm btn-outline-secondary" title="Limpiar filtro">
+        <i class="bi bi-x-lg"></i>
+      </a>
+      {% endif %}
+    </form>
   </div>
 
   <!-- Alertas clasificadas -->
@@ -291,30 +317,35 @@
   {% endif %}
 
   <!-- ── MÓDULOS DE ACCESO RÁPIDO ─────────────────────────────────────────── -->
+  <p class="section-title"><i class="bi bi-grid-1x2-fill me-1"></i>Módulos del Sistema</p>
   <div class="row g-3 mb-4">
+
+    <!-- Módulo Proyectos -->
     <div class="col-md-4">
       <a href="{% url 'projects' %}" class="text-decoration-none">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #0d6efd !important;">
+        <div class="card border-0 shadow-sm h-100" style="border-left:4px solid #1B4D90 !important;">
           <div class="card-body d-flex align-items-center gap-3 py-3">
-            <div class="rounded-circle d-flex align-items-center justify-content-center"
-                 style="width:48px;height:48px;background:rgba(13,110,253,0.1);flex-shrink:0;">
-              <i class="bi bi-folder2-open fs-4 text-primary"></i>
+            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                 style="width:48px;height:48px;background:rgba(27,77,144,0.1);">
+              <i class="bi bi-folder2-open fs-4" style="color:#1B4D90;"></i>
             </div>
             <div>
               <div class="fw-bold text-dark">Módulo Proyectos</div>
-              <div class="text-muted small">Proyectos, clientes y empleados</div>
+              <div class="text-muted small">Proyectos, clientes, sedes y contratos</div>
             </div>
           </div>
         </div>
       </a>
     </div>
+
+    <!-- Módulo Inventario -->
     <div class="col-md-4">
       <a href="{% url 'insumos' %}" class="text-decoration-none">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #198754 !important;">
+        <div class="card border-0 shadow-sm h-100" style="border-left:4px solid #198754 !important;">
           <div class="card-body d-flex align-items-center gap-3 py-3">
-            <div class="rounded-circle d-flex align-items-center justify-content-center"
-                 style="width:48px;height:48px;background:rgba(25,135,84,0.1);flex-shrink:0;">
-              <i class="bi bi-box-seam fs-4 text-success"></i>
+            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                 style="width:48px;height:48px;background:rgba(25,135,84,0.1);">
+              <i class="bi bi-box-seam-fill fs-4 text-success"></i>
             </div>
             <div>
               <div class="fw-bold text-dark">Módulo Inventario</div>
@@ -324,26 +355,34 @@
         </div>
       </a>
     </div>
+
+    <!-- Módulo Personal -->
+    {% if es_admin_o_gerente or es_admin_sec %}
     <div class="col-md-4">
-      <a href="{% url 'payments' %}" class="text-decoration-none">
-        <div class="card border-0 shadow-sm h-100" style="border-left: 4px solid #fd7e14 !important;">
+      <a href="{% url 'employees' %}" class="text-decoration-none">
+        <div class="card border-0 shadow-sm h-100" style="border-left:4px solid #6f42c1 !important;">
           <div class="card-body d-flex align-items-center gap-3 py-3">
-            <div class="rounded-circle d-flex align-items-center justify-content-center"
-                 style="width:48px;height:48px;background:rgba(253,126,20,0.1);flex-shrink:0;">
-              <i class="bi bi-cash-stack fs-4" style="color:#fd7e14;"></i>
+            <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0"
+                 style="width:48px;height:48px;background:rgba(111,66,193,0.1);">
+              <i class="bi bi-person-badge-fill fs-4" style="color:#6f42c1;"></i>
             </div>
             <div>
-              <div class="fw-bold text-dark">Módulo Pagos</div>
-              <div class="text-muted small">Pagos y reportes de análisis</div>
+              <div class="fw-bold text-dark">Módulo Personal</div>
+              <div class="text-muted small">Empleados, jornadas y pagos</div>
             </div>
           </div>
         </div>
       </a>
     </div>
+    {% endif %}
+
   </div>
 
   <!-- ── FILA 1: KPIs de Proyectos ─────────────────────────────────────────── -->
-  <p class="section-title">Estado de Proyectos</p>
+  <p class="section-title">
+    Estado de Proyectos
+    {% if periodo_label %}<span class="badge bg-primary ms-2 fw-normal" style="font-size:0.72rem;text-transform:none;">{{ periodo_label }}</span>{% endif %}
+  </p>
   <div class="row g-3 mb-4">
     <div class="col-6 col-md">
       <div class="card kpi-card blue border-0 shadow-sm h-100">
@@ -390,7 +429,10 @@
   </div>
 
   <!-- ── FILA 2: KPIs Finanzas + Entidades ─────────────────────────────────── -->
-  <p class="section-title">Finanzas y Entidades</p>
+  <p class="section-title">
+    Finanzas y Entidades
+    {% if periodo_label %}<span class="badge bg-primary ms-2 fw-normal" style="font-size:0.72rem;text-transform:none;">{{ periodo_label }}</span>{% endif %}
+  </p>
   <div class="row g-3 mb-4">
     <div class="col-6 col-md-4">
       <div class="card kpi-card teal border-0 shadow-sm h-100">
@@ -473,7 +515,7 @@
     <div class="col-md-6">
       <div class="card border-0 shadow-sm h-100">
         <div class="card-header bg-light">
-          <span class="fw-semibold small">Proyectos por Estado</span>
+          <span class="fw-semibold small">Proyectos por Estado{% if periodo_label %} — {{ periodo_label }}{% endif %}</span>
         </div>
         <div class="card-body d-flex align-items-center justify-content-center" style="max-height:260px;">
           <canvas id="chartEstado"></canvas>
@@ -484,7 +526,7 @@
     <div class="col-md-6">
       <div class="card border-0 shadow-sm h-100">
         <div class="card-header bg-light">
-          <span class="fw-semibold small">Proyectos por Tipo</span>
+          <span class="fw-semibold small">Proyectos por Tipo{% if periodo_label %} — {{ periodo_label }}{% endif %}</span>
         </div>
         <div class="card-body d-flex align-items-center justify-content-center" style="max-height:260px;">
           <canvas id="chartTipo"></canvas>
@@ -548,7 +590,7 @@
   <!-- ── FILA 6: Últimos Proyectos ──────────────────────────────────────────── -->
   <div class="card border-0 shadow-sm">
     <div class="card-header bg-light d-flex justify-content-between align-items-center">
-      <span class="fw-semibold small">Últimos Proyectos Registrados</span>
+      <span class="fw-semibold small">Últimos Proyectos Registrados{% if periodo_label %} — {{ periodo_label }}{% endif %}</span>
       <a href="{% url 'projects' %}" class="btn btn-sm btn-outline-secondary py-0 small">Ver todos</a>
     </div>
     <div class="card-body p-0">
@@ -610,6 +652,18 @@
 
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  function onAnioChange(sel) {
+    const mesSelect = document.getElementById('selectMes');
+    if (sel.value) {
+      mesSelect.disabled = false;
+    } else {
+      mesSelect.disabled = true;
+      mesSelect.value = '';
+    }
+    document.getElementById('filtroForm').submit();
+  }
+</script>
 <script>
   // Gráfico de dona - Estado
   new Chart(document.getElementById('chartEstado'), {
