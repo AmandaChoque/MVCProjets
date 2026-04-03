@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Reporte de Empleados — SOBOTEC S.R.L.</title>
+  <style>
+    @page { size: A4 landscape; margin: 18px 22px; }
+    body { font-family: Arial, sans-serif; font-size: 8.5px; color: #222; }
+
+    /* Encabezado */
+    .header-bar { width: 6px; background-color: #D4B84A; }
+    .header-main { background-color: #0F2D5A; padding: 7px 12px; vertical-align: middle; }
+    .header-right { background-color: #f1f3f6; padding: 6px 12px; vertical-align: middle; text-align: right; border: 1px solid #dde2ed; width: 130px; }
+
+    /* KPIs */
+    .kpi-box { display: inline-block; background: #f1f3f6; border: 1px solid #dde2ed; padding: 5px 10px; margin-right: 6px; border-radius: 3px; vertical-align: top; }
+    .kpi-num  { font-size: 14px; font-weight: bold; color: #0F2D5A; line-height: 1.1; }
+    .kpi-lbl  { font-size: 7px; color: #777; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* Filtros */
+    .infobar { background-color: #f1f3f6; border: 1px solid #dde2ed; padding: 3px 8px; font-size: 7.5px; color: #555; margin: 8px 0 6px 0; }
+
+    /* Tabla */
+    table.rep { width: 100%; border-collapse: collapse; margin-top: 6px; }
+    table.rep thead tr { background-color: #0F2D5A; }
+    table.rep th { padding: 4px 6px; font-size: 7.5px; font-weight: bold; color: #D4B84A; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
+    table.rep td { padding: 3px 6px; border-bottom: 1px solid #dde2ed; font-size: 8px; vertical-align: middle; }
+    table.rep tr:nth-child(even) td { background-color: #f1f3f6; }
+    table.rep tfoot td { font-weight: bold; border-top: 2px solid #0F2D5A; background-color: #e8edf5; color: #0F2D5A; padding: 4px 6px; font-size: 8.5px; }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .muted { color: #777; }
+
+    .footer { border-top: 1px solid #dde2ed; margin-top: 12px; padding-top: 4px; font-size: 7px; color: #aaa; text-align: center; }
+  </style>
+</head>
+<body>
+
+  <!-- Encabezado -->
+  <table width="100%" style="border-collapse:collapse; margin-bottom:8px; background-color:#0F2D5A;">
+    <tr>
+      <td class="header-bar" style="width:6px; background-color:#D4B84A;"></td>
+      <td class="header-main">
+        <div style="font-size:7px; color:#D4B84A; text-transform:uppercase; letter-spacing:0.1em; font-weight:bold; margin-bottom:1px;">SOBOTEC S.R.L. — Sistemas de Seguridad</div>
+        <div style="font-size:14px; font-weight:bold; color:#ffffff;">Reporte de Empleados</div>
+        <div style="font-size:8px; color:#a0b8d8;">
+          {% if filter_cargo %}Cargo: {{ filter_cargo }} &nbsp;|&nbsp; {% endif %}
+          {% if search_nombre %}Búsqueda: {{ search_nombre }} &nbsp;|&nbsp; {% endif %}
+          Total: {{ total_empleados }} empleado{{ total_empleados|pluralize }}
+        </div>
+      </td>
+      <td class="header-right">
+        <div style="font-size:7px; color:#888; text-transform:uppercase; letter-spacing:0.05em;">Generado el</div>
+        <div style="font-size:11px; font-weight:bold; color:#0F2D5A;">{{ now|date:"d/m/Y" }}</div>
+        <div style="font-size:8px; color:#888;">{{ now|date:"H:i" }} hrs</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- KPIs -->
+  <div style="margin-bottom:8px;">
+    <div class="kpi-box">
+      <div class="kpi-num">{{ total_empleados }}</div>
+      <div class="kpi-lbl">Total empleados</div>
+    </div>
+    <div class="kpi-box">
+      <div class="kpi-num" style="color:#2e7d32;">{{ con_contrato }}</div>
+      <div class="kpi-lbl">Con contrato activo</div>
+    </div>
+    <div class="kpi-box">
+      <div class="kpi-num" style="color:#e65100;">{{ sin_contrato }}</div>
+      <div class="kpi-lbl">Sin contrato</div>
+    </div>
+    <div class="kpi-box">
+      <div class="kpi-num" style="color:#0F2D5A;">Bs. {{ tot_devengado|floatformat:2 }}</div>
+      <div class="kpi-lbl">Total devengado</div>
+    </div>
+    <div class="kpi-box">
+      <div class="kpi-num" style="color:#c62828;">Bs. {{ tot_saldo|floatformat:2 }}</div>
+      <div class="kpi-lbl">Saldo pendiente total</div>
+    </div>
+  </div>
+
+  <!-- Info generado por -->
+  <div class="infobar">
+    <b style="color:#0F2D5A;">Generado por:</b> {{ generado_por }}
+  </div>
+
+  <!-- Tabla -->
+  <table class="rep">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Nombre Completo</th>
+        <th>CI</th>
+        <th>Cargo</th>
+        <th>Celular</th>
+        <th>Modalidad</th>
+        <th class="text-right">Monto Acordado (Bs.)</th>
+        <th class="text-center">Inicio Contrato</th>
+        <th class="text-center">Fin Contrato</th>
+        <th class="text-right">Devengado (Bs.)</th>
+        <th class="text-right">Saldo Pendiente (Bs.)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for emp in empleados %}
+      <tr>
+        <td class="text-center muted">{{ forloop.counter }}</td>
+        <td><b>{{ emp.nombre }} {{ emp.apellido_paterno }} {{ emp.apellido_materno|default:"" }}</b></td>
+        <td class="muted">{{ emp.carnet_identidad }}</td>
+        <td>{{ emp.get_cargo_display }}</td>
+        <td class="muted">{{ emp.numero_celular|default:"—" }}</td>
+        <td class="text-center">{% if emp.contrato_activo %}{{ emp.contrato_activo.dias_laborales }} días{% else %}<span class="muted">—</span>{% endif %}</td>
+        <td class="text-right">{% if emp.contrato_activo %}{{ emp.contrato_activo.monto_acordado|floatformat:2 }}{% else %}—{% endif %}</td>
+        <td class="text-center muted">{% if emp.contrato_activo %}{{ emp.contrato_activo.fecha_inicio|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+        <td class="text-center muted">{% if emp.contrato_activo %}{{ emp.contrato_activo.fecha_fin|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+        <td class="text-right">{{ emp.total_ganado|floatformat:2 }}</td>
+        <td class="text-right" style="{% if emp.saldo_pendiente > 0 %}color:#c62828;{% else %}color:#2e7d32;{% endif %} font-weight:bold;">
+          {{ emp.saldo_pendiente|floatformat:2 }}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="11" class="text-center muted" style="padding:8px;">Sin resultados.</td></tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="9" class="text-right">TOTAL</td>
+        <td class="text-right">{{ tot_devengado|floatformat:2 }}</td>
+        <td class="text-right" style="color:#c62828;">{{ tot_saldo|floatformat:2 }}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <div class="footer">
+    Reporte generado automáticamente por el sistema SOBOTEC S.R.L. el {{ now|date:"d/m/Y" }} a las {{ now|date:"H:i" }} hrs. — {{ generado_por }}
+  </div>
+
+</body>
+</html>

@@ -19,11 +19,13 @@
 
 {% block content %}
 <main class="container-fluid px-5 py-4">
-  <!-- ENCABEZADO -->
-  <div class="mb-4">
-    <h4 class="fw-semibold mb-1">Contratantes</h4>
-    <span class="text-muted">Nuevo registro</span>
-  </div>
+  <!-- BREADCRUMB -->
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'clientes' %}">Contratantes</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Nuevo registro</li>
+    </ol>
+  </nav>
 
   <!-- TARJETA -->
   <div class="card border-0 shadow-sm rounded-3">

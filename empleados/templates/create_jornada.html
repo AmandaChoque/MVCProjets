@@ -1,14 +1,13 @@
 {% extends 'base.html' %}
 {% block content %}
 <main class="container-fluid px-5 py-4">
-  <div class="mb-4">
-    <h4 class="fw-semibold mb-1">Registrar Jornada</h4>
-    <span class="text-muted">
-      {{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }} —
-      Contrato {{ contrato.get_tipo_salario_display }} /
-      Bs. {{ contrato.monto_diario|floatformat:2 }} por día
-    </span>
-  </div>
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'employees' %}">Empleados</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'contrato_empleado_detail' contrato.id %}">{{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }}</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Nueva jornada</li>
+    </ol>
+  </nav>
 
   <div class="row g-4">
 

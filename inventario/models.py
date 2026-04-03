@@ -68,10 +68,25 @@ class Insumo(AuditModel):
         ('red',              'Equipo de Red'),
         ('accesorio',        'Accesorio'),
     ]
+    UNIDAD_CHOICES = [
+        ('unidad', 'Unidad'),
+        ('metro',  'Metro'),
+        ('rollo',  'Rollo'),
+        ('caja',   'Caja'),
+        ('par',    'Par'),
+    ]
+    _UNIDAD_ABREV = {
+        'unidad': 'u.',
+        'metro':  'm.',
+        'rollo':  'rollo',
+        'caja':   'caja',
+        'par':    'par',
+    }
     nombre         = models.CharField(max_length=200, verbose_name="Nombre")
     marca          = models.CharField(max_length=100, verbose_name="Marca")
     modelo         = models.CharField(max_length=100, blank=True, default='', verbose_name="Modelo")
     categoria      = models.CharField(max_length=30, choices=CATEGORIA_CHOICES, verbose_name="Categoría")
+    unidad_medida  = models.CharField(max_length=10, choices=UNIDAD_CHOICES, default='unidad', verbose_name="Unidad de medida")
     # Desnormalización controlada: actualizado automáticamente por señal al último precio de compra.
     # Nunca modificar directamente.
     ultimo_precio_compra = models.DecimalField(max_digits=10, decimal_places=2, default=0, blank=True, verbose_name="Último Precio Compra (Bs.)")
@@ -79,6 +94,10 @@ class Insumo(AuditModel):
     # Mantenido automáticamente por señales. Nunca modificar directamente.
     stock          = models.IntegerField(default=0, verbose_name="Stock actual")
     stock_minimo   = models.PositiveIntegerField(default=5, verbose_name="Stock mínimo de alerta")
+
+    @property
+    def unidad_abrev(self):
+        return self._UNIDAD_ABREV.get(self.unidad_medida, self.unidad_medida)
 
     def _recalculate_stock(self):
         """Uso exclusivo de señales — no llamar desde vistas ni formularios."""

@@ -3,8 +3,8 @@ from django.db.models import Sum
 import re
 from decimal import Decimal
 
-from .models import Empleado, PagoEmpleado, ContratoEmpleado, JornadaEmpleado
-from projects.models import Proyecto
+from .models import Empleado, PagoEmpleado, ContratoEmpleado, JornadaEmpleado, AsignacionDiaria
+from projects.models import Proyecto, Sede, TareaChecklist
 
 DECIMAL_REGEX = r'\d+(\.\d{1,2})?'
 
@@ -113,12 +113,12 @@ class _ContratoEmpleadoBase(forms.ModelForm):
         model = ContratoEmpleado
         fields = []
         widgets = {
-            'fecha_firma':   forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
-            'fecha_inicio':  forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
-            'fecha_fin':     forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
-            'tipo_salario':  forms.Select(attrs={'class': 'form-select'}),
-            'observaciones': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Observaciones adicionales...'}),
-            'documento':     forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'fecha_firma':    forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+            'fecha_inicio':   forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+            'fecha_fin':      forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+            'dias_laborales': forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'placeholder': 'Ej: 28'}),
+            'observaciones':  forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Observaciones adicionales...'}),
+            'documento':      forms.ClearableFileInput(attrs={'class': 'form-control'}),
         }
 
     def clean_monto_acordado(self):
@@ -151,7 +151,7 @@ class _ContratoEmpleadoBase(forms.ModelForm):
 
 class ContratoEmpleadoForm(_ContratoEmpleadoBase):
     class Meta(_ContratoEmpleadoBase.Meta):
-        fields = ['empleado', 'fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'tipo_salario', 'observaciones', 'documento']
+        fields = ['empleado', 'fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'dias_laborales', 'observaciones', 'documento']
         widgets = {**_ContratoEmpleadoBase.Meta.widgets, 'empleado': forms.Select(attrs={'class': 'form-select'})}
 
     def __init__(self, *args, **kwargs):
@@ -172,7 +172,7 @@ class ContratoEmpleadoForm(_ContratoEmpleadoBase):
                 self.add_error('empleado', f'{empleado.nombre} {empleado.apellido_paterno} ya tiene un contrato activo.')
             if fecha_inicio and fecha_fin:
                 qs_overlap = ContratoEmpleado.objects.filter(
-                    empleado=empleado,
+                    empleado=empleado, activo=True,
                     fecha_inicio__lte=fecha_fin, fecha_fin__gte=fecha_inicio,
                 )
                 if self.instance and self.instance.pk:
@@ -187,7 +187,7 @@ class ContratoEmpleadoForm(_ContratoEmpleadoBase):
 class ContratoEmpleadoDesdeEmpleadoForm(_ContratoEmpleadoBase):
     """Contrato de empleado creado desde el perfil del empleado (sin campo empleado)."""
     class Meta(_ContratoEmpleadoBase.Meta):
-        fields = ['fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'tipo_salario', 'observaciones', 'documento']
+        fields = ['fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'dias_laborales', 'observaciones', 'documento']
 
     def __init__(self, *args, empleado=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -206,7 +206,7 @@ class ContratoEmpleadoDesdeEmpleadoForm(_ContratoEmpleadoBase):
             fecha_fin    = cleaned_data.get('fecha_fin')
             if fecha_inicio and fecha_fin:
                 qs_overlap = ContratoEmpleado.objects.filter(
-                    empleado=self._empleado,
+                    empleado=self._empleado, activo=True,
                     fecha_inicio__lte=fecha_fin, fecha_fin__gte=fecha_inicio,
                 )
                 if self.instance and self.instance.pk:
@@ -300,3 +300,72 @@ class PagoEmpleadoForm(forms.ModelForm):
         if resultado <= 0:
             raise forms.ValidationError('El monto debe ser mayor a cero.')
         return resultado
+
+
+class AsignacionDiariaForm(forms.ModelForm):
+    class Meta:
+        model = AsignacionDiaria
+        fields = ['fecha', 'proyecto', 'sede', 'supervisor', 'instalador', 'turno', 'observacion', 'tareas_realizadas']
+        widgets = {
+            'fecha':             forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+            'proyecto':          forms.Select(attrs={'class': 'form-select'}),
+            'sede':              forms.Select(attrs={'class': 'form-select'}),
+            'supervisor':        forms.Select(attrs={'class': 'form-select'}),
+            'instalador':        forms.Select(attrs={'class': 'form-select'}),
+            'turno':             forms.Select(attrs={'class': 'form-select'}),
+            'observacion':       forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Actividades realizadas, incidencias...'}),
+            'tareas_realizadas': forms.CheckboxSelectMultiple(),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['supervisor'].queryset = Empleado.objects.filter(
+            is_active=True, cargo__in=['instalador', 'administrador', 'gerente']
+        ).order_by('nombre')
+        self.fields['supervisor'].required = False
+        self.fields['supervisor'].empty_label = '— Sin supervisor —'
+        self.fields['instalador'].queryset = Empleado.objects.filter(
+            is_active=True, cargo__in=['instalador', 'tecnico_soporte']
+        ).order_by('nombre')
+        self.fields['instalador'].required = False
+        self.fields['instalador'].empty_label = '— Sin instalador —'
+        self.fields['proyecto'].queryset = Proyecto.objects.filter(
+            activo=True, estado_proyecto__in=['pendiente', 'en_progreso']
+        ).order_by('nombre')
+        self.fields['proyecto'].empty_label = '— Seleccionar proyecto —'
+        self.fields['sede'].queryset = Sede.objects.none()
+        self.fields['sede'].required = False
+        self.fields['sede'].empty_label = '— Sin sede específica —'
+        self.fields['tareas_realizadas'].queryset = TareaChecklist.objects.none()
+        self.fields['tareas_realizadas'].required = False
+        # Si hay proyecto (edición o POST con proyecto), filtrar sedes y tareas
+        proyecto_id = None
+        if self.instance and self.instance.pk and self.instance.proyecto_id:
+            proyecto_id = self.instance.proyecto_id
+        if 'proyecto' in self.data:
+            try:
+                proyecto_id = int(self.data.get('proyecto'))
+            except (ValueError, TypeError):
+                pass
+        if proyecto_id:
+            self.fields['sede'].queryset = Sede.objects.filter(proyecto_id=proyecto_id, activo=True)
+            self.fields['tareas_realizadas'].queryset = TareaChecklist.objects.filter(
+                sede__proyecto_id=proyecto_id, activo=True, completado=False
+            ).select_related('sede').order_by('sede__nombre', 'orden')
+
+    def clean(self):
+        cleaned_data = super().clean()
+        supervisor = cleaned_data.get('supervisor')
+        instalador = cleaned_data.get('instalador')
+        if not supervisor and not instalador:
+            raise forms.ValidationError('Debe asignar al menos un supervisor o instalador.')
+        if supervisor and instalador and supervisor == instalador:
+            raise forms.ValidationError('El supervisor y el instalador no pueden ser la misma persona.')
+        fecha = cleaned_data.get('fecha')
+        if fecha and fecha.weekday() == 6:  # domingo
+            raise forms.ValidationError('No se pueden registrar asignaciones los domingos.')
+        sede = cleaned_data.get('sede')
+        proyecto = cleaned_data.get('proyecto')
+        if sede and proyecto and sede.proyecto_id != proyecto.id:
+            self.add_error('sede', 'La sede seleccionada no pertenece a este proyecto.')
+        return cleaned_data

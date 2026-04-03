@@ -1,10 +1,11 @@
 {% extends 'base.html' %} {% block content %}
 <main class="container-fluid px-5 py-4">
-  <!-- ENCABEZADO -->
-  <div class="mb-4">
-    <h4 class="fw-semibold mb-1">Empleados</h4>
-    <span class="text-muted">Ver registro</span>
-  </div>
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'employees' %}">Empleados</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Ver empleado</li>
+    </ol>
+  </nav>
 
   <!-- TARJETA -->
   <div class="card border-0 shadow-sm rounded-3">
@@ -85,7 +86,7 @@
         <div class="card-body p-0">
           <div class="table-responsive">
             <table class="table table-sm table-hover align-middle mb-0 small">
-              <thead class="table-light text-uppercase" style="font-size:0.7rem;">
+              <thead class="table-light small text-uppercase fw-semibold">
                 <tr>
                   <th class="px-3">Período</th>
                   <th class="text-end">Monto acordado (Bs.)</th>
@@ -102,7 +103,7 @@
                 {% for item in contratos_con_pagos %}
                 <tr>
                   <td class="px-3">
-                    <span class="badge bg-secondary fw-normal">{{ item.contrato.get_tipo_salario_display }}</span>
+                    <span class="badge bg-secondary fw-normal">{{ item.contrato.dias_laborales }} días laborales</span>
                     <div class="text-muted" style="font-size:0.72rem;">Bs. {{ item.contrato.monto_diario|floatformat:2 }}/día</div>
                   </td>
                   <td class="text-end fw-semibold">{{ item.contrato.monto_acordado|floatformat:2 }}</td>
@@ -123,7 +124,7 @@
                     {{ item.saldo_jornadas|floatformat:2 }}
                   </td>
                   <td class="text-center">
-                    <a href="{% url 'contrato_empleado_detail' item.contrato.id %}" class="btn btn-sm btn-outline-secondary py-0 px-2" style="font-size:0.72rem;">Ver</a>
+                    <a href="{% url 'contrato_empleado_detail' item.contrato.id %}" class="btn btn-sm btn-outline-secondary py-0 px-2">Ver</a>
                   </td>
                 </tr>
                 {% endfor %}
@@ -145,7 +146,7 @@
           <a href="{% url 'employee_view' employee.id %}?pdf" target="_blank" class="btn btn-outline-danger btn-sm">
             <i class="bi bi-file-earmark-pdf me-1"></i>Ficha PDF
           </a>
-          <a href="{% url 'employee_detail' employee.id %}" class="btn btn-primary">Editar</a>
+          {% if es_admin %}<a href="{% url 'employee_detail' employee.id %}" class="btn btn-primary">Editar</a>{% endif %}
         </div>
       </div>
     </div>

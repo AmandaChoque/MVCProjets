@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 {% block content %}
 <main class="container-fluid px-5 py-4">
-  <div class="mb-4">
-    <h4 class="fw-semibold mb-1">Editar Jornada</h4>
-    <span class="text-muted">
-      {{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }} —
-      {{ jornada.fecha|date:"d/m/Y" }} — {{ jornada.proyecto.nombre }}
-    </span>
-  </div>
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'employees' %}">Empleados</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'contrato_empleado_detail' contrato.id %}">{{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }}</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Editar jornada</li>
+    </ol>
+  </nav>
 
   <div class="card border-0 shadow-sm rounded-3" style="max-width:520px;">
     <div class="card-body p-4">

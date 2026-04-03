@@ -18,10 +18,12 @@
 
 {% block content %}
 <main class="container-fluid px-5 py-4">
-  <div class="mb-4">
-    <h4 class="fw-semibold mb-1">Proveedores</h4>
-    <span class="text-muted">Registrar nuevo proveedor</span>
-  </div>
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'proveedores' %}">Proveedores</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Nuevo proveedor</li>
+    </ol>
+  </nav>
 
   <div class="card border-0 shadow-sm rounded-3">
     <div class="card-body p-4">

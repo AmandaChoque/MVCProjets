@@ -18,14 +18,17 @@ def user_cargo_context(request):
     else:
         cargo = getattr(request.user, 'cargo', None)
 
-    # Conteo de notificaciones no leídas (evita importar en cada vista)
-    try:
-        from .models import Notificacion
-        notif_no_leidas = Notificacion.objects.filter(
-            destinatario=request.user, leida=False
-        ).count()
-    except Exception:
-        notif_no_leidas = 0
+    # Solo admin/gerente reciben notificaciones del sistema — evitar COUNT innecesario
+    # para el resto de roles en cada request.
+    notif_no_leidas = 0
+    if cargo in ('administrador', 'gerente'):
+        try:
+            from .models import Notificacion
+            notif_no_leidas = Notificacion.objects.filter(
+                destinatario=request.user, leida=False
+            ).count()
+        except Exception:
+            notif_no_leidas = 0
 
     return {
         'user_cargo': cargo,

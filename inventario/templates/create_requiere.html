@@ -18,10 +18,13 @@
 
 {% block content %}
 <main class="container-fluid px-5 py-4">
-  <div class="mb-4">
-    <h4 class="fw-semibold mb-1">Insumos del Proyecto</h4>
-    <span class="text-muted">Agregar insumo — {{ project.nombre }}</span>
-  </div>
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'projects' %}">Proyectos</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'project_view' project.id %}">{{ project.nombre }}</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Agregar insumo</li>
+    </ol>
+  </nav>
 
   <div class="card border-0 shadow-sm rounded-3">
     <div class="card-body p-4">
@@ -118,10 +121,11 @@
       desgloseDiv.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>Stock insuficiente</span>';
       return;
     }
+    const unit = stocks[`unit_${id}`] || 'u.';
     let html = '<table class="table table-sm mb-0 small">';
     html += '<thead><tr><th>Cantidad</th><th class="text-end">Precio unit.</th><th class="text-end">Subtotal</th></tr></thead><tbody>';
     for (const f of resultado.filas) {
-      html += `<tr><td>${f.cantidad} u.</td><td class="text-end">Bs. ${f.precio.toFixed(2)}</td><td class="text-end">Bs. ${f.subtotal.toFixed(2)}</td></tr>`;
+      html += `<tr><td>${f.cantidad} ${unit}</td><td class="text-end">Bs. ${f.precio.toFixed(2)}</td><td class="text-end">Bs. ${f.subtotal.toFixed(2)}</td></tr>`;
     }
     html += `</tbody><tfoot><tr><td colspan="2" class="fw-semibold text-end">Total</td><td class="text-end fw-semibold text-primary">Bs. ${resultado.total.toFixed(2)}</td></tr></tfoot></table>`;
     desgloseDiv.innerHTML = html;
@@ -130,12 +134,13 @@
   function updateStockInfo(id) {
     if (!id || stocks[id] === undefined) { stockInfo.innerHTML = ''; return; }
     const s = parseInt(stocks[id]);
+    const unit = stocks[`unit_${id}`] || 'u.';
     if (s <= 0) {
-      stockInfo.innerHTML = '<span class="text-danger"><i class="bi bi-exclamation-circle-fill me-1"></i>Sin stock disponible (0 unidades)</span>';
+      stockInfo.innerHTML = `<span class="text-danger"><i class="bi bi-exclamation-circle-fill me-1"></i>Sin stock disponible (0 ${unit})</span>`;
     } else if (stocks['min_' + id] && s <= parseInt(stocks['min_' + id])) {
-      stockInfo.innerHTML = `<span class="text-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i>Stock bajo — disponible: <strong>${s}</strong> unidades</span>`;
+      stockInfo.innerHTML = `<span class="text-warning"><i class="bi bi-exclamation-triangle-fill me-1"></i>Stock bajo — disponible: <strong>${s}</strong> ${unit}</span>`;
     } else {
-      stockInfo.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Disponible: <strong>${s}</strong> unidades</span>`;
+      stockInfo.innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill me-1"></i>Disponible: <strong>${s}</strong> ${unit}</span>`;
     }
   }
 

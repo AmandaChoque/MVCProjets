@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+{% block extra_css %}
+<style>
+  .kpi-card { border:1px solid #e9ecef; border-radius:10px; padding:14px 18px; background:#fff; }
+  .kpi-card .kpi-label { font-size:.68rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:#8e9aab; margin-bottom:4px; }
+  .kpi-card .kpi-value { font-size:1.35rem; font-weight:700; line-height:1.1; }
+  .kpi-card .kpi-sub   { font-size:.7rem; color:#adb5bd; margin-top:2px; }
+  .report-table thead th { font-size:.68rem; font-weight:600; text-transform:uppercase; letter-spacing:.05em; color:#6c757d; border-bottom:2px solid #dee2e6; padding:8px 10px; white-space:nowrap; background:#f8f9fa; }
+  .report-table tbody td { font-size:.8rem; padding:8px 10px; vertical-align:middle; }
+  .report-table tbody tr:hover { background:#f0f4fb; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3 px-4">
+
+  <!-- Encabezado -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h5 class="fw-semibold mb-0">Reporte de Empleados</h5>
+      <span class="text-muted small">SOBOTEC S.R.L. — generado el {{ now|date:"d/m/Y H:i" }}</span>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="?{% if search_nombre %}search_nombre={{ search_nombre }}&{% endif %}{% if filter_cargo %}filter_cargo={{ filter_cargo }}&{% endif %}pdf"
+         target="_blank" class="btn btn-outline-danger btn-sm">
+        <i class="bi bi-file-earmark-pdf me-1"></i>PDF
+      </a>
+      <a href="?{% if search_nombre %}search_nombre={{ search_nombre }}&{% endif %}{% if filter_cargo %}filter_cargo={{ filter_cargo }}&{% endif %}excel"
+         class="btn btn-outline-success btn-sm">
+        <i class="bi bi-file-earmark-excel me-1"></i>Excel
+      </a>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Empleados</div>
+        <div class="kpi-value text-primary">{{ total_empleados }}</div>
+        <div class="kpi-sub">activos en el sistema</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Con Contrato Activo</div>
+        <div class="kpi-value text-success">{{ con_contrato }}</div>
+        <div class="kpi-sub">con contrato vigente</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Sin Contrato</div>
+        <div class="kpi-value text-warning">{{ sin_contrato }}</div>
+        <div class="kpi-sub">sin contrato activo</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Resultado filtro</div>
+        <div class="kpi-value text-secondary">{{ empleados|length }}</div>
+        <div class="kpi-sub">registros mostrados</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+      <form method="GET" class="row g-2 align-items-end">
+        <div class="col-md-4">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:.72rem;">Nombre</label>
+          <input type="text" class="form-control form-control-sm" name="search_nombre"
+                 value="{{ search_nombre|default:'' }}" placeholder="Buscar por nombre">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:.72rem;">Cargo</label>
+          <select class="form-select form-select-sm" name="filter_cargo">
+            <option value="">Todos los cargos</option>
+            {% for val, label in cargo_choices %}
+            <option value="{{ val }}" {% if filter_cargo == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
+        </div>
+        <div class="col-md-1">
+          <a href="{% url 'employee_report' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table report-table table-hover align-middle mb-0">
+          <thead>
+            <tr>
+              <th>Nombre Completo</th>
+              <th>CI</th>
+              <th>Cargo</th>
+              <th>Celular</th>
+              <th>Contrato</th>
+              <th class="text-end">Monto Acordado</th>
+              <th class="text-center">Vigencia</th>
+              <th class="text-end">Devengado (Bs.)</th>
+              <th class="text-end">Saldo Pendiente</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for emp in empleados %}
+            <tr>
+              <td class="fw-semibold">
+                <a href="{% url 'employee_view' emp.id %}" class="text-decoration-none">
+                  {{ emp.nombre }} {{ emp.apellido_paterno }} {{ emp.apellido_materno|default:"" }}
+                </a>
+              </td>
+              <td class="text-muted">{{ emp.carnet_identidad }}</td>
+              <td>
+                {% if emp.cargo == 'administrador' %}
+                  <span class="badge bg-danger">{{ emp.get_cargo_display }}</span>
+                {% elif emp.cargo == 'gerente' %}
+                  <span class="badge bg-primary">{{ emp.get_cargo_display }}</span>
+                {% elif emp.cargo == 'secretaria' %}
+                  <span class="badge bg-info text-dark">{{ emp.get_cargo_display }}</span>
+                {% elif emp.cargo == 'instalador' %}
+                  <span class="badge bg-success">{{ emp.get_cargo_display }}</span>
+                {% else %}
+                  <span class="badge bg-secondary">{{ emp.get_cargo_display }}</span>
+                {% endif %}
+              </td>
+              <td class="text-muted small">{{ emp.numero_celular|default:"—" }}</td>
+              <td>
+                {% if emp.contrato_activo %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle">
+                    {{ emp.contrato_activo.dias_laborales }} días lab.
+                  </span>
+                {% else %}
+                  <span class="badge bg-secondary-subtle text-secondary">Sin contrato</span>
+                {% endif %}
+              </td>
+              <td class="text-end fw-semibold">
+                {% if emp.contrato_activo %}Bs. {{ emp.contrato_activo.monto_acordado|floatformat:2 }}{% else %}—{% endif %}
+              </td>
+              <td class="text-center small text-muted">
+                {% if emp.contrato_activo %}
+                  {{ emp.contrato_activo.fecha_inicio|date:"d/m/Y" }} — {{ emp.contrato_activo.fecha_fin|date:"d/m/Y" }}
+                {% else %}—{% endif %}
+              </td>
+              <td class="text-end">Bs. {{ emp.total_ganado|floatformat:2 }}</td>
+              <td class="text-end fw-semibold {% if emp.saldo_pendiente > 0 %}text-danger{% else %}text-success{% endif %}">
+                Bs. {{ emp.saldo_pendiente|floatformat:2 }}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="9" class="text-center text-muted py-4">No hay empleados con los filtros aplicados.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

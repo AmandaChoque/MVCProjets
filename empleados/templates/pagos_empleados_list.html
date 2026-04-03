@@ -70,7 +70,6 @@
       <thead class="table-light small text-uppercase fw-semibold">
         <tr>
           <th>Empleado</th>
-          <th>Proyecto</th>
           <th>Concepto</th>
           <th>Método</th>
           <th>Fecha</th>
@@ -85,30 +84,25 @@
             {{ pago.contrato.empleado.nombre }} {{ pago.contrato.empleado.apellido_paterno }}
             <div class="text-muted" style="font-size:0.75rem;">{{ pago.contrato.empleado.get_cargo_display }}</div>
           </td>
-          <td class="small">
-            <a href="{% url 'project_view' pago.contrato.proyecto.id %}" class="text-decoration-none">
-              {{ pago.contrato.proyecto.nombre }}
-            </a>
-          </td>
-          <td class="small">{{ pago.concepto }}</td>
+          <td class="small">{{ pago.get_concepto_display }}</td>
           <td class="small">
             {% if pago.tipo_pago == 'transferencia' %}
-            <span class="badge bg-info text-dark">Transferencia</span>
+            <span class="badge bg-primary">Transferencia</span>
             {% else %}
-            <span class="badge bg-secondary">Efectivo</span>
+            <span class="badge bg-info text-dark">Efectivo</span>
             {% endif %}
           </td>
           <td class="small">{{ pago.fecha|date:"d/m/Y" }}</td>
           <td class="text-end fw-semibold">{{ pago.monto|floatformat:2 }}</td>
           <td class="text-end">
             {% if es_admin %}
-            <a href="{% url 'pago_empleado_detail' pago.id %}" class="btn btn-sm btn-light">Editar</a>
+            <a href="{% url 'pago_empleado_detail' pago.id %}" class="btn btn-sm btn-outline-secondary">Editar</a>
             {% endif %}
           </td>
         </tr>
         {% empty %}
         <tr>
-          <td colspan="6" class="text-center text-muted py-3 small">No hay pagos a empleados registrados.</td>
+          <td colspan="6" class="text-center text-muted py-3 small">No hay pagos registrados.</td>
         </tr>
         {% endfor %}
       </tbody>
@@ -165,12 +159,12 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        <label class="form-label small">Empleado — Proyecto</label>
+        <label class="form-label small">Empleado — Período del contrato</label>
         <select id="selectContrato" class="form-select form-select-sm">
           <option value="">— Seleccione un contrato —</option>
           {% for c in contratos_activos %}
           <option value="{% url 'create_pago_empleado' c.id %}">
-            {{ c.empleado.nombre }} {{ c.empleado.apellido_paterno }} — {{ c.proyecto.nombre }}
+            {{ c.empleado.nombre }} {{ c.empleado.apellido_paterno }} — {{ c.dias_laborales }} días lab. ({{ c.fecha_inicio|date:"d/m/Y" }} – {{ c.fecha_fin|date:"d/m/Y" }})
           </option>
           {% endfor %}
         </select>

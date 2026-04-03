@@ -33,7 +33,7 @@
 {% endblock %}
 
 {% block content %}
-<main class="container py-4" style="max-width: 700px;">
+<main class="container-fluid px-5 py-4">
   <div class="d-flex align-items-center gap-2 mb-3">
     <a href="{% url 'project_view' project.id %}" class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-arrow-left"></i>
@@ -64,6 +64,15 @@
           <label class="form-label fw-semibold">Descripción / Indicaciones</label>
           {{ form.descripcion }}
         </div>
+
+        {% if not sede %}
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Plantilla de tareas <span class="text-muted fw-normal">(opcional)</span></label>
+          {{ form.plantilla }}
+          <div class="form-text">Si seleccionas una plantilla, las tareas del checklist se cargarán automáticamente al crear la sede.</div>
+          {% if form.plantilla.errors %}<div class="text-danger small mt-1">{{ form.plantilla.errors.0 }}</div>{% endif %}
+        </div>
+        {% endif %}
 
         <!-- Mapa Leaflet -->
         <div class="mb-3">

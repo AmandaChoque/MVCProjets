@@ -1,0 +1,76 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-fluid py-3">
+
+  {% if messages %}
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+    {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="fw-semibold text-secondary mb-0"><i class="bi bi-card-checklist me-1"></i> Plantillas de Tareas</h5>
+    <a href="{% url 'plantilla_create' %}" class="btn btn-primary btn-sm">
+      <i class="bi bi-plus-lg"></i> Nueva Plantilla
+    </a>
+  </div>
+
+  <div class="alert alert-info small py-2">
+    <i class="bi bi-info-circle me-1"></i>
+    Las plantillas definen los pasos estándar para cada tipo de instalación. Al crear una sede, puedes seleccionar una plantilla y las tareas se cargarán automáticamente.
+  </div>
+
+  {% regroup plantillas by get_tipo_display as plantillas_por_tipo %}
+  {% for grupo in plantillas_por_tipo %}
+  <h6 class="text-muted mt-4 mb-2 border-bottom pb-1">
+    <i class="bi bi-tag me-1"></i>{{ grupo.grouper }}
+  </h6>
+  <div class="row g-3">
+    {% for plantilla in grupo.list %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header d-flex justify-content-between align-items-center bg-white py-2">
+          <span class="fw-semibold">{{ plantilla.nombre }}</span>
+          <div class="d-flex gap-1">
+            <a href="{% url 'plantilla_detail' plantilla.id %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i></a>
+            <form method="POST" action="{% url 'plantilla_deactivate' plantilla.id %}"
+                  onsubmit="return confirm('¿Eliminar la plantilla «{{ plantilla.nombre }}»?')">
+              {% csrf_token %}
+              <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button>
+            </form>
+          </div>
+        </div>
+        {% if plantilla.descripcion %}
+        <div class="card-body pb-1 pt-2">
+          <p class="text-muted small mb-2">{{ plantilla.descripcion }}</p>
+        </div>
+        {% endif %}
+        <ul class="list-group list-group-flush">
+          {% for item in plantilla.items.all %}
+          <li class="list-group-item py-1 small">
+            <span class="text-muted me-1">{{ item.orden }}.</span> {{ item.descripcion }}
+          </li>
+          {% empty %}
+          <li class="list-group-item py-1 text-muted small text-center">Sin tareas aún.</li>
+          {% endfor %}
+        </ul>
+        <div class="card-footer bg-white text-muted small">
+          {{ plantilla.items.count }} tarea{{ plantilla.items.count|pluralize }}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+  {% if not plantillas %}
+  <div class="text-center text-muted py-5">
+    <i class="bi bi-card-checklist fs-1 d-block mb-2"></i>
+    No hay plantillas creadas aún.
+    <a href="{% url 'plantilla_create' %}" class="d-block mt-2">Crear la primera plantilla</a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

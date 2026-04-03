@@ -56,6 +56,7 @@ urlpatterns = [
     path('sedes/<int:id_sede>/tareas/nueva/', views.tarea_create, name='tarea_create'),
     path('tareas/<int:id_tarea>/toggle/', views.tarea_toggle, name='tarea_toggle'),
     path('tareas/<int:id_tarea>/eliminar/', views.tarea_delete, name='tarea_delete'),
+    path('sedes/<int:id_sede>/tareas/reorder/', views.tareas_reorder, name='tareas_reorder'),
     # Fotos de sede
     path('sedes/<int:id_sede>/fotos/subir/', views.foto_upload, name='foto_upload'),
     path('fotos/<int:id_foto>/eliminar/', views.foto_delete, name='foto_delete'),
@@ -83,6 +84,14 @@ urlpatterns = [
     # Analysis y Reporte de proyectos
     path('reporte-analisis/', views.project_analysis, name='project_analysis'),
     path('project_report/', views.project_report, name='project_report'),
+
+    # Plantillas de tareas
+    path('plantillas/',                                       views.plantillas_list,          name='plantillas_list'),
+    path('plantillas/nueva/',                                 views.plantilla_create,         name='plantilla_create'),
+    path('plantillas/<int:id_plantilla>/',                    views.plantilla_detail,         name='plantilla_detail'),
+    path('plantillas/<int:id_plantilla>/deactivate/',         views.plantilla_deactivate,     name='plantilla_deactivate'),
+    path('plantillas/<int:id_plantilla>/items/nuevo/',        views.item_plantilla_create,    name='item_plantilla_create'),
+    path('plantillas/items/<int:id_item>/eliminar/',          views.item_plantilla_delete,    name='item_plantilla_delete'),
 
     # Módulo Empleados
     path('', include('empleados.urls')),

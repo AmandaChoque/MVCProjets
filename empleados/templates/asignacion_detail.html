@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-fluid px-5 py-4">
+
+  {% if messages %}
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+    {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="fw-semibold mb-0"><i class="bi bi-calendar-check me-1"></i> Asignación — {{ asignacion.fecha|date:"d/m/Y" }}</h5>
+    <a href="{% url 'asignaciones_list' %}" class="btn btn-outline-secondary btn-sm">← Volver</a>
+  </div>
+
+  <div class="row g-3">
+    <!-- FORMULARIO EDICIÓN -->
+    <div class="col-lg-7">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-light fw-semibold">Datos de la asignación</div>
+        <div class="card-body">
+          <form method="POST">
+            {% csrf_token %}
+            <div class="row g-3">
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Fecha</label>
+                {{ form.fecha }}
+                {% if form.fecha.errors %}<div class="text-danger small">{{ form.fecha.errors|join:", " }}</div>{% endif %}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Turno</label>
+                {{ form.turno }}
+              </div>
+              <div class="col-md-4">
+                <label class="form-label fw-semibold">Proyecto</label>
+                {{ form.proyecto }}
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">Sede</label>
+                {{ form.sede }}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Supervisor</label>
+                {{ form.supervisor }}
+                {% if form.supervisor.errors %}<div class="text-danger small">{{ form.supervisor.errors|join:", " }}</div>{% endif %}
+              </div>
+              <div class="col-md-6">
+                <label class="form-label fw-semibold">Instalador</label>
+                {{ form.instalador }}
+                {% if form.instalador.errors %}<div class="text-danger small">{{ form.instalador.errors|join:", " }}</div>{% endif %}
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">Tareas realizadas</label>
+                <div class="border rounded p-2" style="max-height:180px;overflow-y:auto;">
+                  {% for checkbox in form.tareas_realizadas %}
+                  <div class="form-check">{{ checkbox }}</div>
+                  {% empty %}
+                  <span class="text-muted small">Sin tareas pendientes en este proyecto.</span>
+                  {% endfor %}
+                </div>
+              </div>
+              <div class="col-12">
+                <label class="form-label fw-semibold">Observación</label>
+                {{ form.observacion }}
+              </div>
+            </div>
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger mt-2 small">{{ form.non_field_errors|join:", " }}</div>
+            {% endif %}
+            <div class="d-flex justify-content-between mt-3">
+              <form method="POST" action="{% url 'asignacion_deactivate' asignacion.id %}"
+                    onsubmit="return confirm('¿Eliminar esta asignación?')">
+                {% csrf_token %}
+                <button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Eliminar</button>
+              </form>
+              <button type="submit" class="btn btn-primary btn-sm">Guardar cambios</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- JORNADAS GENERADAS -->
+    <div class="col-lg-5">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-light fw-semibold">Jornadas generadas</div>
+        <div class="card-body p-0">
+          <ul class="list-group list-group-flush">
+            {% for j in jornadas %}
+            <li class="list-group-item">
+              <div class="d-flex justify-content-between align-items-center">
+                <div>
+                  <span class="fw-semibold">{{ j.contrato.empleado.nombre }} {{ j.contrato.empleado.apellido_paterno }}</span>
+                  <div class="text-muted small">{{ j.proyecto.nombre }}</div>
+                </div>
+                <div class="text-end">
+                  <span class="badge bg-secondary">{{ j.dias }}d</span>
+                  <div class="text-muted small">Bs. {{ j.monto|floatformat:2 }}</div>
+                </div>
+              </div>
+              {% if j.pago %}<div class="text-success small mt-1"><i class="bi bi-check-circle"></i> Cubierta por pago</div>{% endif %}
+            </li>
+            {% empty %}
+            <li class="list-group-item text-muted text-center small py-3">
+              Sin jornadas generadas (empleados sin contrato activo al momento de crear la asignación).
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

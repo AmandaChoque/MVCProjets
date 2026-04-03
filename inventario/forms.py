@@ -53,13 +53,14 @@ class ProveedorForm(forms.ModelForm):
 class InsumoForm(forms.ModelForm):
     class Meta:
         model = Insumo
-        fields = ['nombre', 'marca', 'modelo', 'categoria', 'stock_minimo']
+        fields = ['nombre', 'marca', 'modelo', 'categoria', 'unidad_medida', 'stock_minimo']
         widgets = {
-            'nombre':      forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del insumo', 'required': 'required'}),
-            'marca':       forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Marca'}),
-            'modelo':      forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: IPC-HDW2831T-AS'}),
-            'categoria':   forms.Select(attrs={'class': 'form-select'}),
-            'stock_minimo': forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'placeholder': 'Ej: 5'}),
+            'nombre':        forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del insumo', 'required': 'required'}),
+            'marca':         forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Marca'}),
+            'modelo':        forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: IPC-HDW2831T-AS'}),
+            'categoria':     forms.Select(attrs={'class': 'form-select'}),
+            'unidad_medida': forms.Select(attrs={'class': 'form-select'}),
+            'stock_minimo':  forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'placeholder': 'Ej: 5'}),
         }
 
 

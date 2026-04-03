@@ -16,9 +16,11 @@
 
   <!-- ======================= ENCABEZADO ======================= -->
   <div class="mb-2 d-flex justify-content-between align-items-center">
+    {% if es_admin %}
     <a href="{% url 'create_employee' %}" class="btn btn-primary btn-sm">
       + Nuevo Empleado
     </a>
+    {% else %}<div></div>{% endif %}
     <h5 class="fw-semibold text-secondary mb-0">Gestión de Empleados</h5>
 
     <div class="d-flex align-items-center gap-3">
@@ -141,6 +143,7 @@
                 <li>
                   <a class="dropdown-item" href="{% url 'employee_view' employee.id %}">Ver</a>
                 </li>
+                {% if es_admin %}
                 <li>
                   <a class="dropdown-item" href="{% url 'employee_detail' employee.id %}">Editar</a>
                 </li>
@@ -151,9 +154,10 @@
                     data-bs-target="#deleteModal"
                     data-id="{{ employee.id }}"
                     data-nombre="{{ employee.nombre }} {{ employee.apellido_paterno }}">
-                    Eliminar
+                    Inhabilitar
                   </button>
                 </li>
+                {% endif %}
               </ul>
             </div>
           </td>
@@ -228,7 +232,7 @@
         <form method="POST" id="deleteForm">
           {% csrf_token %}
           <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+          <button type="submit" class="btn btn-danger btn-sm">Inhabilitar</button>
         </form>
       </div>
     </div>

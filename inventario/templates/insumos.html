@@ -117,11 +117,11 @@
           </td>
           <td class="text-center">
             {% if insumo.stock_status == 'agotado' %}
-              <span class="badge bg-danger">Sin stock ({{ insumo.stock }})</span>
+              <span class="badge bg-danger">Sin stock ({{ insumo.stock }} {{ insumo.unidad_abrev }})</span>
             {% elif insumo.stock_status == 'bajo' %}
-              <span class="badge bg-warning text-dark">Stock bajo ({{ insumo.stock }})</span>
+              <span class="badge bg-warning text-dark">Stock bajo ({{ insumo.stock }} {{ insumo.unidad_abrev }})</span>
             {% else %}
-              <span class="badge bg-success">{{ insumo.stock }}</span>
+              <span class="badge bg-success">{{ insumo.stock }} {{ insumo.unidad_abrev }}</span>
             {% endif %}
           </td>
           <td class="text-end">

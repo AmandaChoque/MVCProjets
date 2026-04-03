@@ -229,7 +229,8 @@ def create_requiere(request, id_project):
     insumos_activos = Insumo.objects.filter(activo=True)
     insumos_con_stock = {str(i.id): i.stock for i in insumos_activos}
     for i in insumos_activos:
-        insumos_con_stock[f'min_{i.id}'] = i.stock_minimo
+        insumos_con_stock[f'min_{i.id}']  = i.stock_minimo
+        insumos_con_stock[f'unit_{i.id}'] = i.unidad_abrev
 
     ctx = {
         'form': RequerirForm(),
@@ -260,7 +261,6 @@ def create_requiere(request, id_project):
 
         requiere = form.save(commit=False)
         requiere.proyecto = project
-        requiere.costo_total = costo_total
         requiere.save()
 
         for lote_info in lotes_consumo:
@@ -285,6 +285,9 @@ def requiere_detail(request, id_requiere):
         return redirect('project_view', id_project=project.id)
     insumos_activos = Insumo.objects.filter(activo=True)
     insumos_con_stock = {str(i.id): i.stock for i in insumos_activos}
+    for i in insumos_activos:
+        insumos_con_stock[f'min_{i.id}']  = i.stock_minimo
+        insumos_con_stock[f'unit_{i.id}'] = i.unidad_abrev
 
     ctx = {
         'requiere': requiere,
@@ -385,30 +388,38 @@ def compras(request):
 
 @login_required
 def create_compra(request):
+    insumos_qs = Insumo.objects.filter(activo=True)
+    insumos_unidades = json.dumps({str(i.id): i.unidad_abrev for i in insumos_qs})
+    insumos_unidades_display = json.dumps({str(i.id): i.get_unidad_medida_display() for i in insumos_qs})
+    ctx = {'form': CompraForm(), 'insumos_unidades': insumos_unidades, 'insumos_unidades_display': insumos_unidades_display}
     if request.method == 'GET':
-        return render(request, 'create_compra.html', {'form': CompraForm()})
+        return render(request, 'create_compra.html', ctx)
     form = CompraForm(request.POST)
     if form.is_valid():
         compra = form.save()
         messages.success(request, f'Compra registrada: {compra.insumo.nombre} x{compra.cantidad} de {compra.proveedor.nombre}.')
         return redirect('compras')
-    return render(request, 'create_compra.html', {'form': form})
+    ctx['form'] = form
+    return render(request, 'create_compra.html', ctx)
 
 
 @login_required
 def compra_detail(request, id_compra):
     compra = get_object_or_404(Compra, pk=id_compra)
+    insumos_qs = Insumo.objects.filter(activo=True)
+    insumos_unidades = json.dumps({str(i.id): i.unidad_abrev for i in insumos_qs})
+    insumos_unidades_display = json.dumps({str(i.id): i.get_unidad_medida_display() for i in insumos_qs})
+    ctx = {'compra': compra, 'insumos_unidades': insumos_unidades, 'insumos_unidades_display': insumos_unidades_display}
     if request.method == 'GET':
-        return render(request, 'compra_detail.html', {
-            'compra': compra,
-            'form': CompraForm(instance=compra),
-        })
+        ctx['form'] = CompraForm(instance=compra)
+        return render(request, 'compra_detail.html', ctx)
     form = CompraForm(request.POST, instance=compra)
     if form.is_valid():
         compra = form.save()
         messages.success(request, 'Compra actualizada correctamente.')
         return redirect('compras')
-    return render(request, 'compra_detail.html', {'compra': compra, 'form': form})
+    ctx['form'] = form
+    return render(request, 'compra_detail.html', ctx)
 
 
 @login_required

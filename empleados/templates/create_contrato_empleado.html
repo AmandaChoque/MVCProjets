@@ -18,10 +18,13 @@
 
 {% block content %}
 <main class="container-fluid px-5 py-4">
-  <div class="mb-4">
-    <h4 class="fw-semibold mb-1">Contratos de Empleados</h4>
-    <span class="text-muted">Registrar contrato — {{ project.nombre }}</span>
-  </div>
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'projects' %}">Proyectos</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'project_view' project.id %}">{{ project.nombre }}</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Nuevo contrato empleado</li>
+    </ol>
+  </nav>
 
   <div class="card border-0 shadow-sm rounded-3">
     <div class="card-body p-4">
@@ -80,8 +83,8 @@
 
           <div class="col-lg-6">
             <div class="mb-3">
-              <label class="form-label">Tipo de Pago <span class="text-danger">*</span></label>
-              {{ form.tipo_salario }}
+              <label class="form-label">Días laborales acordados <span class="text-danger">*</span></label>
+              {{ form.dias_laborales }}
             </div>
             <div class="mb-3">
               <label class="form-label">Monto Acordado (Bs.) <span class="text-danger">*</span></label>

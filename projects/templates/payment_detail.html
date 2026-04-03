@@ -19,11 +19,12 @@
 
 {% block content %}
 <main class="container-fluid px-5 py-4">
-  <!-- ENCABEZADO -->
-  <div class="mb-4">
-    <h4 class="fw-semibold mb-1">Pagos</h4>
-    <span class="text-muted">Editar registro</span>
-  </div>
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'payments' %}">Pagos</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Editar pago</li>
+    </ol>
+  </nav>
 
   <!-- TARJETA -->
   <div class="card border-0 shadow-sm rounded-3">

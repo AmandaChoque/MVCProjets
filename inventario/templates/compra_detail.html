@@ -18,10 +18,12 @@
 
 {% block content %}
 <main class="container-fluid px-5 py-4">
-  <div class="mb-4">
-    <h4 class="fw-semibold mb-1">Compras</h4>
-    <span class="text-muted">Editar compra — {{ compra.insumo.nombre|default:"Insumo eliminado" }} ({{ compra.fecha|date:"d/m/Y" }})</span>
-  </div>
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'compras' %}">Compras</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Editar — {{ compra.insumo.nombre|default:"Insumo eliminado" }}</li>
+    </ol>
+  </nav>
 
   <div class="card border-0 shadow-sm rounded-3">
     <div class="card-body p-4">
@@ -59,7 +61,11 @@
           </div>
           <div class="col-lg-6">
             <div class="mb-3">
-              <label class="form-label">Cantidad <span class="text-danger">*</span></label>
+              <label class="form-label">Unidad de medida</label>
+              <div class="form-control bg-light text-muted" id="unidadDisplay">—</div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label" id="labelCantidad">Cantidad <span class="text-danger">*</span></label>
               {{ form.cantidad }}
               {% if form.cantidad.errors %}
               <div class="text-danger small mt-1">{% for err in form.cantidad.errors %}{{ err }}{% endfor %}</div>
@@ -102,9 +108,22 @@
 
 {% block extra_js %}
 <script>
+  const insumoUnidades = {{ insumos_unidades|safe }};
+  const insumoUnidadesDisplay = {{ insumos_unidades_display|safe }};
+  const insumoSelect  = document.getElementById('id_insumo');
+  const labelCantidad = document.getElementById('labelCantidad');
+  const unidadDisplay = document.getElementById('unidadDisplay');
   const costoInput    = document.getElementById('id_costo_unitario');
   const cantidadInput = document.getElementById('id_cantidad');
   const totalDisplay  = document.getElementById('totalDisplay');
+
+  function updateUnit() {
+    const id   = insumoSelect ? insumoSelect.value : '';
+    const unit = id && insumoUnidades[id] ? insumoUnidades[id] : '';
+    const displayName = id && insumoUnidadesDisplay[id] ? insumoUnidadesDisplay[id] : '—';
+    labelCantidad.innerHTML = 'Cantidad' + (unit ? ' (' + unit + ')' : '') + ' <span class="text-danger">*</span>';
+    unidadDisplay.textContent = displayName;
+  }
 
   function updateTotal() {
     const costo    = parseFloat(costoInput.value) || 0;
@@ -112,9 +131,11 @@
     totalDisplay.textContent = 'Bs. ' + (costo * cantidad).toFixed(2);
   }
 
+  if (insumoSelect) insumoSelect.addEventListener('change', updateUnit);
   if (costoInput)    costoInput.addEventListener('input', updateTotal);
   if (cantidadInput) cantidadInput.addEventListener('input', updateTotal);
 
+  updateUnit();
   updateTotal();
 
   document.querySelectorAll('.text-danger.small.mt-1').forEach(function (errorDiv) {

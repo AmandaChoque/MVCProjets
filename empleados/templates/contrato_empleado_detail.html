@@ -18,19 +18,22 @@
 
 {% block content %}
 <main class="container-fluid px-5 py-4">
-  <div class="mb-4">
-    <h4 class="fw-semibold mb-1">Contratos de Empleados</h4>
-    <span class="text-muted">
-      {{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }} —
-      <span class="badge bg-secondary fw-normal">{{ contrato.get_tipo_salario_display }}</span>
-      <span class="badge bg-primary fw-normal">Bs. {{ contrato.monto_diario|floatformat:2 }}/día</span>
-      <span class="badge bg-dark fw-normal">Monto acordado: Bs. {{ contrato.monto_acordado|floatformat:2 }}</span>
-      {% if contrato.activo %}
-        <span class="badge bg-success fw-normal">Activo</span>
-      {% else %}
-        <span class="badge bg-secondary fw-normal">Inactivo</span>
-      {% endif %}
-    </span>
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'employees' %}">Empleados</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'employee_view' contrato.empleado.id %}">{{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }}</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Contrato</li>
+    </ol>
+  </nav>
+  <div class="mb-3">
+    <span class="badge bg-secondary fw-normal">{{ contrato.dias_laborales }} días laborales</span>
+    <span class="badge bg-primary fw-normal">Bs. {{ contrato.monto_diario|floatformat:2 }}/día</span>
+    <span class="badge bg-dark fw-normal">Monto acordado: Bs. {{ contrato.monto_acordado|floatformat:2 }}</span>
+    {% if contrato.activo %}
+      <span class="badge bg-success fw-normal">Activo</span>
+    {% else %}
+      <span class="badge bg-secondary fw-normal">Inactivo</span>
+    {% endif %}
   </div>
 
   <!-- Balance de jornadas -->
@@ -85,8 +88,8 @@
             </div>
             <div class="mb-3">
               <label class="form-label">Período del Contrato <span class="text-danger">*</span></label>
-              {{ form.tipo_salario }}
-              <div class="form-text text-muted">Define el divisor para calcular el monto diario.</div>
+              {{ form.dias_laborales }}
+              <div class="form-text text-muted">Días laborales acordados en el contrato (ej: 28). Monto diario = Monto acordado ÷ días laborales.</div>
             </div>
             <div class="mb-3">
               <label class="form-label">Monto Acordado (Bs.) <span class="text-danger">*</span></label>
@@ -127,10 +130,15 @@
 
             <div class="d-flex justify-content-between mt-3">
               <div class="d-flex gap-2">
-                {% if project %}<a href="{% url 'project_view' project.id %}" class="btn btn-outline-secondary">Cancelar</a>{% else %}<a href="{% url 'employee_view' contrato.empleado.id %}" class="btn btn-outline-secondary">Cancelar</a>{% endif %}
+                <a href="{% url 'employee_view' contrato.empleado.id %}" class="btn btn-outline-secondary">Cancelar</a>
                 <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEliminar">Eliminar</button>
               </div>
-              <button class="btn btn-primary px-4" type="submit">Actualizar contrato</button>
+              <div class="d-flex gap-2">
+                <a href="{% url 'contrato_empleado_pdf' contrato.id %}" target="_blank" class="btn btn-outline-danger">
+                  <i class="bi bi-file-earmark-pdf me-1"></i>Generar Contrato PDF
+                </a>
+                <button class="btn btn-primary px-4" type="submit">Actualizar contrato</button>
+              </div>
             </div>
           </form>
         </div>

@@ -76,9 +76,16 @@
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h6 class="mb-0 fw-semibold"><i class="bi bi-check2-square me-2"></i>Checklist de tareas</h6>
           {% if es_admin %}
-          <button class="btn btn-sm btn-primary py-0" data-bs-toggle="collapse" data-bs-target="#panelNuevaTarea">
-            <i class="bi bi-plus-lg"></i> Tarea
-          </button>
+          <div class="d-flex gap-2 align-items-center">
+            {% if tareas %}
+            <span class="text-muted small" id="orden-hint" title="Arrastra las tareas para reordenar">
+              <i class="bi bi-grip-vertical"></i>
+            </span>
+            {% endif %}
+            <button class="btn btn-sm btn-primary py-0" data-bs-toggle="collapse" data-bs-target="#panelNuevaTarea">
+              <i class="bi bi-plus-lg"></i> Tarea
+            </button>
+          </div>
           {% endif %}
         </div>
         {% if es_admin %}
@@ -96,8 +103,11 @@
         <div class="card-body p-0">
           <ul class="list-group list-group-flush" id="lista-tareas">
             {% for tarea in tareas %}
-            <li class="list-group-item tarea-item {% if tarea.completado %}completada{% endif %}" id="tarea-{{ tarea.id }}">
+            <li class="list-group-item tarea-item {% if tarea.completado %}completada{% endif %}" id="tarea-{{ tarea.id }}" data-id="{{ tarea.id }}">
               <div class="d-flex align-items-center gap-3">
+                {% if es_admin %}
+                <i class="bi bi-grip-vertical text-muted drag-handle" style="cursor:grab; font-size:1.1rem;" title="Arrastra para reordenar"></i>
+                {% endif %}
                 <input type="checkbox" class="form-check-input fs-5 tarea-check"
                        data-id="{{ tarea.id }}" {% if tarea.completado %}checked{% endif %}
                        style="width:1.3em; height:1.3em; cursor:pointer;">
@@ -217,6 +227,20 @@
         <div class="card-header bg-light"><h6 class="mb-0 fw-semibold"><i class="bi bi-map me-2"></i>Ubicación</h6></div>
         <div class="card-body p-2">
           <div id="map-sede"></div>
+          <!-- Coordenadas copiables -->
+          <div class="mt-2 px-1 d-flex align-items-center justify-content-between gap-2">
+            <code id="coords-text" class="text-muted small" style="user-select:all;">{{ sede.latitud|unlocalize }}, {{ sede.longitud|unlocalize }}</code>
+            <div class="d-flex gap-1">
+              <button class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:.75rem;"
+                      onclick="copyCoords()" title="Copiar coordenadas">
+                <i class="bi bi-clipboard me-1"></i><span id="copy-label">Copiar</span>
+              </button>
+              <a href="https://www.google.com/maps?q={{ sede.latitud|unlocalize }},{{ sede.longitud|unlocalize }}"
+                 target="_blank" class="btn btn-outline-success btn-sm py-0 px-2" style="font-size:.75rem;" title="Abrir en Google Maps">
+                <i class="bi bi-map me-1"></i>Google Maps
+              </a>
+            </div>
+          </div>
         </div>
       </div>
       {% endif %}
@@ -240,6 +264,9 @@
 {% endblock %}
 
 {% block extra_js %}
+{% if es_admin %}
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.3/Sortable.min.js"></script>
+{% endif %}
 {% if sede.latitud and sede.longitud %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script type="application/json" id="sede-coords">
@@ -259,6 +286,17 @@
   })();
 </script>
 {% endif %}
+
+<script>
+  function copyCoords() {
+    var text = document.getElementById('coords-text').textContent.trim();
+    navigator.clipboard.writeText(text).then(function() {
+      var label = document.getElementById('copy-label');
+      label.textContent = '¡Copiado!';
+      setTimeout(function() { label.textContent = 'Copiar'; }, 2000);
+    });
+  }
+</script>
 
 <script>
 const CSRF = document.querySelector('[name=csrfmiddlewaretoken]').value;
@@ -328,8 +366,10 @@ if (formNuevaTarea) {
       const li = document.createElement('li');
       li.className = 'list-group-item tarea-item';
       li.id = `tarea-${data.id}`;
+      li.dataset.id = data.id;
       li.innerHTML = `
         <div class="d-flex align-items-center gap-3">
+          <i class="bi bi-grip-vertical text-muted drag-handle" style="cursor:grab; font-size:1.1rem;" title="Arrastra para reordenar"></i>
           <input type="checkbox" class="form-check-input fs-5 tarea-check"
                  data-id="${data.id}" style="width:1.3em; height:1.3em; cursor:pointer;">
           <div class="flex-grow-1"><span class="tarea-desc">${data.descripcion}</span></div>
@@ -371,6 +411,26 @@ document.querySelectorAll('.foto-thumb').forEach(img => {
     document.getElementById('modalFotoDesc').textContent = this.dataset.desc || '';
   });
 });
+
+// ── Reordenar tareas (drag & drop) ──────────────────────────────────────────
+{% if es_admin %}
+const listaTareas = document.getElementById('lista-tareas');
+if (listaTareas && typeof Sortable !== 'undefined') {
+  Sortable.create(listaTareas, {
+    handle: '.drag-handle',
+    animation: 150,
+    ghostClass: 'bg-light',
+    onEnd: function() {
+      const ids = [...listaTareas.querySelectorAll('li[data-id]')].map(li => li.dataset.id);
+      fetch('{% url "tareas_reorder" sede.id %}', {
+        method: 'POST',
+        headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+        body: JSON.stringify({ids}),
+      });
+    },
+  });
+}
+{% endif %}
 
 // ── Sync offline queue al reconectar ────────────────────────────────────────
 window.addEventListener('online', function() {

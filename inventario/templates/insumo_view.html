@@ -47,9 +47,18 @@
     <div class="col-md-3">
       <div class="card border-0 shadow-sm rounded-3 h-100">
         <div class="card-body text-center py-3">
+          <div class="text-muted small mb-1">Unidad de Medida</div>
+          <div class="fs-4 fw-bold">{{ insumo.unidad_abrev }}</div>
+          <span class="text-muted small">{{ insumo.get_unidad_medida_display }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-body text-center py-3">
           <div class="text-muted small mb-1">Stock Mínimo de Alerta</div>
           <div class="fs-4 fw-bold">{{ insumo.stock_minimo }}</div>
-          <span class="text-muted small">unidades</span>
+          <span class="text-muted small">{{ insumo.get_unidad_medida_display|lower }}</span>
         </div>
       </div>
     </div>
@@ -89,7 +98,7 @@
                 {% endif %}
               </td>
               <td>{{ compra.proveedor.nombre|default:"Proveedor eliminado" }}</td>
-              <td class="text-end">{{ compra.cantidad }}</td>
+              <td class="text-end">{{ compra.cantidad }} {{ insumo.unidad_abrev }}</td>
               <td class="text-end fw-semibold">Bs. {{ compra.costo_unitario|floatformat:2 }}</td>
               <td class="small text-muted">{{ compra.numero_factura|default:"—" }}</td>
               <td class="text-end pe-4">Bs. {{ compra.costo_total|floatformat:2 }}</td>
@@ -147,7 +156,7 @@
                   <span class="badge bg-secondary">Pendiente</span>
                 {% endif %}
               </td>
-              <td class="text-end">{{ req.cantidad }}</td>
+              <td class="text-end">{{ req.cantidad }} {{ insumo.unidad_abrev }}</td>
               <td class="text-end pe-4 fw-semibold">Bs. {{ req.costo_total|floatformat:2 }}</td>
             </tr>
             {% endfor %}

@@ -8,10 +8,12 @@ from django.utils import timezone
 from django.template.loader import get_template
 from django.core.paginator import Paginator
 from xhtml2pdf import pisa
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
-from .models import Empleado, PagoEmpleado, ContratoEmpleado, ContratoProyecto, JornadaEmpleado
-from .forms import EmpleadoForm, ContratoEmpleadoForm, ContratoEmpleadoDesdeEmpleadoForm, JornadaEmpleadoForm, PagoEmpleadoForm
-from projects.models import Proyecto, TareaChecklist
+from .models import Empleado, PagoEmpleado, ContratoEmpleado, ContratoProyecto, JornadaEmpleado, AsignacionDiaria
+from .forms import EmpleadoForm, ContratoEmpleadoForm, ContratoEmpleadoDesdeEmpleadoForm, JornadaEmpleadoForm, PagoEmpleadoForm, AsignacionDiariaForm
+from projects.models import Proyecto, TareaChecklist, Sede
 from projects.decorators import cargo_required, ROLES_ADMIN, ROLES_ADMIN_SEC
 
 
@@ -40,6 +42,9 @@ def deactivate_employee(request, id_employee):
     empleado = get_object_or_404(Empleado, id=id_employee, is_active=True)
     if request.method == 'POST':
         empleado.is_active = False
+        empleado.activo     = False
+        empleado.deleted_at = timezone.now()
+        empleado.deleted_by = request.user
         empleado.save()
         messages.success(request, f"El empleado {empleado.nombre} {empleado.apellido_paterno} fue inhabilitado.")
     return redirect('employees')
@@ -71,18 +76,20 @@ def employee_view(request, id_employee):
             'saldo_jornadas': total_ganado - total_pagado,
         })
 
-    saldo_global = total_ganado_global - total_pagado_global
     context = {
         'employee': empleado,
         'contratos_con_pagos': contratos_con_pagos,
-        'total_ganado_global': total_ganado_global,
-        'total_pagado_global': total_pagado_global,
-        'saldo_global': saldo_global,
-        'now': timezone.now(),
-        'generado_por': request.user.get_full_name() or request.user.username,
     }
 
     if 'pdf' in request.GET:
+        saldo_global = total_ganado_global - total_pagado_global
+        context.update({
+            'total_ganado_global': total_ganado_global,
+            'total_pagado_global': total_pagado_global,
+            'saldo_global': saldo_global,
+            'now': timezone.now(),
+            'generado_por': request.user.get_full_name() or request.user.username,
+        })
         template = get_template('employee_detail_pdf.html')
         html = template.render(context)
         response = HttpResponse(content_type='application/pdf')
@@ -161,16 +168,16 @@ def employee_detail(request, id_employee):
         return render(request, 'employee_detail.html', {'employee': empleado, 'form': form})
     form = EmpleadoForm(request.POST, instance=empleado)
     if form.is_valid():
-        empleado = form.save()
+        empleado = form.save(commit=False)
         apellido_materno = form.cleaned_data.get('apellido_materno') or ''
         empleado.first_name = form.cleaned_data['nombre']
-        empleado.last_name = f"{form.cleaned_data['apellido_paterno']} {apellido_materno}".strip()
-        empleado.email = form.cleaned_data.get('correo') or ''
+        empleado.last_name  = f"{form.cleaned_data['apellido_paterno']} {apellido_materno}".strip()
+        empleado.email      = form.cleaned_data.get('correo') or ''
         nueva_password = form.cleaned_data.get('password1')
         if nueva_password:
             empleado.set_password(nueva_password)
             update_session_auth_hash(request, empleado)
-        empleado.save(update_fields=['first_name', 'last_name', 'email', 'password'])
+        empleado.save()
         messages.success(request, f"El empleado {empleado.nombre} {empleado.apellido_paterno} fue actualizado exitosamente.")
         return redirect('employees')
     return render(request, 'employee_detail.html', {'employee': empleado, 'form': form})
@@ -222,6 +229,195 @@ def employees(request):
     })
 
 
+# ── Reporte de empleados ──────────────────────────────────────────────────────
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def employee_report(request):
+    search_nombre = request.GET.get('search_nombre', '').strip()
+    filter_cargo  = request.GET.get('filter_cargo', '')
+
+    empleados_qs = Empleado.objects.filter(is_active=True).prefetch_related(
+        'contratos_empleado'
+    ).order_by('apellido_paterno', 'nombre')
+
+    if search_nombre:
+        empleados_qs = empleados_qs.filter(
+            Q(nombre__icontains=search_nombre) |
+            Q(apellido_paterno__icontains=search_nombre) |
+            Q(apellido_materno__icontains=search_nombre)
+        )
+    if filter_cargo:
+        empleados_qs = empleados_qs.filter(cargo=filter_cargo)
+
+    empleados_list = list(empleados_qs)
+
+    # Enriquecer cada empleado con datos de contrato, jornadas y pagos
+    for emp in empleados_list:
+        contrato = emp.contratos_empleado.filter(activo=True).order_by('-created').first()
+        emp.contrato_activo = contrato
+        if contrato:
+            jornadas_agg = contrato.jornadas.filter(activo=True).aggregate(t=Sum('dias'))
+            total_dias   = jornadas_agg['t'] or 0
+            total_ganado = total_dias * contrato.monto_diario
+            total_pagado = contrato.pagos.filter(activo=True).aggregate(t=Sum('monto'))['t'] or 0
+            emp.total_dias    = total_dias
+            emp.total_ganado  = total_ganado
+            emp.total_pagado  = total_pagado
+            emp.saldo_pendiente = total_ganado - total_pagado
+        else:
+            emp.total_dias = emp.total_ganado = emp.total_pagado = emp.saldo_pendiente = 0
+
+    # KPIs
+    total_empleados = len(empleados_list)
+    con_contrato    = sum(1 for e in empleados_list if e.contrato_activo)
+    sin_contrato    = total_empleados - con_contrato
+    cargo_counts    = {}
+    for e in empleados_list:
+        cargo_counts[e.cargo] = cargo_counts.get(e.cargo, 0) + 1
+
+    tot_devengado = sum(emp.total_ganado  for emp in empleados_list)
+    tot_saldo     = sum(emp.saldo_pendiente for emp in empleados_list)
+
+    context = {
+        'empleados':      empleados_list,
+        'search_nombre':  search_nombre,
+        'filter_cargo':   filter_cargo,
+        'cargo_choices':  Empleado.POSITION_CHOICES,
+        'total_empleados': total_empleados,
+        'con_contrato':   con_contrato,
+        'sin_contrato':   sin_contrato,
+        'cargo_counts':   cargo_counts,
+        'tot_devengado':  tot_devengado,
+        'tot_saldo':      tot_saldo,
+        'now':            timezone.now(),
+        'generado_por':   request.user.get_full_name() or request.user.username,
+    }
+
+    if 'pdf' in request.GET:
+        template = get_template('employee_report_pdf.html')
+        html = template.render(context)
+        response = HttpResponse(content_type='application/pdf')
+        disposition = 'attachment' if 'download' in request.GET else 'inline'
+        response['Content-Disposition'] = f'{disposition}; filename="reporte_empleados.pdf"'
+        pisa_status = pisa.CreatePDF(html, dest=response)
+        if pisa_status.err:
+            return HttpResponse('Error al generar el PDF', status=500)
+        return response
+
+    if 'excel' in request.GET:
+        NUM_COLS = 10
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Empleados'
+
+        title_fill  = PatternFill(start_color='0F2D5A', end_color='0F2D5A', fill_type='solid')
+        title_font  = Font(bold=True, size=14, color='D4B84A')
+        info_fill   = PatternFill(start_color='1B4D90', end_color='1B4D90', fill_type='solid')
+        info_font   = Font(size=9, color='FFFFFF')
+        header_fill = PatternFill(start_color='0F2D5A', end_color='0F2D5A', fill_type='solid')
+        header_font = Font(bold=True, color='D4B84A', size=10)
+        alt_fill    = PatternFill(start_color='EFF2F8', end_color='EFF2F8', fill_type='solid')
+        total_fill  = PatternFill(start_color='E8EDF5', end_color='E8EDF5', fill_type='solid')
+        total_font  = Font(bold=True, size=10, color='0F2D5A')
+        center      = Alignment(horizontal='center', vertical='center')
+        left        = Alignment(horizontal='left',   vertical='center')
+        right_al    = Alignment(horizontal='right',  vertical='center')
+        cell_border = Border(
+            left=Side(style='thin', color='C0C8D8'), right=Side(style='thin', color='C0C8D8'),
+            top=Side(style='thin', color='C0C8D8'),  bottom=Side(style='thin', color='C0C8D8'),
+        )
+        total_border = Border(
+            left=Side(style='thin', color='C0C8D8'), right=Side(style='thin', color='C0C8D8'),
+            top=Side(style='medium', color='0F2D5A'), bottom=Side(style='medium', color='0F2D5A'),
+        )
+        money_fmt = '#,##0.00'
+
+        ws.append(['Reporte de Empleados — SOBOTEC S.R.L.'])
+        ws.merge_cells(f'A1:{openpyxl.utils.get_column_letter(NUM_COLS)}1')
+        ws['A1'].font = title_font; ws['A1'].fill = title_fill
+        ws['A1'].alignment = Alignment(horizontal='left', vertical='center', indent=1)
+        ws.row_dimensions[1].height = 26
+
+        info_str = f'Generado por: {context["generado_por"]}  |  Fecha: {timezone.now().strftime("%d/%m/%Y %H:%M")}'
+        if search_nombre: info_str += f'  |  Nombre: {search_nombre}'
+        if filter_cargo:  info_str += f'  |  Cargo: {filter_cargo}'
+        ws.append([info_str])
+        ws.merge_cells(f'A2:{openpyxl.utils.get_column_letter(NUM_COLS)}2')
+        ws['A2'].font = info_font; ws['A2'].fill = info_fill
+        ws['A2'].alignment = Alignment(horizontal='left', vertical='center', indent=1)
+        ws.row_dimensions[2].height = 18
+
+        ws.append([])
+        ws.row_dimensions[3].height = 6
+
+        headers = ['Nombre Completo', 'CI', 'Cargo', 'Celular',
+                   'Modalidad Pago', 'Monto Acordado (Bs.)', 'Inicio Contrato', 'Fin Contrato',
+                   'Total Devengado (Bs.)', 'Saldo Pendiente (Bs.)']
+        ws.append(headers)
+        for cell in ws[4]:
+            cell.font = header_font; cell.fill = header_fill
+            cell.alignment = center; cell.border = cell_border
+        ws.row_dimensions[4].height = 22
+
+        last_row = 4
+        tot_devengado = tot_saldo = 0
+        for i, emp in enumerate(empleados_list, start=5):
+            c = emp.contrato_activo
+            ws.append([
+                f'{emp.nombre} {emp.apellido_paterno} {emp.apellido_materno or ""}'.strip(),
+                emp.carnet_identidad,
+                emp.get_cargo_display(),
+                emp.numero_celular or '—',
+                f'{c.dias_laborales} días' if c else '—',
+                float(c.monto_acordado) if c else 0,
+                c.fecha_inicio.strftime('%d/%m/%Y') if c else '—',
+                c.fecha_fin.strftime('%d/%m/%Y') if c else '—',
+                float(emp.total_ganado),
+                float(emp.saldo_pendiente),
+            ])
+            row_fill = alt_fill if i % 2 == 0 else None
+            for j, cell in enumerate(ws[i], start=1):
+                if row_fill: cell.fill = row_fill
+                cell.border = cell_border
+                if j in (6, 9, 10):
+                    cell.alignment = right_al; cell.number_format = money_fmt
+                elif j in (7, 8):
+                    cell.alignment = center
+                else:
+                    cell.alignment = left
+            ws.row_dimensions[i].height = 16
+            last_row = i
+            tot_devengado += float(emp.total_ganado)
+            tot_saldo     += float(emp.saldo_pendiente)
+
+        total_row = last_row + 1
+        ws.append(['', '', '', '', '', '', 'TOTAL', '', tot_devengado, tot_saldo])
+        for j, cell in enumerate(ws[total_row], start=1):
+            cell.font = total_font; cell.fill = total_fill; cell.border = total_border
+            if j in (9, 10):
+                cell.alignment = right_al; cell.number_format = money_fmt
+            else:
+                cell.alignment = left
+        ws.row_dimensions[total_row].height = 18
+
+        col_widths = [30, 14, 18, 14, 16, 20, 16, 16, 22, 22]
+        for col_idx, width in enumerate(col_widths, start=1):
+            ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = width
+
+        ws.freeze_panes = 'A5'
+        ws.auto_filter.ref = f'A4:{openpyxl.utils.get_column_letter(NUM_COLS)}4'
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename="reporte_empleados.xlsx"'
+        wb.save(response)
+        return response
+
+    return render(request, 'employee_report.html', context)
+
+
 # ── Contratos de empleado ─────────────────────────────────────────────────────
 
 @login_required
@@ -268,6 +464,26 @@ def contrato_empleado_detail(request, id_contrato):
         'total_dias': total_dias, 'total_ganado': total_ganado,
         'total_pagado': total_pagado, 'saldo_pendiente': saldo_pendiente,
     })
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def contrato_empleado_pdf(request, id_contrato):
+    contrato = get_object_or_404(ContratoEmpleado, pk=id_contrato)
+    context = {
+        'contrato': contrato,
+        'now': timezone.now(),
+        'generado_por': request.user.get_full_name() or request.user.username,
+    }
+    template = get_template('contrato_empleado_pdf.html')
+    html = template.render(context)
+    response = HttpResponse(content_type='application/pdf')
+    nombre = f"{contrato.empleado.apellido_paterno}_{contrato.empleado.nombre}".replace(' ', '_')
+    response['Content-Disposition'] = f'inline; filename="contrato_{nombre}.pdf"'
+    pisa_status = pisa.CreatePDF(html, dest=response)
+    if pisa_status.err:
+        return HttpResponse('Error al generar el PDF', status=500)
+    return response
 
 
 @login_required
@@ -543,3 +759,114 @@ def deactivate_pago_empleado(request, id_pago):
         pago.save()
         messages.success(request, 'Pago eliminado correctamente.')
     return redirect('employee_view', id_employee=contrato.empleado.id)
+
+
+# ── Asignaciones diarias ──────────────────────────────────────────────────────
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def asignaciones_list(request):
+    search_fecha    = request.GET.get('search_fecha', '')
+    search_proyecto = request.GET.get('search_proyecto', '')
+    search_empleado = request.GET.get('search_empleado', '')
+    page     = request.GET.get('page', 1)
+    per_page = request.GET.get('per_page', 10)
+    try:
+        page = max(int(page), 1)
+    except ValueError:
+        page = 1
+    try:
+        per_page = int(per_page) if int(per_page) in [10, 20, 50, 100] else 10
+    except ValueError:
+        per_page = 10
+
+    qs = AsignacionDiaria.objects.filter(activo=True).select_related(
+        'proyecto', 'sede', 'supervisor', 'instalador'
+    ).order_by('-fecha')
+
+    if search_fecha:
+        qs = qs.filter(fecha=search_fecha)
+    if search_proyecto:
+        qs = qs.filter(proyecto__nombre__icontains=search_proyecto)
+    if search_empleado:
+        qs = qs.filter(
+            Q(supervisor__nombre__icontains=search_empleado) |
+            Q(supervisor__apellido_paterno__icontains=search_empleado) |
+            Q(instalador__nombre__icontains=search_empleado) |
+            Q(instalador__apellido_paterno__icontains=search_empleado)
+        )
+
+    paginator     = Paginator(qs, per_page)
+    asignaciones  = paginator.get_page(page)
+    return render(request, 'asignaciones_list.html', {
+        'asignaciones':    asignaciones,
+        'search_fecha':    search_fecha,
+        'search_proyecto': search_proyecto,
+        'search_empleado': search_empleado,
+        'per_page':        per_page,
+    })
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def create_asignacion(request):
+    if request.method == 'GET':
+        form = AsignacionDiariaForm()
+        return render(request, 'create_asignacion.html', {'form': form, 'accion': 'Registrar'})
+    form = AsignacionDiariaForm(request.POST)
+    if form.is_valid():
+        asignacion = form.save()
+        messages.success(request, f'Asignación del {asignacion.fecha} registrada. Jornadas generadas automáticamente.')
+        return redirect('asignaciones_list')
+    return render(request, 'create_asignacion.html', {'form': form, 'accion': 'Registrar'})
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def asignacion_detail(request, id_asignacion):
+    asignacion = get_object_or_404(AsignacionDiaria, pk=id_asignacion, activo=True)
+    jornadas   = asignacion.jornadas.filter(activo=True).select_related('contrato__empleado')
+    if request.method == 'GET':
+        form = AsignacionDiariaForm(instance=asignacion)
+        return render(request, 'asignacion_detail.html', {
+            'form': form, 'asignacion': asignacion, 'jornadas': jornadas,
+        })
+    form = AsignacionDiariaForm(request.POST, instance=asignacion)
+    if form.is_valid():
+        form.save()
+        messages.success(request, 'Asignación actualizada correctamente.')
+        return redirect('asignaciones_list')
+    return render(request, 'asignacion_detail.html', {
+        'form': form, 'asignacion': asignacion, 'jornadas': jornadas,
+    })
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def deactivate_asignacion(request, id_asignacion):
+    asignacion = get_object_or_404(AsignacionDiaria, pk=id_asignacion, activo=True)
+    if request.method == 'POST':
+        # Desvincula las jornadas generadas por esta asignación
+        asignacion.jornadas.filter(activo=True).update(asignacion=None)
+        asignacion.activo     = False
+        asignacion.deleted_at = timezone.now()
+        asignacion.deleted_by = request.user
+        asignacion.save()
+        messages.success(request, 'Asignación eliminada. Las jornadas asociadas quedaron sin asignación.')
+    return redirect('asignaciones_list')
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def asignacion_sedes_ajax(request):
+    """AJAX: devuelve sedes activas de un proyecto en formato JSON."""
+    from django.http import JsonResponse
+    proyecto_id = request.GET.get('proyecto_id')
+    sedes = []
+    if proyecto_id:
+        sedes = list(
+            Sede.objects.filter(proyecto_id=proyecto_id, activo=True)
+            .values('id', 'nombre')
+            .order_by('nombre')
+        )
+    return JsonResponse({'sedes': sedes})

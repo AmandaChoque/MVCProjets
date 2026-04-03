@@ -5,7 +5,8 @@ urlpatterns = [
     # Empleados
     path('employees/', views.employees, name='employees'),
     path('employees/create/', views.create_employee, name='create_employee'),
-    path('employees/carga/', views.employee_workload, name='employee_workload'),
+    path('employees/carga/',   views.employee_workload, name='employee_workload'),
+    path('employees/reporte/', views.employee_report,   name='employee_report'),
     path('employees/<int:id_employee>/', views.employee_detail, name='employee_detail'),
     path('employees/<int:id_employee>/view/', views.employee_view, name='employee_view'),
     path('employees/<int:id_employee>/deactivate/', views.deactivate_employee, name='employee_deactivate'),
@@ -14,6 +15,7 @@ urlpatterns = [
     path('employees/<int:id_employee>/contratos/nuevo/', views.create_contrato_from_employee, name='create_contrato_from_employee'),
     path('contratos/empleado/<int:id_contrato>/', views.contrato_empleado_detail, name='contrato_empleado_detail'),
     path('contratos/empleado/<int:id_contrato>/deactivate/', views.deactivate_contrato_empleado, name='contrato_empleado_deactivate'),
+    path('contratos/empleado/<int:id_contrato>/pdf/',        views.contrato_empleado_pdf,        name='contrato_empleado_pdf'),
 
     # Jornadas
     path('contratos/empleado/<int:id_contrato>/jornadas/nueva/', views.create_jornada, name='create_jornada'),
@@ -28,4 +30,11 @@ urlpatterns = [
     path('contratos/empleado/<int:id_contrato>/pagos/nuevo/',        views.create_pago_empleado,      name='create_pago_empleado'),
     path('pagos-empleado/<int:id_pago>/',                            views.pago_empleado_detail,      name='pago_empleado_detail'),
     path('pagos-empleado/<int:id_pago>/deactivate/',                 views.deactivate_pago_empleado,  name='pago_empleado_deactivate'),
+
+    # Asignaciones diarias
+    path('asignaciones/',                                            views.asignaciones_list,         name='asignaciones_list'),
+    path('asignaciones/nueva/',                                      views.create_asignacion,         name='create_asignacion'),
+    path('asignaciones/<int:id_asignacion>/',                        views.asignacion_detail,         name='asignacion_detail'),
+    path('asignaciones/<int:id_asignacion>/deactivate/',             views.deactivate_asignacion,     name='asignacion_deactivate'),
+    path('asignaciones/sedes-ajax/',                                 views.asignacion_sedes_ajax,     name='asignacion_sedes_ajax'),
 ]

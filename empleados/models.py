@@ -40,19 +40,15 @@ class Empleado(AbstractUser):
 
 
 class ContratoEmpleado(AuditModel):
-    TIPO_SALARIO_CHOICES = [
-        ('mensual', 'Mensual (30 días)'),
-        ('semanal', 'Semanal (7 días)'),
-    ]
-
-    empleado       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='contratos_empleado', verbose_name="Empleado")
-    tipo_salario   = models.CharField(max_length=10, choices=TIPO_SALARIO_CHOICES, default='mensual', verbose_name="Tipo de Pago")
-    fecha_firma    = models.DateField(verbose_name="Fecha de Firma")
-    fecha_inicio   = models.DateField(verbose_name="Fecha de Inicio")
-    fecha_fin      = models.DateField(verbose_name="Fecha de Fin")
-    monto_acordado = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto Acordado (Bs.)")
-    observaciones  = models.TextField(blank=True, verbose_name="Observaciones")
-    documento      = models.FileField(upload_to='contratos/', null=True, blank=True, verbose_name="Documento")
+    empleado        = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='contratos_empleado', verbose_name="Empleado")
+    dias_laborales  = models.PositiveIntegerField(default=28, verbose_name="Días laborales acordados",
+                          validators=[MinValueValidator(1)])
+    fecha_firma     = models.DateField(verbose_name="Fecha de Firma")
+    fecha_inicio    = models.DateField(verbose_name="Fecha de Inicio")
+    fecha_fin       = models.DateField(verbose_name="Fecha de Fin")
+    monto_acordado  = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto Acordado (Bs.)")
+    observaciones   = models.TextField(blank=True, verbose_name="Observaciones")
+    documento       = models.FileField(upload_to='contratos/', null=True, blank=True, verbose_name="Documento")
 
     class Meta:
         verbose_name = 'Contrato de Empleado'
@@ -63,6 +59,7 @@ class ContratoEmpleado(AuditModel):
             models.CheckConstraint(condition=Q(fecha_firma__lte=models.F('fecha_inicio')), name='contrato_emp_fecha_firma_lte_inicio'),
             models.UniqueConstraint(fields=['empleado'], condition=Q(activo=True), name='unique_contrato_empleado_activo'),
             models.CheckConstraint(condition=Q(monto_acordado__gt=0), name='contrato_emp_monto_positivo'),
+            models.CheckConstraint(condition=Q(dias_laborales__gt=0), name='contrato_emp_dias_laborales_positivo'),
         ]
 
     def __str__(self):
@@ -70,9 +67,8 @@ class ContratoEmpleado(AuditModel):
 
     @property
     def monto_diario(self):
-        if self.monto_acordado:
-            divisor = 7 if self.tipo_salario == 'semanal' else 30
-            return self.monto_acordado / divisor
+        if self.monto_acordado and self.dias_laborales:
+            return self.monto_acordado / Decimal(str(self.dias_laborales))
         return self.monto_acordado
 
 
@@ -139,6 +135,58 @@ class PagoEmpleado(AuditModel):
         return f"Bs. {self.monto} — {self.concepto} ({self.fecha})"
 
 
+class AsignacionDiaria(AuditModel):
+    """Registro de quién fue a trabajar, a qué proyecto/sede y en qué turno."""
+    TURNO_CHOICES = [
+        ('completo', 'Día completo (1.0)'),
+        ('manana',   'Mañana — Medio día (0.5)'),
+        ('tarde',    'Tarde — Medio día (0.5)'),
+    ]
+
+    fecha       = models.DateField(db_index=True, verbose_name="Fecha")
+    proyecto    = models.ForeignKey(
+        'projects.Proyecto', on_delete=models.PROTECT,
+        related_name='asignaciones_diarias', verbose_name="Proyecto"
+    )
+    sede        = models.ForeignKey(
+        'projects.Sede', on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='asignaciones', verbose_name="Sede"
+    )
+    supervisor  = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        null=True, blank=True,
+        related_name='asignaciones_supervisor', verbose_name="Supervisor"
+    )
+    instalador  = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        null=True, blank=True,
+        related_name='asignaciones_instalador', verbose_name="Instalador"
+    )
+    turno       = models.CharField(max_length=10, choices=TURNO_CHOICES, default='completo', verbose_name="Turno")
+    observacion = models.TextField(blank=True, verbose_name="Observación")
+    tareas_realizadas = models.ManyToManyField(
+        'projects.TareaChecklist', blank=True,
+        related_name='asignaciones', verbose_name="Tareas realizadas"
+    )
+
+    class Meta:
+        verbose_name = 'Asignación Diaria'
+        verbose_name_plural = 'Asignaciones Diarias'
+        ordering = ['-fecha']
+
+    def __str__(self):
+        equipo = ' / '.join(filter(None, [
+            f"{self.supervisor.nombre} {self.supervisor.apellido_paterno}" if self.supervisor else None,
+            f"{self.instalador.nombre} {self.instalador.apellido_paterno}" if self.instalador else None,
+        ]))
+        return f"{self.fecha} — {self.proyecto.nombre} — {equipo}"
+
+    @property
+    def dias(self):
+        return Decimal('1.0') if self.turno == 'completo' else Decimal('0.5')
+
+
 class JornadaEmpleado(AuditModel):
     """Registro diario de trabajo de un empleado: en qué proyecto trabajó y cuánto."""
     DIAS_CHOICES = [
@@ -167,6 +215,13 @@ class JornadaEmpleado(AuditModel):
         null=True, blank=True,
         related_name='jornadas_cubiertas',
         verbose_name="Pago que cubre esta jornada",
+    )
+    asignacion = models.ForeignKey(
+        AsignacionDiaria,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='jornadas',
+        verbose_name="Asignación de origen",
     )
 
     class Meta:

@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Empleado, ContratoEmpleado, ContratoProyecto, JornadaEmpleado
+from .models import Empleado, ContratoEmpleado, ContratoProyecto, JornadaEmpleado, AsignacionDiaria
 
 
 @admin.register(Empleado)
@@ -17,8 +17,8 @@ class EmpleadoAdmin(UserAdmin):
 
 @admin.register(ContratoEmpleado)
 class ContratoEmpleadoAdmin(admin.ModelAdmin):
-    list_display = ('empleado', 'tipo_salario', 'monto_acordado', 'fecha_inicio', 'fecha_fin', 'activo')
-    list_filter = ('activo', 'tipo_salario')
+    list_display = ('empleado', 'dias_laborales', 'monto_acordado', 'fecha_inicio', 'fecha_fin', 'activo')
+    list_filter = ('activo',)
     search_fields = ('empleado__nombre', 'empleado__apellido_paterno')
     ordering = ('-created',)
 
@@ -36,4 +36,12 @@ class JornadaEmpleadoAdmin(admin.ModelAdmin):
     list_display = ('contrato', 'proyecto', 'fecha', 'dias', 'activo')
     list_filter = ('activo', 'dias')
     search_fields = ('contrato__empleado__nombre', 'contrato__empleado__apellido_paterno', 'proyecto__nombre')
+    ordering = ('-fecha',)
+
+
+@admin.register(AsignacionDiaria)
+class AsignacionDiariaAdmin(admin.ModelAdmin):
+    list_display = ('fecha', 'proyecto', 'sede', 'supervisor', 'instalador', 'turno', 'activo')
+    list_filter = ('activo', 'turno', 'fecha')
+    search_fields = ('proyecto__nombre', 'supervisor__nombre', 'instalador__nombre')
     ordering = ('-fecha',)

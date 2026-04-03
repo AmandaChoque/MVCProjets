@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Contrato de Trabajo — {{ contrato.empleado.apellido_paterno }} {{ contrato.empleado.nombre }}</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 25px 30px 30px 30px;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 10px;
+      color: #222;
+      background-color: #ffffff;
+    }
+
+    /* ── Encabezado ── */
+    .header-table { width: 100%; border-collapse: collapse; margin-bottom: 14px; }
+    .header-left  { background-color: #0F2D5A; padding: 10px 14px; vertical-align: middle; }
+    .header-bar   { background-color: #D4B84A; width: 7px; }
+    .header-right { background-color: #f1f3f6; padding: 8px 14px; vertical-align: middle; text-align: right; border: 1px solid #dde2ed; }
+
+    /* ── Títulos de sección ── */
+    .section-title {
+      background-color: #0F2D5A;
+      color: #D4B84A;
+      font-size: 8.5px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 4px 8px;
+      margin-top: 12px;
+      margin-bottom: 5px;
+    }
+
+    /* ── Tabla de datos ── */
+    table.data { width: 100%; border-collapse: collapse; }
+    table.data td {
+      padding: 4px 8px;
+      border: 1px solid #dde2ed;
+      font-size: 10px;
+      vertical-align: top;
+    }
+    table.data td.lbl {
+      font-weight: bold;
+      color: #0F2D5A;
+      background-color: #f1f3f6;
+      width: 35%;
+      white-space: nowrap;
+    }
+
+    /* ── Cuerpo del contrato ── */
+    .contrato-body {
+      border: 1px solid #ccd1db;
+      padding: 12px 16px;
+      margin-top: 6px;
+      margin-bottom: 10px;
+      line-height: 1.6;
+    }
+    .contrato-body p { margin: 0 0 8px 0; text-align: justify; }
+    .clausula { margin-bottom: 8px; }
+    .clausula-num {
+      font-weight: bold;
+      color: #0F2D5A;
+      text-transform: uppercase;
+    }
+
+    /* ── Firmas ── */
+    .firmas-table { width: 100%; border-collapse: collapse; margin-top: 30px; }
+    .firmas-table td { width: 50%; vertical-align: bottom; padding: 0 20px; text-align: center; }
+    .firma-linea {
+      border-top: 1.5px solid #333;
+      margin-bottom: 4px;
+      margin-top: 40px;
+    }
+    .firma-nombre { font-weight: bold; font-size: 10px; }
+    .firma-cargo  { font-size: 9px; color: #555; }
+
+    /* ── Pie de página ── */
+    .footer {
+      border-top: 1px solid #dde2ed;
+      margin-top: 16px;
+      padding-top: 4px;
+      font-size: 7.5px;
+      color: #888;
+      text-align: center;
+    }
+
+    .highlight { color: #0F2D5A; font-weight: bold; }
+    .text-center { text-align: center; }
+  </style>
+</head>
+<body>
+
+  <!-- ══ ENCABEZADO ══ -->
+  <table class="header-table">
+    <tr>
+      <td class="header-bar"></td>
+      <td class="header-left">
+        <div style="font-size:7.5px; color:#D4B84A; text-transform:uppercase; letter-spacing:0.12em; font-weight:bold; margin-bottom:2px;">
+          SOBOTEC S.R.L. — Instalación y Mantenimiento de Sistemas de Seguridad
+        </div>
+        <div style="font-size:15px; font-weight:bold; color:#ffffff;">CONTRATO DE TRABAJO</div>
+        <div style="font-size:9px; color:#a0b8d8; margin-top:1px;">Documento de carácter legal — firmado entre ambas partes</div>
+      </td>
+      <td class="header-right" style="width:150px;">
+        <div style="font-size:7.5px; color:#888; text-transform:uppercase; letter-spacing:0.06em;">Fecha del contrato</div>
+        <div style="font-size:12px; font-weight:bold; color:#0F2D5A;">{{ contrato.fecha_firma|date:"d/m/Y" }}</div>
+        <div style="font-size:8px; color:#888; margin-top:4px;">Generado el {{ now|date:"d/m/Y" }}</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- ══ DATOS DE LAS PARTES ══ -->
+  <div class="section-title">Identificación de las Partes</div>
+  <table class="data">
+    <tr>
+      <td class="lbl">Empresa (empleador)</td>
+      <td><span class="highlight">SOBOTEC S.R.L.</span> — Sistemas de Seguridad</td>
+    </tr>
+    <tr>
+      <td class="lbl">Representante Legal</td>
+      <td>Gerente General de SOBOTEC S.R.L.</td>
+    </tr>
+    <tr>
+      <td class="lbl">Trabajador</td>
+      <td><span class="highlight">{{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }} {{ contrato.empleado.apellido_materno|default:"" }}</span></td>
+    </tr>
+    <tr>
+      <td class="lbl">Carnet de Identidad</td>
+      <td>{{ contrato.empleado.carnet_identidad }}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Cargo</td>
+      <td>{{ contrato.empleado.get_cargo_display }}</td>
+    </tr>
+    {% if contrato.empleado.numero_celular %}
+    <tr>
+      <td class="lbl">Celular</td>
+      <td>{{ contrato.empleado.numero_celular }}</td>
+    </tr>
+    {% endif %}
+  </table>
+
+  <!-- ══ CONDICIONES ECONÓMICAS ══ -->
+  <div class="section-title">Condiciones Económicas y de Duración</div>
+  <table class="data">
+    <tr>
+      <td class="lbl">Días laborales acordados</td>
+      <td>{{ contrato.dias_laborales }} días</td>
+    </tr>
+    <tr>
+      <td class="lbl">Monto acordado</td>
+      <td><span class="highlight">Bs. {{ contrato.monto_acordado|floatformat:2 }}</span> por {{ contrato.dias_laborales }} días laborales</td>
+    </tr>
+    <tr>
+      <td class="lbl">Equivalencia diaria</td>
+      <td>Bs. {{ contrato.monto_diario|floatformat:2 }} por día trabajado</td>
+    </tr>
+    <tr>
+      <td class="lbl">Fecha de inicio</td>
+      <td>{{ contrato.fecha_inicio|date:"d \d\e F \d\e Y" }}</td>
+    </tr>
+    <tr>
+      <td class="lbl">Fecha de fin</td>
+      <td>{{ contrato.fecha_fin|date:"d \d\e F \d\e Y" }}</td>
+    </tr>
+    {% if contrato.observaciones %}
+    <tr>
+      <td class="lbl">Observaciones</td>
+      <td>{{ contrato.observaciones }}</td>
+    </tr>
+    {% endif %}
+  </table>
+
+  <!-- ══ CLÁUSULAS ══ -->
+  <div class="section-title">Cláusulas del Contrato</div>
+  <div class="contrato-body">
+
+    <div class="clausula">
+      <span class="clausula-num">Primera — Objeto:</span>
+      <p>El presente contrato tiene por objeto regular la prestación de servicios del TRABAJADOR en favor de SOBOTEC S.R.L., en calidad de <strong>{{ contrato.empleado.get_cargo_display }}</strong>, bajo la dependencia y dirección de la empresa, con sujeción a las instrucciones que le imparta su superior inmediato.</p>
+    </div>
+
+    <div class="clausula">
+      <span class="clausula-num">Segunda — Duración:</span>
+      <p>El presente contrato tendrá vigencia desde el <strong>{{ contrato.fecha_inicio|date:"d \d\e F \d\e Y" }}</strong> hasta el <strong>{{ contrato.fecha_fin|date:"d \d\e F \d\e Y" }}</strong>, pudiendo ser renovado por acuerdo de partes.</p>
+    </div>
+
+    <div class="clausula">
+      <span class="clausula-num">Tercera — Remuneración:</span>
+      <p>SOBOTEC S.R.L. se compromete a remunerar al TRABAJADOR con la suma de <strong>Bs. {{ contrato.monto_acordado|floatformat:2 }}</strong> por <strong>{{ contrato.dias_laborales }} días laborales</strong>, equivalente a <strong>Bs. {{ contrato.monto_diario|floatformat:2 }}</strong> por día trabajado. Los pagos se realizarán conforme a las jornadas efectivamente cumplidas y registradas en el sistema.</p>
+    </div>
+
+    <div class="clausula">
+      <span class="clausula-num">Cuarta — Jornada de Trabajo:</span>
+      <p>El TRABAJADOR cumplirá con las jornadas diarias asignadas por la empresa conforme a las necesidades del servicio y los proyectos en ejecución. Las jornadas podrán ser de día completo (1 día) o medio día (0.5 días), según la planificación de SOBOTEC S.R.L.</p>
+    </div>
+
+    <div class="clausula">
+      <span class="clausula-num">Quinta — Obligaciones del Trabajador:</span>
+      <p>El TRABAJADOR se compromete a: (a) cumplir con las tareas asignadas en los proyectos de instalación, ampliación y mantenimiento de sistemas de seguridad; (b) guardar estricta reserva sobre la información técnica, comercial y de clientes de la empresa; (c) cuidar los equipos y herramientas a su cargo; (d) reportar cualquier incidente o anomalía detectada durante la ejecución de los trabajos.</p>
+    </div>
+
+    <div class="clausula">
+      <span class="clausula-num">Sexta — Rescisión:</span>
+      <p>Cualquiera de las partes podrá dar por terminado el presente contrato mediante aviso previo de quince (15) días calendario, sin perjuicio de las disposiciones legales aplicables en materia laboral conforme a la legislación boliviana vigente.</p>
+    </div>
+
+    {% if contrato.observaciones %}
+    <div class="clausula">
+      <span class="clausula-num">Séptima — Observaciones:</span>
+      <p>{{ contrato.observaciones }}</p>
+    </div>
+    {% endif %}
+
+    <p style="margin-top:10px;">
+      En señal de conformidad y libre aceptación de todas las cláusulas establecidas, ambas partes suscriben el presente contrato en la ciudad de La Paz, Bolivia, a los <strong>{{ contrato.fecha_firma|date:"d" }}</strong> días del mes de <strong>{{ contrato.fecha_firma|date:"F" }}</strong> del año <strong>{{ contrato.fecha_firma|date:"Y" }}</strong>.
+    </p>
+  </div>
+
+  <!-- ══ FIRMAS ══ -->
+  <table class="firmas-table">
+    <tr>
+      <td>
+        <div class="firma-linea"></div>
+        <div class="firma-nombre">{{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }}</div>
+        <div class="firma-cargo">CI: {{ contrato.empleado.carnet_identidad }}</div>
+        <div class="firma-cargo">{{ contrato.empleado.get_cargo_display }}</div>
+        <div class="firma-cargo" style="margin-top:2px; color:#888;">EL TRABAJADOR</div>
+      </td>
+      <td>
+        <div class="firma-linea"></div>
+        <div class="firma-nombre">Gerente General</div>
+        <div class="firma-cargo">SOBOTEC S.R.L.</div>
+        <div class="firma-cargo" style="margin-top:2px; color:#888;">POR LA EMPRESA</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- ══ PIE ══ -->
+  <div class="footer">
+    Documento generado por el sistema SOBOTEC S.R.L. el {{ now|date:"d/m/Y" }} a las {{ now|date:"H:i" }} hrs.
+    Este documento debe ser firmado por ambas partes para tener validez legal.
+  </div>
+
+</body>
+</html>

@@ -1,13 +1,13 @@
 {% extends 'base.html' %}
 {% block content %}
 <main class="container-fluid px-5 py-4">
-  <div class="mb-4">
-    <h4 class="fw-semibold mb-1">Empleados</h4>
-    <span class="text-muted">
-      <i class="bi bi-person-fill me-1"></i>
-      {{ employee.nombre }} {{ employee.apellido_paterno }} — {{ employee.get_cargo_display }} · Nuevo contrato
-    </span>
-  </div>
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'employees' %}">Empleados</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'employee_view' employee.id %}">{{ employee.nombre }} {{ employee.apellido_paterno }}</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Nuevo contrato</li>
+    </ol>
+  </nav>
 
   <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
     {% csrf_token %}
@@ -30,9 +30,9 @@
         <div class="row g-4">
           <div class="col-lg-6">
             <div class="mb-3">
-              <label class="form-label">Período del Contrato <span class="text-danger">*</span></label>
-              {{ form.tipo_salario }}
-              <div class="form-text text-muted">Define el divisor para el monto diario (Mensual ÷ 30, Semanal ÷ 7).</div>
+              <label class="form-label">Días laborales acordados <span class="text-danger">*</span></label>
+              {{ form.dias_laborales }}
+              <div class="form-text text-muted">Cantidad de días de trabajo acordados en el contrato (ej: 28). Monto diario = Monto ÷ días laborales.</div>
             </div>
             <div class="mb-3">
               <label class="form-label">Monto Acordado (Bs.) <span class="text-danger">*</span></label>

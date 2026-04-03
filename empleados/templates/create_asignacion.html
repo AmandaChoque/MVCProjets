@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container-fluid px-5 py-4">
+
+  {% if messages %}
+  {% for message in messages %}
+  <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+    {{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+  {% endif %}
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="fw-semibold mb-0"><i class="bi bi-calendar-plus me-1"></i> {{ accion }} Asignación Diaria</h5>
+    <a href="{% url 'asignaciones_list' %}" class="btn btn-outline-secondary btn-sm">← Volver</a>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-body">
+      <form method="POST" id="formAsignacion">
+        {% csrf_token %}
+
+        <div class="alert alert-info small py-2 mb-3">
+          <i class="bi bi-info-circle me-1"></i>
+          Al guardar se generarán automáticamente las jornadas para cada empleado asignado (si tienen contrato activo).
+          Los domingos no están permitidos.
+        </div>
+
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Fecha <span class="text-danger">*</span></label>
+            {{ form.fecha }}
+            {% if form.fecha.errors %}<div class="text-danger small mt-1">{{ form.fecha.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Turno <span class="text-danger">*</span></label>
+            {{ form.turno }}
+            {% if form.turno.errors %}<div class="text-danger small mt-1">{{ form.turno.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Proyecto <span class="text-danger">*</span></label>
+            {{ form.proyecto }}
+            {% if form.proyecto.errors %}<div class="text-danger small mt-1">{{ form.proyecto.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Sede</label>
+            {{ form.sede }}
+            {% if form.sede.errors %}<div class="text-danger small mt-1">{{ form.sede.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <!-- espacio -->
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Supervisor</label>
+            {{ form.supervisor }}
+            <div class="form-text">Cargo: Supervisor / Admin / Gerente</div>
+            {% if form.supervisor.errors %}<div class="text-danger small mt-1">{{ form.supervisor.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Instalador</label>
+            {{ form.instalador }}
+            <div class="form-text">Cargo: Instalador / Técnico</div>
+            {% if form.instalador.errors %}<div class="text-danger small mt-1">{{ form.instalador.errors|join:", " }}</div>{% endif %}
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Observación</label>
+            {{ form.observacion }}
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Tareas realizadas</label>
+            <div class="border rounded p-2" style="max-height:200px; overflow-y:auto;" id="tareasContainer">
+              <span class="text-muted small">Seleccione un proyecto para ver las tareas pendientes.</span>
+            </div>
+            {% if form.tareas_realizadas.errors %}<div class="text-danger small mt-1">{{ form.tareas_realizadas.errors|join:", " }}</div>{% endif %}
+          </div>
+        </div>
+
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger mt-3 small">{{ form.non_field_errors|join:", " }}</div>
+        {% endif %}
+
+        <div class="d-flex justify-content-end gap-2 mt-4">
+          <a href="{% url 'asignaciones_list' %}" class="btn btn-outline-secondary">Cancelar</a>
+          <button type="submit" class="btn btn-primary">Guardar asignación</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+// Carga sedes vía AJAX al cambiar proyecto
+document.getElementById('id_proyecto').addEventListener('change', function () {
+  const proyectoId = this.value;
+  const sedeSelect = document.getElementById('id_sede');
+  sedeSelect.innerHTML = '<option value="">— Sin sede específica —</option>';
+  document.getElementById('tareasContainer').innerHTML = '<span class="text-muted small">Cargando tareas...</span>';
+
+  if (!proyectoId) return;
+
+  fetch(`{% url 'asignacion_sedes_ajax' %}?proyecto_id=${proyectoId}`)
+    .then(r => r.json())
+    .then(data => {
+      data.sedes.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id; opt.textContent = s.nombre;
+        sedeSelect.appendChild(opt);
+      });
+    });
+
+  // Recargar el form con el proyecto seleccionado para obtener tareas
+  const form = document.getElementById('formAsignacion');
+  const hidden = document.createElement('input');
+  hidden.type = 'hidden'; hidden.name = 'proyecto'; hidden.value = proyectoId;
+  // Reemplazar campo proyecto temporalmente — hacemos GET con el proyecto
+  fetch(`{% url 'create_asignacion' %}?_tareas_proyecto=${proyectoId}`)
+    .then(() => {
+      document.getElementById('tareasContainer').innerHTML =
+        '<span class="text-muted small">Selecciona la sede para ver tareas específicas, o guarda primero y edita las tareas.</span>';
+    });
+});
+</script>
+{% endblock %}
