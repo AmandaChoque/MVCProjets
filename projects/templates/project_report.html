@@ -1,15 +1,108 @@
 {% extends 'base.html' %}
+{% block extra_css %}
+<style>
+  /* ── KPI cards ─────────────────────────────────────────── */
+  .kpi-card {
+    border: 1px solid #e9ecef;
+    border-radius: 10px;
+    padding: 14px 18px;
+    background: #fff;
+    transition: box-shadow .15s;
+  }
+  .kpi-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,.07); }
+  .kpi-card .kpi-label {
+    font-size: .68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    color: #8e9aab;
+    margin-bottom: 4px;
+  }
+  .kpi-card .kpi-value {
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.1;
+  }
+  .kpi-card .kpi-sub {
+    font-size: .7rem;
+    color: #adb5bd;
+    margin-top: 2px;
+  }
+  .kpi-divider { border-top: 1px dashed #e9ecef; margin: 12px 0; }
+
+  /* ── Stat chips (segunda fila) ──────────────────────────── */
+  .stat-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: .76rem;
+    font-weight: 500;
+    border: 1px solid transparent;
+  }
+  .stat-chip .chip-num { font-weight: 700; font-size: .9rem; }
+
+  /* ── Tabla ligera ───────────────────────────────────────── */
+  .report-table thead th {
+    font-size: .68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: #6c757d;
+    border-bottom: 2px solid #dee2e6;
+    padding: 8px 10px;
+    white-space: nowrap;
+    background: #f8f9fa;
+  }
+  .report-table tbody td {
+    font-size: .8rem;
+    padding: 8px 10px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f3f5;
+    color: #343a40;
+  }
+  .report-table tbody tr:last-child td { border-bottom: none; }
+  .report-table tfoot td {
+    font-size: .78rem;
+    font-weight: 600;
+    padding: 8px 10px;
+    background: #f8f9fa;
+    border-top: 2px solid #dee2e6;
+  }
+
+  /* badges suaves */
+  .badge-soft-success  { background:#d1fadf; color:#166534; }
+  .badge-soft-primary  { background:#dbeafe; color:#1e40af; }
+  .badge-soft-warning  { background:#fef9c3; color:#854d0e; }
+  .badge-soft-danger   { background:#fee2e2; color:#991b1b; }
+  .badge-soft-info     { background:#e0f2fe; color:#075985; }
+  .badge-soft-secondary{ background:#f1f5f9; color:#475569; }
+  .badge-pill {
+    display:inline-block; padding:2px 8px;
+    border-radius:20px; font-size:.72rem; font-weight:600;
+  }
+
+  /* progress bar */
+  .prog-wrap { display:flex; align-items:center; gap:6px; }
+  .prog-wrap .progress { flex:1; height:5px; min-width:40px; border-radius:3px; }
+  .prog-wrap .prog-pct { font-size:.7rem; color:#6c757d; white-space:nowrap; width:28px; text-align:right; }
+</style>
+{% endblock %}
+
 {% block content %}
+<div class="container-fluid py-3 px-4">
 
-<div class="container-fluid py-3">
-
-  <!-- ENCABEZADO -->
-  <div class="mb-2 d-flex justify-content-between align-items-center">
-    <h5 class="fw-semibold text-secondary mb-0">Reporte de Proyectos</h5>
+  <!-- ── ENCABEZADO ──────────────────────────────────────── -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h5 class="fw-semibold mb-0">Reporte de Proyectos</h5>
+      <span class="text-muted small">{{ projects|length }} registro(s) encontrado(s)</span>
+    </div>
     <div class="d-flex gap-2">
       <a href="?pdf=1&search_nombre={{ search_nombre|default:'' }}&project_type={{ project_type|default:'' }}&project_status={{ project_status|default:'' }}&filter_estado_pago={{ filter_estado_pago|default:'' }}"
          target="_blank" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-file-earmark-pdf me-1"></i>Vista previa PDF
+        <i class="bi bi-eye me-1"></i>Vista PDF
       </a>
       <a href="?pdf=1&download=1&search_nombre={{ search_nombre|default:'' }}&project_type={{ project_type|default:'' }}&project_status={{ project_status|default:'' }}&filter_estado_pago={{ filter_estado_pago|default:'' }}"
          class="btn btn-outline-danger btn-sm">
@@ -22,160 +115,156 @@
     </div>
   </div>
 
-  <!-- FILTROS -->
-  <div class="card mb-3">
-    <div class="card-body py-2">
+  <!-- ── FILTROS ─────────────────────────────────────────── -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2 px-3">
       <form method="get" action="{% url 'project_report' %}" class="row g-2 align-items-end">
-
         <div class="col-md-3">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Nombre</label>
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:.7rem;">Nombre</label>
           <input type="text" name="search_nombre" class="form-control form-control-sm"
                  value="{{ search_nombre|default:'' }}" placeholder="Buscar por nombre">
         </div>
-
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Tipo</label>
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:.7rem;">Tipo</label>
           <select name="project_type" class="form-select form-select-sm">
             <option value="">Todos</option>
-            <option value="instalacion_nueva"  {% if project_type == 'instalacion_nueva'  %}selected{% endif %}>Instalación Nueva</option>
-            <option value="ampliacion"         {% if project_type == 'ampliacion'         %}selected{% endif %}>Ampliación</option>
-            <option value="mantenimiento"      {% if project_type == 'mantenimiento'      %}selected{% endif %}>Mantenimiento</option>
-            <option value="emergencia"         {% if project_type == 'emergencia'         %}selected{% endif %}>Emergencia</option>
+            <option value="instalacion_nueva"      {% if project_type == 'instalacion_nueva' %}selected{% endif %}>Instalación Nueva</option>
+            <option value="ampliacion"             {% if project_type == 'ampliacion' %}selected{% endif %}>Ampliación</option>
+            <option value="mantenimiento_garantia" {% if project_type == 'mantenimiento_garantia' %}selected{% endif %}>Mant. Garantía</option>
+            <option value="mantenimiento_externo"  {% if project_type == 'mantenimiento_externo' %}selected{% endif %}>Mant. Externo</option>
+            <option value="emergencia"             {% if project_type == 'emergencia' %}selected{% endif %}>Emergencia</option>
           </select>
         </div>
-
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Estado</label>
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:.7rem;">Estado</label>
           <select name="project_status" class="form-select form-select-sm">
             <option value="">Todos</option>
-            <option value="pendiente"   {% if project_status == 'pendiente'   %}selected{% endif %}>Pendiente</option>
+            <option value="pendiente"   {% if project_status == 'pendiente' %}selected{% endif %}>Pendiente</option>
             <option value="en_progreso" {% if project_status == 'en_progreso' %}selected{% endif %}>En Progreso</option>
-            <option value="completado"  {% if project_status == 'completado'  %}selected{% endif %}>Completado</option>
+            <option value="completado"  {% if project_status == 'completado' %}selected{% endif %}>Completado</option>
           </select>
         </div>
-
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Estado de Pago</label>
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:.7rem;">Estado de Pago</label>
           <select name="filter_estado_pago" class="form-select form-select-sm">
             <option value="">Todos</option>
             <option value="no_pagado" {% if filter_estado_pago == 'no_pagado' %}selected{% endif %}>No Pagado</option>
-            <option value="parcial"   {% if filter_estado_pago == 'parcial'   %}selected{% endif %}>Parcial</option>
-            <option value="pagado"    {% if filter_estado_pago == 'pagado'    %}selected{% endif %}>Pagado</option>
+            <option value="parcial"   {% if filter_estado_pago == 'parcial' %}selected{% endif %}>Parcial</option>
+            <option value="pagado"    {% if filter_estado_pago == 'pagado' %}selected{% endif %}>Pagado</option>
           </select>
         </div>
-
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Cumplimiento</label>
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:.7rem;">Cumplimiento</label>
           <select name="filter_cumplimiento" class="form-select form-select-sm">
             <option value="">Todos</option>
-            <option value="vencido"   {% if filter_cumplimiento == 'vencido'   %}selected{% endif %}>⚠ Plazo Vencido</option>
-            <option value="en_plazo"  {% if filter_cumplimiento == 'en_plazo'  %}selected{% endif %}>✓ En Plazo</option>
+            <option value="vencido"   {% if filter_cumplimiento == 'vencido' %}selected{% endif %}>Plazo Vencido</option>
+            <option value="en_plazo"  {% if filter_cumplimiento == 'en_plazo' %}selected{% endif %}>En Plazo</option>
             <option value="sin_fecha" {% if filter_cumplimiento == 'sin_fecha' %}selected{% endif %}>Sin Fecha Fin</option>
           </select>
         </div>
-
-        <div class="col-md-1">
-          <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
+        <div class="col-md-1 d-flex gap-1">
+          <button type="submit" class="btn btn-dark btn-sm flex-fill">Filtrar</button>
+          <a href="{% url 'project_report' %}" class="btn btn-outline-secondary btn-sm px-2" title="Limpiar filtros">
+            <i class="bi bi-x-lg"></i>
+          </a>
         </div>
-        <div class="col-md-1">
-          <a href="{% url 'project_report' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
-        </div>
-
       </form>
     </div>
   </div>
 
-  <!-- RESUMEN -->
-  <div class="card mb-3 border-0 shadow-sm">
-    <div class="card-body py-2 px-0">
-      <div class="d-flex flex-wrap">
-
-        <div class="flex-fill text-center px-3 py-1 border-end">
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Total Proyectos</div>
-          <div class="fw-bold fs-5 mt-1">{{ projects|length }}</div>
-          <div class="text-muted" style="font-size:0.7rem;">registros</div>
-        </div>
-
-        <div class="flex-fill text-center px-3 py-1 border-end">
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Monto Contratado</div>
-          <div class="fw-bold fs-5 mt-1">Bs. {{ monto_total|floatformat:2 }}</div>
-          <div class="text-muted" style="font-size:0.7rem;">total contratos</div>
-        </div>
-
-        <div class="flex-fill text-center px-3 py-1 border-end">
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Cobrado</div>
-          <div class="fw-bold fs-5 mt-1 text-success">Bs. {{ total_cobrado|floatformat:2 }}</div>
-          <div class="text-muted" style="font-size:0.7rem;">pagos recibidos</div>
-        </div>
-
-        <div class="flex-fill text-center px-3 py-1 border-end">
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Saldo Pendiente</div>
-          <div class="fw-bold fs-5 mt-1 text-danger">Bs. {{ total_saldo|floatformat:2 }}</div>
-          <div class="text-muted" style="font-size:0.7rem;">por cobrar</div>
-        </div>
-
-        <div class="flex-fill text-center px-3 py-1 border-end">
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Completados</div>
-          <div class="fw-bold fs-5 mt-1 text-success">{{ count_completado }}</div>
-          <div class="text-muted" style="font-size:0.7rem;">proyectos</div>
-        </div>
-
-        <div class="flex-fill text-center px-3 py-1 border-end">
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">En Progreso</div>
-          <div class="fw-bold fs-5 mt-1 text-primary">{{ count_en_progreso }}</div>
-          <div class="text-muted" style="font-size:0.7rem;">proyectos</div>
-        </div>
-
-        <div class="flex-fill text-center px-3 py-1 border-end">
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Pendientes</div>
-          <div class="fw-bold fs-5 mt-1 text-warning">{{ count_pendiente }}</div>
-          <div class="text-muted" style="font-size:0.7rem;">proyectos</div>
-        </div>
-
-        <div class="flex-fill text-center px-3 py-1 border-end">
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Plazo Vencido</div>
-          <div class="fw-bold fs-5 mt-1 text-danger">{{ count_vencidos }}</div>
-          <div class="text-muted" style="font-size:0.7rem;">retrasados</div>
-        </div>
-
-        <div class="flex-fill text-center px-3 py-1 border-end">
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">En Plazo</div>
-          <div class="fw-bold fs-5 mt-1 text-success">{{ count_en_plazo }}</div>
-          <div class="text-muted" style="font-size:0.7rem;">a tiempo</div>
-        </div>
-
-        <div class="flex-fill text-center px-3 py-1">
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Sin Fecha Fin</div>
-          <div class="fw-bold fs-5 mt-1 text-secondary">{{ count_sin_fecha }}</div>
-          <div class="text-muted" style="font-size:0.7rem;">sin plazo</div>
-        </div>
-
+  <!-- ── RESUMEN: fila financiera ───────────────────────────── -->
+  <div class="row g-2 mb-2">
+    <div class="col-sm-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Total proyectos</div>
+        <div class="kpi-value">{{ projects|length }}</div>
+        <div class="kpi-sub">registros filtrados</div>
+      </div>
+    </div>
+    <div class="col-sm-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Monto contratado</div>
+        <div class="kpi-value">Bs. {{ monto_total|floatformat:2 }}</div>
+        <div class="kpi-sub">total presupuestado</div>
+      </div>
+    </div>
+    <div class="col-sm-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Cobrado</div>
+        <div class="kpi-value text-success">Bs. {{ total_cobrado|floatformat:2 }}</div>
+        <div class="kpi-sub">pagos recibidos</div>
+      </div>
+    </div>
+    <div class="col-sm-3">
+      <div class="kpi-card">
+        <div class="kpi-label">Saldo pendiente</div>
+        <div class="kpi-value text-danger">Bs. {{ total_saldo|floatformat:2 }}</div>
+        <div class="kpi-sub">por cobrar</div>
       </div>
     </div>
   </div>
 
-  <!-- TABLA -->
-  <div class="card mb-3">
-    <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
-      <span class="fw-semibold small">Detalle de Proyectos</span>
-      <span class="text-muted small">{{ projects|length }} registro(s)</span>
+  <!-- ── RESUMEN: chips de estado ──────────────────────────── -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2 px-3 d-flex flex-wrap gap-2 align-items-center">
+      <span class="text-muted small fw-semibold me-1" style="font-size:.7rem;">ESTADO:</span>
+      <span class="stat-chip" style="background:#d1fadf;border-color:#a7f3d0;">
+        <i class="bi bi-check-circle-fill text-success" style="font-size:.8rem;"></i>
+        <span class="chip-num text-success">{{ count_completado }}</span>
+        <span class="text-success">Completados</span>
+      </span>
+      <span class="stat-chip" style="background:#dbeafe;border-color:#bfdbfe;">
+        <i class="bi bi-arrow-repeat text-primary" style="font-size:.8rem;"></i>
+        <span class="chip-num text-primary">{{ count_en_progreso }}</span>
+        <span class="text-primary">En Progreso</span>
+      </span>
+      <span class="stat-chip" style="background:#fef9c3;border-color:#fde68a;">
+        <i class="bi bi-hourglass-split" style="font-size:.8rem;color:#854d0e;"></i>
+        <span class="chip-num" style="color:#854d0e;">{{ count_pendiente }}</span>
+        <span style="color:#854d0e;">Pendientes</span>
+      </span>
+
+      <span class="text-muted small mx-1">|</span>
+      <span class="text-muted small fw-semibold me-1" style="font-size:.7rem;">PLAZO:</span>
+      <span class="stat-chip" style="background:#fee2e2;border-color:#fecaca;">
+        <i class="bi bi-exclamation-triangle-fill text-danger" style="font-size:.8rem;"></i>
+        <span class="chip-num text-danger">{{ count_vencidos }}</span>
+        <span class="text-danger">Vencidos</span>
+      </span>
+      <span class="stat-chip" style="background:#d1fadf;border-color:#a7f3d0;">
+        <i class="bi bi-clock-fill text-success" style="font-size:.8rem;"></i>
+        <span class="chip-num text-success">{{ count_en_plazo }}</span>
+        <span class="text-success">En Plazo</span>
+      </span>
+      <span class="stat-chip" style="background:#f1f5f9;border-color:#e2e8f0;">
+        <i class="bi bi-dash-circle text-secondary" style="font-size:.8rem;"></i>
+        <span class="chip-num text-secondary">{{ count_sin_fecha }}</span>
+        <span class="text-secondary">Sin Fecha</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- ── TABLA ──────────────────────────────────────────────── -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-white border-bottom py-2 px-3 d-flex justify-content-between align-items-center">
+      <span class="fw-semibold small text-secondary">Detalle de proyectos</span>
+      <span class="text-muted" style="font-size:.72rem;">{{ projects|length }} registro(s)</span>
     </div>
     <div class="table-responsive">
-      <table class="table table-sm table-hover align-middle small mb-0">
-        <thead class="table-light small text-uppercase fw-semibold">
+      <table class="table report-table mb-0">
+        <thead>
           <tr>
             <th>Código</th>
             <th>Nombre</th>
             <th>Contratante</th>
             <th>Tipo</th>
             <th>Estado</th>
-            <th>Avance</th>
-            <th>Estado Pago</th>
+            <th style="width:90px;">Avance</th>
+            <th>Pago</th>
             <th class="text-end">Monto (Bs.)</th>
             <th class="text-end">Cobrado (Bs.)</th>
             <th class="text-end">Saldo (Bs.)</th>
-            <th>Inicio</th>
-            <th>Fin</th>
+            <th>Periodo</th>
             <th>Cumplimiento</th>
           </tr>
         </thead>
@@ -184,80 +273,98 @@
           {% with cobrado=project.monto_cobrado|default:0 %}
           <tr>
             <td class="text-muted">{{ project.codigo }}</td>
-            <td class="fw-semibold">
-              <a href="{% url 'project_view' project.id %}" class="text-decoration-none">{{ project.nombre }}</a>
+            <td>
+              <a href="{% url 'project_view' project.id %}" class="text-decoration-none fw-semibold text-dark">
+                {{ project.nombre }}
+              </a>
+            </td>
+            <td class="text-muted">
+              {% if project.cliente %}{{ project.cliente.nombre }} {{ project.cliente.apellido_paterno }}
+              {% else %}—{% endif %}
             </td>
             <td>
-              {% if project.cliente %}
-                {{ project.cliente.nombre }} {{ project.cliente.apellido_paterno }}
-              {% else %}<span class="text-muted">—</span>{% endif %}
-            </td>
-            <td>
-              {% if project.tipo_proyecto == 'instalacion_nueva' %}<span class="badge bg-secondary">Instalación</span>
-              {% elif project.tipo_proyecto == 'ampliacion' %}<span class="badge bg-info text-dark">Ampliación</span>
-              {% elif project.tipo_proyecto == 'mantenimiento' %}<span class="badge bg-dark">Mantenim.</span>
-              {% else %}<span class="badge bg-danger">Emergencia</span>
+              {% if project.tipo_proyecto == 'instalacion_nueva' %}
+                <span class="badge-pill badge-soft-secondary">Instalación</span>
+              {% elif project.tipo_proyecto == 'ampliacion' %}
+                <span class="badge-pill badge-soft-info">Ampliación</span>
+              {% elif project.tipo_proyecto == 'mantenimiento_garantia' %}
+                <span class="badge-pill badge-soft-warning">Mant. Garantía</span>
+              {% elif project.tipo_proyecto == 'mantenimiento_externo' %}
+                <span class="badge-pill badge-soft-secondary">Mant. Externo</span>
+              {% else %}
+                <span class="badge-pill badge-soft-danger">Emergencia</span>
               {% endif %}
             </td>
             <td>
-              {% if project.estado_proyecto == 'completado' %}<span class="badge bg-success">Completado</span>
-              {% elif project.estado_proyecto == 'en_progreso' %}<span class="badge bg-primary">En Progreso</span>
-              {% else %}<span class="badge bg-warning text-dark">Pendiente</span>
+              {% if project.estado_proyecto == 'completado' %}
+                <span class="badge-pill badge-soft-success">Completado</span>
+              {% elif project.estado_proyecto == 'en_progreso' %}
+                <span class="badge-pill badge-soft-primary">En Progreso</span>
+              {% else %}
+                <span class="badge-pill badge-soft-warning">Pendiente</span>
               {% endif %}
             </td>
             <td>
               {% with avance=project.ultimo_avance|default:0 %}
-              <div class="d-flex align-items-center gap-1">
-                <div class="progress flex-grow-1" style="height:6px; min-width:50px;">
-                  <div class="progress-bar {% if avance == 100 %}bg-success{% elif avance > 0 %}bg-primary{% else %}bg-secondary{% endif %}"
-                       style="width:{{ avance }}%"></div>
+              <div class="prog-wrap">
+                <div class="progress">
+                  <div class="progress-bar
+                    {% if avance == 100 %}bg-success
+                    {% elif avance > 0 %}bg-primary
+                    {% else %}bg-secondary{% endif %}"
+                    style="width:{{ avance }}%"></div>
                 </div>
-                <span class="text-muted" style="font-size:0.7rem; white-space:nowrap;">{{ avance }}%</span>
+                <span class="prog-pct">{{ avance }}%</span>
               </div>
               {% endwith %}
             </td>
             <td>
-              {% if project.estado_pago == 'pagado' %}<span class="badge bg-success">Pagado</span>
-              {% elif project.estado_pago == 'parcial' %}<span class="badge bg-info text-dark">Parcial</span>
-              {% else %}<span class="badge bg-danger">No Pagado</span>
+              {% if project.estado_pago == 'pagado' %}
+                <span class="badge-pill badge-soft-success">Pagado</span>
+              {% elif project.estado_pago == 'parcial' %}
+                <span class="badge-pill badge-soft-info">Parcial</span>
+              {% else %}
+                <span class="badge-pill badge-soft-danger">No Pagado</span>
               {% endif %}
             </td>
-            <td class="text-end fw-semibold">{{ project.monto_total|floatformat:2 }}</td>
-            <td class="text-end text-success fw-semibold">{{ cobrado|floatformat:2 }}</td>
-            <td class="text-end text-danger fw-semibold">{{ project.monto_saldo|floatformat:2 }}</td>
-            <td class="text-muted">{{ project.fecha_inicio|date:"d/m/Y"|default:"—" }}</td>
-            <td class="text-muted">{{ project.fecha_fin|date:"d/m/Y"|default:"—" }}</td>
+            <td class="text-end">{{ project.monto_total|floatformat:2 }}</td>
+            <td class="text-end text-success">{{ cobrado|floatformat:2 }}</td>
+            <td class="text-end text-danger">{{ project.monto_saldo|floatformat:2 }}</td>
+            <td class="text-muted" style="white-space:nowrap; font-size:.75rem;">
+              {{ project.fecha_inicio|date:"d/m/Y"|default:"—" }}
+              {% if project.fecha_fin %}<br><span style="color:#adb5bd;">{{ project.fecha_fin|date:"d/m/Y" }}</span>{% endif %}
+            </td>
             <td>
               {% if project.cumplimiento == 'completado' %}
-                <span class="badge bg-success">Completado</span>
+                <span class="badge-pill badge-soft-success">Completado</span>
               {% elif project.cumplimiento == 'vencido' %}
-                <span class="badge bg-danger">Vencido</span>
-                <div class="text-danger fw-semibold" style="font-size:0.68rem;">{{ project.dias_info }} día(s)</div>
+                <span class="badge-pill badge-soft-danger">Vencido</span>
+                <div style="font-size:.68rem; color:#dc3545; margin-top:2px;">{{ project.dias_info }}d</div>
               {% elif project.cumplimiento == 'en_plazo' %}
-                <span class="badge bg-success bg-opacity-75">En plazo</span>
-                <div class="text-muted" style="font-size:0.68rem;">{{ project.dias_info }} día(s)</div>
+                <span class="badge-pill badge-soft-success">En plazo</span>
+                <div style="font-size:.68rem; color:#6c757d; margin-top:2px;">{{ project.dias_info }}d</div>
               {% else %}
-                <span class="badge bg-secondary">Sin fecha</span>
+                <span class="badge-pill badge-soft-secondary">Sin fecha</span>
               {% endif %}
             </td>
           </tr>
           {% endwith %}
           {% empty %}
           <tr>
-            <td colspan="13" class="text-center text-muted py-3 small">
-              No se encontraron proyectos con los filtros seleccionados.
+            <td colspan="12" class="text-center text-muted py-4" style="font-size:.85rem;">
+              <i class="bi bi-inbox me-1"></i>No se encontraron proyectos con los filtros seleccionados.
             </td>
           </tr>
           {% endfor %}
         </tbody>
         {% if projects %}
-        <tfoot class="table-light fw-semibold small">
+        <tfoot>
           <tr>
-            <td colspan="7" class="text-end text-muted">Total:</td>
+            <td colspan="7" class="text-end text-muted">Totales:</td>
             <td class="text-end">Bs. {{ monto_total|floatformat:2 }}</td>
             <td class="text-end text-success">Bs. {{ total_cobrado|floatformat:2 }}</td>
             <td class="text-end text-danger">Bs. {{ total_saldo|floatformat:2 }}</td>
-            <td colspan="3"></td>
+            <td colspan="2"></td>
           </tr>
         </tfoot>
         {% endif %}

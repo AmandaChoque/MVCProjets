@@ -1,7 +1,7 @@
 from django.forms import ModelForm
 from django import forms
 from django.db.models import Max
-from .models import Proyecto, Cliente, Progreso, Sede, FotoSede, TareaChecklist, Pago
+from .models import Proyecto, Cliente, Progreso, Sede, FotoSede, TareaChecklist, Pago, PlantillaTarea, ItemPlantilla
 from empleados.models import ContratoProyecto
 import re
 from decimal import Decimal, InvalidOperation
@@ -24,19 +24,36 @@ class ProjectForm(forms.ModelForm):
             'placeholder': 'Ej: 5000 o 5000.50 (opcional si se registra contrato)',
         })
     )
+    proyecto_origen = forms.ModelChoiceField(
+        queryset=Proyecto.objects.filter(tipo_proyecto='instalacion_nueva', activo=True),
+        required=False,
+        empty_label='— Sin proyecto de origen —',
+        label="Proyecto de Instalación Original",
+        widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_proyecto_origen'}),
+    )
 
     class Meta:
         model = Proyecto
-        fields = ['codigo', 'nombre', 'descripcion', 'observacion', 'estado_proyecto', 'tipo_proyecto', 'monto_total', 'cliente']
+        fields = ['codigo', 'nombre', 'descripcion', 'observacion', 'estado_proyecto', 'tipo_proyecto', 'proyecto_origen', 'monto_total', 'cliente']
         widgets = {
             'codigo':           forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el codigo'}),
             'nombre':           forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el nombre'}),
             'descripcion':      forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Escribe la descripción'}),
             'observacion':      forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Notas operativas, observaciones internas...'}),
             'estado_proyecto':  forms.Select(attrs={'class': 'form-select'}),
-            'tipo_proyecto':    forms.Select(attrs={'class': 'form-select'}),
+            'tipo_proyecto':    forms.Select(attrs={'class': 'form-select', 'id': 'id_tipo_proyecto'}),
             'cliente':          forms.Select(attrs={'class': 'form-select'}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+        tipo = cleaned_data.get('tipo_proyecto')
+        origen = cleaned_data.get('proyecto_origen')
+        if tipo == 'mantenimiento_garantia' and not origen:
+            self.add_error('proyecto_origen', 'Debe indicar el proyecto de instalación original para un mantenimiento en garantía.')
+        if tipo != 'mantenimiento_garantia' and origen:
+            cleaned_data['proyecto_origen'] = None
+        return cleaned_data
 
     def clean_monto_total(self):
         valor = self.cleaned_data.get('monto_total')
@@ -224,13 +241,41 @@ class PaymentForm(forms.ModelForm):
 class SedeForm(forms.ModelForm):
     class Meta:
         model = Sede
-        fields = ['nombre', 'direccion', 'descripcion', 'latitud', 'longitud']
+        fields = ['nombre', 'direccion', 'descripcion', 'latitud', 'longitud', 'plantilla']
         widgets = {
             'nombre':      forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Casa #210 Calle 2, Edificio Central'}),
             'direccion':   forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Dirección completa'}),
             'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Indicaciones adicionales, referencias, instrucciones de acceso...'}),
             'latitud':     forms.TextInput(attrs={'class': 'form-control form-control-sm', 'placeholder': 'Ej: -17.3935000', 'id': 'id_latitud'}),
             'longitud':    forms.TextInput(attrs={'class': 'form-control form-control-sm', 'placeholder': 'Ej: -66.1570000', 'id': 'id_longitud'}),
+            'plantilla':   forms.Select(attrs={'class': 'form-select'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['plantilla'].queryset = PlantillaTarea.objects.filter(activo=True).order_by('tipo', 'nombre')
+        self.fields['plantilla'].required = False
+        self.fields['plantilla'].empty_label = '— Sin plantilla (tareas manuales) —'
+
+
+class PlantillaTareaForm(forms.ModelForm):
+    class Meta:
+        model = PlantillaTarea
+        fields = ['nombre', 'tipo', 'descripcion']
+        widgets = {
+            'nombre':      forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Instalación Cámara IP Exterior'}),
+            'tipo':        forms.Select(attrs={'class': 'form-select'}),
+            'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Descripción opcional de esta plantilla...'}),
+        }
+
+
+class ItemPlantillaForm(forms.ModelForm):
+    class Meta:
+        model = ItemPlantilla
+        fields = ['descripcion', 'orden']
+        widgets = {
+            'descripcion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Verificar cableado UTP'}),
+            'orden':       forms.NumberInput(attrs={'class': 'form-control', 'min': 0}),
         }
 
 

@@ -2,6 +2,7 @@ from django.conf import settings
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.utils import timezone
 
 # Señal para actualizar automáticamente el estado del proyecto
 from django.db.models.signals import pre_save, post_save, post_delete
@@ -63,10 +64,12 @@ class Cliente(AuditModel):
         verbose_name = 'Cliente'
         verbose_name_plural = 'Clientes'
         constraints = [
+            # Solo aplica para registros activos: evita colisiones entre clientes
+            # soft-deleted que compartían el mismo NIT/CI
             models.UniqueConstraint(
                 fields=['nit_ci'],
-                condition=~Q(nit_ci=''),
-                name='unique_nit_ci_when_not_empty',
+                condition=Q(activo=True) & ~Q(nit_ci=''),
+                name='unique_nit_ci_activo_when_not_empty',
             )
         ]
 
@@ -74,8 +77,9 @@ class Cliente(AuditModel):
         return f"{self.nombre} {self.apellido_paterno}"
 
     def delete(self, using=None, keep_parents=False):
-        """Soft-delete: mark the client inactive instead of removing from DB."""
+        """Soft-delete: marca el cliente como inactivo en lugar de eliminarlo de la BD."""
         self.activo = False
+        self.deleted_at = timezone.now()
         self.save()
 
 
@@ -88,10 +92,11 @@ class Proyecto(AuditModel):
     ]
 
     PROJECT_TYPE_CHOICES = [
-        ('instalacion_nueva', 'Instalación Nueva'),
-        ('ampliacion', 'Ampliación'),
-        ('mantenimiento', 'Mantenimiento'),
-        ('emergencia', 'Emergencia'),
+        ('instalacion_nueva',      'Instalación Nueva'),
+        ('ampliacion',             'Ampliación'),
+        ('mantenimiento_garantia', 'Mantenimiento (Garantía)'),
+        ('mantenimiento_externo',  'Mantenimiento Externo'),
+        ('emergencia',             'Emergencia'),
     ]
     # Opciones para el estado del pago
     PAYMENT_STATE_CHOICES = [
@@ -111,9 +116,18 @@ class Proyecto(AuditModel):
     # por la señal post_save/post_delete de Pago. Nunca modificar directamente.
     estado_pago = models.CharField(max_length=20, choices=PAYMENT_STATE_CHOICES, default='no_pagado', db_index=True, verbose_name="Estado de Pago")
     creado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name="Creado por")
-    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, verbose_name="Contratista")
+    # PROTECT evita borrar un cliente que tenga proyectos asociados (previene pérdida de datos)
+    cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, verbose_name="Contratista")
 
     monto_total = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Monto Total del Proyecto")
+    proyecto_origen = models.ForeignKey(
+        'self',
+        null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='proyectos_garantia',
+        verbose_name="Proyecto de Origen (Garantía)",
+        limit_choices_to={'tipo_proyecto': 'instalacion_nueva', 'activo': True},
+    )
     equipo = models.ManyToManyField(
         settings.AUTH_USER_MODEL, blank=True,
         related_name='proyectos_asignados',
@@ -239,6 +253,45 @@ class Progreso(AuditModel):
         return f"{self.proyecto.nombre} — {self.porcentaje}% ({self.fecha})"
 
 
+# ── Plantilla de tareas para instalaciones ───────────────────────────────────
+
+class PlantillaTarea(AuditModel):
+    TIPO_CHOICES = [
+        ('camara_ip',        'Cámara IP'),
+        ('camara_analogica', 'Cámara Analógica'),
+        ('dvr_nvr',          'DVR / NVR'),
+        ('alarma',           'Sistema de Alarma'),
+        ('sensor',           'Sensores'),
+        ('otro',             'Otro'),
+    ]
+
+    nombre      = models.CharField(max_length=200, verbose_name="Nombre de la plantilla")
+    tipo        = models.CharField(max_length=20, choices=TIPO_CHOICES, verbose_name="Tipo de instalación")
+    descripcion = models.TextField(blank=True, verbose_name="Descripción")
+
+    class Meta:
+        verbose_name = 'Plantilla de Tareas'
+        verbose_name_plural = 'Plantillas de Tareas'
+        ordering = ['tipo', 'nombre']
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} — {self.nombre}"
+
+
+class ItemPlantilla(AuditModel):
+    plantilla   = models.ForeignKey(PlantillaTarea, on_delete=models.CASCADE, related_name='items', verbose_name="Plantilla")
+    descripcion = models.CharField(max_length=255, verbose_name="Tarea")
+    orden       = models.PositiveSmallIntegerField(default=0, verbose_name="Orden")
+
+    class Meta:
+        verbose_name = 'Item de Plantilla'
+        verbose_name_plural = 'Items de Plantilla'
+        ordering = ['orden']
+
+    def __str__(self):
+        return f"{self.orden}. {self.descripcion}"
+
+
 # ── Sede (punto de instalación dentro de un proyecto) ────────────────────────
 
 class Sede(AuditModel):
@@ -255,6 +308,11 @@ class Sede(AuditModel):
     latitud     = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name="Latitud")
     longitud    = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name="Longitud")
     estado      = models.CharField(max_length=15, choices=ESTADO_CHOICES, default='pendiente', verbose_name="Estado")
+    plantilla   = models.ForeignKey(
+        PlantillaTarea, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='+',
+        verbose_name="Plantilla de tareas",
+    )
 
     class Meta:
         verbose_name = 'Sede de Instalación'
@@ -440,23 +498,28 @@ def notificar_sede_completada(sender, instance, **kwargs):
             Proyecto.objects.filter(pk=proyecto.pk).update(estado_proyecto=nuevo_estado)
 
     if sede.estado == 'completado':
-        admins = get_user_model().objects.filter(
+        admins = list(get_user_model().objects.filter(
             cargo__in=('administrador', 'gerente'), is_active=True
-        )
-        for admin in admins:
-            # Evitar notificación duplicada
-            ya_existe = Notificacion.objects.filter(
-                destinatario=admin,
+        ))
+        if admins:
+            # Una sola consulta para saber quiénes ya tienen la notificación
+            ya_notificados = set(Notificacion.objects.filter(
+                destinatario__in=admins,
                 sede=sede,
                 tipo='sede_completada',
                 leida=False,
-            ).exists()
-            if not ya_existe:
-                Notificacion.objects.create(
+            ).values_list('destinatario_id', flat=True))
+            # bulk_create para los que aún no la tienen
+            nuevas = [
+                Notificacion(
                     destinatario=admin,
                     tipo='sede_completada',
                     mensaje=f'La sede "{sede.nombre}" del proyecto "{sede.proyecto.nombre}" fue completada al 100%.',
                     proyecto=sede.proyecto,
                     sede=sede,
                 )
+                for admin in admins if admin.pk not in ya_notificados
+            ]
+            if nuevas:
+                Notificacion.objects.bulk_create(nuevas)
 

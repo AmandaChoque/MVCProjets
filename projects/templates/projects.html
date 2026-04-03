@@ -8,7 +8,7 @@
     {% for message in messages %}
     <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
       {{ message }}
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
     </div>
     {% endfor %}
   </div>
@@ -23,10 +23,14 @@
 
     <div class="d-flex align-items-center gap-3">
       <form method="GET" action="{% url 'projects' %}" class="d-flex align-items-center">
-        <input type="hidden" name="search_nombre" value="{{ search_nombre }}">
-        <input type="hidden" name="filter_estado" value="{{ filter_estado }}">
-        <input type="hidden" name="filter_tipo" value="{{ filter_tipo }}">
-        <input type="hidden" name="filter_pago" value="{{ filter_pago }}">
+        <input type="hidden" name="search_nombre"       value="{{ search_nombre }}">
+        <input type="hidden" name="filter_estado"       value="{{ filter_estado }}">
+        <input type="hidden" name="filter_tipo"         value="{{ filter_tipo }}">
+        <input type="hidden" name="filter_pago"         value="{{ filter_pago }}">
+        <input type="hidden" name="fecha_inicio_desde"  value="{{ fecha_inicio_desde }}">
+        <input type="hidden" name="fecha_inicio_hasta"  value="{{ fecha_inicio_hasta }}">
+        <input type="hidden" name="fecha_fin_desde"     value="{{ fecha_fin_desde }}">
+        <input type="hidden" name="fecha_fin_hasta"     value="{{ fecha_fin_hasta }}">
         <input type="hidden" name="page" value="1">
         <span class="small text-muted me-2">Mostrar:</span>
         <select name="per_page" class="form-select form-select-sm" style="width:80px;" onchange="this.form.submit()">
@@ -69,10 +73,11 @@
           <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Tipo</label>
           <select class="form-select form-select-sm" name="filter_tipo">
             <option value="">Todos</option>
-            <option value="instalacion_nueva" {% if filter_tipo == "instalacion_nueva" %}selected{% endif %}>Instalación Nueva</option>
-            <option value="ampliacion" {% if filter_tipo == "ampliacion" %}selected{% endif %}>Ampliación</option>
-            <option value="mantenimiento" {% if filter_tipo == "mantenimiento" %}selected{% endif %}>Mantenimiento</option>
-            <option value="emergencia" {% if filter_tipo == "emergencia" %}selected{% endif %}>Emergencia</option>
+            <option value="instalacion_nueva"      {% if filter_tipo == "instalacion_nueva" %}selected{% endif %}>Instalación Nueva</option>
+            <option value="ampliacion"             {% if filter_tipo == "ampliacion" %}selected{% endif %}>Ampliación</option>
+            <option value="mantenimiento_garantia" {% if filter_tipo == "mantenimiento_garantia" %}selected{% endif %}>Mant. Garantía</option>
+            <option value="mantenimiento_externo"  {% if filter_tipo == "mantenimiento_externo" %}selected{% endif %}>Mant. Externo</option>
+            <option value="emergencia"             {% if filter_tipo == "emergencia" %}selected{% endif %}>Emergencia</option>
           </select>
         </div>
 
@@ -87,6 +92,30 @@
           </select>
         </div>
         {% endif %}
+
+        <!-- Fechas de inicio -->
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Inicio desde</label>
+          <input type="date" class="form-control form-control-sm" name="fecha_inicio_desde"
+                 value="{{ fecha_inicio_desde }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Inicio hasta</label>
+          <input type="date" class="form-control form-control-sm" name="fecha_inicio_hasta"
+                 value="{{ fecha_inicio_hasta }}">
+        </div>
+
+        <!-- Fechas de fin -->
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Fin desde</label>
+          <input type="date" class="form-control form-control-sm" name="fecha_fin_desde"
+                 value="{{ fecha_fin_desde }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Fin hasta</label>
+          <input type="date" class="form-control form-control-sm" name="fecha_fin_hasta"
+                 value="{{ fecha_fin_hasta }}">
+        </div>
 
         <div class="col-md-2">
           <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
@@ -194,7 +223,7 @@
 
       {% if projects.has_previous %}
       <li class="page-item">
-        <a class="page-link" href="?page={{ projects.previous_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}&filter_pago={{ filter_pago }}">
+        <a class="page-link" href="?page={{ projects.previous_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}&filter_pago={{ filter_pago }}&fecha_inicio_desde={{ fecha_inicio_desde }}&fecha_inicio_hasta={{ fecha_inicio_hasta }}&fecha_fin_desde={{ fecha_fin_desde }}&fecha_fin_hasta={{ fecha_fin_hasta }}">
           Anterior
         </a>
       </li>
@@ -207,7 +236,7 @@
           <li class="page-item active"><span class="page-link">{{ num }}</span></li>
         {% elif num > projects.number|add:'-3' and num < projects.number|add:'3' %}
           <li class="page-item">
-            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}&filter_pago={{ filter_pago }}">
+            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}&filter_pago={{ filter_pago }}&fecha_inicio_desde={{ fecha_inicio_desde }}&fecha_inicio_hasta={{ fecha_inicio_hasta }}&fecha_fin_desde={{ fecha_fin_desde }}&fecha_fin_hasta={{ fecha_fin_hasta }}">
               {{ num }}
             </a>
           </li>
@@ -216,7 +245,7 @@
 
       {% if projects.has_next %}
       <li class="page-item">
-        <a class="page-link" href="?page={{ projects.next_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}&filter_pago={{ filter_pago }}">
+        <a class="page-link" href="?page={{ projects.next_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}&filter_pago={{ filter_pago }}&fecha_inicio_desde={{ fecha_inicio_desde }}&fecha_inicio_hasta={{ fecha_inicio_hasta }}&fecha_fin_desde={{ fecha_fin_desde }}&fecha_fin_hasta={{ fecha_fin_hasta }}">
           Siguiente
         </a>
       </li>
@@ -235,7 +264,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h6 class="modal-title">Confirmar Inhabilitación</h6>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
       </div>
       <div class="modal-body">
         ¿Está seguro que desea inhabilitar el proyecto
@@ -245,7 +274,7 @@
         <form method="POST" id="deleteForm">
           {% csrf_token %}
           <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+          <button type="submit" class="btn btn-danger btn-sm">Inhabilitar</button>
         </form>
       </div>
     </div>

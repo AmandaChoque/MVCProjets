@@ -14,16 +14,17 @@
     box-shadow: 0 0 0 0.25rem rgba(39, 128, 227, 0.25);
   }
   .valid-feedback { display: none; }
-  #seccionContrato { transition: opacity 0.2s; }
 </style>
 {% endblock %}
 
 {% block content %}
 <main class="container-fluid px-5 py-4">
-  <div class="mb-4">
-    <h4 class="fw-semibold mb-1">Proyectos</h4>
-    <span class="text-muted">Nuevo proyecto</span>
-  </div>
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'projects' %}">Proyectos</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Nuevo proyecto</li>
+    </ol>
+  </nav>
 
   <form action="{% url 'create_project' %}" method="POST" enctype="multipart/form-data"
         class="needs-validation" novalidate>
@@ -43,70 +44,72 @@
         <div class="row g-4">
           <div class="col-lg-6">
             <div class="mb-3">
-              <label class="form-label">Código <span class="text-danger">*</span></label>
+              <label class="form-label" for="{{ form.codigo.id_for_label }}">Código <span class="text-danger">*</span></label>
               {{ form.codigo }}
               {% if form.codigo.errors %}
               <div class="text-danger small mt-1">{% for err in form.codigo.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
             </div>
             <div class="mb-3">
-              <label class="form-label">Nombre del proyecto <span class="text-danger">*</span></label>
+              <label class="form-label" for="{{ form.nombre.id_for_label }}">Nombre del proyecto <span class="text-danger">*</span></label>
               {{ form.nombre }}
               {% if form.nombre.errors %}
               <div class="text-danger small mt-1">{% for err in form.nombre.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
             </div>
             <div class="mb-3">
-              <label class="form-label">Descripción</label>
+              <label class="form-label" for="{{ form.descripcion.id_for_label }}">Descripción</label>
               {{ form.descripcion }}
             </div>
             <div class="mb-3">
-              <label class="form-label">Observación</label>
+              <label class="form-label" for="{{ form.observacion.id_for_label }}">Observación</label>
               {{ form.observacion }}
             </div>
           </div>
           <div class="col-lg-6">
             <div class="mb-3">
-              <label class="form-label">Estado <span class="text-danger">*</span></label>
+              <label class="form-label" for="{{ form.estado_proyecto.id_for_label }}">Estado <span class="text-danger">*</span></label>
               {{ form.estado_proyecto }}
             </div>
             <div class="mb-3">
-              <label class="form-label">Tipo de proyecto <span class="text-danger">*</span></label>
+              <label class="form-label" for="{{ form.tipo_proyecto.id_for_label }}">Tipo de proyecto <span class="text-danger">*</span></label>
               {{ form.tipo_proyecto }}
             </div>
+            <div class="mb-3" id="div_proyecto_origen" style="display:none;">
+              <label class="form-label" for="id_proyecto_origen">Proyecto de Instalación Original <span class="text-danger">*</span></label>
+              {{ form.proyecto_origen }}
+              {% if form.proyecto_origen.errors %}
+              <div class="text-danger small mt-1">{% for err in form.proyecto_origen.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+              <div class="form-text text-muted">Seleccione el proyecto de instalación nueva al que corresponde esta garantía.</div>
+            </div>
             <div class="mb-3">
-              <label class="form-label">Cliente / Contratante <span class="text-danger">*</span></label>
+              <label class="form-label" for="{{ form.cliente.id_for_label }}">Cliente / Contratante <span class="text-danger">*</span></label>
               {{ form.cliente }}
               {% if form.cliente.errors %}
               <div class="text-danger small mt-1">{% for err in form.cliente.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
             </div>
-            <div class="mb-3">
-              <label class="form-label">Monto Estimado (Bs.)</label>
+            <!-- <div class="mb-3">
+              <label class="form-label" for="{{ form.monto_total.id_for_label }}">Monto Estimado (Bs.)</label>
               {{ form.monto_total }}
               {% if form.monto_total.errors %}
               <div class="text-danger small mt-1">{% for err in form.monto_total.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
-              <div class="form-text text-muted">Si registras un contrato, el monto se tomará de ahí automáticamente.</div>
-            </div>
+              <div class="form-text text-muted">El monto del proyecto se tomará automáticamente del contrato.</div>
+            </div> -->
           </div>
         </div>
       </div>
     </div>
 
-    <!-- TOGGLE CONTRATO -->
+    <!-- CONTRATO DEL PROYECTO (obligatorio) -->
     <div class="card border-0 shadow-sm rounded-3 mb-4">
-      <div class="card-header bg-light d-flex align-items-center justify-content-between">
-        <h6 class="mb-0 fw-semibold">Contrato del Proyecto</h6>
-        <div class="form-check form-switch mb-0">
-          <input class="form-check-input" type="checkbox" id="toggleContrato"
-                 name="adjuntar_contrato" role="switch"
-                 {% if adjuntar_contrato %}checked{% endif %}>
-          <label class="form-check-label small text-muted" for="toggleContrato">Registrar contrato ahora</label>
-        </div>
+      <div class="card-header bg-light">
+        <h6 class="mb-0 fw-semibold">Contrato del Proyecto <span class="text-danger">*</span></h6>
       </div>
 
-      <div id="seccionContrato" class="card-body p-4">
+      <div class="card-body p-4">
         {% if contrato_form.non_field_errors %}
         <div class="alert alert-danger">
           {% for err in contrato_form.non_field_errors %}{{ err }}{% endfor %}
@@ -115,21 +118,21 @@
         <div class="row g-4">
           <div class="col-lg-6">
             <div class="mb-3">
-              <label class="form-label">Fecha de Firma <span class="text-danger">*</span></label>
+              <label class="form-label" for="{{ contrato_form.fecha_firma.id_for_label }}">Fecha de Firma <span class="text-danger">*</span></label>
               {{ contrato_form.fecha_firma }}
               {% if contrato_form.fecha_firma.errors %}
               <div class="text-danger small mt-1">{% for err in contrato_form.fecha_firma.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
             </div>
             <div class="mb-3">
-              <label class="form-label">Fecha de Inicio <span class="text-danger">*</span></label>
+              <label class="form-label" for="{{ contrato_form.fecha_inicio.id_for_label }}">Fecha de Inicio <span class="text-danger">*</span></label>
               {{ contrato_form.fecha_inicio }}
               {% if contrato_form.fecha_inicio.errors %}
               <div class="text-danger small mt-1">{% for err in contrato_form.fecha_inicio.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
             </div>
             <div class="mb-3">
-              <label class="form-label">Fecha de Fin <span class="text-danger">*</span></label>
+              <label class="form-label" for="{{ contrato_form.fecha_fin.id_for_label }}">Fecha de Fin <span class="text-danger">*</span></label>
               {{ contrato_form.fecha_fin }}
               {% if contrato_form.fecha_fin.errors %}
               <div class="text-danger small mt-1">{% for err in contrato_form.fecha_fin.errors %}{{ err }}{% endfor %}</div>
@@ -138,19 +141,19 @@
           </div>
           <div class="col-lg-6">
             <div class="mb-3">
-              <label class="form-label">Monto Acordado (Bs.) <span class="text-danger">*</span></label>
+              <label class="form-label" for="{{ contrato_form.monto_acordado.id_for_label }}">Monto Acordado (Bs.) <span class="text-danger">*</span></label>
               {{ contrato_form.monto_acordado }}
               {% if contrato_form.monto_acordado.errors %}
               <div class="text-danger small mt-1">{% for err in contrato_form.monto_acordado.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
             </div>
             <div class="mb-3">
-              <label class="form-label">Documento <span class="text-muted small">(PDF o imagen)</span></label>
+              <label class="form-label" for="{{ contrato_form.documento.id_for_label }}">Documento <span class="text-muted small">(PDF o imagen)</span></label>
               {{ contrato_form.documento }}
               <div class="form-text text-muted">Formatos: PDF, JPG, PNG, GIF, WEBP</div>
             </div>
             <div class="mb-3">
-              <label class="form-label">Observaciones</label>
+              <label class="form-label" for="{{ contrato_form.observaciones.id_for_label }}">Observaciones</label>
               {{ contrato_form.observaciones }}
             </div>
           </div>
@@ -180,19 +183,18 @@
 
 {% block extra_js %}
 <script>
-  const toggle = document.getElementById('toggleContrato');
-  const seccion = document.getElementById('seccionContrato');
-
-  function actualizarSeccion() {
-    const visible = toggle.checked;
-    seccion.style.display = visible ? 'block' : 'none';
-    seccion.querySelectorAll('input, select, textarea').forEach(function (el) {
-      el.disabled = !visible;
-    });
-  }
-
-  toggle.addEventListener('change', actualizarSeccion);
-  actualizarSeccion();
+  (function () {
+    var tipoSelect  = document.getElementById('id_tipo_proyecto');
+    var origenDiv   = document.getElementById('div_proyecto_origen');
+    var origenSelect = document.getElementById('id_proyecto_origen');
+    function toggleOrigen() {
+      var esGarantia = tipoSelect.value === 'mantenimiento_garantia';
+      origenDiv.style.display = esGarantia ? '' : 'none';
+      origenSelect.required = esGarantia;
+    }
+    tipoSelect.addEventListener('change', toggleOrigen);
+    toggleOrigen();
+  })();
 
   document.querySelectorAll('.text-danger.small.mt-1').forEach(function (errorDiv) {
     var prev = errorDiv.previousElementSibling;
