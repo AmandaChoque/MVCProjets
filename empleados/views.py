@@ -14,7 +14,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from .models import Empleado, PagoEmpleado, ContratoEmpleado, ContratoProyecto, JornadaEmpleado, AsignacionDiaria
 from .forms import EmpleadoForm, ContratoEmpleadoForm, ContratoEmpleadoDesdeEmpleadoForm, JornadaEmpleadoForm, PagoEmpleadoForm, AsignacionDiariaForm
 from projects.models import Proyecto, TareaChecklist, Sede
-from projects.decorators import cargo_required, ROLES_ADMIN, ROLES_ADMIN_SEC
+from projects.decorators import cargo_required, ROLES_ADMIN, ROLES_ADMIN_SEC, ROLES_CAMPO
 
 
 # ── Empleados ─────────────────────────────────────────────────────────────────
@@ -32,7 +32,7 @@ def create_employee(request):
         employee.set_password(form.cleaned_data['password1'])
         employee.save()
         messages.success(request, f"El empleado {employee.nombre} {employee.apellido_paterno} fue registrado con acceso al sistema.")
-        return redirect('employees')
+        return redirect('employee_view', employee.id)
     return render(request, 'create_employee.html', {'form': form, 'error': 'Por favor, proporcione datos válidos'})
 
 
@@ -433,7 +433,7 @@ def create_contrato_from_employee(request, id_employee):
             contrato.empleado = empleado
             contrato.save()
             messages.success(request, f'Contrato registrado para {empleado.nombre} {empleado.apellido_paterno}.')
-            return redirect('employee_view', id_employee=empleado.id)
+            return redirect('contrato_empleado_detail', id_contrato=contrato.id)
     return render(request, 'create_contrato_desde_empleado.html', {'form': form, 'employee': empleado})
 
 
@@ -510,22 +510,46 @@ def create_jornada(request, id_contrato):
         return redirect('dashboard')
     es_admin = cargo in ROLES_ADMIN
 
+    # Asignación vinculada (opcional): viene como ?asignacion=<id> desde el dashboard
+    asignacion_id = request.GET.get('asignacion') or request.POST.get('asignacion_id')
+    asignacion = None
+    if asignacion_id:
+        asignacion = get_object_or_404(AsignacionDiaria, pk=asignacion_id, activo=True)
+        if not es_admin and asignacion.supervisor != request.user and asignacion.instalador != request.user:
+            messages.error(request, 'No pertenecés a esta asignación.')
+            return redirect('instalador_dashboard')
+
     jornadas        = contrato.jornadas.filter(activo=True).select_related('proyecto').order_by('-fecha')
     total_dias      = jornadas.aggregate(t=Sum('dias'))['t'] or 0
     total_ganado    = total_dias * contrato.monto_diario
     total_pagado    = contrato.pagos.filter(activo=True).aggregate(t=Sum('monto'))['t'] or 0
     saldo_pendiente = total_ganado - total_pagado
 
+    initial = {}
+    if asignacion:
+        initial = {'fecha': asignacion.fecha}
+
     if request.method == 'GET':
-        form = JornadaEmpleadoForm(empleado=contrato.empleado, es_admin=es_admin, contrato=contrato)
+        form = JornadaEmpleadoForm(
+            empleado=contrato.empleado, es_admin=es_admin,
+            contrato=contrato, asignacion=asignacion, initial=initial,
+        )
     else:
-        form = JornadaEmpleadoForm(request.POST, empleado=contrato.empleado, es_admin=es_admin, contrato=contrato)
+        form = JornadaEmpleadoForm(
+            request.POST, empleado=contrato.empleado, es_admin=es_admin,
+            contrato=contrato, asignacion=asignacion,
+        )
         if form.is_valid():
             jornada = form.save(commit=False)
             jornada.contrato = contrato
             jornada.dias = form.cleaned_data['dias']
+            if asignacion:
+                jornada.proyecto   = asignacion.proyecto
+                jornada.asignacion = asignacion
             jornada.save()
             messages.success(request, 'Jornada registrada correctamente.')
+            if not es_admin:
+                return redirect('instalador_dashboard')
             return redirect('contrato_empleado_detail', id_contrato=contrato.id)
 
     return render(request, 'create_jornada.html', {
@@ -533,24 +557,32 @@ def create_jornada(request, id_contrato):
         'jornadas': jornadas, 'total_dias': total_dias,
         'total_ganado': total_ganado, 'total_pagado': total_pagado,
         'saldo_pendiente': saldo_pendiente,
+        'asignacion': asignacion,
+        'from_dashboard': not es_admin,
     })
 
 
 @login_required
-@cargo_required(*ROLES_ADMIN)
 def jornada_detail(request, id_jornada):
     jornada  = get_object_or_404(JornadaEmpleado, pk=id_jornada, activo=True)
     contrato = jornada.contrato
+    cargo    = getattr(request.user, 'cargo', None)
+    es_admin = cargo in ROLES_ADMIN
+    if not es_admin and contrato.empleado != request.user:
+        messages.error(request, 'No tenés permiso para editar esta jornada.')
+        return redirect('instalador_dashboard')
     if request.method == 'GET':
-        form = JornadaEmpleadoForm(instance=jornada, es_admin=True, contrato=contrato)
+        form = JornadaEmpleadoForm(instance=jornada, es_admin=es_admin, contrato=contrato)
     else:
-        form = JornadaEmpleadoForm(request.POST, instance=jornada, es_admin=True, contrato=contrato)
+        form = JornadaEmpleadoForm(request.POST, instance=jornada, es_admin=es_admin, contrato=contrato)
         if form.is_valid():
             j = form.save(commit=False)
             j.dias = form.cleaned_data['dias']
             j.save()
             messages.success(request, 'Jornada actualizada correctamente.')
-            return redirect('contrato_empleado_detail', id_contrato=contrato.id)
+            if es_admin:
+                return redirect('contrato_empleado_detail', id_contrato=contrato.id)
+            return redirect('instalador_dashboard')
     return render(request, 'jornada_detail.html', {'form': form, 'jornada': jornada, 'contrato': contrato})
 
 
@@ -571,7 +603,7 @@ def deactivate_jornada(request, id_jornada):
 # ── Dashboard instalador ──────────────────────────────────────────────────────
 
 @login_required
-@cargo_required('instalador', 'tecnico_soporte', 'administrador', 'gerente')
+@cargo_required(*ROLES_CAMPO)
 def instalador_dashboard(request):
     user  = request.user
     cargo = getattr(user, 'cargo', None)
@@ -602,10 +634,56 @@ def instalador_dashboard(request):
         sede__proyecto__estado_proyecto__in=['pendiente', 'en_progreso'],
     ).select_related('sede', 'sede__proyecto').order_by('sede__proyecto', 'sede', 'orden')
 
+    # Contrato activo, asignaciones y jornadas de hoy
+    contrato_activo = ContratoEmpleado.objects.filter(
+        empleado=user, activo=True
+    ).order_by('-created').first()
+
+    hoy = timezone.localdate()
+
+    asignaciones_hoy = AsignacionDiaria.objects.filter(
+        activo=True, fecha=hoy,
+    ).filter(
+        Q(supervisor=user) | Q(instalador=user)
+    ).select_related('proyecto', 'sede')
+
+    # IDs de asignaciones ya con jornada registrada hoy por este empleado
+    asignaciones_con_jornada = set()
+    if contrato_activo:
+        asignaciones_con_jornada = set(
+            JornadaEmpleado.objects.filter(
+                contrato=contrato_activo, fecha=hoy, activo=True,
+                asignacion__in=asignaciones_hoy,
+            ).values_list('asignacion_id', flat=True)
+        )
+
+    jornadas_hoy = []
+    resumen_pago = None
+    if contrato_activo:
+        jornadas_hoy = JornadaEmpleado.objects.filter(
+            contrato=contrato_activo, fecha=hoy, activo=True
+        ).select_related('proyecto', 'asignacion__sede')
+
+        total_dias  = contrato_activo.jornadas.filter(activo=True).aggregate(t=Sum('dias'))['t'] or 0
+        total_pagado = contrato_activo.pagos.filter(activo=True).aggregate(t=Sum('monto'))['t'] or 0
+        total_ganado = total_dias * contrato_activo.monto_diario
+        resumen_pago = {
+            'total_dias':   total_dias,
+            'total_ganado': total_ganado,
+            'total_pagado': total_pagado,
+            'saldo':        total_ganado - total_pagado,
+        }
+
     return render(request, 'instalador_dashboard.html', {
         'proyectos_data': proyectos_data,
         'mis_tareas_pendientes': mis_tareas_pendientes,
         'no_leidas': user.notificaciones.filter(leida=False).count(),
+        'contrato_activo': contrato_activo,
+        'asignaciones_hoy': asignaciones_hoy,
+        'asignaciones_con_jornada': asignaciones_con_jornada,
+        'jornadas_hoy': jornadas_hoy,
+        'hoy': hoy,
+        'resumen_pago': resumen_pago,
     })
 
 
@@ -676,7 +754,7 @@ def create_pago_empleado(request, id_contrato):
     resumen  = _contrato_resumen(contrato)
     jornadas_pendientes = JornadaEmpleado.objects.filter(
         contrato=contrato, activo=True, pago__isnull=True
-    ).select_related('proyecto').order_by('fecha')
+    ).select_related('proyecto', 'asignacion__sede').order_by('fecha')
 
     if request.method == 'GET':
         return render(request, 'create_pago_empleado.html', {
@@ -712,10 +790,10 @@ def pago_empleado_detail(request, id_pago):
     pago     = get_object_or_404(PagoEmpleado, pk=id_pago, activo=True)
     contrato = pago.contrato
     resumen  = _contrato_resumen(contrato, excluir_pago_id=pago.id)
-    jornadas_cubiertas  = pago.jornadas_cubiertas.filter(activo=True).select_related('proyecto').order_by('fecha')
+    jornadas_cubiertas  = pago.jornadas_cubiertas.filter(activo=True).select_related('proyecto', 'asignacion__sede').order_by('fecha')
     jornadas_pendientes = JornadaEmpleado.objects.filter(
         contrato=contrato, activo=True, pago__isnull=True
-    ).select_related('proyecto').order_by('fecha')
+    ).select_related('proyecto', 'asignacion__sede').order_by('fecha')
 
     if request.method == 'GET':
         return render(request, 'pago_empleado_detail.html', {

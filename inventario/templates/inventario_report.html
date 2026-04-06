@@ -3,7 +3,7 @@
 
 <div class="container-fluid py-3">
 
-  <div class="mb-2 d-flex justify-content-between align-items-center">
+  <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
     <h5 class="fw-semibold text-secondary mb-0">Reporte de Inventario</h5>
     <div class="d-flex gap-2">
       <a href="?pdf=1&search_nombre={{ search_nombre }}&filter_categoria={{ filter_categoria }}&filter_stock={{ filter_stock }}"
@@ -22,7 +22,7 @@
   </div>
 
   <!-- FILTROS -->
-  <div class="card mb-3">
+  <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">
       <form method="get" class="row g-2 align-items-end">
         <div class="col-md-3">
@@ -59,32 +59,48 @@
   </div>
 
   <!-- KPIs -->
-  <div class="card mb-3 border-0 shadow-sm">
-    <div class="card-body py-2 px-0">
-      <div class="d-flex flex-wrap">
-        <div class="flex-fill text-center px-3 py-1 border-end">
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Total Ítems</div>
-          <div class="fw-bold fs-5 mt-1">{{ total_insumos }}</div>
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md">
+      <div class="card kpi-card blue border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-primary">{{ total_insumos }}</div>
+          <div class="kpi-label">Total Ítems</div>
           <div class="text-muted" style="font-size:0.7rem;">insumos</div>
         </div>
-        <div class="flex-fill text-center px-3 py-1 border-end">
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Valor Total Stock</div>
-          <div class="fw-bold fs-5 mt-1 text-primary">Bs. {{ valor_total|floatformat:2 }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md">
+      <div class="card kpi-card teal border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-success" style="font-size:1.35rem;">Bs. {{ valor_total|floatformat:2 }}</div>
+          <div class="kpi-label">Valor Total Stock</div>
           <div class="text-muted" style="font-size:0.7rem;">en inventario</div>
         </div>
-        <div class="flex-fill text-center px-3 py-1 border-end">
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Sin Stock</div>
-          <div class="fw-bold fs-5 mt-1 text-danger">{{ cnt_agotados }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md">
+      <div class="card kpi-card red border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-danger">{{ cnt_agotados }}</div>
+          <div class="kpi-label">Sin Stock</div>
           <div class="text-muted" style="font-size:0.7rem;">ítems agotados</div>
         </div>
-        <div class="flex-fill text-center px-3 py-1 border-end">
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Stock Bajo</div>
-          <div class="fw-bold fs-5 mt-1 text-warning">{{ cnt_bajo }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md">
+      <div class="card kpi-card yellow border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-warning">{{ cnt_bajo }}</div>
+          <div class="kpi-label">Stock Bajo</div>
           <div class="text-muted" style="font-size:0.7rem;">requieren reposición</div>
         </div>
-        <div class="flex-fill text-center px-3 py-1">
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.7rem;">Stock OK</div>
-          <div class="fw-bold fs-5 mt-1 text-success">{{ cnt_ok }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md">
+      <div class="card kpi-card green border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-success">{{ cnt_ok }}</div>
+          <div class="kpi-label">Stock OK</div>
           <div class="text-muted" style="font-size:0.7rem;">ítems disponibles</div>
         </div>
       </div>
@@ -92,7 +108,7 @@
   </div>
 
   <!-- TABLA -->
-  <div class="card">
+  <div class="card border-0 shadow-sm">
     <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
       <span class="fw-semibold small">Detalle de Insumos</span>
       <span class="text-muted small">{{ insumos|length }} registro(s)</span>

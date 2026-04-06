@@ -8,6 +8,13 @@ DECIMAL_REGEX = r'\d+(\.\d{1,2})?'
 
 
 class ProveedorForm(forms.ModelForm):
+    rubro = forms.ChoiceField(
+        choices=[('', 'Seleccionar rubro')] + Proveedor.RUBRO_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-select', 'required': 'required'}),
+        required=True,
+        label="Rubro",
+    )
+
     class Meta:
         model = Proveedor
         fields = [
@@ -16,9 +23,8 @@ class ProveedorForm(forms.ModelForm):
         ]
         widgets = {
             'nombre':    forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: DIGIPORT S.R.L.', 'required': 'required'}),
-            'rubro':     forms.Select(attrs={'class': 'form-select'}),
             'nit':       forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'NIT de la empresa', 'inputmode': 'numeric', 'pattern': '[0-9]*', 'title': 'Ingrese solo números'}),
-            'telefono':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Teléfono de la empresa', 'inputmode': 'numeric', 'pattern': '[0-9]+', 'title': 'Ingrese solo números', 'required': 'required', 'minlength': '7'}),
+            'telefono':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Teléfono de la empresa', 'inputmode': 'numeric', 'pattern': '[0-9]+', 'title': 'Ingrese solo números', 'required': 'required', 'minlength': '7', 'maxlength': '9'}),
             'correo':    forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'correo@empresa.com'}),
             'direccion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Dirección de la empresa'}),
             'encargado_nombre':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre completo del encargado'}),
@@ -28,11 +34,15 @@ class ProveedorForm(forms.ModelForm):
         }
 
     def clean_telefono(self):
-        telefono = self.cleaned_data.get('telefono', '').replace(' ', '')
+        telefono = self.cleaned_data.get('telefono', '').strip().replace(' ', '').replace('-', '')
+        if not telefono:
+            raise forms.ValidationError('El teléfono es obligatorio.')
         if not telefono.isdigit():
             raise forms.ValidationError('El teléfono debe contener solo números.')
         if len(telefono) < 7:
             raise forms.ValidationError('El teléfono debe tener al menos 7 dígitos.')
+        if len(telefono) > 9:
+            raise forms.ValidationError('El teléfono no puede superar los 15 dígitos.')
         return telefono
 
     def clean_encargado_celular(self):

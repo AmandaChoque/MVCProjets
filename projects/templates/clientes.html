@@ -159,7 +159,7 @@
           </td> -->
           <td class="small">{{ cliente.nombre }} {{ cliente.apellido_paterno }}</td>
           <td class="small">{{ cliente.nit_ci }}</td>
-          <td class="small">{{ cliente.cargo }}</td>
+          <td class="small">{{ cliente.get_rol_contacto_display }}</td>
 
           <td>
             {% if cliente.tipo_contratante == 'empresa' %}

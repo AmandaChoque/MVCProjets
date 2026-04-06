@@ -43,7 +43,16 @@ class Cliente(AuditModel):
         ('personal', 'Personal'),
         ('entidad_publica', 'Entidad Pública'),
     ]
-    cargo = models.CharField(max_length=50, verbose_name="Cargo")
+
+    ROL_CHOICES = [
+        ('propietario', 'Propietario'),
+        ('representante', 'Representante'),
+        ('gerente', 'Gerente'),
+        ('presidente_zona', 'Presidente de Zona'),
+        ('encargado', 'Encargado'),
+    ]
+
+    rol_contacto = models.CharField(max_length=50, choices=ROL_CHOICES, default='propietario', verbose_name="Rol de Contacto")
     nit_ci = models.CharField(max_length=20, blank=True, default='', verbose_name="NIT/CI")
     nombre = models.CharField(max_length=50, verbose_name="Nombres")
     apellido_paterno = models.CharField(max_length=50, verbose_name="Apellido Paterno")
@@ -51,7 +60,7 @@ class Cliente(AuditModel):
     telefono = models.CharField(max_length=15, verbose_name="Número de Teléfono")
     correo = models.EmailField(max_length=100, blank=True, null=True, verbose_name="Correo Electrónico")
     direccion = models.CharField(max_length=255, verbose_name="Dirección")
-    tipo_contratante = models.CharField(max_length=20, choices=TIPO_CONTRATANTE_CHOICES, default='entidad_publica', verbose_name="Tipo Contratante")
+    tipo_contratante = models.CharField(max_length=20, choices=TIPO_CONTRATANTE_CHOICES, default='personal', verbose_name="Tipo Contratante")
     # Solo para tipo_contratante = 'entidad_publica'
     nombre_entidad = models.CharField(max_length=200, blank=True, null=True, verbose_name="Nombre de la Entidad")
     representante_legal = models.CharField(max_length=200, blank=True, null=True, verbose_name="Representante Legal")
@@ -157,13 +166,19 @@ class Proyecto(AuditModel):
     def _sync_estado_pago(self):
         """
         Recalcula y persiste el campo estado_pago.
+        Considera tanto el dinero recibido (monto) como los descuentos/multas
+        aplicadas (descuento). El total cubierto = sum(monto) + sum(descuento).
         Uso exclusivo de señales — no llamar desde vistas ni formularios.
         """
-        total_pagado = self.pagos.filter(activo=True).aggregate(total_pagado=Sum('monto'))['total_pagado'] or 0
+        totals = self.pagos.filter(activo=True).aggregate(
+            total_monto=Sum('monto'),
+            total_descuento=Sum('descuento'),
+        )
+        total_cubierto = (totals['total_monto'] or 0) + (totals['total_descuento'] or 0)
 
-        if total_pagado >= self.monto_total:
+        if total_cubierto >= self.monto_total:
             self.estado_pago = 'pagado'
-        elif total_pagado > 0:
+        elif total_cubierto > 0:
             self.estado_pago = 'parcial'
         else:
             self.estado_pago = 'no_pagado'
@@ -224,11 +239,14 @@ def sync_estado_pago_tras_cambio_monto(sender, instance, **kwargs):
     """
     if getattr(instance, '_recalcular_estado_pago', False):
         instance._recalcular_estado_pago = False
-        total_pagado = instance.pagos.filter(activo=True).aggregate(
-            t=Sum('monto'))['t'] or 0
-        if total_pagado >= instance.monto_total:
+        totals = instance.pagos.filter(activo=True).aggregate(
+            total_monto=Sum('monto'),
+            total_descuento=Sum('descuento'),
+        )
+        total_cubierto = (totals['total_monto'] or 0) + (totals['total_descuento'] or 0)
+        if total_cubierto >= instance.monto_total:
             nuevo_estado = 'pagado'
-        elif total_pagado > 0:
+        elif total_cubierto > 0:
             nuevo_estado = 'parcial'
         else:
             nuevo_estado = 'no_pagado'
@@ -281,7 +299,7 @@ class PlantillaTarea(AuditModel):
 class ItemPlantilla(AuditModel):
     plantilla   = models.ForeignKey(PlantillaTarea, on_delete=models.CASCADE, related_name='items', verbose_name="Plantilla")
     descripcion = models.CharField(max_length=255, verbose_name="Tarea")
-    orden       = models.PositiveSmallIntegerField(default=0, verbose_name="Orden")
+    orden       = models.PositiveSmallIntegerField(default=1, verbose_name="Orden")
 
     class Meta:
         verbose_name = 'Item de Plantilla'
@@ -302,7 +320,7 @@ class Sede(AuditModel):
     ]
 
     proyecto    = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='sedes', verbose_name="Proyecto")
-    nombre      = models.CharField(max_length=200, verbose_name="Nombre / Referencia")
+    nombre      = models.CharField(max_length=200, verbose_name="Referencia del lugar")
     direccion   = models.CharField(max_length=500, verbose_name="Dirección")
     descripcion = models.TextField(blank=True, verbose_name="Descripción / Indicaciones")
     latitud     = models.DecimalField(max_digits=10, decimal_places=7, null=True, blank=True, verbose_name="Latitud")
@@ -440,7 +458,9 @@ METODOS_PAGO = [
 
 
 class Pago(AuditModel):
-    monto             = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto (Bs.)")
+    monto             = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto recibido (Bs.)")
+    descuento         = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Descuento / Multa aplicada (Bs.)")
+    motivo_descuento  = models.CharField(max_length=300, blank=True, default='', verbose_name="Motivo del descuento")
     fecha             = models.DateField(db_index=True, verbose_name="Fecha de Pago")
     tipo_pago         = models.CharField(max_length=15, choices=METODOS_PAGO, default='efectivo', verbose_name="Método de Pago")
     numero_referencia = models.CharField(max_length=100, blank=True, default='', verbose_name="N° Referencia / Comprobante")
@@ -454,11 +474,22 @@ class Pago(AuditModel):
             models.CheckConstraint(
                 condition=models.Q(monto__gt=0),
                 name='pago_monto_positivo',
-            )
+            ),
+            models.CheckConstraint(
+                condition=models.Q(descuento__gte=0),
+                name='pago_descuento_no_negativo',
+            ),
         ]
 
+    @property
+    def monto_neto(self):
+        """Monto efectivamente cubierto = dinero recibido + descuento/multa aplicada."""
+        return self.monto + self.descuento
+
     def __str__(self):
-        return f"Pago de {self.monto} ({self.get_tipo_pago_display()})"
+        if self.descuento:
+            return f"Pago de {self.monto} + descuento {self.descuento} = {self.monto_neto} Bs. ({self.get_tipo_pago_display()})"
+        return f"Pago de {self.monto} Bs. ({self.get_tipo_pago_display()})"
 
 
 @receiver(post_save, sender='projects.Pago')

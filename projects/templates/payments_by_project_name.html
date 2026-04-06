@@ -4,7 +4,7 @@
 <div class="container-fluid py-3">
 
   <!-- ======================= ENCABEZADO ======================= -->
-  <div class="mb-2 d-flex justify-content-between align-items-center">
+  <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
     <h5 class="fw-semibold text-secondary mb-0">Reporte de Pagos</h5>
     <div class="d-flex gap-2">
       <a href="?pdf=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}&filter_tipo={{ filter_tipo }}"
@@ -24,7 +24,7 @@
 
 
   <!-- ======================= FILTROS ======================= -->
-  <div class="card mb-3">
+  <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">
       <form method="get" action="{% url 'filter_payments_by_project_name' %}" class="row g-2 align-items-end">
 
@@ -78,52 +78,43 @@
 
   <!-- ======================= TARJETAS RESUMEN ======================= -->
   <div class="row g-3 mb-3">
-
-    <div class="col-md-3">
-      <div class="card border-0 shadow-sm h-100">
-        <div class="card-body py-3">
-          <div class="text-muted small text-uppercase fw-semibold mb-1">Total Registros</div>
-          <div class="fs-4 fw-bold">{{ payments|length }}</div>
-          <div class="small text-muted">pagos encontrados</div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card blue border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-primary">{{ payments|length }}</div>
+          <div class="kpi-label">Total Registros</div>
         </div>
       </div>
     </div>
-
-    <div class="col-md-3">
-      <div class="card border-0 shadow-sm h-100">
-        <div class="card-body py-3">
-          <div class="text-muted small text-uppercase fw-semibold mb-1">Monto Total</div>
-          <div class="fs-4 fw-bold">Bs. {{ total_monto|floatformat:2 }}</div>
-          <div class="small text-muted">suma de todos los pagos</div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card green border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-success" style="font-size:1.35rem;">Bs. {{ total_monto|floatformat:2 }}</div>
+          <div class="kpi-label">Monto Total</div>
         </div>
       </div>
     </div>
-
-    <div class="col-md-3">
-      <div class="card border-0 shadow-sm h-100">
-        <div class="card-body py-3">
-          <div class="text-muted small text-uppercase fw-semibold mb-1">En Efectivo</div>
-          <div class="fs-4 fw-bold text-info">Bs. {{ monto_efectivo|floatformat:2 }}</div>
-          <div class="small text-muted">{{ count_efectivo }} pago(s)</div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card teal border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-info" style="font-size:1.35rem;">Bs. {{ monto_efectivo|floatformat:2 }}</div>
+          <div class="kpi-label">En Efectivo <span class="text-muted fw-normal" style="font-size:.7rem;">({{ count_efectivo }} pago{{ count_efectivo|pluralize }})</span></div>
         </div>
       </div>
     </div>
-
-    <div class="col-md-3">
-      <div class="card border-0 shadow-sm h-100">
-        <div class="card-body py-3">
-          <div class="text-muted small text-uppercase fw-semibold mb-1">Transferencia</div>
-          <div class="fs-4 fw-bold text-primary">Bs. {{ monto_transferencia|floatformat:2 }}</div>
-          <div class="small text-muted">{{ count_transferencia }} pago(s)</div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card primary border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-primary" style="font-size:1.35rem;">Bs. {{ monto_transferencia|floatformat:2 }}</div>
+          <div class="kpi-label">Transferencia <span class="text-muted fw-normal" style="font-size:.7rem;">({{ count_transferencia }} pago{{ count_transferencia|pluralize }})</span></div>
         </div>
       </div>
     </div>
-
   </div>
 
 
   <!-- ======================= TABLA ======================= -->
-  <div class="card mb-3">
+  <div class="card border-0 shadow-sm mb-3">
     <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
       <span class="fw-semibold small">Detalle de Pagos</span>
       <span class="text-muted small">{{ payments|length }} registro(s)</span>

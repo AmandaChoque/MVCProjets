@@ -84,6 +84,12 @@ class ContratoProyecto(AuditModel):
         verbose_name="% Multa Diaria",
         validators=[MinValueValidator(Decimal('0')), MaxValueValidator(Decimal('100'))],
     )
+    porcentaje_multa_maxima = models.DecimalField(
+        max_digits=5, decimal_places=2, default=Decimal('20'),
+        verbose_name="% Multa Máxima (tope)",
+        help_text="Tope máximo de multa acumulada como % del monto acordado. Al superarlo el estado pasa a 'crítico'.",
+        validators=[MinValueValidator(Decimal('0')), MaxValueValidator(Decimal('100'))],
+    )
     observaciones  = models.TextField(blank=True, verbose_name="Observaciones")
     documento      = models.FileField(upload_to='contratos/', null=True, blank=True, verbose_name="Documento")
 
@@ -113,10 +119,24 @@ class ContratoProyecto(AuditModel):
 
     @property
     def multa_acumulada(self):
-        """Monto de multa acumulada en Bs. (días × % diario × monto_acordado)."""
+        """
+        Monto de multa acumulada en Bs. (días × % diario × monto_acordado),
+        con tope en porcentaje_multa_maxima % del monto acordado.
+        """
         if self.dias_retraso == 0 or not self.porcentaje_multa_diaria:
             return Decimal('0')
-        return (self.porcentaje_multa_diaria / Decimal('100')) * self.monto_acordado * self.dias_retraso
+        multa_sin_tope = (self.porcentaje_multa_diaria / Decimal('100')) * self.monto_acordado * self.dias_retraso
+        tope = (self.porcentaje_multa_maxima / Decimal('100')) * self.monto_acordado
+        return min(multa_sin_tope, tope)
+
+    @property
+    def multa_tope_alcanzado(self):
+        """True si la multa ya llegó al tope máximo definido en el contrato."""
+        if self.dias_retraso == 0 or not self.porcentaje_multa_diaria:
+            return False
+        multa_sin_tope = (self.porcentaje_multa_diaria / Decimal('100')) * self.monto_acordado * self.dias_retraso
+        tope = (self.porcentaje_multa_maxima / Decimal('100')) * self.monto_acordado
+        return multa_sin_tope >= tope
 
     @property
     def porcentaje_multa_sobre_contrato(self):
@@ -127,10 +147,10 @@ class ContratoProyecto(AuditModel):
 
     @property
     def estado_multa(self):
-        """'normal' sin retraso, 'en_multa' con retraso < 20%, 'critico' >= 20%."""
+        """'normal' sin retraso, 'en_multa' con retraso activo, 'critico' si alcanzó el tope."""
         if self.dias_retraso == 0:
             return 'normal'
-        if self.porcentaje_multa_sobre_contrato >= Decimal('20'):
+        if self.multa_tope_alcanzado:
             return 'critico'
         return 'en_multa'
 

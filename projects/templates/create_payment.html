@@ -50,28 +50,68 @@
               {% endif %}
               <div id="proyecto-info" class="mt-2 p-2 rounded border small" style="display:none; background:#f8f9fa;">
                 <div class="d-flex justify-content-between">
-                  <span class="text-muted">Monto acordado:</span>
+                  <span class="text-muted">Monto total proyecto:</span>
                   <span class="fw-semibold">Bs. <span id="info-total">—</span></span>
                 </div>
                 <div class="d-flex justify-content-between">
-                  <span class="text-muted">Ya pagado:</span>
-                  <span class="text-success fw-semibold">Bs. <span id="info-pagado">—</span></span>
+                  <span class="text-muted">Ya cubierto (pagos + descuentos):</span>
+                  <span class="text-success fw-semibold">Bs. <span id="info-cubierto">—</span></span>
                 </div>
                 <div class="d-flex justify-content-between border-top mt-1 pt-1">
                   <span class="fw-semibold">Saldo pendiente:</span>
                   <span class="fw-bold text-danger">Bs. <span id="info-saldo">—</span></span>
                 </div>
               </div>
+              <!-- Alerta de multa si el proyecto tiene retraso -->
+              <div id="multa-alerta" class="mt-2 p-2 rounded border small" style="display:none;">
+                <div class="d-flex align-items-center gap-2 mb-1">
+                  <i class="bi bi-exclamation-triangle-fill" id="multa-icono"></i>
+                  <strong id="multa-titulo">Multa por retraso</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted">Días de retraso:</span>
+                  <span id="info-dias-retraso" class="fw-semibold">—</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted">Multa acumulada:</span>
+                  <span id="info-multa" class="fw-bold">Bs. —</span>
+                </div>
+                <div id="multa-tope-aviso" class="text-danger small mt-1 fw-semibold" style="display:none;">
+                  <i class="bi bi-shield-exclamation"></i> Tope máximo alcanzado — la empresa podría enfrentar acciones legales.
+                </div>
+                <button type="button" class="btn btn-sm btn-outline-warning mt-2 w-100" id="btn-aplicar-multa">
+                  <i class="bi bi-arrow-down-circle"></i> Aplicar multa como descuento
+                </button>
+              </div>
             </div>
 
             <div class="mb-3">
-              <label class="form-label">Monto (Bs.) <span class="text-danger">*</span></label>
+              <label class="form-label">Monto recibido (Bs.) <span class="text-danger">*</span></label>
               {{ form.monto }}
               {% if form.monto.errors %}
               <div class="text-danger small mt-1">
                 {% for err in form.monto.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
               </div>
               {% endif %}
+            </div>
+
+            <!-- Sección descuento / multa -->
+            <div class="mb-3">
+              <label class="form-label">{{ form.descuento.label }}</label>
+              {{ form.descuento }}
+              {% if form.descuento.errors %}
+              <div class="text-danger small mt-1">
+                {% for err in form.descuento.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </div>
+              {% endif %}
+              <div id="monto-neto-preview" class="small text-muted mt-1" style="display:none;">
+                Monto neto cubierto: <strong class="text-success">Bs. <span id="info-neto">—</span></strong>
+              </div>
+            </div>
+
+            <div class="mb-3" id="campo-motivo-descuento" style="display:none;">
+              <label class="form-label">{{ form.motivo_descuento.label }}</label>
+              {{ form.motivo_descuento }}
             </div>
           </div>
 
@@ -126,21 +166,77 @@
 {% block extra_js %}
 <script>
   const proyectosData = {{ proyectos_data|safe }};
-  const selectProyecto = document.getElementById('id_proyecto');
-  const infoBox = document.getElementById('proyecto-info');
+  const selectProyecto  = document.getElementById('id_proyecto');
+  const infoBox         = document.getElementById('proyecto-info');
+  const multaAlerta     = document.getElementById('multa-alerta');
+  const campoMotivo     = document.getElementById('campo-motivo-descuento');
+  const inputDescuento  = document.getElementById('id_descuento');
+  const inputMonto      = document.querySelector('[name="monto"]');
+  const montoNetoBox    = document.getElementById('monto-neto-preview');
+
+  function updateMontoNeto() {
+    const monto     = parseFloat(inputMonto ? inputMonto.value : 0) || 0;
+    const descuento = parseFloat(inputDescuento.value) || 0;
+    if (monto > 0 || descuento > 0) {
+      document.getElementById('info-neto').textContent = (monto + descuento).toFixed(2);
+      montoNetoBox.style.display = 'block';
+    } else {
+      montoNetoBox.style.display = 'none';
+    }
+  }
 
   function updateProyectoInfo() {
     const val = selectProyecto.value;
     if (val && proyectosData[val]) {
       const d = proyectosData[val];
-      document.getElementById('info-total').textContent  = d.monto_total.toFixed(2);
-      document.getElementById('info-pagado').textContent = d.pagado.toFixed(2);
-      document.getElementById('info-saldo').textContent  = d.saldo.toFixed(2);
+      document.getElementById('info-total').textContent   = d.monto_total.toFixed(2);
+      document.getElementById('info-cubierto').textContent = d.cubierto.toFixed(2);
+      document.getElementById('info-saldo').textContent   = d.saldo.toFixed(2);
       infoBox.style.display = 'block';
+
+      // Multa por retraso
+      if (d.dias_retraso > 0 && d.multa_sugerida > 0) {
+        document.getElementById('info-dias-retraso').textContent = d.dias_retraso + ' día(s)';
+        document.getElementById('info-multa').textContent        = 'Bs. ' + d.multa_sugerida.toFixed(2);
+        const esCritico = d.multa_estado === 'critico';
+        multaAlerta.className = 'mt-2 p-2 rounded border small ' + (esCritico ? 'border-danger bg-danger bg-opacity-10 text-danger' : 'border-warning bg-warning bg-opacity-10 text-warning');
+        document.getElementById('multa-icono').className = 'bi ' + (esCritico ? 'bi-x-octagon-fill text-danger' : 'bi-exclamation-triangle-fill text-warning');
+        document.getElementById('multa-titulo').textContent = esCritico ? 'Multa CRÍTICA (tope alcanzado)' : 'Multa por retraso';
+        document.getElementById('multa-tope-aviso').style.display = d.multa_tope ? 'block' : 'none';
+        multaAlerta.style.display = 'block';
+      } else {
+        multaAlerta.style.display = 'none';
+      }
     } else {
-      infoBox.style.display = 'none';
+      infoBox.style.display    = 'none';
+      multaAlerta.style.display = 'none';
     }
+    updateMontoNeto();
   }
+
+  // Botón "Aplicar multa como descuento"
+  document.getElementById('btn-aplicar-multa').addEventListener('click', function () {
+    const val = selectProyecto.value;
+    if (val && proyectosData[val]) {
+      const multa = proyectosData[val].multa_sugerida;
+      inputDescuento.value = multa.toFixed(2);
+      const motivoField = document.querySelector('[name="motivo_descuento"]');
+      if (motivoField && !motivoField.value) {
+        motivoField.value = 'Multa por retraso de ' + proyectosData[val].dias_retraso + ' día(s) según contrato';
+      }
+      toggleDescuento();
+      updateMontoNeto();
+    }
+  });
+
+  function toggleDescuento() {
+    const val = parseFloat(inputDescuento.value) || 0;
+    campoMotivo.style.display = val > 0 ? 'block' : 'none';
+    updateMontoNeto();
+  }
+
+  inputDescuento.addEventListener('input', toggleDescuento);
+  if (inputMonto) inputMonto.addEventListener('input', updateMontoNeto);
 
   selectProyecto.addEventListener('change', updateProyectoInfo);
   updateProyectoInfo();

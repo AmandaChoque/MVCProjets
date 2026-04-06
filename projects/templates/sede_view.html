@@ -14,14 +14,14 @@
 {% endblock %}
 
 {% block content %}
-<main class="container-fluid px-4 py-4" style="max-width: 900px;">
+<main class="container-fluid px-4 py-4">
 
   <!-- ENCABEZADO -->
   <div class="d-flex justify-content-between align-items-start mb-3 flex-wrap gap-2">
     <div>
       <div class="d-flex align-items-center gap-2 mb-1">
-        <a href="{% url 'project_view' project.id %}" class="btn btn-outline-secondary btn-sm py-0">
-          <i class="bi bi-arrow-left"></i>
+        <a href="{% url 'project_view' project.id %}" class="btn btn-outline-secondary btn-sm">
+          <i class="bi bi-arrow-left me-1"></i>Volver
         </a>
         <h5 class="mb-0 fw-semibold" style="color:#1B4D90;">{{ sede.nombre }}</h5>
         {% if sede.estado == 'completado' %}
@@ -82,6 +82,12 @@
               <i class="bi bi-grip-vertical"></i>
             </span>
             {% endif %}
+            {% if plantillas %}
+            <button class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="modal" data-bs-target="#modalPlantilla"
+                    title="Aplicar plantilla de tareas a esta sede">
+              <i class="bi bi-card-checklist me-1"></i>Plantilla
+            </button>
+            {% endif %}
             <button class="btn btn-sm btn-primary py-0" data-bs-toggle="collapse" data-bs-target="#panelNuevaTarea">
               <i class="bi bi-plus-lg"></i> Tarea
             </button>
@@ -113,6 +119,15 @@
                        style="width:1.3em; height:1.3em; cursor:pointer;">
                 <div class="flex-grow-1">
                   <span class="tarea-desc">{{ tarea.descripcion }}</span>
+                  <div class="tarea-edit-form d-none d-flex gap-1 mt-1">
+                    <input type="text" class="form-control form-control-sm tarea-edit-input" value="{{ tarea.descripcion }}">
+                    <button class="btn btn-sm btn-success py-0 btn-save-tarea" data-id="{{ tarea.id }}">
+                      <i class="bi bi-check-lg"></i>
+                    </button>
+                    <button class="btn btn-sm btn-light py-0 btn-cancel-edit">
+                      <i class="bi bi-x-lg"></i>
+                    </button>
+                  </div>
                   {% if tarea.completado and tarea.completado_por %}
                   <div class="text-muted" style="font-size:0.72rem;">
                     <i class="bi bi-person-check me-1"></i>{{ tarea.completado_por.get_full_name|default:tarea.completado_por.username }}
@@ -121,6 +136,9 @@
                   {% endif %}
                 </div>
                 {% if es_admin %}
+                <button class="btn btn-sm btn-light text-secondary py-0 btn-edit-tarea" data-id="{{ tarea.id }}" title="Editar tarea">
+                  <i class="bi bi-pencil"></i>
+                </button>
                 <button class="btn btn-sm btn-light text-danger py-0 btn-delete-tarea" data-id="{{ tarea.id }}">
                   <i class="bi bi-x"></i>
                 </button>
@@ -249,6 +267,38 @@
   </div>
 
 </main>
+
+<!-- Modal aplicar plantilla -->
+{% if es_admin and plantillas %}
+<div class="modal fade" id="modalPlantilla" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title fw-semibold"><i class="bi bi-card-checklist me-2"></i>Aplicar plantilla de tareas</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small mb-3">
+          Las tareas de la plantilla se agregarán al checklist existente (no se eliminarán las tareas actuales).
+        </p>
+        <label class="form-label fw-semibold">Seleccionar plantilla</label>
+        <select id="selectPlantilla" class="form-select">
+          <option value="">— Elegir plantilla —</option>
+          {% for p in plantillas %}
+          <option value="{{ p.id }}">{{ p.nombre }} ({{ p.items.count }} tarea{{ p.items.count|pluralize }})</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btnAplicarPlantilla">
+          <i class="bi bi-check2-all me-1"></i>Aplicar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
 
 <!-- Modal foto ampliada -->
 <div class="modal fade" id="modalFoto" tabindex="-1">
@@ -431,6 +481,165 @@ if (listaTareas && typeof Sortable !== 'undefined') {
   });
 }
 {% endif %}
+
+// ── Editar descripción de tarea ─────────────────────────────────────────────
+document.querySelectorAll('.btn-edit-tarea').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const id = this.dataset.id;
+    const li = document.getElementById(`tarea-${id}`);
+    const desc = li.querySelector('.tarea-desc');
+    const editForm = li.querySelector('.tarea-edit-form');
+    const input = li.querySelector('.tarea-edit-input');
+    desc.classList.add('d-none');
+    editForm.classList.remove('d-none');
+    input.focus();
+    input.select();
+  });
+});
+
+document.querySelectorAll('.btn-cancel-edit').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const li = this.closest('li');
+    li.querySelector('.tarea-desc').classList.remove('d-none');
+    li.querySelector('.tarea-edit-form').classList.add('d-none');
+  });
+});
+
+document.querySelectorAll('.btn-save-tarea').forEach(btn => {
+  btn.addEventListener('click', function() {
+    const id = this.dataset.id;
+    const li = document.getElementById(`tarea-${id}`);
+    const input = li.querySelector('.tarea-edit-input');
+    const desc = input.value.trim();
+    if (!desc) return;
+    fetch(`/tareas/${id}/editar/`, {
+      method: 'POST',
+      headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded'},
+      body: `descripcion=${encodeURIComponent(desc)}`,
+    }).then(r => r.json()).then(data => {
+      if (!data.ok) { alert(data.error || 'Error al guardar.'); return; }
+      li.querySelector('.tarea-desc').textContent = data.descripcion;
+      li.querySelector('.tarea-desc').classList.remove('d-none');
+      li.querySelector('.tarea-edit-form').classList.add('d-none');
+    });
+  });
+});
+
+// Guardar con Enter en el input de edición
+document.querySelectorAll('.tarea-edit-input').forEach(input => {
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      this.closest('.tarea-edit-form').querySelector('.btn-save-tarea').click();
+    } else if (e.key === 'Escape') {
+      this.closest('.tarea-edit-form').querySelector('.btn-cancel-edit').click();
+    }
+  });
+});
+
+// ── Aplicar plantilla a sede existente ──────────────────────────────────────
+const btnAplicar = document.getElementById('btnAplicarPlantilla');
+if (btnAplicar) {
+  btnAplicar.addEventListener('click', function() {
+    const id_plantilla = document.getElementById('selectPlantilla').value;
+    if (!id_plantilla) { alert('Selecciona una plantilla.'); return; }
+    fetch('{% url "aplicar_plantilla_sede" sede.id %}', {
+      method: 'POST',
+      headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+      body: JSON.stringify({id_plantilla: parseInt(id_plantilla)}),
+    }).then(r => r.json()).then(data => {
+      if (!data.ok) { alert('Error al aplicar la plantilla.'); return; }
+      bootstrap.Modal.getInstance(document.getElementById('modalPlantilla')).hide();
+      const listaTareas = document.getElementById('lista-tareas');
+      const emptyMsg = document.getElementById('empty-tareas');
+      if (emptyMsg) emptyMsg.remove();
+      data.tareas.forEach(t => {
+        const li = document.createElement('li');
+        li.className = 'list-group-item tarea-item';
+        li.id = `tarea-${t.id}`;
+        li.dataset.id = t.id;
+        li.innerHTML = `
+          <div class="d-flex align-items-center gap-3">
+            <i class="bi bi-grip-vertical text-muted drag-handle" style="cursor:grab; font-size:1.1rem;" title="Arrastra para reordenar"></i>
+            <input type="checkbox" class="form-check-input fs-5 tarea-check"
+                   data-id="${t.id}" style="width:1.3em; height:1.3em; cursor:pointer;">
+            <div class="flex-grow-1">
+              <span class="tarea-desc">${t.descripcion}</span>
+              <div class="tarea-edit-form d-none d-flex gap-1 mt-1">
+                <input type="text" class="form-control form-control-sm tarea-edit-input" value="${t.descripcion}">
+                <button class="btn btn-sm btn-success py-0 btn-save-tarea" data-id="${t.id}"><i class="bi bi-check-lg"></i></button>
+                <button class="btn btn-sm btn-light py-0 btn-cancel-edit"><i class="bi bi-x-lg"></i></button>
+              </div>
+            </div>
+            <button class="btn btn-sm btn-light text-secondary py-0 btn-edit-tarea" data-id="${t.id}" title="Editar tarea"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-sm btn-light text-danger py-0 btn-delete-tarea" data-id="${t.id}"><i class="bi bi-x"></i></button>
+          </div>`;
+        listaTareas.appendChild(li);
+        // Re-bind events en los nuevos elementos
+        const check = li.querySelector('.tarea-check');
+        check.addEventListener('change', function() {
+          fetch(`/tareas/${t.id}/toggle/`, {
+            method: 'POST', headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'},
+          }).then(r => r.json()).then(d => {
+            if (!d.ok) return;
+            li.classList.toggle('completada', d.completado);
+            document.getElementById('pct-label').textContent = d.porcentaje + '%';
+            const bar = document.getElementById('pct-bar');
+            bar.style.width = d.porcentaje + '%';
+            bar.className = 'progress-bar ' + (d.porcentaje == 100 ? 'bg-success' : d.porcentaje >= 50 ? 'bg-primary' : 'bg-warning');
+          });
+        });
+        li.querySelector('.btn-delete-tarea').addEventListener('click', function() {
+          if (!confirm('¿Eliminar esta tarea?')) return;
+          fetch(`/tareas/${t.id}/eliminar/`, {
+            method: 'POST', headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'},
+          }).then(r => r.json()).then(d => { if (d.ok) li.remove(); });
+        });
+        li.querySelector('.btn-edit-tarea').addEventListener('click', function() {
+          li.querySelector('.tarea-desc').classList.add('d-none');
+          li.querySelector('.tarea-edit-form').classList.remove('d-none');
+          li.querySelector('.tarea-edit-input').focus();
+        });
+        li.querySelector('.btn-cancel-edit').addEventListener('click', function() {
+          li.querySelector('.tarea-desc').classList.remove('d-none');
+          li.querySelector('.tarea-edit-form').classList.add('d-none');
+        });
+        li.querySelector('.btn-save-tarea').addEventListener('click', function() {
+          const desc = li.querySelector('.tarea-edit-input').value.trim();
+          if (!desc) return;
+          fetch(`/tareas/${t.id}/editar/`, {
+            method: 'POST',
+            headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest',
+                      'Content-Type': 'application/x-www-form-urlencoded'},
+            body: `descripcion=${encodeURIComponent(desc)}`,
+          }).then(r => r.json()).then(d => {
+            if (!d.ok) { alert(d.error || 'Error.'); return; }
+            li.querySelector('.tarea-desc').textContent = d.descripcion;
+            li.querySelector('.tarea-desc').classList.remove('d-none');
+            li.querySelector('.tarea-edit-form').classList.add('d-none');
+          });
+        });
+        li.querySelector('.tarea-edit-input').addEventListener('keydown', function(e) {
+          if (e.key === 'Enter') { e.preventDefault(); li.querySelector('.btn-save-tarea').click(); }
+          else if (e.key === 'Escape') { li.querySelector('.btn-cancel-edit').click(); }
+        });
+      });
+      if (typeof Sortable !== 'undefined') {
+        Sortable.create(listaTareas, { handle: '.drag-handle', animation: 150, ghostClass: 'bg-light',
+          onEnd: function() {
+            const ids = [...listaTareas.querySelectorAll('li[data-id]')].map(li => li.dataset.id);
+            fetch('{% url "tareas_reorder" sede.id %}', {
+              method: 'POST', headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+              body: JSON.stringify({ids}),
+            });
+          },
+        });
+      }
+      alert(`Se agregaron ${data.count} tarea${data.count !== 1 ? 's' : ''} de la plantilla.`);
+    });
+  });
+}
 
 // ── Sync offline queue al reconectar ────────────────────────────────────────
 window.addEventListener('online', function() {

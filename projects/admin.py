@@ -18,9 +18,9 @@ class ProyectoAdmin(admin.ModelAdmin):
 
 @admin.register(Cliente)
 class ClienteAdmin(admin.ModelAdmin):
-    list_display = ('nombre', 'apellido_paterno', 'cargo', 'nit_ci', 'tipo_contratante', 'telefono', 'activo')
+    list_display = ('nombre', 'apellido_paterno', 'rol_contacto', 'nit_ci', 'tipo_contratante', 'telefono', 'activo')
     list_filter = ('activo', 'tipo_contratante')
-    search_fields = ('nombre', 'apellido_paterno', 'nit_ci', 'cargo')
+    search_fields = ('nombre', 'apellido_paterno', 'nit_ci', 'rol_contacto')
     ordering = ('apellido_paterno', 'nombre')
     list_per_page = 20
 

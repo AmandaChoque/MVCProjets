@@ -16,14 +16,14 @@ class EmpleadoForm(forms.ModelForm):
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: jperez', 'autocomplete': 'off'})
     )
     password1 = forms.CharField(
+        required=True,
         label="Contraseña",
-        required=False,
         widget=forms.PasswordInput(attrs={'class': 'form-control', 'autocomplete': 'new-password'}),
         help_text="Dejar en blanco para mantener la contraseña actual (solo en edición)."
     )
     password2 = forms.CharField(
+        required=True,
         label="Confirmar contraseña",
-        required=False,
         widget=forms.PasswordInput(attrs={'class': 'form-control', 'autocomplete': 'new-password'})
     )
     cargo = forms.ChoiceField(
@@ -38,7 +38,7 @@ class EmpleadoForm(forms.ModelForm):
         widget=forms.TextInput(attrs={
             'class': 'form-control', 'placeholder': 'Número de Celular',
             'inputmode': 'numeric', 'pattern': '[0-9]+',
-            'title': 'Ingrese solo números', 'required': 'required', 'minlength': '7',
+            'title': 'Ingrese solo números', 'required': 'required', 'minlength': '8',
         })
     )
     correo = forms.EmailField(
@@ -57,7 +57,7 @@ class EmpleadoForm(forms.ModelForm):
             'carnet_identidad': forms.TextInput(attrs={
                 'class': 'form-control', 'placeholder': 'Carnet de Identidad',
                 'inputmode': 'numeric', 'pattern': '[0-9]+',
-                'title': 'Ingrese solo números', 'required': 'required', 'minlength': '6',
+                'title': 'Ingrese solo números', 'required': 'required', 'minlength': '7',
             }),
         }
 
@@ -69,7 +69,7 @@ class EmpleadoForm(forms.ModelForm):
         if not ci_digits.isdigit():
             raise forms.ValidationError('El carnet debe contener solo números.')
         if len(ci_digits) < 6:
-            raise forms.ValidationError('El carnet debe tener al menos 6 dígitos.')
+            raise forms.ValidationError('El carnet debe tener al menos 7 dígitos.')
         return ci_digits
 
     def clean_numero_celular(self):
@@ -77,7 +77,7 @@ class EmpleadoForm(forms.ModelForm):
         if not celular.isdigit():
             raise forms.ValidationError('El celular debe contener solo números.')
         if len(celular) < 7:
-            raise forms.ValidationError('El celular debe tener al menos 7 dígitos.')
+            raise forms.ValidationError('El celular debe tener al menos 8 dígitos.')
         return celular
 
     def clean_username(self):
@@ -239,15 +239,21 @@ class JornadaEmpleadoForm(forms.ModelForm):
         fields = ['proyecto', 'fecha', 'dias', 'observacion']
         widgets = {'proyecto': forms.Select(attrs={'class': 'form-select'})}
 
-    def __init__(self, *args, empleado=None, es_admin=False, contrato=None, **kwargs):
+    def __init__(self, *args, empleado=None, es_admin=False, contrato=None, asignacion=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._contrato = contrato
-        base_qs = Proyecto.objects.filter(activo=True, estado_proyecto__in=['pendiente', 'en_progreso'])
-        if es_admin or empleado is None:
-            self.fields['proyecto'].queryset = base_qs
+        if asignacion:
+            # Proyecto y fecha fijos: vienen de la asignación
+            self.fields['proyecto'].required = False
+            self.fields['proyecto'].widget = forms.HiddenInput()
+            self.fields['fecha'].widget.attrs['readonly'] = True
         else:
-            self.fields['proyecto'].queryset = base_qs.filter(equipo=empleado)
-        self.fields['proyecto'].empty_label = '— Seleccionar proyecto —'
+            base_qs = Proyecto.objects.filter(activo=True, estado_proyecto__in=['pendiente', 'en_progreso'])
+            if es_admin or empleado is None:
+                self.fields['proyecto'].queryset = base_qs
+            else:
+                self.fields['proyecto'].queryset = base_qs.filter(equipo=empleado)
+            self.fields['proyecto'].empty_label = '— Seleccionar proyecto —'
 
     def clean(self):
         cleaned_data = super().clean()

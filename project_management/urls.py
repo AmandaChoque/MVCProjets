@@ -55,8 +55,10 @@ urlpatterns = [
     # Checklist de tareas
     path('sedes/<int:id_sede>/tareas/nueva/', views.tarea_create, name='tarea_create'),
     path('tareas/<int:id_tarea>/toggle/', views.tarea_toggle, name='tarea_toggle'),
+    path('tareas/<int:id_tarea>/editar/', views.tarea_edit, name='tarea_edit'),
     path('tareas/<int:id_tarea>/eliminar/', views.tarea_delete, name='tarea_delete'),
     path('sedes/<int:id_sede>/tareas/reorder/', views.tareas_reorder, name='tareas_reorder'),
+    path('sedes/<int:id_sede>/aplicar-plantilla/', views.aplicar_plantilla_sede, name='aplicar_plantilla_sede'),
     # Fotos de sede
     path('sedes/<int:id_sede>/fotos/subir/', views.foto_upload, name='foto_upload'),
     path('fotos/<int:id_foto>/eliminar/', views.foto_delete, name='foto_delete'),
@@ -92,6 +94,8 @@ urlpatterns = [
     path('plantillas/<int:id_plantilla>/deactivate/',         views.plantilla_deactivate,     name='plantilla_deactivate'),
     path('plantillas/<int:id_plantilla>/items/nuevo/',        views.item_plantilla_create,    name='item_plantilla_create'),
     path('plantillas/items/<int:id_item>/eliminar/',          views.item_plantilla_delete,    name='item_plantilla_delete'),
+    path('plantillas/items/<int:id_item>/editar/',            views.item_plantilla_edit,      name='item_plantilla_edit'),
+    path('plantillas/<int:id_plantilla>/items/reorder/',      views.items_plantilla_reorder,  name='items_plantilla_reorder'),
 
     # Módulo Empleados
     path('', include('empleados.urls')),

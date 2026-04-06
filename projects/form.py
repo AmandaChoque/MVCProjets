@@ -73,9 +73,9 @@ class ProjectForm(forms.ModelForm):
 class ClienteForm(forms.ModelForm):
     class Meta:
         model = Cliente
-        fields = ['cargo', 'nit_ci', 'nombre', 'apellido_paterno', 'apellido_materno', 'telefono', 'correo', 'direccion', 'tipo_contratante', 'nombre_entidad', 'representante_legal']
+        fields = ['rol_contacto', 'nit_ci', 'nombre', 'apellido_paterno', 'apellido_materno', 'telefono', 'correo', 'direccion', 'tipo_contratante', 'nombre_entidad', 'representante_legal']
         widgets = {
-            'cargo':             forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el cargo'}),
+            'rol_contacto':      forms.Select(attrs={'class': 'form-select'}),
             'nit_ci':            forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el NIT/CI (opcional)', 'inputmode': 'numeric', 'pattern': '[0-9]*', 'title': 'Ingrese solo números'}),
             'nombre':            forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe los nombres', 'required': 'required'}),
             'apellido_paterno':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el apellido paterno', 'required': 'required'}),
@@ -227,25 +227,39 @@ class ContratoProyectoForm(_ContratoBaseForm):
 class PaymentForm(forms.ModelForm):
     monto = forms.CharField(
         required=True,
-        label="Monto",
+        label="Monto recibido (Bs.)",
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: 1500 o 1500.50'})
+    )
+    descuento = forms.CharField(
+        required=False,
+        label="Descuento / Multa aplicada (Bs.)",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ej: 400 (dejar en 0 si no aplica)',
+            'value': '0',
+            'id': 'id_descuento',
+        })
     )
 
     class Meta:
         model = Pago
-        fields = ['monto', 'fecha', 'tipo_pago', 'numero_referencia', 'proyecto']
+        fields = ['monto', 'descuento', 'motivo_descuento', 'fecha', 'tipo_pago', 'numero_referencia', 'proyecto']
         widgets = {
             'fecha':             forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
             'tipo_pago':         forms.Select(attrs={'class': 'form-select', 'id': 'id_tipo_pago'}),
             'numero_referencia': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: TRX-00123456 (opcional para transferencias)'}),
             'proyecto':          forms.Select(attrs={'class': 'form-select'}),
+            'motivo_descuento':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Multa por retraso de 5 días según contrato (Art. 7)'}),
         }
 
     def __init__(self, *args, edit_mode=False, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['proyecto'].queryset = Proyecto.objects.filter(activo=True)
+        self.fields['motivo_descuento'].required = False
         if edit_mode:
             self.fields.pop('monto')
+            self.fields.pop('descuento')
+            self.fields.pop('motivo_descuento')
             self.fields.pop('proyecto')
 
     def clean_monto(self):
@@ -255,6 +269,17 @@ class PaymentForm(forms.ModelForm):
         resultado = Decimal(valor)
         if resultado <= 0:
             raise forms.ValidationError('El monto debe ser mayor a cero.')
+        return resultado
+
+    def clean_descuento(self):
+        valor = str(self.cleaned_data.get('descuento', '0') or '0').strip()
+        if not valor:
+            return Decimal('0')
+        if not re.fullmatch(DECIMAL_REGEX, valor):
+            raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 400 o 400.50).')
+        resultado = Decimal(valor)
+        if resultado < 0:
+            raise forms.ValidationError('El descuento no puede ser negativo.')
         return resultado
 
 

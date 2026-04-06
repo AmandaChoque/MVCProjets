@@ -772,6 +772,7 @@ def create_project(request):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN_SEC)
 def create_cliente(request):
     if request.method == 'GET':
         return render(request, 'crear_cliente.html', {
@@ -796,6 +797,7 @@ def cliente_view(request, id_cliente):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN_SEC)
 def cliente_detail(request, id_cliente):
     cliente_obj = get_object_or_404(Cliente, pk=id_cliente)
     if request.method == 'GET':
@@ -878,6 +880,7 @@ def clientes(request):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN)
 def deactivate_cliente(request, id_cliente):
     cliente = get_object_or_404(Cliente, id=id_cliente, activo=True)
     if request.method == 'POST':
@@ -1223,6 +1226,7 @@ def progreso_detail(request, id_progreso):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN)
 def deactivate_progreso(request, id_progreso):
     progreso = get_object_or_404(Progreso, pk=id_progreso, activo=True)
     id_project = progreso.proyecto.id
@@ -1261,6 +1265,7 @@ def equipo_remove(request, id_project, id_employee):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN_SEC)
 def create_contrato_proyecto(request, id_project):
     project = get_object_or_404(Proyecto, pk=id_project)
     # Check if project already has an active contract
@@ -1286,6 +1291,7 @@ def create_contrato_proyecto(request, id_project):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN_SEC)
 def contrato_proyecto_detail(request, id_contrato):
     contrato = get_object_or_404(ContratoProyecto, pk=id_contrato, activo=True)
     project = contrato.proyecto
@@ -1305,6 +1311,7 @@ def contrato_proyecto_detail(request, id_contrato):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN)
 def deactivate_contrato_proyecto(request, id_contrato):
     contrato = get_object_or_404(ContratoProyecto, pk=id_contrato, activo=True)
     if request.method == 'POST':
@@ -1345,6 +1352,8 @@ def sede_view(request, id_sede):
     tareas = sede.tareas.filter(activo=True).order_by('orden', 'created')
     # Fotos
     fotos = sede.fotos.filter(activo=True)
+    # Plantillas disponibles (para aplicar en caso de haberse olvidado)
+    plantillas = PlantillaTarea.objects.filter(activo=True).order_by('tipo', 'nombre')
     # Formularios
     foto_form = FotoSedeForm()
     tarea_form = TareaChecklistForm()
@@ -1356,6 +1365,7 @@ def sede_view(request, id_sede):
         'fotos': fotos,
         'foto_form': foto_form,
         'tarea_form': tarea_form,
+        'plantillas': plantillas,
     }
     return render(request, 'sede_view.html', context)
 
@@ -1412,6 +1422,7 @@ def tarea_create(request, id_sede):
 
 
 @login_required
+@cargo_required(*ROLES_CAMPO)
 def tarea_toggle(request, id_tarea):
     """AJAX: marca/desmarca una tarea como completada."""
     if request.method != 'POST':
@@ -1471,11 +1482,53 @@ def tareas_reorder(request, id_sede):
     return JsonResponse({'ok': True})
 
 
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def tarea_edit(request, id_tarea):
+    """AJAX: actualiza la descripción de una tarea existente."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'method not allowed'}, status=405)
+    tarea = get_object_or_404(TareaChecklist, pk=id_tarea, activo=True)
+    descripcion = request.POST.get('descripcion', '').strip()
+    if not descripcion:
+        return JsonResponse({'ok': False, 'error': 'La descripción no puede estar vacía.'}, status=400)
+    tarea.descripcion = descripcion
+    tarea.save(update_fields=['descripcion'])
+    return JsonResponse({'ok': True, 'descripcion': tarea.descripcion})
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def aplicar_plantilla_sede(request, id_sede):
+    """AJAX: aplica los items de una plantilla a una sede ya existente (agrega las tareas faltantes)."""
+    import json as _json
+    if request.method != 'POST':
+        return JsonResponse({'ok': False}, status=405)
+    sede = get_object_or_404(Sede, pk=id_sede, activo=True)
+    try:
+        id_plantilla = _json.loads(request.body).get('id_plantilla')
+    except (ValueError, AttributeError):
+        return JsonResponse({'ok': False, 'error': 'JSON inválido'}, status=400)
+    plantilla = get_object_or_404(PlantillaTarea, pk=id_plantilla, activo=True)
+    items = plantilla.items.filter(activo=True).order_by('orden')
+    ultimo_orden = sede.tareas.filter(activo=True).aggregate(m=db_Max('orden'))['m'] or 0
+    nuevas = []
+    for i, item in enumerate(items, start=1):
+        tarea = TareaChecklist.objects.create(
+            sede=sede,
+            descripcion=item.descripcion,
+            orden=ultimo_orden + i,
+        )
+        nuevas.append({'id': tarea.id, 'descripcion': tarea.descripcion, 'orden': tarea.orden})
+    return JsonResponse({'ok': True, 'tareas': nuevas, 'count': len(nuevas)})
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  FOTOS DE SEDE
 # ══════════════════════════════════════════════════════════════════════════════
 
 @login_required
+@cargo_required(*ROLES_CAMPO)
 def foto_upload(request, id_sede):
     sede = get_object_or_404(Sede, pk=id_sede, activo=True)
     if request.method == 'POST':
@@ -1562,6 +1615,7 @@ def notificaciones_marcar_todas(request):
 # ── Pagos del cliente ─────────────────────────────────────────────────────────
 
 @login_required
+@cargo_required(*ROLES_ADMIN_SEC)
 def payment_list(request):
     search_proyecto = request.GET.get('search_proyecto', '')
     filter_tipo     = request.GET.get('filter_tipo', '')
@@ -1599,14 +1653,36 @@ def payment_list(request):
 
 
 def _proyectos_pago_data():
+    from empleados.models import ContratoProyecto
     proyectos = Proyecto.objects.filter(activo=True).prefetch_related('pagos')
+    contratos = {c.proyecto_id: c for c in ContratoProyecto.objects.filter(activo=True).select_related('proyecto')}
     data = {}
     for p in proyectos:
-        pagado = p.pagos.filter(activo=True).aggregate(t=Sum('monto'))['t'] or 0
+        totals = p.pagos.filter(activo=True).aggregate(
+            total_monto=Sum('monto'),
+            total_descuento=Sum('descuento'),
+        )
+        pagado     = float(totals['total_monto'] or 0)
+        descuentos = float(totals['total_descuento'] or 0)
+        cubierto   = pagado + descuentos
+        saldo      = float(p.monto_total) - cubierto
+
+        contrato = contratos.get(p.id)
+        multa_sugerida  = float(contrato.multa_acumulada) if contrato else 0
+        multa_estado    = contrato.estado_multa if contrato else 'normal'
+        multa_tope      = bool(contrato.multa_tope_alcanzado) if contrato else False
+        dias_retraso    = contrato.dias_retraso if contrato else 0
+
         data[str(p.id)] = {
-            'monto_total': float(p.monto_total),
-            'pagado': float(pagado),
-            'saldo': float(p.monto_total - pagado),
+            'monto_total':     float(p.monto_total),
+            'pagado':          pagado,
+            'descuentos':      descuentos,
+            'cubierto':        cubierto,
+            'saldo':           saldo,
+            'multa_sugerida':  multa_sugerida,
+            'multa_estado':    multa_estado,
+            'multa_tope':      multa_tope,
+            'dias_retraso':    dias_retraso,
         }
     return data
 
@@ -1662,6 +1738,7 @@ def deactivate_payment(request, id_payment):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN_SEC)
 def filter_payments_by_project_name(request):
     project_name = request.GET.get('project_name', '')
     start_date   = request.GET.get('start_date', '')
@@ -1806,6 +1883,7 @@ def filter_payments_by_project_name(request):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN_SEC)
 def payment_analysis(request):
     start_date = request.GET.get('start_date')
     end_date   = request.GET.get('end_date')
@@ -1913,6 +1991,19 @@ def item_plantilla_create(request, id_plantilla):
 
 @login_required
 @cargo_required(*ROLES_ADMIN)
+def item_plantilla_edit(request, id_item):
+    item = get_object_or_404(ItemPlantilla, pk=id_item, activo=True)
+    id_plantilla = item.plantilla.id
+    if request.method == 'POST':
+        form = ItemPlantillaForm(request.POST, instance=item)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Tarea actualizada.')
+    return redirect('plantilla_detail', id_plantilla=id_plantilla)
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
 def item_plantilla_delete(request, id_item):
     item = get_object_or_404(ItemPlantilla, pk=id_item, activo=True)
     id_plantilla = item.plantilla.id
@@ -1923,3 +2014,24 @@ def item_plantilla_delete(request, id_item):
         item.save()
         messages.success(request, 'Tarea eliminada de la plantilla.')
     return redirect('plantilla_detail', id_plantilla=id_plantilla)
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def items_plantilla_reorder(request, id_plantilla):
+    """AJAX: reordena los items de una plantilla dado un listado de IDs."""
+    import json as _json
+    if request.method != 'POST':
+        return JsonResponse({'ok': False}, status=405)
+    plantilla = get_object_or_404(PlantillaTarea, pk=id_plantilla, activo=True)
+    try:
+        ids = _json.loads(request.body).get('ids', [])
+    except (ValueError, AttributeError):
+        return JsonResponse({'ok': False, 'error': 'JSON inválido'}, status=400)
+    items = {i.id: i for i in plantilla.items.filter(activo=True)}
+    for posicion, item_id in enumerate(ids, start=1):
+        item = items.get(int(item_id))
+        if item:
+            item.orden = posicion
+            item.save(update_fields=['orden'])
+    return JsonResponse({'ok': True})

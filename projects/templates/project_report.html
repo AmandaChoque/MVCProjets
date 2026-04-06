@@ -22,7 +22,7 @@
   </div>
 
   <!-- ── FILTROS ───────────────────────────────────────────────── -->
-  <div class="card mb-3">
+  <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">
       <form method="get" action="{% url 'project_report' %}" class="row g-2 align-items-end">
         <div class="col-md-3">
@@ -83,37 +83,37 @@
   <!-- ── KPIs financieros ──────────────────────────────────────── -->
   <div class="row g-3 mb-3">
     <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-sm h-100" style="border-left:4px solid #1B4D90 !important;">
+      <div class="card kpi-card blue border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="fw-bold fs-4 text-primary">{{ projects|length }}</div>
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.72rem;letter-spacing:.05em;">Proyectos</div>
+          <div class="kpi-value text-primary">{{ projects|length }}</div>
+          <div class="kpi-label">Proyectos</div>
           <div class="text-muted" style="font-size:0.7rem;">registros filtrados</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-sm h-100" style="border-left:4px solid #20c997 !important;">
+      <div class="card kpi-card teal border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="fw-bold text-success" style="font-size:1.25rem;">Bs. {{ monto_total|floatformat:2 }}</div>
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.72rem;letter-spacing:.05em;">Monto Contratado</div>
+          <div class="kpi-value text-success" style="font-size:1.35rem;">Bs. {{ monto_total|floatformat:2 }}</div>
+          <div class="kpi-label">Monto Contratado</div>
           <div class="text-muted" style="font-size:0.7rem;">total presupuestado</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-sm h-100" style="border-left:4px solid #198754 !important;">
+      <div class="card kpi-card green border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="fw-bold text-success" style="font-size:1.25rem;">Bs. {{ total_cobrado|floatformat:2 }}</div>
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.72rem;letter-spacing:.05em;">Cobrado</div>
+          <div class="kpi-value text-success" style="font-size:1.35rem;">Bs. {{ total_cobrado|floatformat:2 }}</div>
+          <div class="kpi-label">Cobrado</div>
           <div class="text-muted" style="font-size:0.7rem;">pagos recibidos</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-sm h-100" style="border-left:4px solid #dc3545 !important;">
+      <div class="card kpi-card red border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="fw-bold text-danger" style="font-size:1.25rem;">Bs. {{ total_saldo|floatformat:2 }}</div>
-          <div class="text-muted small text-uppercase fw-semibold" style="font-size:0.72rem;letter-spacing:.05em;">Saldo Pendiente</div>
+          <div class="kpi-value text-danger" style="font-size:1.35rem;">Bs. {{ total_saldo|floatformat:2 }}</div>
+          <div class="kpi-label">Saldo Pendiente</div>
           <div class="text-muted" style="font-size:0.7rem;">por cobrar</div>
         </div>
       </div>

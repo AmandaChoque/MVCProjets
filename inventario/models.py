@@ -63,10 +63,11 @@ class Insumo(AuditModel):
         ('sensor',           'Sensor'),
         ('cable',            'Cable'),
         ('fuente',           'Fuente de Alimentación'),
+        ('bateria',          'Batería'),
+
         ('pantalla',         'Pantalla / Display'),
-        ('computadora',      'Equipo Computacional'),
         ('red',              'Equipo de Red'),
-        ('accesorio',        'Accesorio'),
+        ('instalacion',      'Material de Instalación'),
     ]
     UNIDAD_CHOICES = [
         ('unidad', 'Unidad'),

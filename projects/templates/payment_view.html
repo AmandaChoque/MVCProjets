@@ -24,9 +24,25 @@
                 <div class="col-sm-7">{{ payment.proyecto.nombre }}</div>
               </div>
               <div class="row mb-2">
-                <div class="col-sm-5"><strong>Monto (Bs.):</strong></div>
-                <div class="col-sm-7">{{ payment.monto }}</div>
+                <div class="col-sm-5"><strong>Monto recibido (Bs.):</strong></div>
+                <div class="col-sm-7">{{ payment.monto|floatformat:2 }}</div>
               </div>
+              {% if payment.descuento %}
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Descuento / Multa (Bs.):</strong></div>
+                <div class="col-sm-7 text-warning fw-semibold">- {{ payment.descuento|floatformat:2 }}</div>
+              </div>
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Monto neto cubierto (Bs.):</strong></div>
+                <div class="col-sm-7 text-success fw-bold">{{ payment.monto_neto|floatformat:2 }}</div>
+              </div>
+              {% if payment.motivo_descuento %}
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Motivo descuento:</strong></div>
+                <div class="col-sm-7 text-muted">{{ payment.motivo_descuento }}</div>
+              </div>
+              {% endif %}
+              {% endif %}
               <div class="row mb-2">
                 <div class="col-sm-5"><strong>Fecha:</strong></div>
                 <div class="col-sm-7">{{ payment.fecha|date:"d/m/Y" }}</div>
@@ -56,7 +72,7 @@
 
       <!-- BOTONES -->
       <div class="d-flex justify-content-between mt-4">
-        <a href="{% url 'payments' %}" class="btn btn-outline-secondary">Volver</a>
+        <a href="{% url 'payments' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
         <a href="{% url 'payment_detail' payment.id %}" class="btn btn-primary">Editar</a>
       </div>
     </div>

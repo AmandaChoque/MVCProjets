@@ -169,6 +169,23 @@
         font-weight: 600;
       }
 
+      /* KPI Cards — estilo unificado */
+      .kpi-card {
+        border-left: 4px solid transparent;
+        border-radius: 8px;
+        transition: transform 0.15s;
+      }
+      .kpi-card:hover { transform: translateY(-2px); }
+      .kpi-card.blue    { border-color: #1B4D90; }
+      .kpi-card.yellow  { border-color: #ffc107; }
+      .kpi-card.primary { border-color: #0dcaf0; }
+      .kpi-card.green   { border-color: #198754; }
+      .kpi-card.red     { border-color: #dc3545; }
+      .kpi-card.teal    { border-color: #20c997; }
+      .kpi-card.gray    { border-color: #6c757d; }
+      .kpi-value { font-size: 1.8rem; font-weight: 700; line-height: 1.1; }
+      .kpi-label { font-size: 0.78rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.05em; }
+
       /* Responsive */
       @media (max-width: 992px) {
         .main-content {
@@ -346,7 +363,7 @@
         <!-- ── MÓDULO EMPLEADOS ────────────────────────── -->
         {% if es_admin_o_gerente %}
         <li class="sidebar-section mod-empleados">
-          <i class="bi bi-people me-1"></i>Empleados
+          <i class="bi bi-people me-1"></i>Personal
         </li>
 
         <li class="nav-item">

@@ -112,16 +112,24 @@
                   <th>Fecha</th>
                   <th>Proyecto</th>
                   <th class="text-center">Días</th>
+                  <th>Sede</th>
                   <th class="text-end">Monto (Bs.)</th>
                 </tr>
               </thead>
               <tbody>
                 {% for j in jornadas_pendientes %}
                 <tr>
-                  <td><input type="checkbox" name="jornadas" value="{{ j.pk }}" class="form-check-input chk-jornada"></td>
+                  <td><input type="checkbox" name="jornadas" value="{{ j.pk }}" class="form-check-input chk-jornada" data-monto="{{ j.monto }}"></td>
                   <td>{{ j.fecha }}</td>
                   <td>{{ j.proyecto.nombre }}</td>
-                  <td class="text-center">{{ j.dias }}</td>
+                  <td class="text-center">
+                    {% if j.dias == 1.0 %}Día completo{% else %}Medio día{% endif %}
+                  </td>
+                  {% if j.asignacion and j.asignacion.sede %}
+                  <td class="text-muted small">{{ j.asignacion.sede.nombre }}</td>
+                  {% else %}
+                  <td class="text-muted small">—</td>
+                  {% endif %}
                   <td class="text-end">{{ j.monto|floatformat:2 }}</td>
                 </tr>
                 {% endfor %}
@@ -147,12 +155,27 @@
 
 {% block extra_js %}
 <script>
+  var montoInput = document.getElementById('id_monto');
+
+  function recalcularMonto() {
+    var total = 0;
+    document.querySelectorAll('.chk-jornada:checked').forEach(function (c) {
+      total += parseFloat(c.dataset.monto || 0);
+    });
+    if (total > 0 && montoInput) montoInput.value = total.toFixed(2);
+  }
+
   var chkAll = document.getElementById('chk_all');
   if (chkAll) {
     chkAll.addEventListener('change', function () {
       document.querySelectorAll('.chk-jornada').forEach(function (c) { c.checked = chkAll.checked; });
+      recalcularMonto();
     });
   }
+
+  document.querySelectorAll('.chk-jornada').forEach(function (c) {
+    c.addEventListener('change', recalcularMonto);
+  });
   document.querySelectorAll('.text-danger.small.mt-1').forEach(function (errorDiv) {
     var prev = errorDiv.previousElementSibling;
     if (prev && (prev.tagName === 'INPUT' || prev.tagName === 'SELECT' || prev.tagName === 'TEXTAREA')) {

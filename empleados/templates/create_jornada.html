@@ -3,8 +3,12 @@
 <main class="container-fluid px-5 py-4">
   <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb mb-0">
-      <li class="breadcrumb-item"><a href="{% url 'employees' %}">Empleados</a></li>
-      <li class="breadcrumb-item"><a href="{% url 'contrato_empleado_detail' contrato.id %}">{{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }}</a></li>
+      {% if from_dashboard %}
+        <li class="breadcrumb-item"><a href="{% url 'instalador_dashboard' %}">Mi trabajo</a></li>
+      {% else %}
+        <li class="breadcrumb-item"><a href="{% url 'employees' %}">Empleados</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'contrato_empleado_detail' contrato.id %}">{{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }}</a></li>
+      {% endif %}
       <li class="breadcrumb-item active" aria-current="page">Nueva jornada</li>
     </ol>
   </nav>
@@ -16,17 +20,39 @@
       <div class="card border-0 shadow-sm rounded-3">
         <div class="card-header bg-light fw-semibold small">Nueva Jornada</div>
         <div class="card-body p-4">
+
+          {% if asignacion %}
+          <div class="alert alert-info py-2 px-3 mb-3 small">
+            <div class="fw-semibold">{{ asignacion.proyecto.nombre }}</div>
+            {% if asignacion.sede %}
+              <div><i class="bi bi-geo-alt me-1"></i>{{ asignacion.sede.nombre }} — {{ asignacion.sede.direccion }}</div>
+            {% endif %}
+            <div class="mt-1">
+              {% if asignacion.supervisor == request.user %}
+                <i class="bi bi-person-badge me-1"></i>Tu rol: <strong>Supervisor</strong>
+              {% else %}
+                <i class="bi bi-tools me-1"></i>Tu rol: <strong>Técnico</strong>
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+
           <form method="POST">
             {% csrf_token %}
+            {% if asignacion %}
+              <input type="hidden" name="asignacion_id" value="{{ asignacion.id }}">
+            {% endif %}
             {% if form.non_field_errors %}
             <div class="alert alert-danger small">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>
             {% endif %}
 
+            {% if not asignacion %}
             <div class="mb-3">
               <label class="form-label">Proyecto <span class="text-danger">*</span></label>
               {{ form.proyecto }}
               {% if form.proyecto.errors %}<div class="text-danger small mt-1">{% for e in form.proyecto.errors %}{{ e }}{% endfor %}</div>{% endif %}
             </div>
+            {% endif %}
             <div class="mb-3">
               <label class="form-label">Fecha <span class="text-danger">*</span></label>
               {{ form.fecha }}
@@ -42,7 +68,11 @@
             </div>
 
             <div class="d-flex justify-content-between mt-4">
-              <a href="{% url 'contrato_empleado_detail' contrato.id %}" class="btn btn-outline-secondary">Cancelar</a>
+              {% if from_dashboard %}
+                <a href="{% url 'instalador_dashboard' %}" class="btn btn-outline-secondary">Cancelar</a>
+              {% else %}
+                <a href="{% url 'contrato_empleado_detail' contrato.id %}" class="btn btn-outline-secondary">Cancelar</a>
+              {% endif %}
               <button type="submit" class="btn btn-primary px-4">Guardar jornada</button>
             </div>
           </form>
@@ -55,29 +85,37 @@
       <!-- Balance -->
       <div class="row g-3 mb-4">
         <div class="col-6 col-md-3">
-          <div class="card border-0 shadow-sm text-center py-3">
-            <div class="fs-4 fw-bold text-primary">{{ total_dias }}</div>
-            <div class="text-muted small">Días trabajados</div>
-          </div>
-        </div>
-        <div class="col-6 col-md-3">
-          <div class="card border-0 shadow-sm text-center py-3">
-            <div class="fs-5 fw-bold text-success">Bs. {{ total_ganado|floatformat:2 }}</div>
-            <div class="text-muted small">Total devengado</div>
-          </div>
-        </div>
-        <div class="col-6 col-md-3">
-          <div class="card border-0 shadow-sm text-center py-3">
-            <div class="fs-5 fw-bold text-info">Bs. {{ total_pagado|floatformat:2 }}</div>
-            <div class="text-muted small">Total pagado</div>
-          </div>
-        </div>
-        <div class="col-6 col-md-3">
-          <div class="card border-0 shadow-sm text-center py-3">
-            <div class="fs-5 fw-bold {% if saldo_pendiente > 0 %}text-danger{% else %}text-success{% endif %}">
-              Bs. {{ saldo_pendiente|floatformat:2 }}
+          <div class="card kpi-card blue border-0 shadow-sm h-100">
+            <div class="card-body py-3 px-3">
+              <div class="kpi-value text-primary">{{ total_dias }}</div>
+              <div class="kpi-label">Días trabajados</div>
             </div>
-            <div class="text-muted small">Saldo pendiente</div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card kpi-card green border-0 shadow-sm h-100">
+            <div class="card-body py-3 px-3">
+              <div class="kpi-value text-success" style="font-size:1.35rem;">Bs. {{ total_ganado|floatformat:2 }}</div>
+              <div class="kpi-label">Total devengado</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card kpi-card teal border-0 shadow-sm h-100">
+            <div class="card-body py-3 px-3">
+              <div class="kpi-value text-info" style="font-size:1.35rem;">Bs. {{ total_pagado|floatformat:2 }}</div>
+              <div class="kpi-label">Total pagado</div>
+            </div>
+          </div>
+        </div>
+        <div class="col-6 col-md-3">
+          <div class="card kpi-card {% if saldo_pendiente > 0 %}red{% else %}green{% endif %} border-0 shadow-sm h-100">
+            <div class="card-body py-3 px-3">
+              <div class="kpi-value {% if saldo_pendiente > 0 %}text-danger{% else %}text-success{% endif %}" style="font-size:1.35rem;">
+                Bs. {{ saldo_pendiente|floatformat:2 }}
+              </div>
+              <div class="kpi-label">Saldo pendiente</div>
+            </div>
           </div>
         </div>
       </div>

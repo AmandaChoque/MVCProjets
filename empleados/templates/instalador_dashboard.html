@@ -39,6 +39,136 @@
   </div>
   {% endif %}
 
+  <!-- ── JORNADA DE HOY ───────────────────────────────────────────── -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center"
+         style="border-left:4px solid #198754;">
+      <div>
+        <span class="fw-semibold">Jornada de hoy</span>
+        <span class="text-muted small ms-2">{{ hoy }}</span>
+      </div>
+      {% if contrato_activo and not asignaciones_hoy %}
+        <a href="{% url 'create_jornada' contrato_activo.id %}"
+           class="btn btn-success btn-sm">
+          <i class="bi bi-plus-lg me-1"></i>Registrar jornada
+        </a>
+      {% endif %}
+    </div>
+    <div class="card-body py-2 px-3">
+      {% if not contrato_activo %}
+        <p class="text-muted small mb-0">No tienes un contrato activo. Contactá al administrador.</p>
+
+      {% elif asignaciones_hoy %}
+        <!-- Una fila por asignación del día -->
+        <div class="d-flex flex-column gap-2">
+          {% for asig in asignaciones_hoy %}
+          <div class="d-flex justify-content-between align-items-center py-1
+                      {% if not forloop.last %}border-bottom{% endif %}">
+            <div>
+              <span class="fw-semibold small">{{ asig.proyecto.nombre }}</span>
+              {% if asig.sede %}
+                <span class="text-muted small ms-1">· {{ asig.sede.nombre }}</span>
+              {% endif %}
+              <div class="text-muted small">
+                {% if asig.supervisor == request.user %}
+                  <i class="bi bi-person-badge me-1"></i>Supervisor
+                {% else %}
+                  <i class="bi bi-tools me-1"></i>Técnico
+                {% endif %}
+                {% if asig.id in asignaciones_con_jornada %}
+                  <span class="badge bg-success ms-1">Registrada</span>
+                {% endif %}
+              </div>
+            </div>
+            {% if asig.id not in asignaciones_con_jornada %}
+              <a href="{% url 'create_jornada' contrato_activo.id %}?asignacion={{ asig.id }}"
+                 class="btn btn-success btn-sm">
+                <i class="bi bi-plus-lg me-1"></i>Registrar
+              </a>
+            {% else %}
+              {% for j in jornadas_hoy %}
+                {% if j.asignacion_id == asig.id %}
+                <a href="{% url 'jornada_detail' j.id %}" class="btn btn-outline-secondary btn-sm py-0">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Jornadas sin asignación (registradas manualmente) -->
+        {% for j in jornadas_hoy %}
+          {% if not j.asignacion_id %}
+          <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-1">
+            <div>
+              <span class="fw-semibold small">{{ j.proyecto.nombre }}</span>
+              <span class="badge bg-secondary ms-1">
+                {% if j.dias == 1.0 %}Día completo{% else %}Medio día{% endif %}
+              </span>
+            </div>
+            <a href="{% url 'jornada_detail' j.id %}" class="btn btn-outline-secondary btn-sm py-0">
+              <i class="bi bi-pencil"></i>
+            </a>
+          </div>
+          {% endif %}
+        {% endfor %}
+
+      {% elif jornadas_hoy %}
+        <div class="d-flex flex-column gap-2">
+          {% for j in jornadas_hoy %}
+          <div class="d-flex justify-content-between align-items-center border-bottom pb-1">
+            <div>
+              <span class="fw-semibold small">{{ j.proyecto.nombre }}</span>
+              <span class="badge bg-secondary ms-1">
+                {% if j.dias == 1.0 %}Día completo{% else %}Medio día{% endif %}
+              </span>
+              {% if j.observacion %}
+                <div class="text-muted small">{{ j.observacion }}</div>
+              {% endif %}
+            </div>
+            <a href="{% url 'jornada_detail' j.id %}" class="btn btn-outline-secondary btn-sm py-0">
+              <i class="bi bi-pencil"></i>
+            </a>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="text-muted small mb-0">Aún no registraste tu jornada de hoy.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── RESUMEN DE PAGOS ─────────────────────────────────────────── -->
+  {% if resumen_pago %}
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-light py-2 px-3"
+         style="border-left:4px solid #0d6efd;">
+      <span class="fw-semibold">Mi balance</span>
+      <span class="text-muted small ms-2">Bs. {{ contrato_activo.monto_diario|floatformat:2 }} / día</span>
+    </div>
+    <div class="card-body py-2 px-3">
+      <div class="row g-2 text-center">
+        <div class="col-4">
+          <div class="text-muted small">Días trabajados</div>
+          <div class="fw-semibold">{{ resumen_pago.total_dias }}</div>
+        </div>
+        <div class="col-4">
+          <div class="text-muted small">Total ganado</div>
+          <div class="fw-semibold text-primary">Bs. {{ resumen_pago.total_ganado|floatformat:2 }}</div>
+        </div>
+        <div class="col-4">
+          <div class="text-muted small">Saldo pendiente</div>
+          <div class="fw-bold {% if resumen_pago.saldo > 0 %}text-danger{% else %}text-success{% endif %}">
+            Bs. {{ resumen_pago.saldo|floatformat:2 }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- ── PROYECTOS CON SEDES ────────────────────────────────────── -->
   {% for item in proyectos_data %}
   <div class="card border-0 shadow-sm mb-3">
