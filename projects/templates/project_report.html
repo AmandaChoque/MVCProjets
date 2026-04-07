@@ -1,4 +1,15 @@
 {% extends 'base.html' %}
+{% block extra_css %}
+<style>
+  .label-xs   { font-size: 0.72rem; }
+  .text-xs    { font-size: 0.70rem; }
+  .text-xxs   { font-size: 0.68rem; }
+  .kpi-amount { font-size: 1.35rem; }
+  .thead-xs   { font-size: 0.71rem; }
+  .tfoot-sm   { font-size: 0.78rem; }
+  .label-meta { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em; }
+</style>
+{% endblock %}
 {% block content %}
 <div class="container-fluid py-3">
 
@@ -26,12 +37,12 @@
     <div class="card-body py-2">
       <form method="get" action="{% url 'project_report' %}" class="row g-2 align-items-end">
         <div class="col-md-3">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Nombre</label>
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Nombre</label>
           <input type="text" name="search_nombre" class="form-control form-control-sm"
                  value="{{ search_nombre|default:'' }}" placeholder="Buscar por nombre...">
         </div>
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Tipo</label>
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Tipo</label>
           <select name="project_type" class="form-select form-select-sm">
             <option value="">Todos</option>
             <option value="instalacion_nueva"      {% if project_type == 'instalacion_nueva' %}selected{% endif %}>Instalación Nueva</option>
@@ -42,7 +53,7 @@
           </select>
         </div>
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Estado</label>
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Estado</label>
           <select name="project_status" class="form-select form-select-sm">
             <option value="">Todos</option>
             <option value="pendiente"   {% if project_status == 'pendiente' %}selected{% endif %}>Pendiente</option>
@@ -51,7 +62,7 @@
           </select>
         </div>
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Estado de Pago</label>
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Estado de Pago</label>
           <select name="filter_estado_pago" class="form-select form-select-sm">
             <option value="">Todos</option>
             <option value="no_pagado" {% if filter_estado_pago == 'no_pagado' %}selected{% endif %}>No Pagado</option>
@@ -60,7 +71,7 @@
           </select>
         </div>
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Cumplimiento</label>
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Cumplimiento</label>
           <select name="filter_cumplimiento" class="form-select form-select-sm">
             <option value="">Todos</option>
             <option value="vencido"   {% if filter_cumplimiento == 'vencido' %}selected{% endif %}>Plazo Vencido</option>
@@ -87,25 +98,25 @@
         <div class="card-body py-3 px-3">
           <div class="kpi-value text-primary">{{ projects|length }}</div>
           <div class="kpi-label">Proyectos</div>
-          <div class="text-muted" style="font-size:0.7rem;">registros filtrados</div>
+          <div class="text-muted text-xs">registros filtrados</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
       <div class="card kpi-card teal border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-success" style="font-size:1.35rem;">Bs. {{ monto_total|floatformat:2 }}</div>
+          <div class="kpi-value text-success kpi-amount">Bs. {{ monto_total|floatformat:2 }}</div>
           <div class="kpi-label">Monto Contratado</div>
-          <div class="text-muted" style="font-size:0.7rem;">total presupuestado</div>
+          <div class="text-muted text-xs">total presupuestado</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
       <div class="card kpi-card green border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-success" style="font-size:1.35rem;">Bs. {{ total_cobrado|floatformat:2 }}</div>
+          <div class="kpi-value text-success kpi-amount">Bs. {{ total_cobrado|floatformat:2 }}</div>
           <div class="kpi-label">Cobrado</div>
-          <div class="text-muted" style="font-size:0.7rem;">pagos recibidos</div>
+          <div class="text-muted text-xs">pagos recibidos</div>
         </div>
       </div>
     </div>
@@ -114,7 +125,7 @@
         <div class="card-body py-3 px-3">
           <div class="kpi-value text-danger" style="font-size:1.35rem;">Bs. {{ total_saldo|floatformat:2 }}</div>
           <div class="kpi-label">Saldo Pendiente</div>
-          <div class="text-muted" style="font-size:0.7rem;">por cobrar</div>
+          <div class="text-muted text-xs">por cobrar</div>
         </div>
       </div>
     </div>
@@ -123,12 +134,12 @@
   <!-- ── Resumen de estado y cumplimiento ─────────────────────── -->
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2 px-3 d-flex flex-wrap gap-2 align-items-center">
-      <span class="text-muted fw-semibold" style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em;">Estado:</span>
+      <span class="text-muted fw-semibold label-meta">Estado:</span>
       <span class="badge bg-success">{{ count_completado }} Completados</span>
       <span class="badge bg-primary">{{ count_en_progreso }} En Progreso</span>
       <span class="badge bg-warning text-dark">{{ count_pendiente }} Pendientes</span>
       <span class="text-muted mx-1">|</span>
-      <span class="text-muted fw-semibold" style="font-size:0.72rem;text-transform:uppercase;letter-spacing:.05em;">Plazo:</span>
+      <span class="text-muted fw-semibold label-meta">Plazo:</span>
       <span class="badge bg-danger">{{ count_vencidos }} Vencidos</span>
       <span class="badge bg-success">{{ count_en_plazo }} En Plazo</span>
       <span class="badge bg-secondary">{{ count_sin_fecha }} Sin Fecha</span>
@@ -143,20 +154,20 @@
     </div>
     <div class="table-responsive">
       <table class="table table-sm table-hover align-middle small mb-0">
-        <thead class="table-light text-uppercase fw-semibold" style="font-size:0.71rem;">
+        <thead class="table-light text-uppercase fw-semibold thead-xs">
           <tr>
-            <th class="px-3">Código</th>
-            <th>Nombre</th>
-            <th>Contratante</th>
-            <th>Tipo</th>
-            <th>Estado</th>
-            <th style="width:90px;">Avance</th>
-            <th>Pago</th>
-            <th class="text-end">Monto (Bs.)</th>
-            <th class="text-end">Cobrado (Bs.)</th>
-            <th class="text-end">Saldo (Bs.)</th>
-            <th>Período</th>
-            <th>Cumplimiento</th>
+            <th scope="col" class="px-3">Código</th>
+            <th scope="col">Nombre</th>
+            <th scope="col">Contratante</th>
+            <th scope="col">Tipo</th>
+            <th scope="col">Estado</th>
+            <th scope="col" style="width:90px;">Avance</th>
+            <th scope="col">Pago</th>
+            <th scope="col" class="text-end">Monto (Bs.)</th>
+            <th scope="col" class="text-end">Cobrado (Bs.)</th>
+            <th scope="col" class="text-end">Saldo (Bs.)</th>
+            <th scope="col">Período</th>
+            <th scope="col">Cumplimiento</th>
           </tr>
         </thead>
         <tbody>
@@ -203,7 +214,9 @@
                     {% if avance == 100 %}bg-success
                     {% elif avance > 0 %}bg-primary
                     {% else %}bg-secondary{% endif %}"
-                    style="width:{{ avance }}%"></div>
+                    role="progressbar"
+                    style="width:{{ avance }}%"
+                    aria-valuenow="{{ avance }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <span class="text-muted" style="font-size:0.7rem;white-space:nowrap;">{{ avance }}%</span>
               </div>
@@ -221,10 +234,10 @@
             <td class="text-end fw-semibold">{{ project.monto_total|floatformat:2 }}</td>
             <td class="text-end text-success">{{ cobrado|floatformat:2 }}</td>
             <td class="text-end text-danger">{{ project.monto_saldo|floatformat:2 }}</td>
-            <td class="text-muted" style="white-space:nowrap;">
-              {{ project.fecha_inicio|date:"d/m/Y"|default:"—" }}
-              {% if project.fecha_fin %}
-              <br><span class="text-muted">{{ project.fecha_fin|date:"d/m/Y" }}</span>
+            <td class="text-muted text-nowrap">
+              {{ project.contrato_fecha_inicio|date:"d/m/Y"|default:"—" }}
+              {% if project.contrato_fecha_fin %}
+              <br><span class="text-muted">{{ project.contrato_fecha_fin|date:"d/m/Y" }}</span>
               {% endif %}
             </td>
             <td>
@@ -232,10 +245,10 @@
                 <span class="badge bg-success">Completado</span>
               {% elif project.cumplimiento == 'vencido' %}
                 <span class="badge bg-danger">Vencido</span>
-                <div class="text-danger" style="font-size:0.68rem;">hace {{ project.dias_info }}d</div>
+                <div class="text-danger text-xxs">hace {{ project.dias_info }}d</div>
               {% elif project.cumplimiento == 'en_plazo' %}
                 <span class="badge bg-success">En Plazo</span>
-                <div class="text-muted" style="font-size:0.68rem;">{{ project.dias_info }}d restantes</div>
+                <div class="text-muted text-xxs">{{ project.dias_info }}d restantes</div>
               {% else %}
                 <span class="badge bg-secondary">Sin Fecha</span>
               {% endif %}
@@ -251,7 +264,7 @@
           {% endfor %}
         </tbody>
         {% if projects %}
-        <tfoot class="table-light fw-semibold" style="font-size:0.78rem;">
+        <tfoot class="table-light fw-semibold tfoot-sm">
           <tr>
             <td colspan="7" class="text-end px-3">Totales:</td>
             <td class="text-end">Bs. {{ monto_total|floatformat:2 }}</td>

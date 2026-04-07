@@ -98,6 +98,17 @@
               {% endif %}
               <div class="form-text text-muted">El monto del proyecto se tomará automáticamente del contrato.</div>
             </div> -->
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.ritmo_semanal.id_for_label }}">
+                Ritmo esperado
+                <span class="text-muted fw-normal">(instalaciones/semana)</span>
+              </label>
+              {{ form.ritmo_semanal }}
+              {% if form.ritmo_semanal.errors %}
+              <div class="text-danger small mt-1">{% for err in form.ritmo_semanal.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+              <div class="form-text text-muted">Promedio de unidades que el equipo completa por semana. Ej: 4 cámaras/semana.</div>
+            </div>
           </div>
         </div>
       </div>

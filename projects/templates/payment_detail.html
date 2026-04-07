@@ -46,9 +46,26 @@
             </div>
 
             <div class="mb-3">
-              <label class="form-label text-muted small">Monto (Bs.)</label>
+              <label class="form-label text-muted small">Monto recibido (Bs.)</label>
               <div class="form-control bg-light">{{ payment.monto|floatformat:2 }}</div>
             </div>
+
+            {% if payment.descuento %}
+            <div class="mb-3">
+              <label class="form-label text-muted small">Descuento / Multa aplicada (Bs.)</label>
+              <div class="form-control bg-light text-warning fw-semibold">{{ payment.descuento|floatformat:2 }}</div>
+            </div>
+            {% if payment.motivo_descuento %}
+            <div class="mb-3">
+              <label class="form-label text-muted small">Motivo del descuento</label>
+              <div class="form-control bg-light">{{ payment.motivo_descuento }}</div>
+            </div>
+            {% endif %}
+            <div class="mb-3">
+              <label class="form-label text-muted small">Monto neto cubierto (Bs.)</label>
+              <div class="form-control bg-light fw-semibold text-success">{{ payment.monto_neto|floatformat:2 }}</div>
+            </div>
+            {% endif %}
           </div>
 
           <!-- COLUMNA DERECHA -->

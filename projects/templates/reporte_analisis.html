@@ -2,10 +2,52 @@
 {% block content %}
 <div class="container-fluid py-3">
 
+  <!-- ── ENCABEZADO ────────────────────────────────────────────── -->
   <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-    <h5 class="fw-semibold text-secondary mb-0">Análisis de Proyectos (Distribución)</h5>
+    <h5 class="fw-semibold text-secondary mb-0">Análisis de Proyectos</h5>
   </div>
 
+  <!-- ── KPIs ──────────────────────────────────────────────────── -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card blue border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-primary">{{ total_proyectos }}</div>
+          <div class="kpi-label">Total Proyectos</div>
+          <div class="text-muted" style="font-size:0.7rem;">registrados</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card green border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-success">{{ total_completados }}</div>
+          <div class="kpi-label">Completados</div>
+          <div class="text-muted" style="font-size:0.7rem;">finalizados</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card blue border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-primary">{{ total_en_progreso }}</div>
+          <div class="kpi-label">En Progreso</div>
+          <div class="text-muted" style="font-size:0.7rem;">en ejecución</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card yellow border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-warning">{{ total_pendientes }}</div>
+          <div class="kpi-label">Pendientes</div>
+          <div class="text-muted" style="font-size:0.7rem;">por iniciar</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── GRÁFICO ───────────────────────────────────────────────── -->
   <div class="card border-0 shadow-sm">
     <div class="card-header bg-light py-2">
       <span class="fw-semibold small">Distribución de Proyectos por Estado</span>

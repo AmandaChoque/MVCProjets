@@ -3,37 +3,72 @@
 {% block content %}
 <div class="container-fluid py-3">
 
-  <!-- ======================= ENCABEZADO ======================= -->
+  <!-- ── ENCABEZADO ────────────────────────────────────────────── -->
   <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
     <h5 class="fw-semibold text-secondary mb-0">Análisis de Pagos</h5>
   </div>
 
-  <!-- ======================= FILTROS ======================= -->
+  <!-- ── FILTROS ───────────────────────────────────────────────── -->
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">
       <form method="get" action="{% url 'payment_analysis' %}" class="row g-2 align-items-end">
-
         <div class="col-md-4">
           <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Fecha inicio</label>
           <input type="date" name="start_date" class="form-control form-control-sm"
-                 value="{{ start_date }}">
+                 value="{{ start_date|default:'' }}">
         </div>
-
         <div class="col-md-4">
           <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Fecha fin</label>
           <input type="date" name="end_date" class="form-control form-control-sm"
-                 value="{{ end_date }}">
+                 value="{{ end_date|default:'' }}">
         </div>
-
         <div class="col-md-2">
           <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
         </div>
-
         <div class="col-md-2">
           <a href="{% url 'payment_analysis' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
         </div>
-
       </form>
+    </div>
+  </div>
+
+  <!-- ── KPIs ──────────────────────────────────────────────────── -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card blue border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-primary">{{ total_pagos }}</div>
+          <div class="kpi-label">Total Pagos</div>
+          <div class="text-muted" style="font-size:0.7rem;">registros filtrados</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card teal border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-success" style="font-size:1.35rem;">Bs. {{ total_monto|floatformat:2 }}</div>
+          <div class="kpi-label">Monto Total</div>
+          <div class="text-muted" style="font-size:0.7rem;">cobrado en el período</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card green border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-success" style="font-size:1.35rem;">Bs. {{ total_efectivo|floatformat:2 }}</div>
+          <div class="kpi-label">En Efectivo</div>
+          <div class="text-muted" style="font-size:0.7rem;">pagos en efectivo</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card blue border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-primary" style="font-size:1.35rem;">Bs. {{ total_transfer|floatformat:2 }}</div>
+          <div class="kpi-label">Por Transferencia</div>
+          <div class="text-muted" style="font-size:0.7rem;">pagos transferidos</div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -43,57 +78,53 @@
   </div>
   {% else %}
 
-  <!-- ======================= GRÁFICO ======================= -->
+  <!-- ── GRÁFICO ───────────────────────────────────────────────── -->
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-header bg-light py-2">
       <span class="fw-semibold small">Distribución de Pagos por Tipo</span>
     </div>
     <div class="card-body text-center py-3">
       <img src="data:image/png;base64,{{ graphic }}" alt="Gráfico de Torta"
-           class="img-fluid" style="max-height: 320px;">
+           class="img-fluid" style="max-height:320px;">
     </div>
   </div>
 
-  <!-- ======================= TABLAS RESUMEN ======================= -->
-  <div class="row g-3">
-
-    <div class="col-md-6">
-      <div class="card border-0 shadow-sm">
-        <div class="card-header bg-light py-2">
-          <span class="fw-semibold small">Conteo por Tipo</span>
-        </div>
-        <div class="card-body p-0">
-          <table class="table table-sm table-hover align-middle small mb-0">
-            <thead class="table-light text-uppercase fw-semibold">
-              <tr>
-                <th>Tipo de Pago</th>
-                <th class="text-center">Cantidad</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for type in payment_type_counts %}
-              <tr>
-                <td>
-                  {% if type.tipo_pago == 'transferencia' %}
-                    <span class="badge bg-primary">Transferencia</span>
-                  {% else %}
-                    <span class="badge bg-info text-dark">Efectivo</span>
-                  {% endif %}
-                </td>
-                <td class="text-center fw-semibold">{{ type.count }}</td>
-              </tr>
-              {% empty %}
-              <tr>
-                <td colspan="2" class="text-center text-muted py-2">Sin datos</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </div>
+  <!-- ── TABLA RESUMEN ─────────────────────────────────────────── -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+      <span class="fw-semibold small">Conteo por Tipo de Pago</span>
+      <span class="text-muted small">{{ total_pagos }} registro(s)</span>
     </div>
-
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle small mb-0">
+        <thead class="table-light text-uppercase fw-semibold" style="font-size:0.71rem;">
+          <tr>
+            <th>Tipo de Pago</th>
+            <th class="text-center">Cantidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for type in payment_type_counts %}
+          <tr>
+            <td>
+              {% if type.tipo_pago == 'transferencia' %}
+                <span class="badge bg-primary">Transferencia</span>
+              {% else %}
+                <span class="badge bg-info text-dark">Efectivo</span>
+              {% endif %}
+            </td>
+            <td class="text-center fw-semibold">{{ type.count }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="2" class="text-center text-muted py-3">Sin datos</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
+
   {% endif %}
 
 </div>

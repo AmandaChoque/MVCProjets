@@ -111,7 +111,7 @@ class Proyecto(AuditModel):
     PAYMENT_STATE_CHOICES = [
         ('no_pagado', 'No Pagado'),
         ('parcial', 'Pago Parcial'),
-        ('pagado', 'Pagado Completo'),
+        ('pagado', 'Pago Completo'),
     ]
     codigo = models.CharField(max_length=20, unique=True, verbose_name="Código Proyecto")
     nombre = models.CharField(max_length=200, unique=True, verbose_name="Nombre Proyecto")
@@ -141,6 +141,11 @@ class Proyecto(AuditModel):
         settings.AUTH_USER_MODEL, blank=True,
         related_name='proyectos_asignados',
         verbose_name="Equipo del Proyecto",
+    )
+    ritmo_semanal = models.PositiveSmallIntegerField(
+        default=4,
+        verbose_name="Ritmo esperado (grupos/semana)",
+        help_text="Promedio de unidades de instalación completadas por semana (ej: 4 cámaras/semana).",
     )
 
     def __str__(self):
@@ -383,10 +388,56 @@ class FotoSede(AuditModel):
         return f"Foto — {self.sede.nombre} ({self.created.date() if self.created else ''})"
 
 
+# ── Grupo de instalación (unidad de trabajo dentro de una sede) ───────────────
+
+class GrupoTarea(AuditModel):
+    TIPO_CHOICES = [
+        ('camara_ip',        'Cámara IP'),
+        ('camara_analogica', 'Cámara Analógica'),
+        ('dvr_nvr',          'DVR / NVR'),
+        ('alarma',           'Sistema de Alarma'),
+        ('sensor',           'Sensor'),
+        ('fibra',            'Fibra Óptica'),
+        ('otro',             'Otro'),
+    ]
+    sede             = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='grupos', verbose_name="Sede")
+    nombre           = models.CharField(max_length=200, verbose_name="Nombre")
+    tipo             = models.CharField(max_length=20, choices=TIPO_CHOICES, verbose_name="Tipo")
+    orden            = models.PositiveSmallIntegerField(default=1, verbose_name="Orden")
+    fecha_completado = models.DateTimeField(null=True, blank=True, verbose_name="Fecha completado")
+
+    class Meta:
+        verbose_name = 'Grupo de Instalación'
+        verbose_name_plural = 'Grupos de Instalación'
+        ordering = ['orden', 'created']
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} — {self.nombre}"
+
+    @property
+    def completado(self):
+        tareas = self.tareas.filter(activo=True)
+        if not tareas.exists():
+            return False
+        return not tareas.filter(completado=False).exists()
+
+    @property
+    def porcentaje(self):
+        total = self.tareas.filter(activo=True).count()
+        if total == 0:
+            return 0
+        completadas = self.tareas.filter(activo=True, completado=True).count()
+        return round(completadas / total * 100)
+
+
 # ── Tarea de checklist por sede ───────────────────────────────────────────────
 
 class TareaChecklist(AuditModel):
     sede              = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='tareas', verbose_name="Sede")
+    grupo             = models.ForeignKey(
+        GrupoTarea, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='tareas', verbose_name="Grupo de instalación"
+    )
     descripcion       = models.CharField(max_length=255, verbose_name="Tarea")
     orden             = models.PositiveSmallIntegerField(default=0, verbose_name="Orden")
     completado        = models.BooleanField(default=False, verbose_name="Completado")
@@ -499,6 +550,24 @@ def update_project_payment_status(sender, instance, **kwargs):
 
 
 # ── Señal: notificaciones de sede ────────────────────────────────────────────
+
+@receiver(post_save, sender=TareaChecklist)
+def sincronizar_grupo_completado(sender, instance, **kwargs):
+    """
+    Cuando se guarda una TareaChecklist con grupo, recalcula fecha_completado
+    del grupo: se llena cuando todas las tareas del grupo están completadas,
+    se limpia si alguna queda pendiente.
+    """
+    grupo = instance.grupo
+    if not grupo or not grupo.activo:
+        return
+    tareas = grupo.tareas.filter(activo=True)
+    todas_hechas = tareas.exists() and not tareas.filter(completado=False).exists()
+    if todas_hechas and not grupo.fecha_completado:
+        GrupoTarea.objects.filter(pk=grupo.pk).update(fecha_completado=timezone.now())
+    elif not todas_hechas and grupo.fecha_completado:
+        GrupoTarea.objects.filter(pk=grupo.pk).update(fecha_completado=None)
+
 
 @receiver(post_save, sender=TareaChecklist)
 def notificar_sede_completada(sender, instance, **kwargs):

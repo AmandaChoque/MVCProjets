@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+{% block content %}
+<main class="container-fluid px-5 py-4">
+
+  <nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'projects' %}">Proyectos</a></li>
+      <li class="breadcrumb-item"><a href="{% url 'project_view' proyecto.id %}">{{ proyecto.nombre }}</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Revisión de jornadas</li>
+    </ol>
+  </nav>
+
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h5 class="fw-semibold mb-0">Revisión de jornadas</h5>
+      <span class="text-muted small">{{ proyecto.nombre }} · {{ proyecto.codigo }}</span>
+    </div>
+    <!-- Filtro de estado -->
+    <div class="btn-group btn-group-sm" role="group">
+      <a href="?estado=pendiente"
+         class="btn {% if estado_filtro == 'pendiente' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+        Pendientes
+      </a>
+      <a href="?estado=aprobada"
+         class="btn {% if estado_filtro == 'aprobada' %}btn-success{% else %}btn-outline-success{% endif %}">
+        Aprobadas
+      </a>
+      <a href="?estado=rechazada"
+         class="btn {% if estado_filtro == 'rechazada' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+        Rechazadas
+      </a>
+    </div>
+  </div>
+
+  {% if not empleados_data %}
+  <div class="text-center text-muted py-5">
+    <i class="bi bi-people" style="font-size:2.5rem;"></i>
+    <p class="mt-2">No hay empleados asignados a este proyecto con contrato activo.</p>
+  </div>
+  {% endif %}
+
+  {% for item in empleados_data %}
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 px-3"
+         style="border-left:4px solid #1B4D90;">
+      <div>
+        <span class="fw-semibold">{{ item.empleado.nombre }} {{ item.empleado.apellido_paterno }}</span>
+        <span class="text-muted small ms-2">{{ item.empleado.get_cargo_display }}</span>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        {% if item.total_pendientes > 0 %}
+          <span class="badge bg-warning text-dark">{{ item.total_pendientes }} pendiente{{ item.total_pendientes|pluralize:"s" }}</span>
+        {% else %}
+          <span class="badge bg-success">Al día</span>
+        {% endif %}
+        <span class="text-muted small">Bs. {{ item.contrato.monto_diario|floatformat:2 }}/día</span>
+      </div>
+    </div>
+
+    <div class="card-body p-0">
+      {% if item.jornadas %}
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle mb-0 small">
+          <thead class="table-light text-uppercase" style="font-size:0.7rem;">
+            <tr>
+              <th class="px-3">Fecha</th>
+              <th>Días</th>
+              <th>Observación</th>
+              <th>Tareas completadas</th>
+              <th class="text-center">Estado</th>
+              <th class="text-end px-3">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for j in item.jornadas %}
+            <tr>
+              <td class="px-3 fw-semibold">{{ j.fecha|date:"d/m/Y" }}</td>
+              <td>
+                {% if j.dias == 1.0 %}
+                  <span class="badge bg-primary">Día completo</span>
+                {% else %}
+                  <span class="badge bg-secondary">Medio día</span>
+                {% endif %}
+              </td>
+              <td class="text-muted">{{ j.observacion|default:"—" }}</td>
+              <td>
+                {% with tareas=j.proyecto.tareas_proyecto.filter %}
+                <!-- Tareas completadas ese día por este empleado -->
+                {% endwith %}
+                <a href="{% url 'jornada_detail' j.id %}" class="text-decoration-none small text-primary">
+                  <i class="bi bi-eye me-1"></i>Ver tareas
+                </a>
+              </td>
+              <td class="text-center">
+                {% if j.estado == 'aprobada' %}
+                  <span class="badge bg-success">Aprobada</span>
+                {% elif j.estado == 'rechazada' %}
+                  <span class="badge bg-danger" title="{{ j.motivo_rechazo }}">Rechazada</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark">Pendiente</span>
+                {% endif %}
+              </td>
+              <td class="text-end px-3">
+                {% if j.estado != 'aprobada' %}
+                <div class="d-flex gap-1 justify-content-end">
+                  <form method="POST" action="{% url 'aprobar_jornada' j.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success btn-sm py-0 px-2" title="Aprobar">
+                      <i class="bi bi-check-lg"></i>
+                    </button>
+                  </form>
+                  <button type="button"
+                          class="btn btn-danger btn-sm py-0 px-2"
+                          title="Rechazar"
+                          data-bs-toggle="modal"
+                          data-bs-target="#modalRechazar{{ j.id }}">
+                    <i class="bi bi-x-lg"></i>
+                  </button>
+                </div>
+                {% else %}
+                <span class="text-muted small">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <p class="text-muted small p-3 mb-0">
+        Sin jornadas
+        {% if estado_filtro == 'pendiente' %}pendientes
+        {% elif estado_filtro == 'aprobada' %}aprobadas
+        {% else %}rechazadas{% endif %}
+        para este empleado en este proyecto.
+      </p>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Modales de rechazo por jornada -->
+  {% for j in item.jornadas %}
+  {% if j.estado != 'aprobada' %}
+  <div class="modal fade" id="modalRechazar{{ j.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Rechazar jornada — {{ j.fecha|date:"d/m/Y" }}</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <form method="POST" action="{% url 'rechazar_jornada' j.id %}">
+          {% csrf_token %}
+          <div class="modal-body">
+            <p class="small text-muted mb-2">
+              Empleado: <strong>{{ item.empleado.nombre }} {{ item.empleado.apellido_paterno }}</strong>
+            </p>
+            <label class="form-label">Motivo <span class="text-muted small">(opcional)</span></label>
+            <textarea name="motivo_rechazo" class="form-control" rows="3"
+                      placeholder="Ej: fecha incorrecta, empleado no asignado ese día..."></textarea>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="submit" class="btn btn-danger">Confirmar rechazo</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% endfor %}
+
+  {% endfor %}
+
+</main>
+{% endblock %}

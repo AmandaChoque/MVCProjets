@@ -52,6 +52,9 @@ urlpatterns = [
     path('sedes/<int:id_sede>/', views.sede_detail, name='sede_detail'),
     path('sedes/<int:id_sede>/ver/', views.sede_view, name='sede_view'),
     path('sedes/<int:id_sede>/deactivate/', views.sede_deactivate, name='sede_deactivate'),
+    # Grupos de instalación dentro de una sede
+    path('sedes/<int:id_sede>/grupos/nuevo/', views.grupo_create, name='grupo_create'),
+    path('grupos/<int:id_grupo>/eliminar/', views.grupo_delete, name='grupo_delete'),
     # Checklist de tareas
     path('sedes/<int:id_sede>/tareas/nueva/', views.tarea_create, name='tarea_create'),
     path('tareas/<int:id_tarea>/toggle/', views.tarea_toggle, name='tarea_toggle'),

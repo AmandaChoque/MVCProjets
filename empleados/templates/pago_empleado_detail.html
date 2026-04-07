@@ -113,7 +113,6 @@
                 <th>Fecha</th>
                 <th>Proyecto</th>
                 <th class="text-center">Días</th>
-                <th>Sede</th>
                 <th class="text-end">Monto (Bs.)</th>
                 <th class="text-center">Estado</th>
               </tr>
@@ -125,7 +124,6 @@
                 <td>{{ j.fecha }}</td>
                 <td>{{ j.proyecto.nombre }}</td>
                 <td class="text-center">{% if j.dias == 1.0 %}Día completo{% else %}Medio día{% endif %}</td>
-                <td class="text-muted small">{% if j.asignacion and j.asignacion.sede %}{{ j.asignacion.sede.nombre }}{% else %}—{% endif %}</td>
                 <td class="text-end">{{ j.monto|floatformat:2 }}</td>
                 <td class="text-center"><span class="badge bg-success-subtle text-success">Cubierta</span></td>
               </tr>
@@ -136,7 +134,6 @@
                 <td>{{ j.fecha }}</td>
                 <td>{{ j.proyecto.nombre }}</td>
                 <td class="text-center">{% if j.dias == 1.0 %}Día completo{% else %}Medio día{% endif %}</td>
-                <td class="text-muted small">{% if j.asignacion and j.asignacion.sede %}{{ j.asignacion.sede.nombre }}{% else %}—{% endif %}</td>
                 <td class="text-end">{{ j.monto|floatformat:2 }}</td>
                 <td class="text-center"><span class="badge bg-warning-subtle text-warning">Pendiente</span></td>
               </tr>

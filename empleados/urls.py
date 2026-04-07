@@ -21,6 +21,9 @@ urlpatterns = [
     path('contratos/empleado/<int:id_contrato>/jornadas/nueva/', views.create_jornada, name='create_jornada'),
     path('jornadas/<int:id_jornada>/', views.jornada_detail, name='jornada_detail'),
     path('jornadas/<int:id_jornada>/eliminar/', views.deactivate_jornada, name='deactivate_jornada'),
+    path('jornadas/<int:id_jornada>/aprobar/', views.aprobar_jornada, name='aprobar_jornada'),
+    path('jornadas/<int:id_jornada>/rechazar/', views.rechazar_jornada, name='rechazar_jornada'),
+    path('projects/<int:id_proyecto>/jornadas/revision/', views.revisar_jornadas_proyecto, name='revisar_jornadas_proyecto'),
 
     # Dashboard instalador
     path('mi-trabajo/', views.instalador_dashboard, name='instalador_dashboard'),
@@ -31,10 +34,4 @@ urlpatterns = [
     path('pagos-empleado/<int:id_pago>/',                            views.pago_empleado_detail,      name='pago_empleado_detail'),
     path('pagos-empleado/<int:id_pago>/deactivate/',                 views.deactivate_pago_empleado,  name='pago_empleado_deactivate'),
 
-    # Asignaciones diarias
-    path('asignaciones/',                                            views.asignaciones_list,         name='asignaciones_list'),
-    path('asignaciones/nueva/',                                      views.create_asignacion,         name='create_asignacion'),
-    path('asignaciones/<int:id_asignacion>/',                        views.asignacion_detail,         name='asignacion_detail'),
-    path('asignaciones/<int:id_asignacion>/deactivate/',             views.deactivate_asignacion,     name='asignacion_deactivate'),
-    path('asignaciones/sedes-ajax/',                                 views.asignacion_sedes_ajax,     name='asignacion_sedes_ajax'),
 ]

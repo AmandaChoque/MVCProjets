@@ -45,6 +45,32 @@
         </div>
       </div>
 
+      <!-- DATOS DE ENTIDAD PÚBLICA (condicional) -->
+      {% if cliente.tipo_contratante == 'entidad_publica' %}
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light d-flex align-items-center gap-2">
+          <i class="bi bi-building text-primary"></i>
+          <h6 class="mb-0 fw-semibold">Datos de la Entidad Pública</h6>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Nombre de la Entidad:</strong></div>
+                <div class="col-sm-7">{{ cliente.nombre_entidad|default:"—" }}</div>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="row mb-2">
+                <div class="col-sm-5"><strong>Representante Legal:</strong></div>
+                <div class="col-sm-7">{{ cliente.representante_legal|default:"—" }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
       <!-- INFORMACIÓN DE CONTACTO -->
       <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-header bg-light">

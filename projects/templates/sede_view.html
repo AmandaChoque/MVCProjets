@@ -10,6 +10,13 @@
   .tarea-item.completada .tarea-desc { text-decoration: line-through; color: #adb5bd; }
   .foto-thumb { width: 100px; height: 80px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid transparent; transition: border-color .15s; }
   .foto-thumb:hover { border-color: #1B4D90; }
+  /* Grupos de instalación */
+  .grupo-card { border-left: 3px solid #6f42c1; border-radius: 6px; }
+  .grupo-card.completado { border-left-color: #198754; }
+  .grupo-card.en_progreso { border-left-color: #0d6efd; }
+  .grupo-progress { height: 4px; border-radius: 3px; }
+  .tipo-icon { font-size: 1rem; }
+  .actividad-badge { font-size: 0.7rem; }
 </style>
 {% endblock %}
 
@@ -68,39 +75,161 @@
 
   <div class="row g-4">
 
-    <!-- COLUMNA IZQUIERDA: checklist + fotos -->
+    <!-- COLUMNA IZQUIERDA: grupos de instalación + fotos -->
     <div class="col-lg-7">
 
-      <!-- CHECKLIST -->
-      <div class="card border-0 shadow-sm rounded-3 mb-4">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0 fw-semibold"><i class="bi bi-check2-square me-2"></i>Checklist de tareas</h6>
-          {% if es_admin %}
-          <div class="d-flex gap-2 align-items-center">
-            {% if tareas %}
-            <span class="text-muted small" id="orden-hint" title="Arrastra las tareas para reordenar">
-              <i class="bi bi-grip-vertical"></i>
-            </span>
-            {% endif %}
-            {% if plantillas %}
-            <button class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="modal" data-bs-target="#modalPlantilla"
-                    title="Aplicar plantilla de tareas a esta sede">
-              <i class="bi bi-card-checklist me-1"></i>Plantilla
-            </button>
-            {% endif %}
-            <button class="btn btn-sm btn-primary py-0" data-bs-toggle="collapse" data-bs-target="#panelNuevaTarea">
-              <i class="bi bi-plus-lg"></i> Tarea
-            </button>
+      <!-- CABECERA GRUPOS -->
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="mb-0 fw-semibold text-muted"><i class="bi bi-tools me-2"></i>Instalaciones en esta sede</h6>
+        {% if es_admin %}
+        <div class="d-flex gap-2">
+          {% if plantillas %}
+          <button class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="modal" data-bs-target="#modalPlantilla"
+                  title="Aplicar plantilla de tareas">
+            <i class="bi bi-card-checklist me-1"></i>Plantilla
+          </button>
+          {% endif %}
+          <button class="btn btn-sm btn-primary py-0" data-bs-toggle="collapse" data-bs-target="#panelNuevoGrupo">
+            <i class="bi bi-plus-lg"></i> Nueva instalación
+          </button>
+        </div>
+        {% endif %}
+      </div>
+
+      {% if es_admin %}
+      <!-- FORM NUEVO GRUPO -->
+      <div class="collapse mb-3" id="panelNuevoGrupo">
+        <div class="card border-0 shadow-sm rounded-3">
+          <div class="card-body py-2">
+            <form id="form-nuevo-grupo" class="row g-2 align-items-end">
+              {% csrf_token %}
+              <div class="col-12 col-sm-6">
+                {{ grupo_form.nombre }}
+              </div>
+              <div class="col-12 col-sm-4">
+                {{ grupo_form.tipo }}
+              </div>
+              <div class="col-12 col-sm-2">
+                <button type="submit" class="btn btn-sm btn-primary w-100">Agregar</button>
+              </div>
+            </form>
           </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- LISTA DE GRUPOS -->
+      <div id="lista-grupos">
+      {% for grupo in grupos %}
+      {% with pct=grupo.porcentaje %}
+      <div class="card border-0 shadow-sm rounded-3 mb-3 grupo-card {% if grupo.completado %}completado{% elif pct > 0 %}en_progreso{% endif %}"
+           id="grupo-{{ grupo.id }}">
+        <div class="card-header bg-light py-2 d-flex align-items-center gap-2">
+          <!-- Icono por tipo -->
+          <span class="tipo-icon text-muted">
+            {% if grupo.tipo == 'camara_ip' or grupo.tipo == 'camara_analogica' %}<i class="bi bi-camera-video"></i>
+            {% elif grupo.tipo == 'dvr_nvr' %}<i class="bi bi-hdd-rack"></i>
+            {% elif grupo.tipo == 'alarma' %}<i class="bi bi-bell"></i>
+            {% elif grupo.tipo == 'sensor' %}<i class="bi bi-broadcast"></i>
+            {% elif grupo.tipo == 'fibra' %}<i class="bi bi-ethernet"></i>
+            {% else %}<i class="bi bi-wrench"></i>{% endif %}
+          </span>
+          <div class="flex-grow-1">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="fw-semibold small">{{ grupo.nombre }}</span>
+              <div class="d-flex align-items-center gap-2">
+                <span class="text-muted" style="font-size:.72rem;">{{ grupo.get_tipo_display }}</span>
+                {% if grupo.completado %}
+                  <span class="badge bg-success actividad-badge"><i class="bi bi-check-circle me-1"></i>Completado</span>
+                {% else %}
+                  <span class="text-muted" style="font-size:.72rem;" id="pct-grupo-{{ grupo.id }}">{{ pct }}%</span>
+                {% endif %}
+                {% if es_admin %}
+                <button class="btn btn-sm btn-light text-danger py-0 px-1 btn-delete-grupo" data-id="{{ grupo.id }}"
+                        title="Eliminar instalación">
+                  <i class="bi bi-x"></i>
+                </button>
+                {% endif %}
+              </div>
+            </div>
+            <div class="progress grupo-progress mt-1">
+              <div class="progress-bar {% if pct == 100 %}bg-success{% elif pct >= 50 %}bg-primary{% else %}bg-warning{% endif %}"
+                   id="bar-grupo-{{ grupo.id }}"
+                   style="width:{{ pct }}%" role="progressbar"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <ul class="list-group list-group-flush" id="lista-tareas-grupo-{{ grupo.id }}">
+            {% for tarea in grupo.tareas.all %}
+            <li class="list-group-item tarea-item {% if tarea.completado %}completada{% endif %} py-2"
+                id="tarea-{{ tarea.id }}" data-id="{{ tarea.id }}" data-grupo="{{ grupo.id }}">
+              <div class="d-flex align-items-center gap-2">
+                <input type="checkbox" class="form-check-input tarea-check"
+                       data-id="{{ tarea.id }}" {% if tarea.completado %}checked{% endif %}
+                       style="width:1.1em; height:1.1em; cursor:pointer;">
+                <div class="flex-grow-1">
+                  <span class="tarea-desc small">{{ tarea.descripcion }}</span>
+                  <div class="tarea-edit-form d-none d-flex gap-1 mt-1">
+                    <input type="text" class="form-control form-control-sm tarea-edit-input" value="{{ tarea.descripcion }}">
+                    <button class="btn btn-sm btn-success py-0 btn-save-tarea" data-id="{{ tarea.id }}"><i class="bi bi-check-lg"></i></button>
+                    <button class="btn btn-sm btn-light py-0 btn-cancel-edit"><i class="bi bi-x-lg"></i></button>
+                  </div>
+                  {% if tarea.completado and tarea.completado_por %}
+                  <div class="text-muted completado-info" style="font-size:0.68rem;">
+                    <i class="bi bi-person-check me-1"></i>{{ tarea.completado_por.get_full_name|default:tarea.completado_por.username }}
+                    — {{ tarea.fecha_completado|date:"d/m/Y H:i" }}
+                  </div>
+                  {% endif %}
+                </div>
+                {% if es_admin %}
+                <button class="btn btn-sm btn-light text-secondary py-0 px-1 btn-edit-tarea" data-id="{{ tarea.id }}"><i class="bi bi-pencil" style="font-size:.7rem;"></i></button>
+                <button class="btn btn-sm btn-light text-danger py-0 px-1 btn-delete-tarea" data-id="{{ tarea.id }}"><i class="bi bi-x" style="font-size:.8rem;"></i></button>
+                {% endif %}
+              </div>
+            </li>
+            {% endfor %}
+            {% if es_admin %}
+            <li class="list-group-item py-1 bg-light">
+              <form class="form-nueva-tarea-grupo d-flex gap-2" data-grupo="{{ grupo.id }}">
+                {% csrf_token %}
+                <input type="text" name="descripcion" class="form-control form-control-sm"
+                       placeholder="Nueva tarea en esta instalación..." style="font-size:.8rem;">
+                <button type="submit" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:.75rem;">
+                  <i class="bi bi-plus-lg"></i>
+                </button>
+              </form>
+            </li>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+      {% endwith %}
+      {% empty %}
+      <div class="text-muted small text-center py-3" id="empty-grupos">
+        Sin instalaciones registradas.{% if es_admin %} Agrega la primera con "Nueva instalación".{% endif %}
+      </div>
+      {% endfor %}
+      </div>
+
+      <!-- TAREAS SIN GRUPO -->
+      {% if tareas_sin_grupo or es_admin %}
+      <div class="card border-0 shadow-sm rounded-3 mb-4" id="card-sin-grupo">
+        <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-semibold small text-muted"><i class="bi bi-check2-square me-2"></i>Tareas generales</h6>
+          {% if es_admin %}
+          <button class="btn btn-sm btn-outline-secondary py-0" data-bs-toggle="collapse" data-bs-target="#panelNuevaTareaGeneral">
+            <i class="bi bi-plus-lg"></i>
+          </button>
           {% endif %}
         </div>
         {% if es_admin %}
-        <div class="collapse" id="panelNuevaTarea">
+        <div class="collapse" id="panelNuevaTareaGeneral">
           <div class="card-body border-bottom bg-light py-2">
             <form id="form-nueva-tarea" class="d-flex gap-2">
               {% csrf_token %}
               <input type="text" name="descripcion" class="form-control form-control-sm"
-                     placeholder="Ej: Montar cámara domo exterior, Tender cable BNC..." required>
+                     placeholder="Tarea general (sin instalación específica)..." required>
               <button type="submit" class="btn btn-sm btn-primary">Agregar</button>
             </form>
           </div>
@@ -108,11 +237,11 @@
         {% endif %}
         <div class="card-body p-0">
           <ul class="list-group list-group-flush" id="lista-tareas">
-            {% for tarea in tareas %}
+            {% for tarea in tareas_sin_grupo %}
             <li class="list-group-item tarea-item {% if tarea.completado %}completada{% endif %}" id="tarea-{{ tarea.id }}" data-id="{{ tarea.id }}">
               <div class="d-flex align-items-center gap-3">
                 {% if es_admin %}
-                <i class="bi bi-grip-vertical text-muted drag-handle" style="cursor:grab; font-size:1.1rem;" title="Arrastra para reordenar"></i>
+                <i class="bi bi-grip-vertical text-muted drag-handle" style="cursor:grab; font-size:1.1rem;"></i>
                 {% endif %}
                 <input type="checkbox" class="form-check-input fs-5 tarea-check"
                        data-id="{{ tarea.id }}" {% if tarea.completado %}checked{% endif %}
@@ -121,38 +250,31 @@
                   <span class="tarea-desc">{{ tarea.descripcion }}</span>
                   <div class="tarea-edit-form d-none d-flex gap-1 mt-1">
                     <input type="text" class="form-control form-control-sm tarea-edit-input" value="{{ tarea.descripcion }}">
-                    <button class="btn btn-sm btn-success py-0 btn-save-tarea" data-id="{{ tarea.id }}">
-                      <i class="bi bi-check-lg"></i>
-                    </button>
-                    <button class="btn btn-sm btn-light py-0 btn-cancel-edit">
-                      <i class="bi bi-x-lg"></i>
-                    </button>
+                    <button class="btn btn-sm btn-success py-0 btn-save-tarea" data-id="{{ tarea.id }}"><i class="bi bi-check-lg"></i></button>
+                    <button class="btn btn-sm btn-light py-0 btn-cancel-edit"><i class="bi bi-x-lg"></i></button>
                   </div>
                   {% if tarea.completado and tarea.completado_por %}
-                  <div class="text-muted" style="font-size:0.72rem;">
+                  <div class="text-muted completado-info" style="font-size:0.72rem;">
                     <i class="bi bi-person-check me-1"></i>{{ tarea.completado_por.get_full_name|default:tarea.completado_por.username }}
                     — {{ tarea.fecha_completado|date:"d/m/Y H:i" }}
                   </div>
                   {% endif %}
                 </div>
                 {% if es_admin %}
-                <button class="btn btn-sm btn-light text-secondary py-0 btn-edit-tarea" data-id="{{ tarea.id }}" title="Editar tarea">
-                  <i class="bi bi-pencil"></i>
-                </button>
-                <button class="btn btn-sm btn-light text-danger py-0 btn-delete-tarea" data-id="{{ tarea.id }}">
-                  <i class="bi bi-x"></i>
-                </button>
+                <button class="btn btn-sm btn-light text-secondary py-0 btn-edit-tarea" data-id="{{ tarea.id }}"><i class="bi bi-pencil"></i></button>
+                <button class="btn btn-sm btn-light text-danger py-0 btn-delete-tarea" data-id="{{ tarea.id }}"><i class="bi bi-x"></i></button>
                 {% endif %}
               </div>
             </li>
             {% empty %}
-            <li class="list-group-item text-muted small py-3" id="empty-tareas">
-              Sin tareas. {% if es_admin %}Agrega la primera con el botón +.{% endif %}
+            <li class="list-group-item text-muted small py-2" id="empty-tareas">
+              Sin tareas generales.
             </li>
             {% endfor %}
           </ul>
         </div>
       </div>
+      {% endif %}
 
       <!-- FOTOS -->
       <div class="card border-0 shadow-sm rounded-3">
@@ -199,8 +321,43 @@
 
     </div><!-- /col izquierda -->
 
-    <!-- COLUMNA DERECHA: insumos + mapa -->
+    <!-- COLUMNA DERECHA: actividad del día + insumos + mapa -->
     <div class="col-lg-5">
+
+      <!-- ACTIVIDAD DEL DÍA -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light py-2">
+          <h6 class="mb-0 fw-semibold small"><i class="bi bi-calendar-check me-2 text-primary"></i>Actividad de hoy</h6>
+        </div>
+        <div class="card-body py-2 px-3">
+          {% if actividad_hoy %}
+            {% for empleado, tareas_emp in actividad_hoy.items %}
+            <div class="mb-3">
+              <div class="d-flex align-items-center gap-2 mb-1">
+                <i class="bi bi-person-circle text-secondary"></i>
+                <span class="fw-semibold small">
+                  {{ empleado.get_full_name|default:empleado.username }}
+                </span>
+                <span class="badge bg-light text-secondary border actividad-badge">{{ empleado.cargo }}</span>
+                <span class="badge bg-success actividad-badge ms-auto">{{ tareas_emp|length }} tarea{{ tareas_emp|length|pluralize }}</span>
+              </div>
+              <ul class="list-unstyled ms-4 mb-0">
+                {% for t in tareas_emp %}
+                <li class="text-muted" style="font-size:.78rem;">
+                  <i class="bi bi-check2 text-success me-1"></i>
+                  {% if t.grupo %}<span class="text-secondary">[{{ t.grupo.nombre }}]</span> {% endif %}
+                  {{ t.descripcion }}
+                  <span class="text-muted" style="font-size:.68rem;">— {{ t.fecha_completado|date:"H:i" }}</span>
+                </li>
+                {% endfor %}
+              </ul>
+            </div>
+            {% endfor %}
+          {% else %}
+            <p class="text-muted small mb-0 py-1">Ninguna tarea completada hoy aún.</p>
+          {% endif %}
+        </div>
+      </div>
 
       <!-- INSUMOS POR SEDE -->
       <div class="card border-0 shadow-sm rounded-3 mb-4">
@@ -351,63 +508,162 @@
 <script>
 const CSRF = document.querySelector('[name=csrfmiddlewaretoken]').value;
 
-// ── Toggle tarea ────────────────────────────────────────────────────────────
-document.querySelectorAll('.tarea-check').forEach(chk => {
-  chk.addEventListener('change', function() {
-    const id = this.dataset.id;
-    fetch(`/tareas/${id}/toggle/`, {
-      method: 'POST',
-      headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'},
-    }).then(r => r.json()).then(data => {
-      if (!data.ok) return;
-      const li = document.getElementById(`tarea-${id}`);
-      li.classList.toggle('completada', data.completado);
-      // Actualizar barra progreso
-      document.getElementById('pct-label').textContent = data.porcentaje + '%';
-      const bar = document.getElementById('pct-bar');
-      bar.style.width = data.porcentaje + '%';
-      bar.className = 'progress-bar ' + (data.porcentaje == 100 ? 'bg-success' : data.porcentaje >= 50 ? 'bg-primary' : 'bg-warning');
-      // Guardar en cola offline si no pudo conectar
-    }).catch(() => {
-      // Offline: encolar
-      const queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
-      queue.push({url: `/tareas/${id}/toggle/`, method: 'POST'});
-      localStorage.setItem('offlineQueue', JSON.stringify(queue));
-      const li = document.getElementById(`tarea-${id}`);
-      li.title = 'Guardado offline — se sincronizará al reconectar';
-      li.style.opacity = '0.7';
+// ── Helpers ──────────────────────────────────────────────────────────────────
+function updateBarraSede(pct) {
+  const label = document.getElementById('pct-label');
+  const bar   = document.getElementById('pct-bar');
+  if (label) label.textContent = pct + '%';
+  if (bar) {
+    bar.style.width = pct + '%';
+    bar.className = 'progress-bar ' + (pct == 100 ? 'bg-success' : pct >= 50 ? 'bg-primary' : 'bg-warning');
+  }
+}
+
+function updateBarraGrupo(grupoId, pct, completado) {
+  const bar   = document.getElementById(`bar-grupo-${grupoId}`);
+  const label = document.getElementById(`pct-grupo-${grupoId}`);
+  const card  = document.getElementById(`grupo-${grupoId}`);
+  if (bar) {
+    bar.style.width = pct + '%';
+    bar.className = 'progress-bar ' + (pct == 100 ? 'bg-success' : pct >= 50 ? 'bg-primary' : 'bg-warning');
+  }
+  if (label) label.textContent = pct + '%';
+  if (card) {
+    card.classList.toggle('completado', completado);
+    card.classList.toggle('en_progreso', !completado && pct > 0);
+  }
+}
+
+function bindTareaEvents(li, grupoId) {
+  const id = li.dataset.id;
+
+  // Toggle
+  const chk = li.querySelector('.tarea-check');
+  if (chk) {
+    chk.addEventListener('change', function() {
+      fetch(`/tareas/${id}/toggle/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'},
+      }).then(r => r.json()).then(data => {
+        if (!data.ok) return;
+        li.classList.toggle('completada', data.completado);
+        updateBarraSede(data.porcentaje);
+        if (data.grupo) updateBarraGrupo(data.grupo.id, data.grupo.porcentaje, data.grupo.completado);
+        // Mostrar/ocultar info de quién completó
+        let info = li.querySelector('.completado-info');
+        if (data.completado && data.completado_por) {
+          if (!info) {
+            info = document.createElement('div');
+            info.className = 'text-muted completado-info';
+            info.style.fontSize = '0.68rem';
+            li.querySelector('.flex-grow-1').appendChild(info);
+          }
+          info.innerHTML = `<i class="bi bi-person-check me-1"></i>${data.completado_por} — ${data.fecha_completado}`;
+        } else if (info) {
+          info.remove();
+        }
+      }).catch(() => {
+        const queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
+        queue.push({url: `/tareas/${id}/toggle/`, method: 'POST'});
+        localStorage.setItem('offlineQueue', JSON.stringify(queue));
+        li.style.opacity = '0.7';
+        li.title = 'Guardado offline — se sincronizará al reconectar';
+      });
     });
-  });
+  }
+
+  // Eliminar
+  const btnDel = li.querySelector('.btn-delete-tarea');
+  if (btnDel) {
+    btnDel.addEventListener('click', function() {
+      if (!confirm('¿Eliminar esta tarea?')) return;
+      fetch(`/tareas/${id}/eliminar/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'},
+      }).then(r => r.json()).then(data => { if (data.ok) li.remove(); });
+    });
+  }
+
+  // Editar
+  const btnEdit = li.querySelector('.btn-edit-tarea');
+  if (btnEdit) {
+    btnEdit.addEventListener('click', function() {
+      li.querySelector('.tarea-desc').classList.add('d-none');
+      const ef = li.querySelector('.tarea-edit-form');
+      ef.classList.remove('d-none');
+      ef.querySelector('.tarea-edit-input').focus();
+    });
+  }
+  const btnCancel = li.querySelector('.btn-cancel-edit');
+  if (btnCancel) {
+    btnCancel.addEventListener('click', function() {
+      li.querySelector('.tarea-desc').classList.remove('d-none');
+      li.querySelector('.tarea-edit-form').classList.add('d-none');
+    });
+  }
+  const btnSave = li.querySelector('.btn-save-tarea');
+  if (btnSave) {
+    btnSave.addEventListener('click', function() {
+      const input = li.querySelector('.tarea-edit-input');
+      const desc = input.value.trim();
+      if (!desc) return;
+      fetch(`/tareas/${id}/editar/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest',
+                  'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `descripcion=${encodeURIComponent(desc)}`,
+      }).then(r => r.json()).then(data => {
+        if (!data.ok) { alert(data.error || 'Error.'); return; }
+        li.querySelector('.tarea-desc').textContent = data.descripcion;
+        li.querySelector('.tarea-desc').classList.remove('d-none');
+        li.querySelector('.tarea-edit-form').classList.add('d-none');
+      });
+    });
+  }
+  const editInput = li.querySelector('.tarea-edit-input');
+  if (editInput) {
+    editInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') { e.preventDefault(); btnSave && btnSave.click(); }
+      else if (e.key === 'Escape') { btnCancel && btnCancel.click(); }
+    });
+  }
+}
+
+// ── Bind events en todas las tareas ya renderizadas ──────────────────────────
+document.querySelectorAll('.tarea-item').forEach(li => {
+  const grupoId = li.dataset.grupo || null;
+  bindTareaEvents(li, grupoId);
 });
 
-// ── Eliminar tarea ──────────────────────────────────────────────────────────
-document.querySelectorAll('.btn-delete-tarea').forEach(btn => {
-  btn.addEventListener('click', function() {
-    if (!confirm('¿Eliminar esta tarea?')) return;
-    const id = this.dataset.id;
-    fetch(`/tareas/${id}/eliminar/`, {
-      method: 'POST',
-      headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'},
-    }).then(r => r.json()).then(data => {
-      if (data.ok) document.getElementById(`tarea-${id}`).remove();
-    });
+// ── Reordenar tareas generales (drag & drop) ─────────────────────────────────
+{% if es_admin %}
+const listaTareas = document.getElementById('lista-tareas');
+if (listaTareas && typeof Sortable !== 'undefined') {
+  Sortable.create(listaTareas, {
+    handle: '.drag-handle', animation: 150, ghostClass: 'bg-light',
+    onEnd: function() {
+      const ids = [...listaTareas.querySelectorAll('li[data-id]')].map(li => li.dataset.id);
+      fetch('{% url "tareas_reorder" sede.id %}', {
+        method: 'POST',
+        headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+        body: JSON.stringify({ids}),
+      });
+    },
   });
-});
+}
+{% endif %}
 
-// ── Nueva tarea ─────────────────────────────────────────────────────────────
+// ── Nueva tarea general (sin grupo) ─────────────────────────────────────────
 const formNuevaTarea = document.getElementById('form-nueva-tarea');
 if (formNuevaTarea) {
   formNuevaTarea.addEventListener('submit', function(e) {
     e.preventDefault();
     const desc = this.querySelector('[name=descripcion]').value.trim();
     if (!desc) return;
-    fetch(`{% url 'tarea_create' sede.id %}`, {
+    fetch('{% url "tarea_create" sede.id %}', {
       method: 'POST',
-      headers: {
-        'X-CSRFToken': CSRF,
-        'X-Requested-With': 'XMLHttpRequest',
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
+      headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded'},
       body: `descripcion=${encodeURIComponent(desc)}`,
     }).then(r => r.json()).then(data => {
       if (!data.ok) return;
@@ -419,28 +675,206 @@ if (formNuevaTarea) {
       li.dataset.id = data.id;
       li.innerHTML = `
         <div class="d-flex align-items-center gap-3">
-          <i class="bi bi-grip-vertical text-muted drag-handle" style="cursor:grab; font-size:1.1rem;" title="Arrastra para reordenar"></i>
-          <input type="checkbox" class="form-check-input fs-5 tarea-check"
-                 data-id="${data.id}" style="width:1.3em; height:1.3em; cursor:pointer;">
-          <div class="flex-grow-1"><span class="tarea-desc">${data.descripcion}</span></div>
-          <button class="btn btn-sm btn-light text-danger py-0 btn-delete-tarea" data-id="${data.id}">
-            <i class="bi bi-x"></i>
-          </button>
+          <i class="bi bi-grip-vertical text-muted drag-handle" style="cursor:grab;font-size:1.1rem;"></i>
+          <input type="checkbox" class="form-check-input fs-5 tarea-check" data-id="${data.id}" style="width:1.3em;height:1.3em;cursor:pointer;">
+          <div class="flex-grow-1">
+            <span class="tarea-desc">${data.descripcion}</span>
+            <div class="tarea-edit-form d-none d-flex gap-1 mt-1">
+              <input type="text" class="form-control form-control-sm tarea-edit-input" value="${data.descripcion}">
+              <button class="btn btn-sm btn-success py-0 btn-save-tarea" data-id="${data.id}"><i class="bi bi-check-lg"></i></button>
+              <button class="btn btn-sm btn-light py-0 btn-cancel-edit"><i class="bi bi-x-lg"></i></button>
+            </div>
+          </div>
+          <button class="btn btn-sm btn-light text-secondary py-0 btn-edit-tarea" data-id="${data.id}"><i class="bi bi-pencil"></i></button>
+          <button class="btn btn-sm btn-light text-danger py-0 btn-delete-tarea" data-id="${data.id}"><i class="bi bi-x"></i></button>
         </div>`;
       document.getElementById('lista-tareas').appendChild(li);
-      // Re-bind events en el nuevo elemento
-      li.querySelector('.tarea-check').addEventListener('change', function() {
-        document.querySelectorAll('.tarea-check')[0].dispatchEvent; // trigger via delegado
-      });
+      bindTareaEvents(li, null);
       this.querySelector('[name=descripcion]').value = '';
-      // Cerrar panel
-      const panel = document.getElementById('panelNuevaTarea');
+      const panel = document.getElementById('panelNuevaTareaGeneral');
       if (panel) bootstrap.Collapse.getOrCreateInstance(panel).hide();
     });
   });
 }
 
-// ── Eliminar foto ───────────────────────────────────────────────────────────
+// ── Nueva tarea dentro de un grupo ──────────────────────────────────────────
+document.querySelectorAll('.form-nueva-tarea-grupo').forEach(form => {
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const grupoId = this.dataset.grupo;
+    const desc = this.querySelector('[name=descripcion]').value.trim();
+    if (!desc) return;
+    fetch('{% url "tarea_create" sede.id %}', {
+      method: 'POST',
+      headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded'},
+      body: `descripcion=${encodeURIComponent(desc)}&grupo_id=${grupoId}`,
+    }).then(r => r.json()).then(data => {
+      if (!data.ok) return;
+      const lista = document.getElementById(`lista-tareas-grupo-${grupoId}`);
+      const li = document.createElement('li');
+      li.className = 'list-group-item tarea-item py-2';
+      li.id = `tarea-${data.id}`;
+      li.dataset.id = data.id;
+      li.dataset.grupo = grupoId;
+      li.innerHTML = `
+        <div class="d-flex align-items-center gap-2">
+          <input type="checkbox" class="form-check-input tarea-check" data-id="${data.id}" style="width:1.1em;height:1.1em;cursor:pointer;">
+          <div class="flex-grow-1">
+            <span class="tarea-desc small">${data.descripcion}</span>
+            <div class="tarea-edit-form d-none d-flex gap-1 mt-1">
+              <input type="text" class="form-control form-control-sm tarea-edit-input" value="${data.descripcion}">
+              <button class="btn btn-sm btn-success py-0 btn-save-tarea" data-id="${data.id}"><i class="bi bi-check-lg"></i></button>
+              <button class="btn btn-sm btn-light py-0 btn-cancel-edit"><i class="bi bi-x-lg"></i></button>
+            </div>
+          </div>
+          <button class="btn btn-sm btn-light text-secondary py-0 px-1 btn-edit-tarea" data-id="${data.id}"><i class="bi bi-pencil" style="font-size:.7rem;"></i></button>
+          <button class="btn btn-sm btn-light text-danger py-0 px-1 btn-delete-tarea" data-id="${data.id}"><i class="bi bi-x" style="font-size:.8rem;"></i></button>
+        </div>`;
+      // Insertar antes del form de nueva tarea (último li)
+      lista.insertBefore(li, lista.lastElementChild);
+      bindTareaEvents(li, grupoId);
+      this.querySelector('[name=descripcion]').value = '';
+    });
+  });
+});
+
+{% if es_admin %}
+// ── Nuevo grupo de instalación ───────────────────────────────────────────────
+const formNuevoGrupo = document.getElementById('form-nuevo-grupo');
+if (formNuevoGrupo) {
+  formNuevoGrupo.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const nombre = this.querySelector('[name=nombre]').value.trim();
+    const tipo   = this.querySelector('[name=tipo]').value;
+    if (!nombre || !tipo) return;
+    fetch('{% url "grupo_create" sede.id %}', {
+      method: 'POST',
+      headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest',
+                'Content-Type': 'application/x-www-form-urlencoded'},
+      body: `nombre=${encodeURIComponent(nombre)}&tipo=${encodeURIComponent(tipo)}`,
+    }).then(r => r.json()).then(data => {
+      if (!data.ok) return;
+      const emptyGrupos = document.getElementById('empty-grupos');
+      if (emptyGrupos) emptyGrupos.remove();
+
+      // Construir icon según tipo
+      const iconMap = {
+        camara_ip: 'bi-camera-video', camara_analogica: 'bi-camera-video',
+        dvr_nvr: 'bi-hdd-rack', alarma: 'bi-bell',
+        sensor: 'bi-broadcast', fibra: 'bi-ethernet', otro: 'bi-wrench',
+      };
+      const icon = iconMap[data.tipo_key] || 'bi-wrench';
+
+      const div = document.createElement('div');
+      div.className = 'card border-0 shadow-sm rounded-3 mb-3 grupo-card';
+      div.id = `grupo-${data.id}`;
+      div.innerHTML = `
+        <div class="card-header bg-light py-2 d-flex align-items-center gap-2">
+          <span class="tipo-icon text-muted"><i class="bi ${icon}"></i></span>
+          <div class="flex-grow-1">
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="fw-semibold small">${data.nombre}</span>
+              <div class="d-flex align-items-center gap-2">
+                <span class="text-muted" style="font-size:.72rem;">${data.tipo}</span>
+                <span class="text-muted" style="font-size:.72rem;" id="pct-grupo-${data.id}">0%</span>
+                <button class="btn btn-sm btn-light text-danger py-0 px-1 btn-delete-grupo" data-id="${data.id}">
+                  <i class="bi bi-x"></i>
+                </button>
+              </div>
+            </div>
+            <div class="progress grupo-progress mt-1">
+              <div class="progress-bar bg-warning" id="bar-grupo-${data.id}" style="width:0%" role="progressbar"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <ul class="list-group list-group-flush" id="lista-tareas-grupo-${data.id}">
+            <li class="list-group-item py-1 bg-light">
+              <form class="form-nueva-tarea-grupo d-flex gap-2" data-grupo="${data.id}">
+                <input type="hidden" name="csrfmiddlewaretoken" value="${CSRF}">
+                <input type="text" name="descripcion" class="form-control form-control-sm"
+                       placeholder="Nueva tarea en esta instalación..." style="font-size:.8rem;">
+                <button type="submit" class="btn btn-sm btn-outline-primary py-0 px-2" style="font-size:.75rem;">
+                  <i class="bi bi-plus-lg"></i>
+                </button>
+              </form>
+            </li>
+          </ul>
+        </div>`;
+      document.getElementById('lista-grupos').appendChild(div);
+
+      // Bind events en el nuevo form de tarea de grupo
+      div.querySelector('.form-nueva-tarea-grupo').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const gId = this.dataset.grupo;
+        const desc = this.querySelector('[name=descripcion]').value.trim();
+        if (!desc) return;
+        fetch('{% url "tarea_create" sede.id %}', {
+          method: 'POST',
+          headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest',
+                    'Content-Type': 'application/x-www-form-urlencoded'},
+          body: `descripcion=${encodeURIComponent(desc)}&grupo_id=${gId}`,
+        }).then(r => r.json()).then(td => {
+          if (!td.ok) return;
+          const lista = document.getElementById(`lista-tareas-grupo-${gId}`);
+          const li = document.createElement('li');
+          li.className = 'list-group-item tarea-item py-2';
+          li.id = `tarea-${td.id}`;
+          li.dataset.id = td.id;
+          li.dataset.grupo = gId;
+          li.innerHTML = `
+            <div class="d-flex align-items-center gap-2">
+              <input type="checkbox" class="form-check-input tarea-check" data-id="${td.id}" style="width:1.1em;height:1.1em;cursor:pointer;">
+              <div class="flex-grow-1">
+                <span class="tarea-desc small">${td.descripcion}</span>
+                <div class="tarea-edit-form d-none d-flex gap-1 mt-1">
+                  <input type="text" class="form-control form-control-sm tarea-edit-input" value="${td.descripcion}">
+                  <button class="btn btn-sm btn-success py-0 btn-save-tarea" data-id="${td.id}"><i class="bi bi-check-lg"></i></button>
+                  <button class="btn btn-sm btn-light py-0 btn-cancel-edit"><i class="bi bi-x-lg"></i></button>
+                </div>
+              </div>
+              <button class="btn btn-sm btn-light text-secondary py-0 px-1 btn-edit-tarea" data-id="${td.id}"><i class="bi bi-pencil" style="font-size:.7rem;"></i></button>
+              <button class="btn btn-sm btn-light text-danger py-0 px-1 btn-delete-tarea" data-id="${td.id}"><i class="bi bi-x" style="font-size:.8rem;"></i></button>
+            </div>`;
+          lista.insertBefore(li, lista.lastElementChild);
+          bindTareaEvents(li, gId);
+          this.querySelector('[name=descripcion]').value = '';
+        });
+      });
+
+      // Bind delete grupo
+      div.querySelector('.btn-delete-grupo').addEventListener('click', function() {
+        if (!confirm('¿Eliminar esta instalación y todas sus tareas?')) return;
+        const gId = this.dataset.id;
+        fetch(`/grupos/${gId}/eliminar/`, {
+          method: 'POST',
+          headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'},
+        }).then(r => r.json()).then(d => { if (d.ok) document.getElementById(`grupo-${gId}`).remove(); });
+      });
+
+      this.querySelector('[name=nombre]').value = '';
+      bootstrap.Collapse.getOrCreateInstance(document.getElementById('panelNuevoGrupo')).hide();
+    });
+  });
+}
+
+// ── Eliminar grupo existente ─────────────────────────────────────────────────
+document.querySelectorAll('.btn-delete-grupo').forEach(btn => {
+  btn.addEventListener('click', function() {
+    if (!confirm('¿Eliminar esta instalación y todas sus tareas?')) return;
+    const id = this.dataset.id;
+    fetch(`/grupos/${id}/eliminar/`, {
+      method: 'POST',
+      headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'},
+    }).then(r => r.json()).then(data => {
+      if (data.ok) document.getElementById(`grupo-${id}`).remove();
+    });
+  });
+});
+{% endif %}
+
+// ── Foto: eliminar ──────────────────────────────────────────────────────────
 document.querySelectorAll('.btn-delete-foto').forEach(btn => {
   btn.addEventListener('click', function() {
     if (!confirm('¿Eliminar esta foto?')) return;
@@ -462,83 +896,7 @@ document.querySelectorAll('.foto-thumb').forEach(img => {
   });
 });
 
-// ── Reordenar tareas (drag & drop) ──────────────────────────────────────────
-{% if es_admin %}
-const listaTareas = document.getElementById('lista-tareas');
-if (listaTareas && typeof Sortable !== 'undefined') {
-  Sortable.create(listaTareas, {
-    handle: '.drag-handle',
-    animation: 150,
-    ghostClass: 'bg-light',
-    onEnd: function() {
-      const ids = [...listaTareas.querySelectorAll('li[data-id]')].map(li => li.dataset.id);
-      fetch('{% url "tareas_reorder" sede.id %}', {
-        method: 'POST',
-        headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
-        body: JSON.stringify({ids}),
-      });
-    },
-  });
-}
-{% endif %}
-
-// ── Editar descripción de tarea ─────────────────────────────────────────────
-document.querySelectorAll('.btn-edit-tarea').forEach(btn => {
-  btn.addEventListener('click', function() {
-    const id = this.dataset.id;
-    const li = document.getElementById(`tarea-${id}`);
-    const desc = li.querySelector('.tarea-desc');
-    const editForm = li.querySelector('.tarea-edit-form');
-    const input = li.querySelector('.tarea-edit-input');
-    desc.classList.add('d-none');
-    editForm.classList.remove('d-none');
-    input.focus();
-    input.select();
-  });
-});
-
-document.querySelectorAll('.btn-cancel-edit').forEach(btn => {
-  btn.addEventListener('click', function() {
-    const li = this.closest('li');
-    li.querySelector('.tarea-desc').classList.remove('d-none');
-    li.querySelector('.tarea-edit-form').classList.add('d-none');
-  });
-});
-
-document.querySelectorAll('.btn-save-tarea').forEach(btn => {
-  btn.addEventListener('click', function() {
-    const id = this.dataset.id;
-    const li = document.getElementById(`tarea-${id}`);
-    const input = li.querySelector('.tarea-edit-input');
-    const desc = input.value.trim();
-    if (!desc) return;
-    fetch(`/tareas/${id}/editar/`, {
-      method: 'POST',
-      headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest',
-                'Content-Type': 'application/x-www-form-urlencoded'},
-      body: `descripcion=${encodeURIComponent(desc)}`,
-    }).then(r => r.json()).then(data => {
-      if (!data.ok) { alert(data.error || 'Error al guardar.'); return; }
-      li.querySelector('.tarea-desc').textContent = data.descripcion;
-      li.querySelector('.tarea-desc').classList.remove('d-none');
-      li.querySelector('.tarea-edit-form').classList.add('d-none');
-    });
-  });
-});
-
-// Guardar con Enter en el input de edición
-document.querySelectorAll('.tarea-edit-input').forEach(input => {
-  input.addEventListener('keydown', function(e) {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      this.closest('.tarea-edit-form').querySelector('.btn-save-tarea').click();
-    } else if (e.key === 'Escape') {
-      this.closest('.tarea-edit-form').querySelector('.btn-cancel-edit').click();
-    }
-  });
-});
-
-// ── Aplicar plantilla a sede existente ──────────────────────────────────────
+// ── Aplicar plantilla (agrega tareas sin grupo) ─────────────────────────────
 const btnAplicar = document.getElementById('btnAplicarPlantilla');
 if (btnAplicar) {
   btnAplicar.addEventListener('click', function() {
@@ -551,7 +909,7 @@ if (btnAplicar) {
     }).then(r => r.json()).then(data => {
       if (!data.ok) { alert('Error al aplicar la plantilla.'); return; }
       bootstrap.Modal.getInstance(document.getElementById('modalPlantilla')).hide();
-      const listaTareas = document.getElementById('lista-tareas');
+      const listaGeneral = document.getElementById('lista-tareas');
       const emptyMsg = document.getElementById('empty-tareas');
       if (emptyMsg) emptyMsg.remove();
       data.tareas.forEach(t => {
@@ -561,9 +919,8 @@ if (btnAplicar) {
         li.dataset.id = t.id;
         li.innerHTML = `
           <div class="d-flex align-items-center gap-3">
-            <i class="bi bi-grip-vertical text-muted drag-handle" style="cursor:grab; font-size:1.1rem;" title="Arrastra para reordenar"></i>
-            <input type="checkbox" class="form-check-input fs-5 tarea-check"
-                   data-id="${t.id}" style="width:1.3em; height:1.3em; cursor:pointer;">
+            <i class="bi bi-grip-vertical text-muted drag-handle" style="cursor:grab;font-size:1.1rem;"></i>
+            <input type="checkbox" class="form-check-input fs-5 tarea-check" data-id="${t.id}" style="width:1.3em;height:1.3em;cursor:pointer;">
             <div class="flex-grow-1">
               <span class="tarea-desc">${t.descripcion}</span>
               <div class="tarea-edit-form d-none d-flex gap-1 mt-1">
@@ -572,71 +929,13 @@ if (btnAplicar) {
                 <button class="btn btn-sm btn-light py-0 btn-cancel-edit"><i class="bi bi-x-lg"></i></button>
               </div>
             </div>
-            <button class="btn btn-sm btn-light text-secondary py-0 btn-edit-tarea" data-id="${t.id}" title="Editar tarea"><i class="bi bi-pencil"></i></button>
+            <button class="btn btn-sm btn-light text-secondary py-0 btn-edit-tarea" data-id="${t.id}"><i class="bi bi-pencil"></i></button>
             <button class="btn btn-sm btn-light text-danger py-0 btn-delete-tarea" data-id="${t.id}"><i class="bi bi-x"></i></button>
           </div>`;
-        listaTareas.appendChild(li);
-        // Re-bind events en los nuevos elementos
-        const check = li.querySelector('.tarea-check');
-        check.addEventListener('change', function() {
-          fetch(`/tareas/${t.id}/toggle/`, {
-            method: 'POST', headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'},
-          }).then(r => r.json()).then(d => {
-            if (!d.ok) return;
-            li.classList.toggle('completada', d.completado);
-            document.getElementById('pct-label').textContent = d.porcentaje + '%';
-            const bar = document.getElementById('pct-bar');
-            bar.style.width = d.porcentaje + '%';
-            bar.className = 'progress-bar ' + (d.porcentaje == 100 ? 'bg-success' : d.porcentaje >= 50 ? 'bg-primary' : 'bg-warning');
-          });
-        });
-        li.querySelector('.btn-delete-tarea').addEventListener('click', function() {
-          if (!confirm('¿Eliminar esta tarea?')) return;
-          fetch(`/tareas/${t.id}/eliminar/`, {
-            method: 'POST', headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'},
-          }).then(r => r.json()).then(d => { if (d.ok) li.remove(); });
-        });
-        li.querySelector('.btn-edit-tarea').addEventListener('click', function() {
-          li.querySelector('.tarea-desc').classList.add('d-none');
-          li.querySelector('.tarea-edit-form').classList.remove('d-none');
-          li.querySelector('.tarea-edit-input').focus();
-        });
-        li.querySelector('.btn-cancel-edit').addEventListener('click', function() {
-          li.querySelector('.tarea-desc').classList.remove('d-none');
-          li.querySelector('.tarea-edit-form').classList.add('d-none');
-        });
-        li.querySelector('.btn-save-tarea').addEventListener('click', function() {
-          const desc = li.querySelector('.tarea-edit-input').value.trim();
-          if (!desc) return;
-          fetch(`/tareas/${t.id}/editar/`, {
-            method: 'POST',
-            headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest',
-                      'Content-Type': 'application/x-www-form-urlencoded'},
-            body: `descripcion=${encodeURIComponent(desc)}`,
-          }).then(r => r.json()).then(d => {
-            if (!d.ok) { alert(d.error || 'Error.'); return; }
-            li.querySelector('.tarea-desc').textContent = d.descripcion;
-            li.querySelector('.tarea-desc').classList.remove('d-none');
-            li.querySelector('.tarea-edit-form').classList.add('d-none');
-          });
-        });
-        li.querySelector('.tarea-edit-input').addEventListener('keydown', function(e) {
-          if (e.key === 'Enter') { e.preventDefault(); li.querySelector('.btn-save-tarea').click(); }
-          else if (e.key === 'Escape') { li.querySelector('.btn-cancel-edit').click(); }
-        });
+        if (listaGeneral) listaGeneral.appendChild(li);
+        bindTareaEvents(li, null);
       });
-      if (typeof Sortable !== 'undefined') {
-        Sortable.create(listaTareas, { handle: '.drag-handle', animation: 150, ghostClass: 'bg-light',
-          onEnd: function() {
-            const ids = [...listaTareas.querySelectorAll('li[data-id]')].map(li => li.dataset.id);
-            fetch('{% url "tareas_reorder" sede.id %}', {
-              method: 'POST', headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
-              body: JSON.stringify({ids}),
-            });
-          },
-        });
-      }
-      alert(`Se agregaron ${data.count} tarea${data.count !== 1 ? 's' : ''} de la plantilla.`);
+      alert(`Se agregaron ${data.count} tarea${data.count !== 1 ? 's' : ''} en tareas generales.`);
     });
   });
 }
@@ -645,13 +944,9 @@ if (btnAplicar) {
 window.addEventListener('online', function() {
   const queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
   if (!queue.length) return;
-  const promises = queue.map(item =>
+  Promise.allSettled(queue.map(item =>
     fetch(item.url, { method: item.method, headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'} })
-  );
-  Promise.allSettled(promises).then(() => {
-    localStorage.removeItem('offlineQueue');
-    location.reload();
-  });
+  )).then(() => { localStorage.removeItem('offlineQueue'); location.reload(); });
 });
 </script>
 {% endblock %}

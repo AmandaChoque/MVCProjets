@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Empleado, ContratoEmpleado, ContratoProyecto, JornadaEmpleado, AsignacionDiaria
+from .models import Empleado, ContratoEmpleado, ContratoProyecto, JornadaEmpleado
 
 
 @admin.register(Empleado)
@@ -39,9 +39,3 @@ class JornadaEmpleadoAdmin(admin.ModelAdmin):
     ordering = ('-fecha',)
 
 
-@admin.register(AsignacionDiaria)
-class AsignacionDiariaAdmin(admin.ModelAdmin):
-    list_display = ('fecha', 'proyecto', 'sede', 'supervisor', 'instalador', 'turno', 'activo')
-    list_filter = ('activo', 'turno', 'fecha')
-    search_fields = ('proyecto__nombre', 'supervisor__nombre', 'instalador__nombre')
-    ordering = ('-fecha',)

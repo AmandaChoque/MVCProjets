@@ -112,7 +112,6 @@
                   <th>Fecha</th>
                   <th>Proyecto</th>
                   <th class="text-center">Días</th>
-                  <th>Sede</th>
                   <th class="text-end">Monto (Bs.)</th>
                 </tr>
               </thead>
@@ -125,11 +124,6 @@
                   <td class="text-center">
                     {% if j.dias == 1.0 %}Día completo{% else %}Medio día{% endif %}
                   </td>
-                  {% if j.asignacion and j.asignacion.sede %}
-                  <td class="text-muted small">{{ j.asignacion.sede.nombre }}</td>
-                  {% else %}
-                  <td class="text-muted small">—</td>
-                  {% endif %}
                   <td class="text-end">{{ j.monto|floatformat:2 }}</td>
                 </tr>
                 {% endfor %}

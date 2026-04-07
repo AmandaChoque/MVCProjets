@@ -20,6 +20,17 @@
   .sede-progress { height: 5px; border-radius: 4px; }
   .sede-stats    { font-size: .72rem; color: #6c757d; }
   .sede-foto-thumb { width: 36px; height: 28px; object-fit: cover; border-radius: 3px; }
+  /* Utilidades tipográficas para sustituir estilos inline */
+  .thead-xs   { font-size: 0.71rem; }
+  .text-xs    { font-size: 0.70rem; }
+  .text-xxs   { font-size: 0.68rem; }
+  .badge-count { font-size: 0.70rem; }
+  .sede-link  { min-width: 120px; max-width: 180px; }
+  .sede-pct   { min-width: 36px; text-align: right; }
+  .label-meta { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em; }
+  .progress-lg { height: 18px; border-radius: 8px; }
+  .progress-md { height: 12px; border-radius: 8px; }
+  .icon-lg    { font-size: 2rem; }
 </style>
 {% endblock %}
 
@@ -29,7 +40,7 @@
   <!-- ENCABEZADO -->
   <div class="d-flex justify-content-between align-items-start mb-3">
     <div>
-      <h4 class="fw-semibold mb-1" style="color:#1B4D90;">{{ project.nombre }}</h4>
+      <h4 class="fw-semibold mb-1 text-sobotec">{{ project.nombre }}</h4>
       <div class="d-flex align-items-center gap-2 flex-wrap">
         <span class="text-muted small">{{ project.codigo }}</span>
         {% if project.estado_proyecto == 'completado' %}
@@ -61,6 +72,11 @@
       <a href="{% url 'project_view' project.id %}?pdf" target="_blank" class="btn btn-outline-danger btn-sm">
         <i class="bi bi-file-earmark-pdf me-1"></i>Ficha PDF
       </a>
+      {% if es_admin %}
+      <a href="{% url 'revisar_jornadas_proyecto' project.id %}" class="btn btn-outline-warning btn-sm">
+        <i class="bi bi-clipboard2-check me-1"></i>Revisar jornadas
+      </a>
+      {% endif %}
       <a href="{% url 'project_detail' project.id %}" class="btn btn-primary btn-sm">
         <i class="bi bi-pencil me-1"></i>Editar
       </a>
@@ -79,9 +95,9 @@
       <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-progreso" type="button">
         <i class="bi bi-graph-up me-1"></i>Progreso
         {% if progreso_sedes > 0 %}
-        <span class="badge bg-secondary ms-1" style="font-size:0.7rem;">{{ progreso_sedes }}%</span>
+        <span class="badge bg-secondary ms-1 badge-count">{{ progreso_sedes }}%</span>
         {% elif porcentaje_actual > 0 %}
-        <span class="badge bg-secondary ms-1" style="font-size:0.7rem;">{{ porcentaje_actual }}%</span>
+        <span class="badge bg-secondary ms-1 badge-count">{{ porcentaje_actual }}%</span>
         {% endif %}
       </button>
     </li>
@@ -96,7 +112,7 @@
       <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-sedes" type="button">
         <i class="bi bi-geo-alt me-1"></i>Sedes
         {% if sedes %}
-        <span class="badge bg-secondary ms-1" style="font-size:0.7rem;">{{ sedes|length }}</span>
+        <span class="badge bg-secondary ms-1 badge-count">{{ sedes|length }}</span>
         {% endif %}
       </button>
     </li>
@@ -104,7 +120,7 @@
       <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-insumos" type="button">
         <i class="bi bi-box-seam me-1"></i>Insumos
         {% if insumos_proyecto %}
-        <span class="badge bg-secondary ms-1" style="font-size:0.7rem;">{{ insumos_proyecto|length }}</span>
+        <span class="badge bg-secondary ms-1 badge-count">{{ insumos_proyecto|length }}</span>
         {% endif %}
       </button>
     </li>
@@ -158,7 +174,7 @@
         {% if not es_instalador_tecnico %}
         <div class="col-md-6">
           <div class="card border-0 shadow-sm rounded-3 h-100">
-            <div class="card-header bg-light"><h6 class="mb-0 fw-semibold">Asignaciones</h6></div>
+            <div class="card-header bg-light"><h6 class="mb-0 fw-semibold">Contratante</h6></div>
             <div class="card-body">
               <div class="info-row">
                 <span class="info-label">Contratante:</span>
@@ -197,10 +213,9 @@
                 {{ progreso_sedes }}%
               </span>
             </div>
-            <div class="progress mb-2" style="height:18px; border-radius:8px;">
-              <div class="progress-bar {% if progreso_sedes == 100 %}bg-success{% elif progreso_sedes >= 50 %}bg-primary{% else %}bg-warning{% endif %} fw-semibold"
-                   id="progresoSedesBar" data-width="{{ progreso_sedes }}"
-                   role="progressbar" style="font-size:0.75rem;"
+            <div class="progress mb-2 progress-lg">
+              <div class="progress-bar text-xs {% if progreso_sedes == 100 %}bg-success{% elif progreso_sedes >= 50 %}bg-primary{% else %}bg-warning{% endif %} fw-semibold"
+                   role="progressbar" style="width:{{ progreso_sedes }}%"
                    aria-valuenow="{{ progreso_sedes }}" aria-valuemin="0" aria-valuemax="100">
                 {% if progreso_sedes > 10 %}{{ progreso_sedes }}%{% endif %}
               </div>
@@ -209,15 +224,15 @@
             <div class="d-flex flex-column gap-1 mt-2">
               {% for sede in sedes %}
               <div class="d-flex align-items-center gap-2 small">
-                <a href="{% url 'sede_view' sede.id %}" class="text-decoration-none text-truncate" style="min-width:120px; max-width:180px;">
+                <a href="{% url 'sede_view' sede.id %}" class="text-decoration-none text-truncate sede-link">
                   <i class="bi bi-geo-alt-fill me-1 {% if sede.estado == 'completado' %}text-success{% elif sede.estado == 'en_progreso' %}text-primary{% else %}text-warning{% endif %}"></i>
                   {{ sede.nombre }}
                 </a>
                 <div class="progress flex-grow-1" style="height:8px; border-radius:4px;">
-                  <div class="progress-bar sede-bar {% if sede.estado == 'completado' %}bg-success{% elif sede.estado == 'en_progreso' %}bg-primary{% else %}bg-warning{% endif %}"
-                       data-width="{{ sede.porcentaje_checklist }}"></div>
+                  <div class="progress-bar {% if sede.estado == 'completado' %}bg-success{% elif sede.estado == 'en_progreso' %}bg-primary{% else %}bg-warning{% endif %}"
+                       style="width:{{ sede.porcentaje_checklist }}%"></div>
                 </div>
-                <span class="text-muted" style="min-width:36px; text-align:right;">{{ sede.porcentaje_checklist }}%</span>
+                <span class="text-muted sede-pct">{{ sede.porcentaje_checklist }}%</span>
                 {% if sede.estado == 'completado' %}
                 <i class="bi bi-check-circle-fill text-success"></i>
                 {% endif %}
@@ -235,10 +250,9 @@
               <span class="text-muted">Avance registrado</span>
               <span class="fw-semibold">{{ porcentaje_actual }}%</span>
             </div>
-            <div class="progress" style="height:14px; border-radius:8px;">
+            <div class="progress progress-lg">
               <div class="progress-bar {% if porcentaje_actual == 100 %}bg-success{% elif porcentaje_actual >= 50 %}bg-primary{% else %}bg-warning{% endif %} fw-semibold"
-                   id="progresoBar" data-width="{{ porcentaje_actual }}"
-                   role="progressbar" style="font-size:0.7rem;"
+                   role="progressbar" style="width:{{ porcentaje_actual }}%; font-size:0.7rem;"
                    aria-valuenow="{{ porcentaje_actual }}" aria-valuemin="0" aria-valuemax="100">
                 {% if porcentaje_actual > 10 %}{{ porcentaje_actual }}%{% endif %}
               </div>
@@ -248,21 +262,21 @@
           {% if progresos %}
           <div class="table-responsive">
             <table class="table table-sm table-hover align-middle small mb-0">
-              <thead class="table-light text-uppercase fw-semibold" style="font-size:0.72rem;">
+              <thead class="table-light text-uppercase fw-semibold thead-xs">
                 <tr>
-                  <th>Registrado</th><th>Fecha</th><th class="text-center">%</th>
-                  <th>Descripción</th><th>Observación</th>
-                  <th class="text-end" style="width:60px;">Acciones</th>
+                  <th scope="col">Registrado</th><th scope="col">Fecha</th><th scope="col" class="text-center">%</th>
+                  <th scope="col">Descripción</th><th scope="col">Observación</th>
+                  <th scope="col" class="text-end" style="width:60px;">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {% for prog in progresos %}
                 <tr>
-                  <td style="white-space:nowrap;">
+                  <td class="text-nowrap">
                     {{ prog.created|date:"d/m/Y" }}
-                    <div class="text-muted" style="font-size:0.75rem;">{{ prog.created|date:"H:i" }}</div>
+                    <div class="text-muted text-xs">{{ prog.created|date:"H:i" }}</div>
                   </td>
-                  <td style="white-space:nowrap;">{{ prog.fecha|date:"d/m/Y" }}</td>
+                  <td class="text-nowrap">{{ prog.fecha|date:"d/m/Y" }}</td>
                   <td class="text-center">
                     <span class="badge {% if prog.porcentaje == 100 %}bg-success{% elif prog.porcentaje >= 50 %}bg-primary{% else %}bg-warning text-dark{% endif %}">
                       {{ prog.porcentaje }}%
@@ -317,6 +331,7 @@
               <div class="info-row"><span class="info-label">Monto Acordado (Bs.):</span><span class="fw-semibold">{{ contrato_proyecto.monto_acordado|floatformat:2 }}</span></div>
               {% if contrato_proyecto.porcentaje_multa_diaria %}
               <div class="info-row"><span class="info-label">% Multa Diaria:</span><span>{{ contrato_proyecto.porcentaje_multa_diaria }}%</span></div>
+              <div class="info-row"><span class="info-label">% Multa Máxima:</span><span>{{ contrato_proyecto.porcentaje_multa_maxima }}% <span class="text-muted small">(al alcanzarlo → inhabilitado)</span></span></div>
               {% endif %}
               <div class="info-row">
                 <span class="info-label">Documento:</span>
@@ -351,7 +366,7 @@
           <div class="card-body border-bottom bg-light py-2">
             <form method="POST" action="{% url 'equipo_add' project.id %}" class="d-flex gap-2 align-items-center flex-wrap">
               {% csrf_token %}
-              <select name="empleado_id" class="form-select form-select-sm" style="max-width:280px;" required>
+              <select name="empleado_id" class="form-select form-select-sm" style="max-width:280px" required>
                 <option value="">— Seleccionar empleado —</option>
                 {% for emp in empleados_disponibles %}
                 <option value="{{ emp.id }}">{{ emp.nombre }} {{ emp.apellido_paterno }} — {{ emp.get_cargo_display }}</option>
@@ -366,14 +381,14 @@
           {% if equipo_proyecto %}
           <div class="table-responsive">
             <table class="table table-sm table-hover align-middle small mb-0">
-              <thead class="table-light text-uppercase fw-semibold" style="font-size:0.72rem;">
+              <thead class="table-light text-uppercase fw-semibold thead-xs">
                 <tr>
-                  <th class="px-3">Empleado</th>
-                  <th>Cargo</th>
-                  <th class="text-center">Última jornada</th>
-                  <th class="text-center">Días trab.</th>
-                  {% if not es_instalador_tecnico %}<th class="text-end">Costo (Bs.)</th>{% endif %}
-                  <th class="text-end px-3" style="width:100px;"></th>
+                  <th scope="col" class="px-3">Empleado</th>
+                  <th scope="col">Cargo</th>
+                  <th scope="col" class="text-center">Última jornada</th>
+                  <th scope="col" class="text-center">Días trab.</th>
+                  {% if not es_instalador_tecnico %}<th scope="col" class="text-end">Costo (Bs.)</th>{% endif %}
+                  <th scope="col" class="text-end px-3" style="width:100px;"></th>
                 </tr>
               </thead>
               <tbody>
@@ -413,6 +428,47 @@
 
     <!-- ── TAB SEDES ──────────────────────────────────────────────────── -->
     <div class="tab-pane fade" id="tab-sedes">
+
+      <!-- INDICADOR DE RITMO DEL PROYECTO -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4
+        {% if ritmo_estado == 'ok' %}border-start border-success border-3
+        {% elif ritmo_estado == 'alerta' %}border-start border-warning border-3
+        {% else %}border-start border-danger border-3{% endif %}">
+        <div class="card-body py-3">
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div>
+              <div class="d-flex align-items-center gap-2 mb-1">
+                <i class="bi bi-speedometer2 fs-5
+                  {% if ritmo_estado == 'ok' %}text-success
+                  {% elif ritmo_estado == 'alerta' %}text-warning
+                  {% else %}text-danger{% endif %}"></i>
+                <span class="fw-semibold">Ritmo de avance — esta semana</span>
+                {% if ritmo_estado == 'ok' %}
+                  <span class="badge bg-success">Al día</span>
+                {% elif ritmo_estado == 'alerta' %}
+                  <span class="badge bg-warning text-dark">Ligeramente atrasado</span>
+                {% else %}
+                  <span class="badge bg-danger">Atrasado — posible fin de semana</span>
+                {% endif %}
+              </div>
+              <div class="text-muted small">
+                <strong>{{ grupos_completados_semana }}</strong> instalación{{ grupos_completados_semana|pluralize:"es" }} completada{{ grupos_completados_semana|pluralize:"s" }}
+                de las <strong>{{ ritmo_esperado }}</strong> esperadas esta semana
+                (promedio del equipo: {{ ritmo_esperado }}/semana)
+              </div>
+            </div>
+            <div class="text-center">
+              <div class="display-6 fw-bold
+                {% if ritmo_estado == 'ok' %}text-success
+                {% elif ritmo_estado == 'alerta' %}text-warning
+                {% else %}text-danger{% endif %}">
+                {{ grupos_completados_semana }}<span class="fs-6 fw-normal text-muted">/{{ ritmo_esperado }}</span>
+              </div>
+              <div class="text-muted label-meta">últimos 7 días</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Mapa general del proyecto -->
       {% with sedes_con_coords=sedes %}
@@ -459,7 +515,7 @@
               {% if total > 0 %}
               <div class="progress my-2 sede-progress">
                 <div class="progress-bar {% if pct == 100 %}bg-success{% elif pct >= 50 %}bg-primary{% else %}bg-warning{% endif %}"
-                     data-width="{{ pct }}"></div>
+                     style="width:{{ pct }}%"></div>
               </div>
               <div class="d-flex justify-content-between sede-stats">
                 <span>{{ total }} tarea{{ total|pluralize:"s" }}</span>
@@ -476,7 +532,7 @@
                 {% for foto in sede.fotos.all %}
                 {% if foto.activo %}
                 <a href="{% url 'sede_view' sede.id %}">
-                  <img src="{{ foto.foto.url }}" alt="foto" class="sede-foto-thumb">
+                  <img src="{{ foto.foto.url }}" alt="Foto de {{ sede.nombre }}" class="sede-foto-thumb">
                 </a>
                 {% endif %}
                 {% endfor %}
@@ -495,7 +551,7 @@
       </div>
       {% else %}
       <div class="text-center text-muted py-4">
-        <i class="bi bi-geo-alt" style="font-size:2rem;"></i>
+        <i class="bi bi-geo-alt icon-lg"></i>
         <p class="mt-2 mb-0">Sin sedes registradas.
           {% if es_admin %}<a href="{% url 'sede_create' project.id %}">Agregar la primera</a>.{% endif %}
         </p>
@@ -515,14 +571,14 @@
           {% if insumos_proyecto %}
           <div class="table-responsive" style="overflow: visible;">
             <table class="table table-sm table-hover align-middle small mb-0">
-              <thead class="table-light text-uppercase fw-semibold" style="font-size:0.72rem;">
+              <thead class="table-light text-uppercase fw-semibold thead-xs">
                 <tr>
-                  <th>Categoría</th><th>Insumo</th><th>Marca</th>
-                  <th class="text-center">Cantidad</th>
+                  <th scope="col">Categoría</th><th scope="col">Insumo</th><th scope="col">Marca</th>
+                  <th scope="col" class="text-center">Cantidad</th>
                   {% if not es_instalador_tecnico %}
-                  <th class="text-end">Total (Bs.)</th>
+                  <th scope="col" class="text-end">Total (Bs.)</th>
                   {% endif %}
-                  <th class="text-end" style="width:70px;">Acciones</th>
+                  <th scope="col" class="text-end" style="width:70px;">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -610,9 +666,9 @@
               <span class="display-6 fw-bold {% if margen >= 30 %}text-success{% elif margen >= 10 %}text-warning{% else %}text-danger{% endif %}">
                 {{ margen }}%
               </span>
-              <div class="progress w-100 mt-2" style="height:12px; border-radius:8px;">
+              <div class="progress w-100 mt-2 progress-md">
                 <div class="progress-bar {% if margen >= 30 %}bg-success{% elif margen >= 10 %}bg-warning{% else %}bg-danger{% endif %}"
-                     id="margenBar" data-width="{{ margen_clamped }}"></div>
+                     style="width:{{ margen_clamped }}%"></div>
               </div>
               <small class="text-muted mt-2">
                 {% if margen >= 30 %}<i class="bi bi-check-circle-fill text-success me-1"></i>Rentabilidad saludable
@@ -634,12 +690,12 @@
         <div class="card-body p-0">
           <div class="table-responsive">
             <table class="table table-sm align-middle small mb-0">
-              <thead class="table-light text-uppercase fw-semibold" style="font-size:0.7rem;">
+              <thead class="table-light text-uppercase fw-semibold thead-xs">
                 <tr>
-                  <th class="px-3">Fecha</th>
-                  <th class="text-end">Anterior (Bs.)</th>
-                  <th class="text-end">Actual (Bs.)</th>
-                  <th>Motivo</th>
+                  <th scope="col" class="px-3">Fecha</th>
+                  <th scope="col" class="text-end">Anterior (Bs.)</th>
+                  <th scope="col" class="text-end">Actual (Bs.)</th>
+                  <th scope="col">Motivo</th>
                 </tr>
               </thead>
               <tbody>

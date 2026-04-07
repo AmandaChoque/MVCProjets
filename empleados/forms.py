@@ -3,8 +3,8 @@ from django.db.models import Sum
 import re
 from decimal import Decimal
 
-from .models import Empleado, PagoEmpleado, ContratoEmpleado, JornadaEmpleado, AsignacionDiaria
-from projects.models import Proyecto, Sede, TareaChecklist
+from .models import Empleado, PagoEmpleado, ContratoEmpleado, JornadaEmpleado
+from projects.models import Proyecto
 
 DECIMAL_REGEX = r'\d+(\.\d{1,2})?'
 
@@ -239,21 +239,15 @@ class JornadaEmpleadoForm(forms.ModelForm):
         fields = ['proyecto', 'fecha', 'dias', 'observacion']
         widgets = {'proyecto': forms.Select(attrs={'class': 'form-select'})}
 
-    def __init__(self, *args, empleado=None, es_admin=False, contrato=None, asignacion=None, **kwargs):
+    def __init__(self, *args, empleado=None, es_admin=False, contrato=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._contrato = contrato
-        if asignacion:
-            # Proyecto y fecha fijos: vienen de la asignación
-            self.fields['proyecto'].required = False
-            self.fields['proyecto'].widget = forms.HiddenInput()
-            self.fields['fecha'].widget.attrs['readonly'] = True
+        base_qs = Proyecto.objects.filter(activo=True, estado_proyecto__in=['pendiente', 'en_progreso'])
+        if es_admin or empleado is None:
+            self.fields['proyecto'].queryset = base_qs
         else:
-            base_qs = Proyecto.objects.filter(activo=True, estado_proyecto__in=['pendiente', 'en_progreso'])
-            if es_admin or empleado is None:
-                self.fields['proyecto'].queryset = base_qs
-            else:
-                self.fields['proyecto'].queryset = base_qs.filter(equipo=empleado)
-            self.fields['proyecto'].empty_label = '— Seleccionar proyecto —'
+            self.fields['proyecto'].queryset = base_qs.filter(equipo=empleado)
+        self.fields['proyecto'].empty_label = '— Seleccionar proyecto —'
 
     def clean(self):
         cleaned_data = super().clean()
@@ -308,70 +302,3 @@ class PagoEmpleadoForm(forms.ModelForm):
         return resultado
 
 
-class AsignacionDiariaForm(forms.ModelForm):
-    class Meta:
-        model = AsignacionDiaria
-        fields = ['fecha', 'proyecto', 'sede', 'supervisor', 'instalador', 'turno', 'observacion', 'tareas_realizadas']
-        widgets = {
-            'fecha':             forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'proyecto':          forms.Select(attrs={'class': 'form-select'}),
-            'sede':              forms.Select(attrs={'class': 'form-select'}),
-            'supervisor':        forms.Select(attrs={'class': 'form-select'}),
-            'instalador':        forms.Select(attrs={'class': 'form-select'}),
-            'turno':             forms.Select(attrs={'class': 'form-select'}),
-            'observacion':       forms.Textarea(attrs={'class': 'form-control', 'rows': 2, 'placeholder': 'Actividades realizadas, incidencias...'}),
-            'tareas_realizadas': forms.CheckboxSelectMultiple(),
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.fields['supervisor'].queryset = Empleado.objects.filter(
-            is_active=True, cargo__in=['instalador', 'administrador', 'gerente']
-        ).order_by('nombre')
-        self.fields['supervisor'].required = False
-        self.fields['supervisor'].empty_label = '— Sin supervisor —'
-        self.fields['instalador'].queryset = Empleado.objects.filter(
-            is_active=True, cargo__in=['instalador', 'tecnico_soporte']
-        ).order_by('nombre')
-        self.fields['instalador'].required = False
-        self.fields['instalador'].empty_label = '— Sin instalador —'
-        self.fields['proyecto'].queryset = Proyecto.objects.filter(
-            activo=True, estado_proyecto__in=['pendiente', 'en_progreso']
-        ).order_by('nombre')
-        self.fields['proyecto'].empty_label = '— Seleccionar proyecto —'
-        self.fields['sede'].queryset = Sede.objects.none()
-        self.fields['sede'].required = False
-        self.fields['sede'].empty_label = '— Sin sede específica —'
-        self.fields['tareas_realizadas'].queryset = TareaChecklist.objects.none()
-        self.fields['tareas_realizadas'].required = False
-        # Si hay proyecto (edición o POST con proyecto), filtrar sedes y tareas
-        proyecto_id = None
-        if self.instance and self.instance.pk and self.instance.proyecto_id:
-            proyecto_id = self.instance.proyecto_id
-        if 'proyecto' in self.data:
-            try:
-                proyecto_id = int(self.data.get('proyecto'))
-            except (ValueError, TypeError):
-                pass
-        if proyecto_id:
-            self.fields['sede'].queryset = Sede.objects.filter(proyecto_id=proyecto_id, activo=True)
-            self.fields['tareas_realizadas'].queryset = TareaChecklist.objects.filter(
-                sede__proyecto_id=proyecto_id, activo=True, completado=False
-            ).select_related('sede').order_by('sede__nombre', 'orden')
-
-    def clean(self):
-        cleaned_data = super().clean()
-        supervisor = cleaned_data.get('supervisor')
-        instalador = cleaned_data.get('instalador')
-        if not supervisor and not instalador:
-            raise forms.ValidationError('Debe asignar al menos un supervisor o instalador.')
-        if supervisor and instalador and supervisor == instalador:
-            raise forms.ValidationError('El supervisor y el instalador no pueden ser la misma persona.')
-        fecha = cleaned_data.get('fecha')
-        if fecha and fecha.weekday() == 6:  # domingo
-            raise forms.ValidationError('No se pueden registrar asignaciones los domingos.')
-        sede = cleaned_data.get('sede')
-        proyecto = cleaned_data.get('proyecto')
-        if sede and proyecto and sede.proyecto_id != proyecto.id:
-            self.add_error('sede', 'La sede seleccionada no pertenece a este proyecto.')
-        return cleaned_data

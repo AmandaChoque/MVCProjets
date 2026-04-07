@@ -194,63 +194,17 @@ class PagoEmpleado(AuditModel):
         return f"Bs. {self.monto} — {self.concepto} ({self.fecha})"
 
 
-class AsignacionDiaria(AuditModel):
-    """Registro de quién fue a trabajar, a qué proyecto/sede y en qué turno."""
-    TURNO_CHOICES = [
-        ('completo', 'Día completo (1.0)'),
-        ('manana',   'Mañana — Medio día (0.5)'),
-        ('tarde',    'Tarde — Medio día (0.5)'),
-    ]
-
-    fecha       = models.DateField(db_index=True, verbose_name="Fecha")
-    proyecto    = models.ForeignKey(
-        'projects.Proyecto', on_delete=models.PROTECT,
-        related_name='asignaciones_diarias', verbose_name="Proyecto"
-    )
-    sede        = models.ForeignKey(
-        'projects.Sede', on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='asignaciones', verbose_name="Sede"
-    )
-    supervisor  = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
-        null=True, blank=True,
-        related_name='asignaciones_supervisor', verbose_name="Supervisor"
-    )
-    instalador  = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
-        null=True, blank=True,
-        related_name='asignaciones_instalador', verbose_name="Instalador"
-    )
-    turno       = models.CharField(max_length=10, choices=TURNO_CHOICES, default='completo', verbose_name="Turno")
-    observacion = models.TextField(blank=True, verbose_name="Observación")
-    tareas_realizadas = models.ManyToManyField(
-        'projects.TareaChecklist', blank=True,
-        related_name='asignaciones', verbose_name="Tareas realizadas"
-    )
-
-    class Meta:
-        verbose_name = 'Asignación Diaria'
-        verbose_name_plural = 'Asignaciones Diarias'
-        ordering = ['-fecha']
-
-    def __str__(self):
-        equipo = ' / '.join(filter(None, [
-            f"{self.supervisor.nombre} {self.supervisor.apellido_paterno}" if self.supervisor else None,
-            f"{self.instalador.nombre} {self.instalador.apellido_paterno}" if self.instalador else None,
-        ]))
-        return f"{self.fecha} — {self.proyecto.nombre} — {equipo}"
-
-    @property
-    def dias(self):
-        return Decimal('1.0') if self.turno == 'completo' else Decimal('0.5')
-
 
 class JornadaEmpleado(AuditModel):
     """Registro diario de trabajo de un empleado: en qué proyecto trabajó y cuánto."""
     DIAS_CHOICES = [
         ('0.5', 'Medio día (0.5)'),
         ('1.0', 'Día completo (1.0)'),
+    ]
+    ESTADO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('aprobada',  'Aprobada'),
+        ('rechazada', 'Rechazada'),
     ]
 
     contrato = models.ForeignKey(
@@ -267,7 +221,9 @@ class JornadaEmpleado(AuditModel):
         verbose_name="Días trabajados",
         validators=[MinValueValidator(0.5), MaxValueValidator(1.0)],
     )
-    observacion = models.TextField(blank=True, verbose_name="Observación")
+    observacion     = models.TextField(blank=True, verbose_name="Observación")
+    estado          = models.CharField(max_length=15, choices=ESTADO_CHOICES, default='pendiente', verbose_name="Estado")
+    motivo_rechazo  = models.TextField(blank=True, verbose_name="Motivo de rechazo")
     pago = models.ForeignKey(
         PagoEmpleado,
         on_delete=models.SET_NULL,
@@ -275,14 +231,6 @@ class JornadaEmpleado(AuditModel):
         related_name='jornadas_cubiertas',
         verbose_name="Pago que cubre esta jornada",
     )
-    asignacion = models.ForeignKey(
-        AsignacionDiaria,
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='jornadas',
-        verbose_name="Asignación de origen",
-    )
-
     class Meta:
         verbose_name = 'Jornada de Empleado'
         verbose_name_plural = 'Jornadas de Empleados'

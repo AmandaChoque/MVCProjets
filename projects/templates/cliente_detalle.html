@@ -67,6 +67,32 @@
               {{ form.tipo_contratante }}
             </div>
 
+            <!-- Datos de entidad pública (solo visible cuando tipo = entidad_publica) -->
+            <div id="div_entidad_publica" class="d-none">
+              <div class="mb-3">
+                <label class="form-label" for="{{ form.nombre_entidad.id_for_label }}">
+                  Nombre de la Entidad <span class="text-danger">*</span>
+                </label>
+                {{ form.nombre_entidad }}
+                {% if form.nombre_entidad.errors %}
+                <div class="text-danger small mt-1">
+                  {% for err in form.nombre_entidad.errors %}{{ err }}{% endfor %}
+                </div>
+                {% endif %}
+              </div>
+              <div class="mb-3">
+                <label class="form-label" for="{{ form.representante_legal.id_for_label }}">
+                  Representante Legal <span class="text-danger">*</span>
+                </label>
+                {{ form.representante_legal }}
+                {% if form.representante_legal.errors %}
+                <div class="text-danger small mt-1">
+                  {% for err in form.representante_legal.errors %}{{ err }}{% endfor %}
+                </div>
+                {% endif %}
+              </div>
+            </div>
+
             <div class="mb-3">
               <label class="form-label"
                 >Celular / Teléfono <span class="text-danger">*</span></label
@@ -165,5 +191,21 @@
       })
     }, false)
   })()
+
+  // Toggle campos entidad pública
+  const tipoSelect    = document.getElementById('id_tipo_contratante');
+  const divEntidad    = document.getElementById('div_entidad_publica');
+  const nombreEntidad = document.getElementById('id_nombre_entidad');
+  const repLegal      = document.getElementById('id_representante_legal');
+
+  function toggleEntidad() {
+    const esEntidad = tipoSelect.value === 'entidad_publica';
+    divEntidad.classList.toggle('d-none', !esEntidad);
+    nombreEntidad.required = esEntidad;
+    repLegal.required      = esEntidad;
+  }
+
+  tipoSelect.addEventListener('change', toggleEntidad);
+  toggleEntidad();
 </script>
 {% endblock %}

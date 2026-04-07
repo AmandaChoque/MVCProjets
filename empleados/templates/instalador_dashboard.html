@@ -47,7 +47,7 @@
         <span class="fw-semibold">Jornada de hoy</span>
         <span class="text-muted small ms-2">{{ hoy }}</span>
       </div>
-      {% if contrato_activo and not asignaciones_hoy %}
+      {% if contrato_activo %}
         <a href="{% url 'create_jornada' contrato_activo.id %}"
            class="btn btn-success btn-sm">
           <i class="bi bi-plus-lg me-1"></i>Registrar jornada
@@ -58,63 +58,6 @@
       {% if not contrato_activo %}
         <p class="text-muted small mb-0">No tienes un contrato activo. Contactá al administrador.</p>
 
-      {% elif asignaciones_hoy %}
-        <!-- Una fila por asignación del día -->
-        <div class="d-flex flex-column gap-2">
-          {% for asig in asignaciones_hoy %}
-          <div class="d-flex justify-content-between align-items-center py-1
-                      {% if not forloop.last %}border-bottom{% endif %}">
-            <div>
-              <span class="fw-semibold small">{{ asig.proyecto.nombre }}</span>
-              {% if asig.sede %}
-                <span class="text-muted small ms-1">· {{ asig.sede.nombre }}</span>
-              {% endif %}
-              <div class="text-muted small">
-                {% if asig.supervisor == request.user %}
-                  <i class="bi bi-person-badge me-1"></i>Supervisor
-                {% else %}
-                  <i class="bi bi-tools me-1"></i>Técnico
-                {% endif %}
-                {% if asig.id in asignaciones_con_jornada %}
-                  <span class="badge bg-success ms-1">Registrada</span>
-                {% endif %}
-              </div>
-            </div>
-            {% if asig.id not in asignaciones_con_jornada %}
-              <a href="{% url 'create_jornada' contrato_activo.id %}?asignacion={{ asig.id }}"
-                 class="btn btn-success btn-sm">
-                <i class="bi bi-plus-lg me-1"></i>Registrar
-              </a>
-            {% else %}
-              {% for j in jornadas_hoy %}
-                {% if j.asignacion_id == asig.id %}
-                <a href="{% url 'jornada_detail' j.id %}" class="btn btn-outline-secondary btn-sm py-0">
-                  <i class="bi bi-pencil"></i>
-                </a>
-                {% endif %}
-              {% endfor %}
-            {% endif %}
-          </div>
-          {% endfor %}
-        </div>
-
-        <!-- Jornadas sin asignación (registradas manualmente) -->
-        {% for j in jornadas_hoy %}
-          {% if not j.asignacion_id %}
-          <div class="d-flex justify-content-between align-items-center border-top pt-2 mt-1">
-            <div>
-              <span class="fw-semibold small">{{ j.proyecto.nombre }}</span>
-              <span class="badge bg-secondary ms-1">
-                {% if j.dias == 1.0 %}Día completo{% else %}Medio día{% endif %}
-              </span>
-            </div>
-            <a href="{% url 'jornada_detail' j.id %}" class="btn btn-outline-secondary btn-sm py-0">
-              <i class="bi bi-pencil"></i>
-            </a>
-          </div>
-          {% endif %}
-        {% endfor %}
-
       {% elif jornadas_hoy %}
         <div class="d-flex flex-column gap-2">
           {% for j in jornadas_hoy %}
@@ -124,13 +67,25 @@
               <span class="badge bg-secondary ms-1">
                 {% if j.dias == 1.0 %}Día completo{% else %}Medio día{% endif %}
               </span>
+              {% if j.estado == 'aprobada' %}
+                <span class="badge bg-success ms-1">Aprobada</span>
+              {% elif j.estado == 'rechazada' %}
+                <span class="badge bg-danger ms-1" title="{{ j.motivo_rechazo }}">Rechazada</span>
+              {% else %}
+                <span class="badge bg-warning text-dark ms-1">Pendiente aprobación</span>
+              {% endif %}
               {% if j.observacion %}
                 <div class="text-muted small">{{ j.observacion }}</div>
               {% endif %}
+              {% if j.estado == 'rechazada' and j.motivo_rechazo %}
+                <div class="text-danger small"><i class="bi bi-exclamation-circle me-1"></i>{{ j.motivo_rechazo }}</div>
+              {% endif %}
             </div>
+            {% if j.estado != 'aprobada' %}
             <a href="{% url 'jornada_detail' j.id %}" class="btn btn-outline-secondary btn-sm py-0">
               <i class="bi bi-pencil"></i>
             </a>
+            {% endif %}
           </div>
           {% endfor %}
         </div>

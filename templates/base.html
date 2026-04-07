@@ -407,12 +407,6 @@
 
         {% if es_admin_o_gerente %}
         <li class="nav-item">
-          <a class="nav-link {% if '/asignaciones' in request.path %}active-link{% endif %}"
-             href="{% url 'asignaciones_list' %}">
-            <i class="bi bi-calendar-check me-2"></i>Asignaciones Diarias
-          </a>
-        </li>
-        <li class="nav-item">
           <a class="nav-link {% if '/plantillas' in request.path %}active-link{% endif %}"
              href="{% url 'plantillas_list' %}">
             <i class="bi bi-card-checklist me-2"></i>Plantillas de Tareas

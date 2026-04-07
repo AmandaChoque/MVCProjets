@@ -1,7 +1,7 @@
 from django.forms import ModelForm
 from django import forms
 from django.db.models import Max
-from .models import Proyecto, Cliente, Progreso, Sede, FotoSede, TareaChecklist, Pago, PlantillaTarea, ItemPlantilla
+from .models import Proyecto, Cliente, Progreso, Sede, FotoSede, TareaChecklist, Pago, PlantillaTarea, ItemPlantilla, GrupoTarea
 from empleados.models import ContratoProyecto
 import re
 from decimal import Decimal, InvalidOperation
@@ -34,7 +34,7 @@ class ProjectForm(forms.ModelForm):
 
     class Meta:
         model = Proyecto
-        fields = ['codigo', 'nombre', 'descripcion', 'observacion', 'estado_proyecto', 'tipo_proyecto', 'proyecto_origen', 'monto_total', 'cliente']
+        fields = ['codigo', 'nombre', 'descripcion', 'observacion', 'estado_proyecto', 'tipo_proyecto', 'proyecto_origen', 'monto_total', 'cliente', 'ritmo_semanal']
         widgets = {
             'codigo':           forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el codigo'}),
             'nombre':           forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el nombre'}),
@@ -43,6 +43,7 @@ class ProjectForm(forms.ModelForm):
             'estado_proyecto':  forms.Select(attrs={'class': 'form-select'}),
             'tipo_proyecto':    forms.Select(attrs={'class': 'form-select', 'id': 'id_tipo_proyecto'}),
             'cliente':          forms.Select(attrs={'class': 'form-select'}),
+            'ritmo_semanal':    forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 50}),
         }
 
     def clean(self):
@@ -205,22 +206,42 @@ class ContratoProyectoForm(_ContratoBaseForm):
         label="% Multa Diaria por Retraso",
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'Ej: 0.50 (deja vacío si no aplica)',
+            'placeholder': 'Ej: 2 (deja vacío si no aplica)',
+        }),
+    )
+    porcentaje_multa_maxima = forms.CharField(
+        required=False,
+        label="% Multa Máxima (tope)",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ej: 20',
         }),
     )
 
     class Meta(_ContratoBaseForm.Meta):
-        fields = ['fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'porcentaje_multa_diaria', 'observaciones', 'documento']
+        fields = ['fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado',
+                  'porcentaje_multa_diaria', 'porcentaje_multa_maxima', 'observaciones', 'documento']
 
     def clean_porcentaje_multa_diaria(self):
         valor = str(self.cleaned_data.get('porcentaje_multa_diaria', '') or '').strip()
         if not valor:
             return Decimal('0')
         if not re.fullmatch(DECIMAL_REGEX, valor):
-            raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 0.50).')
+            raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 2 o 0.50).')
         resultado = Decimal(valor)
         if resultado < 0 or resultado > 100:
             raise forms.ValidationError('El porcentaje debe estar entre 0 y 100.')
+        return resultado
+
+    def clean_porcentaje_multa_maxima(self):
+        valor = str(self.cleaned_data.get('porcentaje_multa_maxima', '') or '').strip()
+        if not valor:
+            return Decimal('20')
+        if not re.fullmatch(DECIMAL_REGEX, valor):
+            raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 20).')
+        resultado = Decimal(valor)
+        if resultado <= 0 or resultado > 100:
+            raise forms.ValidationError('El porcentaje debe estar entre 0.01 y 100.')
         return resultado
 
 
@@ -348,3 +369,17 @@ class TareaChecklistForm(forms.ModelForm):
         widgets = {
             'descripcion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Tender cable desde tablero, Montar cámara domo exterior...'}),
         }
+
+
+class GrupoTareaForm(forms.ModelForm):
+    class Meta:
+        model = GrupoTarea
+        fields = ['nombre', 'tipo']
+        widgets = {
+            'nombre': forms.TextInput(attrs={
+                'class': 'form-control form-control-sm',
+                'placeholder': 'Ej: Cámara 1 – Entrada principal',
+            }),
+            'tipo': forms.Select(attrs={'class': 'form-select form-select-sm'}),
+        }
+

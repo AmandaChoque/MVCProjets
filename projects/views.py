@@ -9,8 +9,8 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.http import HttpResponse, JsonResponse
 from django.db import IntegrityError
 
-from .form import ProjectForm, ClienteForm, ProgresoForm, ContratoProyectoForm, SedeForm, FotoSedeForm, TareaChecklistForm, PaymentForm, PlantillaTareaForm, ItemPlantillaForm
-from .models import Proyecto, Cliente, Progreso, HistorialPresupuesto, Sede, FotoSede, TareaChecklist, Notificacion, Pago, PlantillaTarea, ItemPlantilla
+from .form import ProjectForm, ClienteForm, ProgresoForm, ContratoProyectoForm, SedeForm, FotoSedeForm, TareaChecklistForm, PaymentForm, PlantillaTareaForm, ItemPlantillaForm, GrupoTareaForm
+from .models import Proyecto, Cliente, Progreso, HistorialPresupuesto, Sede, FotoSede, TareaChecklist, Notificacion, Pago, PlantillaTarea, ItemPlantilla, GrupoTarea
 from empleados.models import Empleado, ContratoEmpleado, ContratoProyecto, JornadaEmpleado, PagoEmpleado
 from inventario.models import Insumo, Requiere
 from django.contrib.auth.decorators import login_required
@@ -164,7 +164,13 @@ def reporte_analisis_view(request):
     graphic = base64.b64encode(image_png)
     graphic = graphic.decode('utf-8')
 
-    context = {'graphic': graphic}
+    context = {
+        'graphic': graphic,
+        'total_completados': total_completados,
+        'total_en_progreso': total_en_progreso,
+        'total_pendientes': total_pendientes,
+        'total_proyectos': total_completados + total_en_progreso + total_pendientes,
+    }
     return render(request, 'reporte_analisis.html', context)
 
 
@@ -250,13 +256,26 @@ def project_report(request):
     search_nombre      = request.GET.get('search_nombre', '').strip()
     hoy = timezone.now().date()
 
-    ultimo_avance_qs = Progreso.objects.filter(
+    contrato_fecha_inicio_qs = ContratoProyecto.objects.filter(
         proyecto=OuterRef('pk'), activo=True
-    ).order_by('-fecha', '-id').values('porcentaje')[:1]
+    ).order_by('-fecha_inicio').values('fecha_inicio')[:1]
 
-    projects = Proyecto.objects.filter(activo=True).select_related('cliente').annotate(
+    contrato_fecha_fin_qs = ContratoProyecto.objects.filter(
+        proyecto=OuterRef('pk'), activo=True
+    ).order_by('-fecha_inicio').values('fecha_fin')[:1]
+
+    sedes_prefetch = Prefetch(
+        'sedes',
+        queryset=Sede.objects.filter(activo=True).prefetch_related(
+            Prefetch('tareas', queryset=TareaChecklist.objects.filter(activo=True))
+        ),
+        to_attr='sedes_activas',
+    )
+
+    projects = Proyecto.objects.filter(activo=True).select_related('cliente').prefetch_related(sedes_prefetch).annotate(
         monto_cobrado=Sum('pagos__monto', filter=Q(pagos__activo=True)),
-        ultimo_avance=Subquery(ultimo_avance_qs),
+        contrato_fecha_inicio=Subquery(contrato_fecha_inicio_qs),
+        contrato_fecha_fin=Subquery(contrato_fecha_fin_qs),
     ).order_by('-id')
 
     if search_nombre:
@@ -270,17 +289,17 @@ def project_report(request):
     if filter_cumplimiento == 'vencido':
         projects = projects.filter(
             estado_proyecto__in=['pendiente', 'en_progreso'],
-            fecha_fin__isnull=False, fecha_fin__lt=hoy,
+            contrato_fecha_fin__isnull=False, contrato_fecha_fin__lt=hoy,
         )
     elif filter_cumplimiento == 'en_plazo':
         projects = projects.filter(
             estado_proyecto__in=['pendiente', 'en_progreso'],
-            fecha_fin__isnull=False, fecha_fin__gte=hoy,
+            contrato_fecha_fin__isnull=False, contrato_fecha_fin__gte=hoy,
         )
     elif filter_cumplimiento == 'sin_fecha':
         projects = projects.filter(
             estado_proyecto__in=['pendiente', 'en_progreso'],
-            fecha_fin__isnull=True,
+            contrato_fecha_fin__isnull=True,
         )
 
     agg = projects.aggregate(
@@ -294,22 +313,28 @@ def project_report(request):
     count_en_progreso    = projects.filter(estado_proyecto='en_progreso').count()
     count_pendiente      = projects.filter(estado_proyecto='pendiente').count()
 
-    # Pre-compute saldo y cumplimiento por proyecto
+    # Pre-compute saldo, avance y cumplimiento por proyecto
     projects_list = list(projects)
     for p in projects_list:
         p.monto_saldo = p.monto_total - (p.monto_cobrado or 0)
+        sedes_list_p = p.sedes_activas
+        if sedes_list_p:
+            p.ultimo_avance = round(sum(s.porcentaje_checklist for s in sedes_list_p) / len(sedes_list_p))
+        else:
+            p.ultimo_avance = 0
+        fecha_fin_contrato = p.contrato_fecha_fin
         if p.estado_proyecto == 'completado':
             p.cumplimiento = 'completado'
             p.dias_info = None
-        elif not p.fecha_fin:
+        elif not fecha_fin_contrato:
             p.cumplimiento = 'sin_fecha'
             p.dias_info = None
-        elif p.fecha_fin < hoy:
+        elif fecha_fin_contrato < hoy:
             p.cumplimiento = 'vencido'
-            p.dias_info = (hoy - p.fecha_fin).days
+            p.dias_info = (hoy - fecha_fin_contrato).days
         else:
             p.cumplimiento = 'en_plazo'
-            p.dias_info = (p.fecha_fin - hoy).days
+            p.dias_info = (fecha_fin_contrato - hoy).days
 
     count_vencidos   = sum(1 for p in projects_list if p.cumplimiento == 'vencido')
     count_en_plazo   = sum(1 for p in projects_list if p.cumplimiento == 'en_plazo')
@@ -426,7 +451,7 @@ def project_report(request):
                 float(p.monto_total),
                 float(cobrado),
                 float(saldo),
-                p.fecha_inicio.strftime('%d/%m/%Y') if p.fecha_inicio else '—',
+                p.contrato_fecha_inicio.strftime('%d/%m/%Y') if p.contrato_fecha_inicio else '—',
             ])
             row_fill = alt_fill if i % 2 == 0 else None
             for j, cell in enumerate(ws[i], start=1):
@@ -653,7 +678,22 @@ def project_view(request, id_project):
     saldo_cliente = ingresos - total_pagado_cliente
 
     # ── Sedes del proyecto ────────────────────────────────────────────────────
-    sedes = project.sedes.filter(activo=True).prefetch_related('tareas', 'fotos', 'insumos')
+    sedes = project.sedes.filter(activo=True).prefetch_related('tareas', 'fotos', 'insumos', 'grupos')
+
+    # ── Indicador de ritmo (grupos completados vs esperado) ───────────────────
+    hace_7_dias = timezone.now() - timedelta(days=7)
+    grupos_completados_semana = GrupoTarea.objects.filter(
+        sede__proyecto=project,
+        activo=True,
+        fecha_completado__gte=hace_7_dias,
+    ).count()
+    ritmo_esperado = project.ritmo_semanal
+    if grupos_completados_semana >= ritmo_esperado:
+        ritmo_estado = 'ok'
+    elif grupos_completados_semana >= ritmo_esperado * 0.75:
+        ritmo_estado = 'alerta'
+    else:
+        ritmo_estado = 'atrasado'
     sedes_geo_json = json.dumps([
         {
             'lat': float(s.latitud), 'lng': float(s.longitud),
@@ -695,6 +735,9 @@ def project_view(request, id_project):
         'sedes_geo_json': sedes_geo_json,
         'progreso_sedes': progreso_sedes,
         'sedes_completadas': sedes_completadas,
+        'grupos_completados_semana': grupos_completados_semana,
+        'ritmo_esperado': ritmo_esperado,
+        'ritmo_estado': ritmo_estado,
         'now': timezone.now(),
         'generado_por': request.user.get_full_name() or request.user.username,
     }
@@ -1346,26 +1389,59 @@ def sede_create(request, id_project):
 @login_required
 def sede_view(request, id_sede):
     sede = get_object_or_404(Sede, pk=id_sede, activo=True)
-    # Insumos asignados a esta sede
     insumos_sede = sede.insumos.filter(activo=True).select_related('insumo')
-    # Tareas checklist
-    tareas = sede.tareas.filter(activo=True).order_by('orden', 'created')
-    # Fotos
+
+    # Grupos con sus tareas pre-cargadas
+    grupos = list(
+        sede.grupos.filter(activo=True).prefetch_related(
+            Prefetch(
+                'tareas',
+                queryset=TareaChecklist.objects.filter(activo=True)
+                    .order_by('orden', 'created')
+                    .select_related('completado_por'),
+            )
+        )
+    )
+
+    # Tareas sin grupo asignado
+    tareas_sin_grupo = sede.tareas.filter(activo=True, grupo__isnull=True).order_by('orden', 'created').select_related('completado_por')
+
     fotos = sede.fotos.filter(activo=True)
-    # Plantillas disponibles (para aplicar en caso de haberse olvidado)
     plantillas = PlantillaTarea.objects.filter(activo=True).order_by('tipo', 'nombre')
-    # Formularios
     foto_form = FotoSedeForm()
     tarea_form = TareaChecklistForm()
+    grupo_form = GrupoTareaForm()
+
+    # Actividad del día: tareas completadas hoy en esta sede, agrupadas por empleado
+    today = timezone.localdate()
+    actividad_raw = (
+        TareaChecklist.objects.filter(
+            sede=sede, activo=True, completado=True,
+            fecha_completado__date=today,
+        )
+        .select_related('completado_por', 'grupo')
+        .order_by('completado_por_id', 'fecha_completado')
+    )
+    # Agrupar por empleado
+    actividad_hoy = {}
+    for t in actividad_raw:
+        emp = t.completado_por
+        if emp not in actividad_hoy:
+            actividad_hoy[emp] = []
+        actividad_hoy[emp].append(t)
+
     context = {
         'sede': sede,
         'project': sede.proyecto,
         'insumos_sede': insumos_sede,
-        'tareas': tareas,
+        'grupos': grupos,
+        'tareas_sin_grupo': tareas_sin_grupo,
         'fotos': fotos,
         'foto_form': foto_form,
         'tarea_form': tarea_form,
+        'grupo_form': grupo_form,
         'plantillas': plantillas,
+        'actividad_hoy': actividad_hoy,
     }
     return render(request, 'sede_view.html', context)
 
@@ -1412,12 +1488,23 @@ def tarea_create(request, id_sede):
         if form.is_valid():
             tarea = form.save(commit=False)
             tarea.sede = sede
-            # Asignar orden al final
+            grupo_id = request.POST.get('grupo_id')
+            if grupo_id:
+                try:
+                    tarea.grupo = GrupoTarea.objects.get(pk=grupo_id, sede=sede, activo=True)
+                except GrupoTarea.DoesNotExist:
+                    pass
             ultimo_orden = sede.tareas.filter(activo=True).aggregate(m=db_Max('orden'))['m'] or 0
             tarea.orden = ultimo_orden + 1
             tarea.save()
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({'ok': True, 'id': tarea.id, 'descripcion': tarea.descripcion, 'orden': tarea.orden})
+                return JsonResponse({
+                    'ok': True,
+                    'id': tarea.id,
+                    'descripcion': tarea.descripcion,
+                    'orden': tarea.orden,
+                    'grupo_id': tarea.grupo_id,
+                })
     return redirect('sede_view', id_sede=sede.id)
 
 
@@ -1436,14 +1523,30 @@ def tarea_toggle(request, id_tarea):
         tarea.fecha_completado = None
         tarea.completado_por = None
     tarea.save()
-    # Sincroniza estado de la sede
     tarea.sede._sync_estado()
-    pct = tarea.sede.porcentaje_checklist
+    pct_sede = tarea.sede.porcentaje_checklist
+
+    # Info del grupo (si tiene)
+    grupo_info = None
+    if tarea.grupo_id:
+        tarea.grupo.refresh_from_db()
+        grupo_info = {
+            'id': tarea.grupo_id,
+            'porcentaje': tarea.grupo.porcentaje,
+            'completado': tarea.grupo.completado,
+        }
+
+    nombre_usuario = tarea.completado_por.get_full_name() or tarea.completado_por.username if tarea.completado_por else ''
+    fecha_str = tarea.fecha_completado.strftime('%d/%m/%Y %H:%M') if tarea.fecha_completado else ''
+
     return JsonResponse({
         'ok': True,
         'completado': tarea.completado,
-        'porcentaje': pct,
+        'porcentaje': pct_sede,
         'estado_sede': tarea.sede.estado,
+        'grupo': grupo_info,
+        'completado_por': nombre_usuario,
+        'fecha_completado': fecha_str,
     })
 
 
@@ -1456,6 +1559,49 @@ def tarea_delete(request, id_tarea):
         tarea.activo = False
         tarea.save()
         tarea.sede._sync_estado()
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'ok': True})
+    return redirect('sede_view', id_sede=id_sede)
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def grupo_create(request, id_sede):
+    """AJAX: crea un nuevo GrupoTarea dentro de una sede."""
+    sede = get_object_or_404(Sede, pk=id_sede, activo=True)
+    if request.method == 'POST':
+        form = GrupoTareaForm(request.POST)
+        if form.is_valid():
+            grupo = form.save(commit=False)
+            grupo.sede = sede
+            ultimo = sede.grupos.filter(activo=True).aggregate(m=db_Max('orden'))['m'] or 0
+            grupo.orden = ultimo + 1
+            grupo.save()
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'ok': True,
+                    'id': grupo.id,
+                    'nombre': grupo.nombre,
+                    'tipo': grupo.get_tipo_display(),
+                    'tipo_key': grupo.tipo,
+                    'orden': grupo.orden,
+                })
+        elif request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            return JsonResponse({'ok': False, 'errors': form.errors}, status=400)
+    return redirect('sede_view', id_sede=sede.id)
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def grupo_delete(request, id_grupo):
+    """AJAX: desactiva (soft-delete) un GrupoTarea."""
+    grupo = get_object_or_404(GrupoTarea, pk=id_grupo, activo=True)
+    id_sede = grupo.sede.id
+    if request.method == 'POST':
+        grupo.activo = False
+        grupo.deleted_at = timezone.now()
+        grupo.deleted_by = request.user
+        grupo.save()
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'ok': True})
     return redirect('sede_view', id_sede=id_sede)
@@ -1909,12 +2055,23 @@ def payment_analysis(request):
     buf.seek(0)
     graphic = base64.b64encode(buf.getvalue()).decode('utf-8')
     plt.close(fig)
+    totals = payments.aggregate(
+        total_monto=Sum('monto'),
+        total_descuento=Sum('descuento'),
+    )
+    total_monto     = (totals['total_monto']     or 0) + (totals['total_descuento'] or 0)
+    total_efectivo  = payments.filter(tipo_pago='efectivo').aggregate(t=Sum('monto'))['t'] or 0
+    total_transfer  = payments.filter(tipo_pago='transferencia').aggregate(t=Sum('monto'))['t'] or 0
     return render(request, 'payment_analysis.html', {
         'graphic': graphic,
         'payment_type_counts': payment_type_counts,
         'start_date': start_date,
         'end_date': end_date,
         'message': None if payments.exists() else 'No hay pagos en este rango de fechas.',
+        'total_pagos': payments.count(),
+        'total_monto': total_monto,
+        'total_efectivo': total_efectivo,
+        'total_transfer': total_transfer,
     })
 
 
