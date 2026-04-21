@@ -295,11 +295,11 @@
 
         <li class="nav-item">
           <a class="nav-link" data-bs-toggle="collapse" href="#projectSubmenu"
-             aria-expanded="{% if '/projects' in request.path or '/progreso' in request.path or request.resolver_match.url_name == 'project_report' or request.resolver_match.url_name == 'project_analysis' %}true{% else %}false{% endif %}">
+             aria-expanded="{% if '/projects' in request.path or '/progreso' in request.path or request.resolver_match.url_name in 'project_report project_analysis analisis_financiero seguimiento_avance' %}true{% else %}false{% endif %}">
             <i class="bi bi-folder2-open me-2"></i>Proyectos
             <i class="bi bi-chevron-down chevron"></i>
           </a>
-          <div class="collapse submenu {% if '/projects' in request.path or '/progreso' in request.path or request.resolver_match.url_name == 'project_report' or request.resolver_match.url_name == 'project_analysis' or request.resolver_match.url_name == 'seguimiento_avance' %}show{% endif %}" id="projectSubmenu">
+          <div class="collapse submenu {% if '/projects' in request.path or '/progreso' in request.path or request.resolver_match.url_name in 'project_report project_analysis analisis_financiero seguimiento_avance' %}show{% endif %}" id="projectSubmenu">
             <ul class="nav flex-column ms-2">
               <li>
                 <a class="nav-link {% if request.resolver_match.url_name == 'projects' %}active-link{% endif %}"
@@ -324,6 +324,12 @@
                 <a class="nav-link {% if request.resolver_match.url_name == 'project_analysis' %}active-link{% endif %}"
                    href="{% url 'project_analysis' %}">
                   <i class="bi bi-graph-up me-2"></i>Análisis
+                </a>
+              </li>
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'analisis_financiero' %}active-link{% endif %}"
+                   href="{% url 'analisis_financiero' %}">
+                  <i class="bi bi-currency-dollar me-2"></i>Financiero
                 </a>
               </li>
               {% endif %}

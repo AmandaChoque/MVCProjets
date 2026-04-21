@@ -288,6 +288,53 @@ class HistorialPresupuesto(models.Model):
     def __str__(self):
         return f"Presupuesto modificado — {self.fecha_modificacion}"
 
+
+# Auditoría de cambios de estado del proyecto
+class HistorialEstadoProyecto(models.Model):
+    ESTADO_CHOICES = [
+        ('pendiente',    'Pendiente'),
+        ('en_progreso',  'En Progreso'),
+        ('completado',   'Completado'),
+    ]
+    proyecto         = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='historial_estado', verbose_name="Proyecto")
+    estado_anterior  = models.CharField(max_length=20, choices=ESTADO_CHOICES, verbose_name="Estado Anterior")
+    estado_nuevo     = models.CharField(max_length=20, choices=ESTADO_CHOICES, verbose_name="Estado Nuevo")
+    cambiado_por     = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='+', verbose_name="Cambiado por"
+    )
+    fecha            = models.DateTimeField(auto_now_add=True, verbose_name="Fecha")
+    motivo           = models.TextField(blank=True, default='', verbose_name="Motivo / Observación")
+
+    class Meta:
+        verbose_name        = 'Historial de Estado'
+        verbose_name_plural = 'Historial de Estados'
+        db_table            = 'projects_historialestadoproyecto'
+        ordering            = ['-fecha']
+
+    def __str__(self):
+        return f"{self.proyecto.nombre}: {self.estado_anterior} → {self.estado_nuevo} ({self.fecha:%d/%m/%Y})"
+
+
+@receiver(pre_save, sender=Proyecto)
+def registrar_cambio_estado_proyecto(sender, instance, **kwargs):
+    """Registra en HistorialEstadoProyecto cuando cambia estado_proyecto manualmente."""
+    if not instance.pk:
+        return
+    try:
+        anterior = Proyecto.objects.get(pk=instance.pk)
+    except Proyecto.DoesNotExist:
+        return
+    if anterior.estado_proyecto != instance.estado_proyecto:
+        HistorialEstadoProyecto.objects.create(
+            proyecto=anterior,
+            estado_anterior=anterior.estado_proyecto,
+            estado_nuevo=instance.estado_proyecto,
+            cambiado_por=getattr(instance, '_current_user', None),
+            motivo=getattr(instance, '_motivo_cambio_estado', ''),
+        )
+
+
 @receiver(pre_save, sender=Proyecto)
 def registrar_cambio_monto_proyecto(sender, instance, **kwargs):
     """

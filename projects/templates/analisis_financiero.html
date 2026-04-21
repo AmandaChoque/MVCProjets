@@ -1,0 +1,163 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container-fluid px-4 py-4">
+
+  <!-- ENCABEZADO -->
+  <div class="mb-4 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h4 class="fw-bold text-sobotec mb-0">
+        <i class="bi bi-graph-up-arrow me-2"></i>Análisis Financiero Global
+      </h4>
+      <p class="text-muted small mb-0">Presupuesto vs. costo real por proyecto</p>
+    </div>
+    <a href="{% url 'projects' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Volver a Proyectos
+    </a>
+  </div>
+
+  <!-- KPIs -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-body text-center py-3">
+          <div class="text-muted small text-uppercase fw-semibold mb-1">Presupuesto Total</div>
+          <div class="fs-5 fw-bold text-dark">Bs. {{ totales.presupuesto|floatformat:2 }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-body text-center py-3">
+          <div class="text-muted small text-uppercase fw-semibold mb-1">Costo Real</div>
+          <div class="fs-5 fw-bold text-danger">Bs. {{ totales.costo_total|floatformat:2 }}</div>
+          <div class="text-muted" style="font-size:0.72rem;">
+            Insumos: Bs. {{ totales.costo_insumos|floatformat:2 }} /
+            Personal: Bs. {{ totales.costo_personal|floatformat:2 }}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-body text-center py-3">
+          <div class="text-muted small text-uppercase fw-semibold mb-1">Total Cobrado</div>
+          <div class="fs-5 fw-bold text-primary">Bs. {{ totales.cobrado|floatformat:2 }}</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-body text-center py-3">
+          <div class="text-muted small text-uppercase fw-semibold mb-1">Rentabilidad Global</div>
+          <div class="fs-5 fw-bold {% if totales.rentabilidad >= 0 %}text-success{% else %}text-danger{% endif %}">
+            Bs. {{ totales.rentabilidad|floatformat:2 }}
+          </div>
+          <div class="text-muted" style="font-size:0.72rem;">Margen: {{ totales.margen }}%</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLA DETALLE -->
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-header bg-light d-flex align-items-center gap-2 py-2">
+      <i class="bi bi-table text-primary"></i>
+      <span class="fw-semibold">Detalle por Proyecto</span>
+      <span class="badge bg-secondary ms-auto">{{ filas|length }} proyecto{{ filas|length|pluralize:"s" }}</span>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle small mb-0">
+          <thead class="table-light text-uppercase fw-semibold" style="font-size:0.7rem;">
+            <tr>
+              <th class="px-3">Proyecto</th>
+              <th>Cliente</th>
+              <th>Estado</th>
+              <th class="text-end">Presupuesto</th>
+              <th class="text-end">Insumos</th>
+              <th class="text-end">Personal</th>
+              <th class="text-end">Costo Real</th>
+              <th class="text-end">Cobrado</th>
+              <th class="text-end">Saldo</th>
+              <th class="text-end">Rentabilidad</th>
+              <th class="text-center">Margen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for f in filas %}
+            <tr>
+              <td class="px-3">
+                <a href="{% url 'project_view' id_project=f.proyecto.id %}" class="text-decoration-none fw-semibold text-dark">
+                  {{ f.proyecto.nombre }}
+                </a>
+                <div class="text-muted" style="font-size:0.7rem;">{{ f.proyecto.codigo }}</div>
+              </td>
+              <td class="text-muted">{{ f.proyecto.cliente.nombre }} {{ f.proyecto.cliente.apellido_paterno }}</td>
+              <td>
+                {% if f.proyecto.estado_proyecto == 'completado' %}
+                  <span class="badge bg-success">Completado</span>
+                {% elif f.proyecto.estado_proyecto == 'en_progreso' %}
+                  <span class="badge bg-primary">En Progreso</span>
+                {% else %}
+                  <span class="badge bg-secondary">Pendiente</span>
+                {% endif %}
+              </td>
+              <td class="text-end">Bs. {{ f.proyecto.monto_total|floatformat:2 }}</td>
+              <td class="text-end text-muted">{{ f.costo_insumos|floatformat:2 }}</td>
+              <td class="text-end text-muted">{{ f.costo_personal|floatformat:2 }}</td>
+              <td class="text-end text-danger fw-semibold">Bs. {{ f.costo_total|floatformat:2 }}</td>
+              <td class="text-end text-primary">Bs. {{ f.cobrado|floatformat:2 }}</td>
+              <td class="text-end {% if f.saldo > 0 %}text-warning{% else %}text-success{% endif %}">
+                Bs. {{ f.saldo|floatformat:2 }}
+              </td>
+              <td class="text-end fw-bold {% if f.rentabilidad >= 0 %}text-success{% else %}text-danger{% endif %}">
+                Bs. {{ f.rentabilidad|floatformat:2 }}
+              </td>
+              <td class="text-center">
+                {% if f.margen >= 30 %}
+                  <span class="badge bg-success">{{ f.margen }}%</span>
+                {% elif f.margen >= 10 %}
+                  <span class="badge bg-warning text-dark">{{ f.margen }}%</span>
+                {% elif f.margen >= 0 %}
+                  <span class="badge bg-danger">{{ f.margen }}%</span>
+                {% else %}
+                  <span class="badge bg-dark">{{ f.margen }}%</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="11" class="text-center text-muted py-4">No hay proyectos activos.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          <!-- FILA TOTALES -->
+          {% if filas %}
+          <tfoot class="table-light fw-bold">
+            <tr>
+              <td class="px-3" colspan="3">TOTALES</td>
+              <td class="text-end">Bs. {{ totales.presupuesto|floatformat:2 }}</td>
+              <td class="text-end">{{ totales.costo_insumos|floatformat:2 }}</td>
+              <td class="text-end">{{ totales.costo_personal|floatformat:2 }}</td>
+              <td class="text-end text-danger">Bs. {{ totales.costo_total|floatformat:2 }}</td>
+              <td class="text-end text-primary">Bs. {{ totales.cobrado|floatformat:2 }}</td>
+              <td class="text-end">—</td>
+              <td class="text-end {% if totales.rentabilidad >= 0 %}text-success{% else %}text-danger{% endif %}">
+                Bs. {{ totales.rentabilidad|floatformat:2 }}
+              </td>
+              <td class="text-center">
+                {% if totales.margen >= 30 %}<span class="badge bg-success">{{ totales.margen }}%</span>
+                {% elif totales.margen >= 10 %}<span class="badge bg-warning text-dark">{{ totales.margen }}%</span>
+                {% else %}<span class="badge bg-danger">{{ totales.margen }}%</span>{% endif %}
+              </td>
+            </tr>
+          </tfoot>
+          {% endif %}
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

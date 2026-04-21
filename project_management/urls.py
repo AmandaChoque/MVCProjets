@@ -37,6 +37,7 @@ urlpatterns = [
     path('proyectos/analisis/', views.project_analysis, name='project_analysis'),
     path('proyectos/seguimiento/', views.seguimiento_avance, name='seguimiento_avance'),
     path('proyectos/reporte/', views.project_report, name='project_report'),
+    path('proyectos/financiero/', views.analisis_financiero, name='analisis_financiero'),
     path('proyectos/<int:id_project>/', views.project_detail, name='project_detail'),
     path('proyectos/<int:id_project>/ver/', views.project_view, name='project_view'),
     path('proyectos/<int:id_project>/completar/', views.project_complete, name='project_complete'),

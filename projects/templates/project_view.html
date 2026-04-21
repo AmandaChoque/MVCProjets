@@ -661,6 +661,50 @@
         </div>
       </div>
 
+      <!-- Historial de Cambios de Estado -->
+      {% if historial_estado %}
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-header bg-light d-flex align-items-center gap-2">
+          <i class="bi bi-arrow-left-right text-primary"></i>
+          <h6 class="mb-0 fw-semibold">Historial de Cambios de Estado</h6>
+        </div>
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm align-middle small mb-0">
+              <thead class="table-light text-uppercase fw-semibold thead-xs">
+                <tr>
+                  <th class="px-3">Fecha</th>
+                  <th>Estado Anterior</th>
+                  <th>Estado Nuevo</th>
+                  <th>Cambiado por</th>
+                  <th>Motivo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for h in historial_estado %}
+                <tr>
+                  <td class="px-3 text-muted">{{ h.fecha|date:"d/m/Y H:i" }}</td>
+                  <td>
+                    {% if h.estado_anterior == 'pendiente' %}<span class="badge bg-secondary">Pendiente</span>
+                    {% elif h.estado_anterior == 'en_progreso' %}<span class="badge bg-primary">En Progreso</span>
+                    {% else %}<span class="badge bg-success">Completado</span>{% endif %}
+                  </td>
+                  <td>
+                    {% if h.estado_nuevo == 'pendiente' %}<span class="badge bg-secondary">Pendiente</span>
+                    {% elif h.estado_nuevo == 'en_progreso' %}<span class="badge bg-primary">En Progreso</span>
+                    {% else %}<span class="badge bg-success">Completado</span>{% endif %}
+                  </td>
+                  <td class="text-muted">{{ h.cambiado_por.get_full_name|default:h.cambiado_por.username|default:"Sistema" }}</td>
+                  <td class="text-muted">{{ h.motivo|default:"—" }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
       <!-- Historial de Cambios de Monto -->
       {% if historial_monto %}
       <div class="card border-0 shadow-sm rounded-3">

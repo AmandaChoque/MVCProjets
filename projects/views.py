@@ -10,7 +10,7 @@ from django.http import HttpResponse, JsonResponse
 from django.db import IntegrityError
 
 from .form import ProjectForm, ClienteForm, ContratoProyectoForm, SedeForm, FotoSedeForm, TareaChecklistForm, PaymentForm, PlantillaTareaForm, ItemPlantillaForm
-from .models import Proyecto, Cliente, HistorialPresupuesto, Sede, FotoSede, TareaChecklist, SubtareaChecklist, Notificacion, PagoProyecto, PlantillaTarea, ItemPlantilla, SubItemPlantilla, ContratoProyecto
+from .models import Proyecto, Cliente, HistorialPresupuesto, HistorialEstadoProyecto, Sede, FotoSede, TareaChecklist, SubtareaChecklist, Notificacion, PagoProyecto, PlantillaTarea, ItemPlantilla, SubItemPlantilla, ContratoProyecto
 from empleados.models import Empleado, ContratoEmpleado, JornadaEmpleado, PagoEmpleado
 from inventario.models import Insumo, Requiere
 from django.contrib.auth.decorators import login_required
@@ -830,6 +830,9 @@ def project_view(request, id_project):
     # ── Historial de cambios de monto ──────────────────────────────────────────
     historial_monto = HistorialPresupuesto.objects.filter(proyecto=project).order_by('-fecha_modificacion')
 
+    # ── Historial de cambios de estado ─────────────────────────────────────────
+    historial_estado = HistorialEstadoProyecto.objects.filter(proyecto=project).select_related('cambiado_por').order_by('-fecha')
+
     # ── Rentabilidad ───────────────────────────────────────────────────────────
     ingresos = project.monto_total
     rentabilidad = ingresos - total_insumos - costo_personal
@@ -876,6 +879,7 @@ def project_view(request, id_project):
         'margen': margen,
         'margen_clamped': margen_clamped,
         'historial_monto': historial_monto,
+        'historial_estado': historial_estado,
         'pagos_cliente': pagos_cliente,
         'total_pagado_cliente': total_pagado_cliente,
         'saldo_cliente': saldo_cliente,
@@ -910,6 +914,8 @@ def project_complete(request, id_project):
         if not project.contratos.filter(activo=True).exists():
             messages.error(request, 'No se puede completar el proyecto sin un contrato de proyecto activo.')
             return redirect('project_view', id_project=project.id)
+        project._current_user = request.user
+        project._motivo_cambio_estado = 'Proyecto marcado como completado manualmente.'
         project.estado_proyecto = 'completado'
         project.fecha_fin = timezone.now().date()
         project.save(update_fields=['estado_proyecto', 'fecha_fin'])
@@ -2530,4 +2536,92 @@ def seguimiento_avance(request):
         'promedio_avance': promedio_avance,
     }
     return render(request, 'seguimiento.html', context)
-    return JsonResponse({'ok': True})
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN_SEC)
+def analisis_financiero(request):
+    """
+    Vista global de análisis financiero: compara presupuesto vs costo real
+    (insumos + mano de obra) y muestra rentabilidad por proyecto.
+    """
+    from django.db.models import Sum, Prefetch
+    from empleados.models import ContratoEmpleado
+
+    proyectos = (
+        Proyecto.objects
+        .filter(activo=True)
+        .select_related('cliente')
+        .prefetch_related(
+            Prefetch('insumos', queryset=Requiere.objects.filter(activo=True).select_related('insumo')),
+            Prefetch('equipo', queryset=Empleado.objects.filter(is_active=True).prefetch_related(
+                Prefetch('contratos_empleado', queryset=ContratoEmpleado.objects.filter(activo=True), to_attr='_contratos_activos')
+            )),
+        )
+        .order_by('-created')
+    )
+
+    # Batch de jornadas por proyecto
+    jornadas_agg = (
+        JornadaEmpleado.objects
+        .filter(activo=True, estado='aprobada')
+        .values('proyecto_id', 'contrato__empleado_id')
+        .annotate(total_dias=Sum('dias'))
+    )
+    jornadas_map = {}
+    for j in jornadas_agg:
+        jornadas_map.setdefault(j['proyecto_id'], {})[j['contrato__empleado_id']] = j['total_dias']
+
+    # Batch de pagos por proyecto
+    pagos_agg = (
+        PagoProyecto.objects
+        .filter(activo=True)
+        .values('proyecto_id')
+        .annotate(total=Sum('monto'), total_desc=Sum('descuento'))
+    )
+    pagos_map = {p['proyecto_id']: (p['total'] or 0) + (p['total_desc'] or 0) for p in pagos_agg}
+
+    filas = []
+    totales = {'presupuesto': 0, 'costo_insumos': 0, 'costo_personal': 0, 'cobrado': 0}
+
+    for p in proyectos:
+        costo_insumos = sum(r.costo_total for r in p.insumos.all())
+        jornadas_proy = jornadas_map.get(p.pk, {})
+        costo_personal = 0
+        for emp in p.equipo.all():
+            contrato = emp._contratos_activos[0] if emp._contratos_activos else None
+            dias = jornadas_proy.get(emp.pk, 0)
+            if contrato and dias:
+                costo_personal += dias * contrato.monto_diario
+
+        cobrado       = pagos_map.get(p.pk, 0)
+        costo_total   = costo_insumos + costo_personal
+        rentabilidad  = p.monto_total - costo_total
+        margen        = round((rentabilidad / p.monto_total * 100), 1) if p.monto_total else 0
+
+        totales['presupuesto']    += p.monto_total
+        totales['costo_insumos']  += costo_insumos
+        totales['costo_personal'] += costo_personal
+        totales['cobrado']        += cobrado
+
+        filas.append({
+            'proyecto':      p,
+            'costo_insumos': costo_insumos,
+            'costo_personal': costo_personal,
+            'costo_total':   costo_total,
+            'cobrado':       cobrado,
+            'saldo':         p.monto_total - cobrado,
+            'rentabilidad':  rentabilidad,
+            'margen':        margen,
+        })
+
+    totales['costo_total']  = totales['costo_insumos'] + totales['costo_personal']
+    totales['rentabilidad'] = totales['presupuesto'] - totales['costo_total']
+    totales['margen']       = round(
+        (totales['rentabilidad'] / totales['presupuesto'] * 100), 1
+    ) if totales['presupuesto'] else 0
+
+    return render(request, 'analisis_financiero.html', {
+        'filas': filas,
+        'totales': totales,
+    })
