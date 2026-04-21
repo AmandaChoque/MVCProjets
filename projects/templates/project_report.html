@@ -5,9 +5,7 @@
   .text-xs     { font-size: 0.66rem; }
   .text-xxs    { font-size: 0.63rem; }
   .stat-sep    { color: #dee2e6; }
-  .thead-xs    { font-size: 0.67rem; }
   .tfoot-sm    { font-size: 0.72rem; }
-  .table-report td, .table-report th { font-size: 0.75rem; }
   .cod-muted   { font-size: 0.63rem; color: #adb5bd; }
   .periodo-txt { font-size: 0.68rem; color: #6c757d; white-space: nowrap; }
   .saldo-neg   { color: #dc3545; }
@@ -195,13 +193,13 @@
   </div>
 
   <!-- ── TABLA ─────────────────────────────────────────────────── -->
-  <div class="card border-0 shadow-sm">
+  <div class="card border-0 shadow-sm mb-3">
     <div class="card-header bg-light py-2">
       <span class="fw-semibold small">Detalle de Proyectos</span>
     </div>
-    <div class="table-responsive">
-      <table class="table table-sm table-hover align-middle mb-0 table-report">
-        <thead class="table-light text-uppercase fw-semibold thead-xs">
+    <div class="table-responsive" style="overflow:visible;">
+      <table class="table table-sm table-hover align-middle small">
+        <thead class="table-light small text-uppercase fw-semibold">
           <tr>
             <th scope="col" class="px-3">Proyecto</th>
             <th scope="col">Contratante</th>
@@ -297,7 +295,7 @@
           {% endfor %}
         </tbody>
         {% if projects %}
-        <tfoot class="table-light fw-semibold tfoot-sm">
+        <tfoot class="table-light small text-uppercase fw-semibold">
           <tr>
             <td colspan="5" class="text-end px-3">Totales:</td>
             <td class="text-end">Bs. {{ monto_total|floatformat:2 }}</td>

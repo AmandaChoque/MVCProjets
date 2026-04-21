@@ -3,9 +3,7 @@
 <style>
   .label-xs    { font-size: 0.68rem; }
   .text-xs     { font-size: 0.66rem; }
-  .thead-xs    { font-size: 0.67rem; }
   .tfoot-sm    { font-size: 0.72rem; }
-  .table-report td, .table-report th { font-size: 0.75rem; }
   .stat-sep    { color: #dee2e6; }
 </style>
 {% endblock %}
@@ -138,9 +136,9 @@
     <div class="card-header bg-light py-2">
       <span class="fw-semibold small">Detalle de Pagos</span>
     </div>
-    <div class="table-responsive">
-      <table class="table table-sm table-hover align-middle mb-0 table-report">
-        <thead class="table-light text-uppercase fw-semibold thead-xs">
+    <div class="table-responsive" style="overflow:visible;">
+      <table class="table table-sm table-hover align-middle small">
+        <thead class="table-light small text-uppercase fw-semibold">
           <tr>
             <th>Proyecto</th>
             <th>Contratante</th>
@@ -196,7 +194,7 @@
           {% endfor %}
         </tbody>
         {% if payments %}
-        <tfoot class="table-light fw-semibold tfoot-sm">
+        <tfoot class="table-light small text-uppercase fw-semibold">
           <tr>
             <td colspan="5" class="text-end text-muted">Totales:</td>
             <td class="text-end">Bs. {{ total_monto|floatformat:2 }}</td>

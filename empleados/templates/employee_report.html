@@ -3,8 +3,6 @@
 <style>
   .label-xs    { font-size: 0.68rem; }
   .text-xs     { font-size: 0.66rem; }
-  .thead-xs    { font-size: 0.67rem; }
-  .table-report td, .table-report th { font-size: 0.75rem; }
   .stat-sep    { color: #dee2e6; }
 </style>
 {% endblock %}
@@ -118,13 +116,13 @@
   </div>
 
   <!-- ── TABLA ─────────────────────────────────────────────────── -->
-  <div class="card border-0 shadow-sm">
+  <div class="card border-0 shadow-sm mb-3">
     <div class="card-header bg-light py-2">
       <span class="fw-semibold small">Detalle de Empleados</span>
     </div>
-    <div class="table-responsive">
-      <table class="table table-sm table-hover align-middle mb-0 table-report">
-        <thead class="table-light text-uppercase fw-semibold thead-xs">
+    <div class="table-responsive" style="overflow:visible;">
+      <table class="table table-sm table-hover align-middle small">
+        <thead class="table-light small text-uppercase fw-semibold">
           <tr>
             <th>Nombre Completo</th>
             <th>CI</th>

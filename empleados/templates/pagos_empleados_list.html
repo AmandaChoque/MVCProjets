@@ -2,8 +2,6 @@
 {% block extra_css %}
 <style>
   .label-xs  { font-size: 0.68rem; }
-  .thead-xs  { font-size: 0.67rem; }
-  .table-report td, .table-report th { font-size: 0.75rem; }
 </style>
 {% endblock %}
 
@@ -124,8 +122,8 @@
     </div>
     <div class="card-body p-0">
       <div class="table-responsive" style="overflow: visible;">
-    <table class="table table-sm table-hover align-middle mb-0 table-report">
-      <thead class="table-light text-uppercase fw-semibold thead-xs">
+    <table class="table table-sm table-hover align-middle small">
+      <thead class="table-light small text-uppercase fw-semibold">
         <tr>
           <th>Empleado</th>
           <th>Concepto</th>
@@ -170,7 +168,7 @@
         {% endfor %}
       </tbody>
       {% if pagos %}
-      <tfoot class="table-light">
+      <tfoot class="table-light small text-uppercase fw-semibold">
         <tr>
           <td colspan="4" class="text-end fw-semibold">Total (Bs.):</td>
           <td class="text-end fw-bold">{{ total_monto|floatformat:2 }}</td>

@@ -1,8 +1,6 @@
 {% extends 'base.html' %}
 {% block extra_css %}
 <style>
-  .thead-xs  { font-size: 0.67rem; }
-  .table-report td, .table-report th { font-size: 0.75rem; }
   .nav-tabs .nav-link { font-size: 0.85rem; color: #6c757d; border: none; border-bottom: 2px solid transparent; border-radius: 0; }
   .nav-tabs .nav-link:hover { color: #264653; background: transparent; }
   .nav-tabs .nav-link.active { font-weight: 600; color: #0d6efd; border-bottom: 2px solid #0d6efd; background: transparent; }
@@ -96,9 +94,9 @@
               </a>
             </div>
           </div>
-          <div class="table-responsive">
-            <table class="table table-sm table-hover align-middle mb-0 table-report">
-              <thead class="table-light text-uppercase fw-semibold thead-xs">
+          <div class="table-responsive" style="overflow:visible;">
+            <table class="table table-sm table-hover align-middle small">
+              <thead class="table-light small text-uppercase fw-semibold">
                 <tr>
                   <th>Fecha</th>
                   <th>Proyecto</th>
@@ -172,9 +170,9 @@
               </a>
             </div>
           </div>
-          <div class="table-responsive">
-            <table class="table table-sm table-hover align-middle mb-0 table-report">
-              <thead class="table-light text-uppercase fw-semibold thead-xs">
+          <div class="table-responsive" style="overflow:visible;">
+            <table class="table table-sm table-hover align-middle small">
+              <thead class="table-light small text-uppercase fw-semibold">
                 <tr>
                   <th>Fecha</th>
                   <th>Proyecto</th>
