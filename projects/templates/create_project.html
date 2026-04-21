@@ -18,7 +18,7 @@
 {% endblock %}
 
 {% block content %}
-<main class="container-fluid px-5 py-4">
+<main class="container-fluid px-4 py-4">
   <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb mb-0">
       <li class="breadcrumb-item"><a href="{% url 'projects' %}">Proyectos</a></li>
@@ -61,27 +61,11 @@
               <label class="form-label" for="{{ form.descripcion.id_for_label }}">Descripción</label>
               {{ form.descripcion }}
             </div>
-            <div class="mb-3">
-              <label class="form-label" for="{{ form.observacion.id_for_label }}">Observación</label>
-              {{ form.observacion }}
-            </div>
           </div>
           <div class="col-lg-6">
             <div class="mb-3">
-              <label class="form-label" for="{{ form.estado_proyecto.id_for_label }}">Estado <span class="text-danger">*</span></label>
-              {{ form.estado_proyecto }}
-            </div>
-            <div class="mb-3">
               <label class="form-label" for="{{ form.tipo_proyecto.id_for_label }}">Tipo de proyecto <span class="text-danger">*</span></label>
               {{ form.tipo_proyecto }}
-            </div>
-            <div class="mb-3" id="div_proyecto_origen" style="display:none;">
-              <label class="form-label" for="id_proyecto_origen">Proyecto de Instalación Original <span class="text-danger">*</span></label>
-              {{ form.proyecto_origen }}
-              {% if form.proyecto_origen.errors %}
-              <div class="text-danger small mt-1">{% for err in form.proyecto_origen.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
-              <div class="form-text text-muted">Seleccione el proyecto de instalación nueva al que corresponde esta garantía.</div>
             </div>
             <div class="mb-3">
               <label class="form-label" for="{{ form.cliente.id_for_label }}">Cliente / Contratante <span class="text-danger">*</span></label>
@@ -89,6 +73,10 @@
               {% if form.cliente.errors %}
               <div class="text-danger small mt-1">{% for err in form.cliente.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
+            </div>
+            <div class="mb-3">
+              <label class="form-label" for="{{ form.observacion.id_for_label }}">Observación</label>
+              {{ form.observacion }}
             </div>
             <!-- <div class="mb-3">
               <label class="form-label" for="{{ form.monto_total.id_for_label }}">Monto Estimado (Bs.)</label>
@@ -98,17 +86,6 @@
               {% endif %}
               <div class="form-text text-muted">El monto del proyecto se tomará automáticamente del contrato.</div>
             </div> -->
-            <div class="mb-3">
-              <label class="form-label" for="{{ form.ritmo_semanal.id_for_label }}">
-                Ritmo esperado
-                <span class="text-muted fw-normal">(instalaciones/semana)</span>
-              </label>
-              {{ form.ritmo_semanal }}
-              {% if form.ritmo_semanal.errors %}
-              <div class="text-danger small mt-1">{% for err in form.ritmo_semanal.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
-              <div class="form-text text-muted">Promedio de unidades que el equipo completa por semana. Ej: 4 cámaras/semana.</div>
-            </div>
           </div>
         </div>
       </div>
@@ -159,6 +136,11 @@
               {% endif %}
             </div>
             <div class="mb-3">
+              <label class="form-label" for="{{ contrato_form.garantia_meses.id_for_label }}">Meses de Garantía</label>
+              {{ contrato_form.garantia_meses }}
+              <div class="form-text text-muted">Ingrese 0 si el contrato no incluye garantía.</div>
+            </div>
+            <div class="mb-3">
               <label class="form-label" for="{{ contrato_form.documento.id_for_label }}">Documento <span class="text-muted small">(PDF o imagen)</span></label>
               {{ contrato_form.documento }}
               <div class="form-text text-muted">Formatos: PDF, JPG, PNG, GIF, WEBP</div>
@@ -194,19 +176,22 @@
 
 {% block extra_js %}
 <script>
-  (function () {
-    var tipoSelect  = document.getElementById('id_tipo_proyecto');
-    var origenDiv   = document.getElementById('div_proyecto_origen');
-    var origenSelect = document.getElementById('id_proyecto_origen');
-    function toggleOrigen() {
-      var esGarantia = tipoSelect.value === 'mantenimiento_garantia';
-      origenDiv.style.display = esGarantia ? '' : 'none';
-      origenSelect.required = esGarantia;
-    }
-    tipoSelect.addEventListener('change', toggleOrigen);
-    toggleOrigen();
-  })();
+(function () {
+  'use strict';
 
+  var fechaInicio = document.getElementById('{{ contrato_form.fecha_inicio.id_for_label }}');
+  var fechaFin    = document.getElementById('{{ contrato_form.fecha_fin.id_for_label }}');
+
+  /* Sugiere fecha_fin = fecha_inicio + 1 año para mantenimiento externo */
+  fechaInicio.addEventListener('change', function () {
+    if (document.getElementById('id_tipo_proyecto').value !== 'mantenimiento_externo') return;
+    if (fechaFin.value) return;
+    var d = new Date(fechaInicio.value);
+    d.setFullYear(d.getFullYear() + 1);
+    fechaFin.value = d.toISOString().slice(0, 10);
+  });
+
+  /* Marca campos inválidos con clase Bootstrap */
   document.querySelectorAll('.text-danger.small.mt-1').forEach(function (errorDiv) {
     var prev = errorDiv.previousElementSibling;
     if (prev && (prev.tagName === 'INPUT' || prev.tagName === 'SELECT' || prev.tagName === 'TEXTAREA')) {
@@ -214,16 +199,15 @@
     }
   });
 
-  (function () {
-    'use strict';
-    window.addEventListener('load', function () {
-      Array.prototype.filter.call(document.getElementsByClassName('needs-validation'), function (form) {
-        form.addEventListener('submit', function (event) {
-          if (!form.checkValidity()) { event.preventDefault(); event.stopPropagation(); }
-          form.classList.add('was-validated');
-        }, false);
-      });
-    }, false);
-  })();
+  /* Validación Bootstrap */
+  window.addEventListener('load', function () {
+    Array.prototype.filter.call(document.getElementsByClassName('needs-validation'), function (form) {
+      form.addEventListener('submit', function (event) {
+        if (!form.checkValidity()) { event.preventDefault(); event.stopPropagation(); }
+        form.classList.add('was-validated');
+      }, false);
+    });
+  });
+})();
 </script>
 {% endblock %}

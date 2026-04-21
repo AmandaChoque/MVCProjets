@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
-<main class="container-fluid px-5 py-4">
+<main class="container-fluid px-4 py-4">
   <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb mb-0">
       {% if from_dashboard %}
@@ -44,6 +44,20 @@
             <div class="mb-3">
               <label class="form-label">Observación</label>
               {{ form.observacion }}
+            </div>
+
+            <!-- Compañeros que también trabajaron este día -->
+            <div class="mb-3" id="companeros-section" style="display:none;">
+              <label class="form-label fw-semibold">
+                <i class="bi bi-people me-1 text-primary"></i>¿Quién más trabajó este día?
+                <span class="text-muted fw-normal small">(opcional)</span>
+              </label>
+              <div id="companeros-lista" class="border rounded p-3 bg-light" style="max-height:200px;overflow-y:auto;">
+                <span class="text-muted small">Selecciona un proyecto primero.</span>
+              </div>
+              {% if form.companeros.errors %}
+                <div class="text-danger small mt-1">{{ form.companeros.errors }}</div>
+              {% endif %}
             </div>
 
             <div class="d-flex justify-content-between mt-4">
@@ -153,4 +167,54 @@
 
   </div>
 </main>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+  const DATA = {{ companeros_por_proyecto_json|safe }};
+  const proyectoSelect = document.getElementById('id_proyecto');
+  const section        = document.getElementById('companeros-section');
+  const lista          = document.getElementById('companeros-lista');
+
+  function renderCompaneros(proyectoId) {
+    const empleados = DATA[proyectoId] || [];
+    if (!proyectoId || empleados.length === 0) {
+      section.style.display = 'none';
+      lista.innerHTML = '<span class="text-muted small">Sin compañeros asignados a este proyecto.</span>';
+      return;
+    }
+    section.style.display = 'block';
+    lista.innerHTML = empleados.map(e => `
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox"
+               name="companeros" value="${e.id}" id="comp_${e.id}">
+        <label class="form-check-label small" for="comp_${e.id}">
+          ${e.nombre}
+          <span class="text-muted">(${e.cargo})</span>
+        </label>
+      </div>
+    `).join('');
+  }
+
+  // Restaurar selección previa tras error de formulario
+  const prevSelected = [{% for c in form.companeros.value %}"{{ c }}"{% if not forloop.last %},{% endif %}{% endfor %}];
+  function restoreChecked() {
+    prevSelected.forEach(id => {
+      const el = document.getElementById('comp_' + id);
+      if (el) el.checked = true;
+    });
+  }
+
+  if (proyectoSelect) {
+    proyectoSelect.addEventListener('change', function () {
+      renderCompaneros(this.value);
+    });
+    // Al cargar la página, si ya hay un proyecto seleccionado
+    if (proyectoSelect.value) {
+      renderCompaneros(proyectoSelect.value);
+      restoreChecked();
+    }
+  }
+})();
+</script>
 {% endblock %}

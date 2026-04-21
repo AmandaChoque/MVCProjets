@@ -1,17 +1,48 @@
 {% extends 'base.html' %}
 {% block content %}
 
-<div class="container-fluid py-3">
+<div class="container-fluid px-4 py-4">
 
-  <div class="mb-3 d-flex justify-content-between align-items-center">
-    <h5 class="fw-semibold text-secondary mb-0">Análisis de Proyectos</h5>
+  <!-- ── ENCABEZADO ────────────────────────────────────────────────────────── -->
+  <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <h4 class="fw-bold text-sobotec mb-0">
+      Análisis de Proyectos
+      {% if periodo_label %}
+        <span class="badge bg-primary ms-2 fw-normal" style="font-size:0.72rem;text-transform:none;">{{ periodo_label }}</span>
+      {% endif %}
+    </h4>
+
+    <!-- Filtro de período -->
+    <form method="get" class="d-flex align-items-center gap-2 flex-wrap" id="filtroForm">
+      <i class="bi bi-funnel text-secondary"></i>
+      <select name="anio" id="selectAnio" class="form-select form-select-sm" style="width:auto;"
+              onchange="onAnioChange(this)">
+        <option value="">Todo el tiempo</option>
+        {% for yr in anios_disponibles %}
+        <option value="{{ yr }}" {% if filtro_anio == yr %}selected{% endif %}>{{ yr }}</option>
+        {% endfor %}
+      </select>
+      <select name="mes" id="selectMes" class="form-select form-select-sm" style="width:auto;"
+              onchange="document.getElementById('filtroForm').submit()"
+              {% if not filtro_anio %}disabled{% endif %}>
+        <option value="">Todos los meses</option>
+        {% for m in meses_lista %}
+        <option value="{{ m.num }}" {% if filtro_mes == m.num %}selected{% endif %}>{{ m.nombre }}</option>
+        {% endfor %}
+      </select>
+      {% if filtro_anio %}
+      <a href="{% url 'project_analysis' %}" class="btn btn-sm btn-outline-secondary" title="Limpiar filtro">
+        <i class="bi bi-x-lg"></i>
+      </a>
+      {% endif %}
+    </form>
   </div>
 
   {% if message %}
   <div class="alert alert-info small" role="alert">{{ message }}</div>
   {% else %}
 
-  <!-- ── KPIs ────────────────────────────────────────────────────────────── -->
+  <!-- ── KPI RESUMEN ──────────────────────────────────────────── -->
   <div class="row g-3 mb-4">
     <div class="col-6 col-md">
       <div class="card kpi-card blue border-0 shadow-sm h-100">
@@ -48,12 +79,16 @@
     <div class="col-6 col-md">
       <div class="card kpi-card teal border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-success">{{ pagado_count }}</div>
+          <div class="kpi-value" style="color:#20c997;">{{ pagado_count }}</div>
           <div class="kpi-label">Pagados</div>
         </div>
       </div>
     </div>
   </div>
+
+  {% if total == 0 %}
+  <div class="alert alert-info small">No hay proyectos para el período seleccionado.</div>
+  {% else %}
 
   <!-- ── FILA 1: Tipo + Mes ──────────────────────────────────────────────── -->
   <div class="row g-3 mb-4">
@@ -123,33 +158,24 @@
         <div class="card-body p-0">
           <table class="table table-sm table-hover align-middle small mb-0">
             <thead class="table-light text-uppercase fw-semibold" style="font-size:0.7rem;">
-              <tr><th>Tipo</th><th class="text-center">Cant.</th><th class="text-center">%</th></tr>
+              <tr><th>Tipo</th><th class="text-center">Cant.</th></tr>
             </thead>
             <tbody>
               <tr>
                 <td><span class="badge" style="background:#264653;">Instalación Nueva</span></td>
                 <td class="text-center fw-semibold">{{ instalacion_count }}</td>
-                <td class="text-center text-muted">{% if total %}{{ instalacion_count|floatformat:0 }}{% endif %}</td>
               </tr>
               <tr>
                 <td><span class="badge" style="background:#2a9d8f;">Ampliación</span></td>
                 <td class="text-center fw-semibold">{{ ampliacion_count }}</td>
-                <td class="text-center text-muted"></td>
-              </tr>
-              <tr>
-                <td><span class="badge" style="background:#e9c46a;color:#333;">Mant. Garantía</span></td>
-                <td class="text-center fw-semibold">{{ mantenimiento_garantia_count }}</td>
-                <td class="text-center text-muted"></td>
               </tr>
               <tr>
                 <td><span class="badge" style="background:#f4a261;color:#333;">Mant. Externo</span></td>
                 <td class="text-center fw-semibold">{{ mantenimiento_externo_count }}</td>
-                <td class="text-center text-muted"></td>
               </tr>
               <tr>
                 <td><span class="badge" style="background:#e76f51;">Emergencia</span></td>
                 <td class="text-center fw-semibold">{{ emergencia_count }}</td>
-                <td class="text-center text-muted"></td>
               </tr>
             </tbody>
           </table>
@@ -216,13 +242,23 @@
     </div>
   </div>
 
-  {% endif %}
+  {% endif %}{# total == 0 #}
+  {% endif %}{# message #}
 </div>
 
-{% endblock %}
-
-{% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  function onAnioChange(sel) {
+    const mesSelect = document.getElementById('selectMes');
+    if (sel.value) {
+      mesSelect.disabled = false;
+    } else {
+      mesSelect.disabled = true;
+      mesSelect.value = '';
+    }
+    document.getElementById('filtroForm').submit();
+  }
+</script>
 <script>
   const chartDefaults = {
     plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 14, boxWidth: 14 } } },
@@ -230,22 +266,19 @@
     maintainAspectRatio: true,
   };
 
-  // ── Gráfico 1: Tipo de Proyecto (Donut) ──
   new Chart(document.getElementById('chartTipo'), {
     type: 'doughnut',
     data: {
-      labels: ['Instalación Nueva', 'Ampliación', 'Mant. Garantía', 'Mant. Externo', 'Emergencia'],
+      labels: ['Instalación Nueva', 'Ampliación', 'Mant. Externo', 'Emergencia'],
       datasets: [{
-        data: [{{ instalacion_count }}, {{ ampliacion_count }}, {{ mantenimiento_garantia_count }}, {{ mantenimiento_externo_count }}, {{ emergencia_count }}],
-        backgroundColor: ['#264653', '#2a9d8f', '#e9c46a', '#f4a261', '#e76f51'],
-        borderWidth: 2,
-        borderColor: '#fff',
+        data: [{{ instalacion_count }}, {{ ampliacion_count }}, {{ mantenimiento_externo_count }}, {{ emergencia_count }}],
+        backgroundColor: ['#264653', '#2a9d8f', '#f4a261', '#e76f51'],
+        borderWidth: 2, borderColor: '#fff',
       }]
     },
     options: { ...chartDefaults }
   });
 
-  // ── Gráfico 2: Proyectos por Mes (Barras) ──
   new Chart(document.getElementById('chartMensual'), {
     type: 'bar',
     data: {
@@ -254,14 +287,11 @@
         label: 'Proyectos creados',
         data: {{ monthly_values|safe }},
         backgroundColor: 'rgba(27, 77, 144, 0.75)',
-        borderColor: '#1B4D90',
-        borderWidth: 1,
-        borderRadius: 4,
+        borderColor: '#1B4D90', borderWidth: 1, borderRadius: 4,
       }]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
+      responsive: true, maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
         y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } } },
@@ -270,7 +300,6 @@
     }
   });
 
-  // ── Gráfico 3: Estado del Proyecto (Donut) ──
   new Chart(document.getElementById('chartEstado'), {
     type: 'doughnut',
     data: {
@@ -278,14 +307,12 @@
       datasets: [{
         data: [{{ pendiente_count }}, {{ en_progreso_count }}, {{ completado_count }}],
         backgroundColor: ['#ffc107', '#0dcaf0', '#198754'],
-        borderWidth: 2,
-        borderColor: '#fff',
+        borderWidth: 2, borderColor: '#fff',
       }]
     },
     options: { ...chartDefaults }
   });
 
-  // ── Gráfico 4: Estado de Pago (Barras horizontales) ──
   new Chart(document.getElementById('chartPago'), {
     type: 'bar',
     data: {
@@ -294,14 +321,11 @@
         label: 'Proyectos',
         data: [{{ no_pagado_count }}, {{ parcial_count }}, {{ pagado_count }}],
         backgroundColor: ['#dc3545', '#0dcaf0', '#198754'],
-        borderRadius: 5,
-        borderWidth: 0,
+        borderRadius: 5, borderWidth: 0,
       }]
     },
     options: {
-      indexAxis: 'y',
-      responsive: true,
-      maintainAspectRatio: true,
+      indexAxis: 'y', responsive: true, maintainAspectRatio: true,
       plugins: { legend: { display: false } },
       scales: {
         x: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 11 } } },
@@ -310,4 +334,6 @@
     }
   });
 </script>
+
 {% endblock %}
+

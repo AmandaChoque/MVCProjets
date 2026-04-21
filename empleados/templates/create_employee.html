@@ -18,7 +18,7 @@
 {% endblock %}
 
 {% block content %}
-<main class="container-fluid px-5 py-4">
+<main class="container-fluid px-4 py-4">
   <!-- BREADCRUMB -->
   <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb mb-0">
@@ -70,19 +70,6 @@
             </div>
 
             <div class="mb-3">
-              <label class="form-label">Número de Celular <span class="text-danger">*</span></label>
-              {{ form.numero_celular }}
-              {% if form.numero_celular.errors %}
-              <div class="text-danger small mt-1">
-                {% for err in form.numero_celular.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
-              </div>
-              {% endif %}
-              <div class="invalid-feedback">
-                El celular debe contener solo números y al menos 8 dígitos.
-              </div>
-            </div>
-
-            <div class="mb-3">
               <label class="form-label">Correo Electrónico</label>
               {{ form.correo }}
               {% if form.correo.errors %}
@@ -115,6 +102,19 @@
               {% endif %}
               <div class="invalid-feedback">
                 El carnet debe contener solo números y al menos 7 dígitos.
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Número de Celular <span class="text-danger">*</span></label>
+              {{ form.numero_celular }}
+              {% if form.numero_celular.errors %}
+              <div class="text-danger small mt-1">
+                {% for err in form.numero_celular.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+              </div>
+              {% endif %}
+              <div class="invalid-feedback">
+                El celular debe contener solo números y al menos 8 dígitos.
               </div>
             </div>
           </div>

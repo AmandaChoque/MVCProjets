@@ -17,7 +17,7 @@
 {% endblock %}
 
 {% block content %}
-<main class="container-fluid px-5 py-4">
+<main class="container-fluid px-4 py-4">
   <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb mb-0">
       <li class="breadcrumb-item"><a href="{% url 'proveedores' %}">Proveedores</a></li>
@@ -87,11 +87,6 @@
             <label class="form-label">Celular del Encargado</label>
             {{ form.encargado_celular }}
             {% if form.encargado_celular.errors %}<div class="text-danger small mt-1">{% for err in form.encargado_celular.errors %}{{ err }}{% endfor %}</div>{% endif %}
-          </div>
-          <div class="col-lg-6">
-            <label class="form-label">Correo del Encargado</label>
-            {{ form.encargado_correo }}
-            {% if form.encargado_correo.errors %}<div class="text-danger small mt-1">{% for err in form.encargado_correo.errors %}{{ err }}{% endfor %}</div>{% endif %}
           </div>
         </div>
 

@@ -3,7 +3,6 @@ from django.db.models import Q, Sum
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
-from django.core.exceptions import ValidationError
 from decimal import Decimal
 
 from projects.models import AuditModel, Proyecto
@@ -33,7 +32,6 @@ class Proveedor(AuditModel):
     encargado_nombre  = models.CharField(max_length=150, blank=True, default='', verbose_name="Nombre del Encargado")
     encargado_cargo   = models.CharField(max_length=100, blank=True, default='', verbose_name="Cargo del Encargado")
     encargado_celular = models.CharField(max_length=15,  blank=True, default='', verbose_name="Celular del Encargado")
-    encargado_correo  = models.EmailField(blank=True,    default='', verbose_name="Correo del Encargado")
 
     class Meta:
         verbose_name = 'Proveedor'
@@ -140,12 +138,6 @@ class Requiere(AuditModel):
     proyecto       = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='insumos', verbose_name="Proyecto")
     insumo         = models.ForeignKey(Insumo, on_delete=models.SET_NULL, null=True, related_name='proyectos', verbose_name="Insumo")
     cantidad       = models.PositiveIntegerField(verbose_name="Cantidad")
-    # Sede de instalación: permite asignar insumos a un punto específico del proyecto.
-    # null = insumo general del proyecto (sin sede asignada).
-    sede           = models.ForeignKey(
-        'projects.Sede', on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='insumos', verbose_name="Sede de instalación"
-    )
 
     class Meta:
         verbose_name = 'Insumo del Proyecto'
@@ -153,31 +145,12 @@ class Requiere(AuditModel):
         ordering = ['-created']
         db_table = 'inventario_requiere'
         constraints = [
-            # Un mismo insumo solo puede asignarse una vez al mismo proyecto+sede activo.
-            # sede=null representa insumos generales (sin sede específica).
             models.UniqueConstraint(
                 fields=['proyecto', 'insumo'],
-                condition=Q(activo=True, sede__isnull=True),
-                name='unique_requiere_proyecto_insumo_sin_sede',
-            ),
-            models.UniqueConstraint(
-                fields=['proyecto', 'insumo', 'sede'],
-                condition=Q(activo=True, sede__isnull=False),
-                name='unique_requiere_proyecto_insumo_sede',
+                condition=Q(activo=True),
+                name='unique_requiere_proyecto_insumo_activo',
             ),
         ]
-
-    def clean(self):
-        # Fix 2: sede must belong to the same project
-        if self.sede_id and self.proyecto_id:
-            if self.sede.proyecto_id != self.proyecto_id:
-                raise ValidationError({'sede': 'La sede seleccionada no pertenece al proyecto asignado.'})
-        # Fix 5: stock must be sufficient (mirrors calcular_costo_fifo validation)
-        if self.insumo_id and self.cantidad:
-            try:
-                calcular_costo_fifo(self.insumo, self.cantidad, excluir_requiere_pk=self.pk if self.pk else None)
-            except ValueError as e:
-                raise ValidationError({'cantidad': str(e)})
 
     def __str__(self):
         insumo = self.insumo.nombre if self.insumo else 'Insumo eliminado'
@@ -185,7 +158,8 @@ class Requiere(AuditModel):
 
     @property
     def costo_total(self):
-        return sum(lote.cantidad * lote.costo_unitario for lote in self.lotes.all())
+        # Usa .all() para aprovechar el prefetch_related('lotes__compra') cuando esté disponible
+        return sum(lote.cantidad * lote.compra.costo_unitario for lote in self.lotes.all())
 
 
 class Compra(AuditModel):
@@ -194,15 +168,13 @@ class Compra(AuditModel):
     insumo         = models.ForeignKey(Insumo, on_delete=models.SET_NULL, null=True, related_name='compras', verbose_name="Insumo")
     cantidad       = models.PositiveIntegerField(verbose_name="Cantidad")
     costo_unitario = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Costo Unitario (Bs.)")
-    costo_total    = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Costo Total (Bs.)")
     fecha            = models.DateField(verbose_name="Fecha de Compra")
     numero_factura   = models.CharField(max_length=100, blank=True, default='', verbose_name="N° Factura / Comprobante")
 
-    def save(self, *args, **kwargs):
-        # Desnormalización controlada: costo_total se deriva de cantidad × costo_unitario.
-        # Se recalcula aquí para que la BD nunca tenga valores inconsistentes.
-        self.costo_total = self.cantidad * self.costo_unitario
-        super().save(*args, **kwargs)
+    @property
+    def costo_total(self):
+        """Calculado: cantidad × costo_unitario. No se almacena en BD (3FN)."""
+        return self.cantidad * self.costo_unitario
 
     class Meta:
         verbose_name = 'Compra'
@@ -218,24 +190,42 @@ class Compra(AuditModel):
 
 # ── Trazabilidad FIFO: registra qué unidades de qué lote de compra consume cada Requiere ──
 
-class RequiereLote(models.Model):
+class ActiveRequiereLoteManager(models.Manager):
+    """Devuelve solo lotes activos. Usado como manager por defecto para respetar soft-delete."""
+    def get_queryset(self):
+        return super().get_queryset().filter(activo=True)
+
+
+class RequiereLote(AuditModel):
     """
     Relaciona un Requiere con las Compras (lotes) específicas que consume, en orden FIFO.
     Permite saber exactamente a qué precio real se adquirió cada unidad asignada a un proyecto.
+    Al editar un Requiere, los lotes anteriores se desactivan (activo=False) y se crean nuevos,
+    preservando el historial de asignaciones.
     """
+    objects     = ActiveRequiereLoteManager()  # por defecto: solo activos
+    all_objects = models.Manager()             # acceso completo para admin / auditoría
+
     requiere       = models.ForeignKey(Requiere, on_delete=models.CASCADE, related_name='lotes', verbose_name="Requiere")
     compra         = models.ForeignKey(Compra, on_delete=models.CASCADE, related_name='lotes_asignados', verbose_name="Lote de compra")
     cantidad       = models.PositiveIntegerField(verbose_name="Cantidad consumida")
-    costo_unitario = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Costo unitario del lote")
 
     class Meta:
         db_table = 'inventario_requiere_lote'
         verbose_name = 'Lote FIFO'
         verbose_name_plural = 'Lotes FIFO'
+        default_manager_name = 'objects'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['requiere', 'compra'],
+                condition=Q(activo=True),
+                name='unique_requirelote_requiere_compra_activo',
+            ),
+        ]
 
     @property
     def subtotal(self):
-        return self.cantidad * self.costo_unitario
+        return self.cantidad * self.compra.costo_unitario
 
     def __str__(self):
         return f"{self.cantidad} u. de lote {self.compra_id} → {self.requiere_id}"
@@ -254,11 +244,23 @@ def calcular_costo_fifo(insumo, cantidad, excluir_requiere_pk=None):
         lotes_consumo — lista de {'compra': <Compra>, 'cantidad': int}
 
     Lanza ValueError si el stock disponible es insuficiente.
+    Usa 2 queries en lugar de 1 por lote de compra.
     """
     lotes_qs = Compra.objects.filter(
         insumo=insumo,
         activo=True,
     ).order_by('fecha', 'created')
+
+    # 1 query: total consumido por compra para este insumo
+    consumed_qs = RequiereLote.objects.filter(
+        compra__insumo=insumo,
+        requiere__activo=True,
+    )
+    if excluir_requiere_pk:
+        consumed_qs = consumed_qs.exclude(requiere_id=excluir_requiere_pk)
+    consumed_by_compra = dict(
+        consumed_qs.values('compra_id').annotate(t=Sum('cantidad')).values_list('compra_id', 't')
+    )
 
     consumo = []
     restante = cantidad
@@ -266,13 +268,7 @@ def calcular_costo_fifo(insumo, cantidad, excluir_requiere_pk=None):
     for lote in lotes_qs:
         if restante <= 0:
             break
-        consumido_qs = RequiereLote.objects.filter(
-            compra=lote,
-            requiere__activo=True,
-        )
-        if excluir_requiere_pk:
-            consumido_qs = consumido_qs.exclude(requiere_id=excluir_requiere_pk)
-        consumido = consumido_qs.aggregate(t=Sum('cantidad'))['t'] or 0
+        consumido = consumed_by_compra.get(lote.id, 0)
         disponible = max(0, lote.cantidad - consumido)
 
         if disponible <= 0:

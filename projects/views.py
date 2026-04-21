@@ -9,9 +9,9 @@ from django.utils.http import url_has_allowed_host_and_scheme
 from django.http import HttpResponse, JsonResponse
 from django.db import IntegrityError
 
-from .form import ProjectForm, ClienteForm, ProgresoForm, ContratoProyectoForm, SedeForm, FotoSedeForm, TareaChecklistForm, PaymentForm, PlantillaTareaForm, ItemPlantillaForm, GrupoTareaForm
-from .models import Proyecto, Cliente, Progreso, HistorialPresupuesto, Sede, FotoSede, TareaChecklist, Notificacion, Pago, PlantillaTarea, ItemPlantilla, GrupoTarea
-from empleados.models import Empleado, ContratoEmpleado, ContratoProyecto, JornadaEmpleado, PagoEmpleado
+from .form import ProjectForm, ClienteForm, ContratoProyectoForm, SedeForm, FotoSedeForm, TareaChecklistForm, PaymentForm, PlantillaTareaForm, ItemPlantillaForm
+from .models import Proyecto, Cliente, HistorialPresupuesto, Sede, FotoSede, TareaChecklist, SubtareaChecklist, Notificacion, PagoProyecto, PlantillaTarea, ItemPlantilla, SubItemPlantilla, ContratoProyecto
+from empleados.models import Empleado, ContratoEmpleado, JornadaEmpleado, PagoEmpleado
 from inventario.models import Insumo, Requiere
 from django.contrib.auth.decorators import login_required
 from .decorators import cargo_required, ROLES_ADMIN, ROLES_ADMIN_SEC, ROLES_CAMPO
@@ -22,6 +22,23 @@ from xhtml2pdf import pisa
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
+plt.rcParams.update({
+    'font.family':       'DejaVu Sans',
+    'font.size':         6,
+    'axes.titlesize':    8,
+    'axes.titleweight':  'bold',
+    'axes.labelsize':    6,
+    'figure.facecolor':  'white',
+    'axes.facecolor':    'white',
+    'axes.edgecolor':    '#dee2e6',
+    'axes.linewidth':    0.8,
+    'xtick.color':       '#495057',
+    'ytick.color':       '#495057',
+    'text.color':        '#212529',
+    'grid.color':        '#e9ecef',
+    'grid.linewidth':    0.8,
+})
 import io
 import urllib, base64
 from django.db.models import Q, Count, Sum, OuterRef, Subquery, F, Max as db_Max, Prefetch
@@ -144,32 +161,90 @@ def extend_session(request):
 @login_required
 @cargo_required(*ROLES_ADMIN_SEC)
 def reporte_analisis_view(request):
-    total_completados = Proyecto.objects.filter(estado_proyecto='completado').count()
-    total_en_progreso = Proyecto.objects.filter(estado_proyecto='en_progreso').count()
-    total_pendientes = Proyecto.objects.filter(estado_proyecto='pendiente').count()
-    labels = ['Completado', 'En Progreso', 'Pendiente']
-    sizes = [total_completados, total_en_progreso, total_pendientes]
-    colors = ['#4CAF50', '#FFEB3B', '#F44336']
-    explode = (0.1, 0, 0)
+    MESES_NOMBRES = [
+        '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+    ]
 
-    plt.figure(figsize=(4, 4))
-    plt.pie(sizes, labels=labels, autopct='%1.1f%%', startangle=140, colors=colors, explode=explode)
-    plt.axis('equal')
+    # ── Filtros de período ─────────────────────────────────────────────────────
+    try:
+        filtro_anio = int(request.GET.get('anio', '')) or None
+    except ValueError:
+        filtro_anio = None
+    try:
+        _mes = int(request.GET.get('mes', ''))
+        filtro_mes = _mes if filtro_anio and 1 <= _mes <= 12 else None
+    except ValueError:
+        filtro_mes = None
+
+    anios_disponibles = sorted(set(
+        Proyecto.objects.filter(activo=True).values_list('created__year', flat=True)
+    ), reverse=True)
+    meses_lista = [{'num': i, 'nombre': MESES_NOMBRES[i]} for i in range(1, 13)]
+
+    if filtro_anio and filtro_mes:
+        periodo_label = f'{MESES_NOMBRES[filtro_mes]} {filtro_anio}'
+    elif filtro_anio:
+        periodo_label = str(filtro_anio)
+    else:
+        periodo_label = None
+
+    # ── Queryset filtrado ──────────────────────────────────────────────────────
+    qs = Proyecto.objects.filter(activo=True)
+    if filtro_anio:
+        qs = qs.filter(created__year=filtro_anio)
+        if filtro_mes:
+            qs = qs.filter(created__month=filtro_mes)
+
+    total_completados = qs.filter(estado_proyecto='completado').count()
+    total_en_progreso = qs.filter(estado_proyecto='en_progreso').count()
+    total_pendientes  = qs.filter(estado_proyecto='pendiente').count()
+    total_proyectos   = total_completados + total_en_progreso + total_pendientes
+
+    # ── Gráfico matplotlib ────────────────────────────────────────────────────
+    labels  = ['Completado', 'En Progreso', 'Pendiente']
+    sizes   = [total_completados, total_en_progreso, total_pendientes]
+    colors  = ['#198754', '#0dcaf0', '#ffc107']
+
+    fig_r, ax_r = plt.subplots(figsize=(5, 5.5), facecolor='white')
+    fig_r.subplots_adjust(top=0.95, bottom=0.14)
+    if total_proyectos > 0:
+        wedges_r, _, autotexts_r = ax_r.pie(
+            sizes, autopct='%1.1f%%', startangle=140, colors=colors,
+            wedgeprops={'linewidth': 2.5, 'edgecolor': 'white', 'width': 0.65},
+            pctdistance=0.75,
+        )
+        for t in autotexts_r:
+            t.set_fontsize(11)
+            t.set_fontweight('bold')
+        centre_r = plt.Circle((0, 0), 0.35, fc='white')
+        ax_r.add_patch(centre_r)
+        ax_r.legend(wedges_r, labels, loc='lower center',
+                    bbox_to_anchor=(0.5, -0.06), ncol=3, fontsize=10,
+                    frameon=False, handlelength=1.2)
+    else:
+        ax_r.text(0.5, 0.5, 'Sin datos para el período', ha='center', va='center',
+                  transform=ax_r.transAxes, fontsize=12, color='#888888')
+    ax_r.axis('equal')
 
     buffer = io.BytesIO()
-    plt.savefig(buffer, format='png', bbox_inches='tight')
+    fig_r.savefig(buffer, format='png', bbox_inches='tight', dpi=200)
+    plt.close(fig_r)
     buffer.seek(0)
-    image_png = buffer.getvalue()
+    graphic = base64.b64encode(buffer.getvalue()).decode('utf-8')
     buffer.close()
-    graphic = base64.b64encode(image_png)
-    graphic = graphic.decode('utf-8')
 
     context = {
-        'graphic': graphic,
-        'total_completados': total_completados,
-        'total_en_progreso': total_en_progreso,
-        'total_pendientes': total_pendientes,
-        'total_proyectos': total_completados + total_en_progreso + total_pendientes,
+        'graphic':            graphic,
+        'total_completados':  total_completados,
+        'total_en_progreso':  total_en_progreso,
+        'total_pendientes':   total_pendientes,
+        'total_proyectos':    total_proyectos,
+        'filtro_anio':        filtro_anio,
+        'filtro_mes':         filtro_mes,
+        'anios_disponibles':  anios_disponibles,
+        'meses_lista':        meses_lista,
+        'periodo_label':      periodo_label,
     }
     return render(request, 'reporte_analisis.html', context)
 
@@ -177,25 +252,62 @@ def reporte_analisis_view(request):
 @login_required
 @cargo_required(*ROLES_ADMIN_SEC)
 def project_analysis(request):
+    MESES_NOMBRES = [
+        '', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+    ]
+    MESES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
+
+    # ── Filtros de período ─────────────────────────────────────────────────────
+    try:
+        filtro_anio = int(request.GET.get('anio', '')) or None
+    except ValueError:
+        filtro_anio = None
+    try:
+        _mes = int(request.GET.get('mes', ''))
+        filtro_mes = _mes if filtro_anio and 1 <= _mes <= 12 else None
+    except ValueError:
+        filtro_mes = None
+
+    anios_disponibles = sorted(set(
+        Proyecto.objects.filter(activo=True).values_list('created__year', flat=True)
+    ), reverse=True)
+    meses_lista = [{'num': i, 'nombre': MESES_NOMBRES[i]} for i in range(1, 13)]
+
+    if filtro_anio and filtro_mes:
+        periodo_label = f'{MESES_NOMBRES[filtro_mes]} {filtro_anio}'
+    elif filtro_anio:
+        periodo_label = str(filtro_anio)
+    else:
+        periodo_label = None
+
+    # ── Queryset base filtrado ────────────────────────────────────────────────
     projects = Proyecto.objects.filter(activo=True)
+    if filtro_anio:
+        projects = projects.filter(created__year=filtro_anio)
+        if filtro_mes:
+            projects = projects.filter(created__month=filtro_mes)
+
     total = projects.count()
 
-    if total == 0:
-        return render(request, 'project_analysis.html', {'message': "No existen proyectos registrados."})
+    if total == 0 and not filtro_anio:
+        return render(request, 'project_analysis.html', {
+            'message': "No existen proyectos registrados.",
+            'anios_disponibles': anios_disponibles, 'meses_lista': meses_lista,
+            'filtro_anio': filtro_anio, 'filtro_mes': filtro_mes, 'periodo_label': periodo_label,
+        })
 
     # ── Por tipo ──────────────────────────────────────────────────────────────
     tipo_counts = {
         item['tipo_proyecto']: item['total']
         for item in projects.values('tipo_proyecto').annotate(total=Count('tipo_proyecto'))
     }
-    instalacion_count            = tipo_counts.get('instalacion_nueva', 0)
-    ampliacion_count             = tipo_counts.get('ampliacion', 0)
-    mantenimiento_garantia_count = tipo_counts.get('mantenimiento_garantia', 0)
-    mantenimiento_externo_count  = tipo_counts.get('mantenimiento_externo', 0)
-    mantenimiento_count          = mantenimiento_garantia_count + mantenimiento_externo_count
-    emergencia_count             = tipo_counts.get('emergencia', 0)
+    instalacion_count           = tipo_counts.get('instalacion_nueva', 0)
+    ampliacion_count            = tipo_counts.get('ampliacion', 0)
+    mantenimiento_externo_count = tipo_counts.get('mantenimiento_externo', 0)
+    emergencia_count            = tipo_counts.get('emergencia', 0)
 
-    # ── Por estado del proyecto ───────────────────────────────────────────────
+    # ── Por estado ────────────────────────────────────────────────────────────
     estado_counts = {
         item['estado_proyecto']: item['total']
         for item in projects.values('estado_proyecto').annotate(total=Count('estado_proyecto'))
@@ -213,35 +325,48 @@ def project_analysis(request):
     parcial_count   = pago_counts.get('parcial', 0)
     pagado_count    = pago_counts.get('pagado', 0)
 
-    # ── Proyectos por mes (últimos 12 meses) ──────────────────────────────────
-    MESES_ES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic']
-    doce_meses_atras = timezone.now() - timedelta(days=365)
-    monthly_qs = (
-        projects.filter(created__gte=doce_meses_atras)
-        .annotate(mes=TruncMonth('created'))
-        .values('mes')
-        .annotate(total=Count('id'))
-        .order_by('mes')
-    )
+    # ── Proyectos por mes ─────────────────────────────────────────────────────
+    if filtro_anio:
+        # Todos los meses del año seleccionado
+        monthly_qs = (
+            Proyecto.objects.filter(activo=True, created__year=filtro_anio)
+            .annotate(mes=TruncMonth('created'))
+            .values('mes').annotate(total=Count('id')).order_by('mes')
+        )
+        monthly_chart_label = f'Proyectos creados en {filtro_anio}'
+    else:
+        # Últimos 12 meses
+        doce_meses_atras = timezone.now() - timedelta(days=365)
+        monthly_qs = (
+            Proyecto.objects.filter(activo=True, created__gte=doce_meses_atras)
+            .annotate(mes=TruncMonth('created'))
+            .values('mes').annotate(total=Count('id')).order_by('mes')
+        )
+        monthly_chart_label = 'Últimos 12 meses'
+
     monthly_labels = [f"{MESES_ES[m['mes'].month - 1]} {m['mes'].year}" for m in monthly_qs]
     monthly_values = [m['total'] for m in monthly_qs]
 
     context = {
-        'total': total,
-        'instalacion_count': instalacion_count,
-        'ampliacion_count': ampliacion_count,
-        'mantenimiento_garantia_count': mantenimiento_garantia_count,
+        'total':                        total,
+        'instalacion_count':           instalacion_count,
+        'ampliacion_count':            ampliacion_count,
         'mantenimiento_externo_count': mantenimiento_externo_count,
-        'mantenimiento_count': mantenimiento_count,
-        'emergencia_count': emergencia_count,
-        'pendiente_count': pendiente_count,
-        'en_progreso_count': en_progreso_count,
-        'completado_count': completado_count,
-        'no_pagado_count': no_pagado_count,
-        'parcial_count': parcial_count,
-        'pagado_count': pagado_count,
-        'monthly_labels': json.dumps(monthly_labels),
-        'monthly_values': json.dumps(monthly_values),
+        'emergencia_count':            emergencia_count,
+        'pendiente_count':              pendiente_count,
+        'en_progreso_count':            en_progreso_count,
+        'completado_count':             completado_count,
+        'no_pagado_count':              no_pagado_count,
+        'parcial_count':                parcial_count,
+        'pagado_count':                 pagado_count,
+        'monthly_chart_label':          monthly_chart_label,
+        'monthly_labels':               json.dumps(monthly_labels),
+        'monthly_values':               json.dumps(monthly_values),
+        'filtro_anio':                  filtro_anio,
+        'filtro_mes':                   filtro_mes,
+        'anios_disponibles':            anios_disponibles,
+        'meses_lista':                  meses_lista,
+        'periodo_label':                periodo_label,
     }
     return render(request, 'project_analysis.html', context)
 
@@ -249,11 +374,17 @@ def project_analysis(request):
 @login_required
 @cargo_required(*ROLES_ADMIN_SEC)
 def project_report(request):
-    project_type       = request.GET.get('project_type') or None
-    project_status     = request.GET.get('project_status') or None
-    filter_estado_pago = request.GET.get('filter_estado_pago') or None
+    project_type        = request.GET.get('project_type') or None
+    project_status      = request.GET.get('project_status') or None
+    filter_estado_pago  = request.GET.get('filter_estado_pago') or None
     filter_cumplimiento = request.GET.get('filter_cumplimiento') or None
-    search_nombre      = request.GET.get('search_nombre', '').strip()
+    search_nombre       = request.GET.get('search_nombre', '').strip()
+    fecha_desde         = request.GET.get('fecha_desde', '').strip()
+    fecha_hasta         = request.GET.get('fecha_hasta', '').strip()
+    per_page = int(request.GET.get('per_page', 20))
+    if per_page not in (10, 20, 50, 100):
+        per_page = 20
+    page = request.GET.get('page', 1)
     hoy = timezone.now().date()
 
     contrato_fecha_inicio_qs = ContratoProyecto.objects.filter(
@@ -301,52 +432,87 @@ def project_report(request):
             estado_proyecto__in=['pendiente', 'en_progreso'],
             contrato_fecha_fin__isnull=True,
         )
+    if fecha_desde:
+        try:
+            projects = projects.filter(contrato_fecha_inicio__gte=datetime.strptime(fecha_desde, '%Y-%m-%d').date())
+        except ValueError:
+            fecha_desde = ''
+    if fecha_hasta:
+        try:
+            projects = projects.filter(contrato_fecha_inicio__lte=datetime.strptime(fecha_hasta, '%Y-%m-%d').date())
+        except ValueError:
+            fecha_hasta = ''
 
+    # Agregados sobre el total filtrado (para KPIs y totales de PDF/Excel)
     agg = projects.aggregate(
         total_monto=Sum('monto_total'),
         total_cobrado=Sum('pagos__monto', filter=Q(pagos__activo=True)),
     )
-    monto_total          = agg['total_monto'] or 0
-    total_cobrado        = agg['total_cobrado'] or 0
-    total_saldo          = monto_total - total_cobrado
-    count_completado     = projects.filter(estado_proyecto='completado').count()
-    count_en_progreso    = projects.filter(estado_proyecto='en_progreso').count()
-    count_pendiente      = projects.filter(estado_proyecto='pendiente').count()
+    monto_total       = agg['total_monto'] or 0
+    total_cobrado     = agg['total_cobrado'] or 0
+    total_saldo       = monto_total - total_cobrado
+    count_completado  = projects.filter(estado_proyecto='completado').count()
+    count_en_progreso = projects.filter(estado_proyecto='en_progreso').count()
+    count_pendiente   = projects.filter(estado_proyecto='pendiente').count()
 
-    # Pre-compute saldo, avance y cumplimiento por proyecto
-    projects_list = list(projects)
-    for p in projects_list:
-        p.monto_saldo = p.monto_total - (p.monto_cobrado or 0)
-        sedes_list_p = p.sedes_activas
-        if sedes_list_p:
-            p.ultimo_avance = round(sum(s.porcentaje_checklist for s in sedes_list_p) / len(sedes_list_p))
-        else:
-            p.ultimo_avance = 0
-        fecha_fin_contrato = p.contrato_fecha_fin
-        if p.estado_proyecto == 'completado':
-            p.cumplimiento = 'completado'
-            p.dias_info = None
-        elif not fecha_fin_contrato:
-            p.cumplimiento = 'sin_fecha'
-            p.dias_info = None
-        elif fecha_fin_contrato < hoy:
-            p.cumplimiento = 'vencido'
-            p.dias_info = (hoy - fecha_fin_contrato).days
-        else:
-            p.cumplimiento = 'en_plazo'
-            p.dias_info = (fecha_fin_contrato - hoy).days
+    def _annotate_projects(qs_items):
+        """Agrega atributos calculados a cada proyecto de la lista."""
+        result = []
+        for p in qs_items:
+            p.monto_saldo = p.monto_total - (p.monto_cobrado or 0)
+            sedes_list_p = p.sedes_activas
+            p.ultimo_avance = (
+                round(sum(s.porcentaje_checklist for s in sedes_list_p) / len(sedes_list_p))
+                if sedes_list_p else 0
+            )
+            fecha_fin_contrato = p.contrato_fecha_fin
+            if p.estado_proyecto == 'completado':
+                p.cumplimiento = 'completado'
+                p.dias_info = None
+            elif not fecha_fin_contrato:
+                p.cumplimiento = 'sin_fecha'
+                p.dias_info = None
+            elif fecha_fin_contrato < hoy:
+                p.cumplimiento = 'vencido'
+                p.dias_info = (hoy - fecha_fin_contrato).days
+            else:
+                p.cumplimiento = 'en_plazo'
+                p.dias_info = (fecha_fin_contrato - hoy).days
+            result.append(p)
+        return result
 
-    count_vencidos   = sum(1 for p in projects_list if p.cumplimiento == 'vencido')
-    count_en_plazo   = sum(1 for p in projects_list if p.cumplimiento == 'en_plazo')
-    count_sin_fecha  = sum(1 for p in projects_list if p.cumplimiento == 'sin_fecha')
+    # Conteos de cumplimiento via BD (evita evaluar la queryset completa en Python)
+    activos_qs = projects.filter(estado_proyecto__in=['pendiente', 'en_progreso'])
+    count_vencidos  = activos_qs.filter(contrato_fecha_fin__isnull=False, contrato_fecha_fin__lt=hoy).count()
+    count_en_plazo  = activos_qs.filter(contrato_fecha_fin__isnull=False, contrato_fecha_fin__gte=hoy).count()
+    count_sin_fecha = activos_qs.filter(contrato_fecha_fin__isnull=True).count()
+
+    # PDF / Excel: lista completa sin paginar
+    if 'pdf' in request.GET or 'excel' in request.GET:
+        projects_list = _annotate_projects(list(projects))
+        projects_page = None
+    else:
+        # Paginación solo para la vista HTML
+        paginator = Paginator(projects, per_page)
+        try:
+            projects_page = paginator.page(page)
+        except PageNotAnInteger:
+            projects_page = paginator.page(1)
+        except EmptyPage:
+            projects_page = paginator.page(paginator.num_pages)
+        projects_list = _annotate_projects(list(projects_page.object_list))
 
     context = {
         'projects': projects_list,
+        'projects_page': projects_page,
         'project_type': project_type,
         'project_status': project_status,
         'filter_estado_pago': filter_estado_pago,
         'filter_cumplimiento': filter_cumplimiento,
         'search_nombre': search_nombre,
+        'fecha_desde': fecha_desde,
+        'fecha_hasta': fecha_hasta,
+        'per_page': per_page,
         'monto_total': monto_total,
         'total_cobrado': total_cobrado,
         'total_saldo': total_saldo,
@@ -618,9 +784,6 @@ def project_detail(request, id_project):
 @login_required
 def project_view(request, id_project):
     project = get_object_or_404(Proyecto, pk=id_project)
-    progresos = project.progresos.filter(activo=True).order_by('-fecha', '-created')
-    ultimo_progreso = progresos.first()
-    porcentaje_actual = ultimo_progreso.porcentaje if ultimo_progreso else 0
     contrato_proyecto = project.contratos.filter(activo=True).first()
     insumos_proyecto = project.insumos.select_related('insumo').order_by('-created')
     total_insumos = sum(r.costo_total for r in insumos_proyecto)
@@ -646,7 +809,8 @@ def project_view(request, id_project):
 
     equipo_proyecto = []
     costo_personal = 0
-    for emp in miembros:
+    _cargo_orden = {'instalador': 0, 'tecnico_soporte': 1}
+    for emp in sorted(miembros, key=lambda e: _cargo_orden.get(e.cargo, 2)):
         j = jornadas_map.get(emp.pk, {})
         total_dias = j.get('total_dias') or 0
         contrato_emp = emp._contratos_activos[0] if emp._contratos_activos else None
@@ -678,22 +842,8 @@ def project_view(request, id_project):
     saldo_cliente = ingresos - total_pagado_cliente
 
     # ── Sedes del proyecto ────────────────────────────────────────────────────
-    sedes = project.sedes.filter(activo=True).prefetch_related('tareas', 'fotos', 'insumos', 'grupos')
+    sedes = project.sedes.filter(activo=True).prefetch_related('tareas', 'fotos')
 
-    # ── Indicador de ritmo (grupos completados vs esperado) ───────────────────
-    hace_7_dias = timezone.now() - timedelta(days=7)
-    grupos_completados_semana = GrupoTarea.objects.filter(
-        sede__proyecto=project,
-        activo=True,
-        fecha_completado__gte=hace_7_dias,
-    ).count()
-    ritmo_esperado = project.ritmo_semanal
-    if grupos_completados_semana >= ritmo_esperado:
-        ritmo_estado = 'ok'
-    elif grupos_completados_semana >= ritmo_esperado * 0.75:
-        ritmo_estado = 'alerta'
-    else:
-        ritmo_estado = 'atrasado'
     sedes_geo_json = json.dumps([
         {
             'lat': float(s.latitud), 'lng': float(s.longitud),
@@ -715,8 +865,6 @@ def project_view(request, id_project):
 
     context = {
         'project': project,
-        'progresos': progresos,
-        'porcentaje_actual': porcentaje_actual,
         'equipo_proyecto': equipo_proyecto,
         'empleados_disponibles': empleados_disponibles,
         'contrato_proyecto': contrato_proyecto,
@@ -735,9 +883,6 @@ def project_view(request, id_project):
         'sedes_geo_json': sedes_geo_json,
         'progreso_sedes': progreso_sedes,
         'sedes_completadas': sedes_completadas,
-        'grupos_completados_semana': grupos_completados_semana,
-        'ritmo_esperado': ritmo_esperado,
-        'ritmo_estado': ritmo_estado,
         'now': timezone.now(),
         'generado_por': request.user.get_full_name() or request.user.username,
     }
@@ -781,7 +926,7 @@ def project_delete(request, id_project):
 
 
 @login_required
-@cargo_required(*ROLES_ADMIN)
+@cargo_required(*ROLES_ADMIN_SEC)
 def create_project(request):
     if request.method == 'GET':
         return render(request, 'create_project.html', {
@@ -789,8 +934,10 @@ def create_project(request):
             'contrato_form': ContratoProyectoForm(),
         })
 
-    form = ProjectForm(request.POST)
-    contrato_form = ContratoProyectoForm(request.POST, request.FILES)
+    post_data = request.POST.copy()
+    post_data.setdefault('estado_proyecto', 'pendiente')
+    form = ProjectForm(post_data)
+    contrato_form = ContratoProyectoForm(post_data, request.FILES)
 
     if form.is_valid() and contrato_form.is_valid():
         project = form.save(commit=False)
@@ -981,7 +1128,7 @@ def dashboard_home(request):
 
     # ── Finanzas ───────────────────────────────────────────────────────────────
     total_facturado = proyectos_qs.aggregate(total=Sum('monto_total'))['total'] or 0
-    pagos_qs = Pago.objects.filter(activo=True)
+    pagos_qs = PagoProyecto.objects.filter(activo=True)
     if filtro_anio:
         pagos_qs = pagos_qs.filter(fecha__year=filtro_anio)
         if filtro_mes:
@@ -1074,28 +1221,27 @@ def dashboard_home(request):
             'url': f'/insumos/{i.id}/',
         })
 
-    # Categoría 4: Pagos pendientes a empleados
+    # Categoría 4: Pagos pendientes a empleados — jornadas aprobadas sin pago asignado
     alertas_empleados = []
-    pagado_subq = PagoEmpleado.objects.filter(
-        contrato=OuterRef('pk'), activo=True
-    ).values('contrato').annotate(t=Sum('monto')).values('t')
-    contratos_completados = ContratoEmpleado.objects.filter(
-        activo=True,
-        jornadas__proyecto__estado_proyecto='completado',
-        jornadas__activo=True,
-    ).select_related('empleado').annotate(
-        total_pagado=Subquery(pagado_subq)
-    ).distinct()
-    for contrato in contratos_completados:
-        pagado = contrato.total_pagado or 0
-        if pagado < contrato.monto_acordado:
-            pendiente = contrato.monto_acordado - pagado
-            alertas_empleados.append({
-                'tipo': 'warning',
-                'icono': 'bi-person-exclamation',
-                'msg': f'{contrato.empleado.nombre} {contrato.empleado.apellido_paterno} tiene Bs. {pendiente:.2f} pendientes.',
-                'url': f'/employees/{contrato.empleado.id}/view/',
-            })
+    empleados_deuda = (
+        JornadaEmpleado.objects
+        .filter(activo=True, estado='aprobada', pago__isnull=True)
+        .select_related('contrato__empleado')
+        .order_by('contrato__empleado__nombre')
+        .values_list(
+            'contrato__empleado_id',
+            'contrato__empleado__nombre',
+            'contrato__empleado__apellido_paterno',
+        )
+        .distinct()
+    )
+    for emp_id, nombre, apellido in empleados_deuda:
+        alertas_empleados.append({
+            'tipo': 'warning',
+            'icono': 'bi-person-exclamation',
+            'msg': f'{nombre} {apellido} tiene jornadas aprobadas pendientes de pago.',
+            'url': '/pagos-empleados/',
+        })
 
     # Categoría 5: Próximos a vencer — 3 sub-grupos por urgencia (ContratoProyecto)
     proximos_hoy     = []   # vence hoy o mañana (0-1 días)
@@ -1129,12 +1275,12 @@ def dashboard_home(request):
     # ── Últimos 5 proyectos ────────────────────────────────────────────────────
     ultimos_proyectos = proyectos_qs.select_related('cliente').order_by('-created')[:5]
 
-    # ── Datos para gráficos (JSON-safe) ───────────────────────────────────────
-    tipos_labels = ['Instalación Nueva', 'Ampliación', 'Mant. Garantía', 'Mant. Externo', 'Emergencia']
+    # ── Datos para Chart.js ───────────────────────────────────────────────────
+    import json
+    tipos_labels = ['Instalación Nueva', 'Ampliación', 'Mant. Externo', 'Emergencia']
     tipos_values = [
         proyectos_qs.filter(tipo_proyecto='instalacion_nueva').count(),
         proyectos_qs.filter(tipo_proyecto='ampliacion').count(),
-        proyectos_qs.filter(tipo_proyecto='mantenimiento_garantia').count(),
         proyectos_qs.filter(tipo_proyecto='mantenimiento_externo').count(),
         proyectos_qs.filter(tipo_proyecto='emergencia').count(),
     ]
@@ -1175,8 +1321,8 @@ def dashboard_home(request):
         'total_alertas':        total_alertas,
         'cnt_vencidos':         cnt_vencidos,
         'ultimos_proyectos':    ultimos_proyectos,
-        'tipos_labels':         tipos_labels,
-        'tipos_values':         tipos_values,
+        'tipos_labels':         json.dumps(tipos_labels),
+        'tipos_values':         json.dumps(tipos_values),
         'filtro_anio':          filtro_anio,
         'filtro_mes':           filtro_mes,
         'anios_disponibles':    anios_disponibles,
@@ -1184,102 +1330,6 @@ def dashboard_home(request):
         'periodo_label':        periodo_label,
     }
     return render(request, 'home.html', context)
-
-
-# ===================== PROGRESO =====================
-
-def _puede_registrar_progreso(user, proyecto):
-    """Admins/gerentes siempre pueden. Otros solo si tienen contrato activo en el proyecto."""
-    if user.is_superuser:
-        return True
-    cargo = getattr(user, 'cargo', None)
-    if cargo in ROLES_ADMIN:
-        return True
-    return JornadaEmpleado.objects.filter(
-        contrato__empleado=user, proyecto=proyecto, activo=True
-    ).exists()
-
-
-@login_required
-def create_progreso(request, id_project):
-    project = get_object_or_404(Proyecto, pk=id_project)
-    if not _puede_registrar_progreso(request.user, project):
-        messages.error(request, 'Solo puedes registrar progreso en proyectos donde tienes un contrato activo.')
-        return redirect('project_view', id_project=project.id)
-    if request.method == 'GET':
-        form = ProgresoForm(proyecto=project)
-        return render(request, 'create_progreso.html', {'form': form, 'project': project})
-    else:
-        form = ProgresoForm(request.POST, proyecto=project)
-        if form.is_valid():
-            progreso = form.save(commit=False)
-            progreso.proyecto = project
-            progreso.save()
-
-            if progreso.porcentaje == 100 and project.estado_proyecto != 'completado':
-                era_pendiente = project.estado_proyecto == 'pendiente'
-                project.estado_proyecto = 'completado'
-                project.fecha_fin = timezone.now().date()
-                if era_pendiente and not project.fecha_inicio:
-                    project.fecha_inicio = timezone.now().date()
-                project.save(update_fields=['estado_proyecto', 'fecha_fin', 'fecha_inicio'])
-                messages.success(request, 'Progreso registrado. El proyecto fue marcado como completado automáticamente.')
-            elif 0 < progreso.porcentaje < 100 and project.estado_proyecto == 'pendiente':
-                if not project.contratos.filter(activo=True).exists():
-                    messages.warning(request, 'Progreso registrado, pero el proyecto no puede iniciar sin un contrato de proyecto activo.')
-                    return redirect('project_view', id_project=project.id)
-                project.estado_proyecto = 'en_progreso'
-                project.fecha_inicio = timezone.now().date()
-                project.save(update_fields=['estado_proyecto', 'fecha_inicio'])
-                messages.success(request, 'Progreso registrado. El proyecto fue marcado como en progreso.')
-            else:
-                messages.success(request, 'Progreso registrado correctamente.')
-            return redirect('project_view', id_project=project.id)
-        return render(request, 'create_progreso.html', {'form': form, 'project': project})
-
-
-@login_required
-def progreso_detail(request, id_progreso):
-    progreso = get_object_or_404(Progreso, pk=id_progreso, activo=True)
-    project = progreso.proyecto
-    if not _puede_registrar_progreso(request.user, project):
-        messages.error(request, 'Solo puedes editar progreso en proyectos donde tienes un contrato activo.')
-        return redirect('project_view', id_project=project.id)
-    if request.method == 'GET':
-        form = ProgresoForm(instance=progreso, proyecto=project)
-        return render(request, 'progreso_detail.html', {'form': form, 'progreso': progreso, 'project': project})
-    else:
-        form = ProgresoForm(request.POST, instance=progreso, proyecto=project)
-        if form.is_valid():
-            progreso = form.save()
-            if progreso.porcentaje == 100 and project.estado_proyecto != 'completado':
-                project.estado_proyecto = 'completado'
-                project.fecha_fin = timezone.now().date()
-                project.save(update_fields=['estado_proyecto', 'fecha_fin'])
-                messages.success(request, 'Progreso actualizado. El proyecto fue marcado como completado automáticamente.')
-            elif 0 < progreso.porcentaje < 100 and project.estado_proyecto == 'pendiente':
-                project.estado_proyecto = 'en_progreso'
-                project.fecha_inicio = timezone.now().date()
-                project.save(update_fields=['estado_proyecto', 'fecha_inicio'])
-                messages.success(request, 'Progreso actualizado. El proyecto fue marcado como en progreso.')
-            else:
-                messages.success(request, 'Progreso actualizado correctamente.')
-            return redirect('project_view', id_project=project.id)
-        return render(request, 'progreso_detail.html', {'form': form, 'progreso': progreso, 'project': project})
-
-
-@login_required
-@cargo_required(*ROLES_ADMIN)
-def deactivate_progreso(request, id_progreso):
-    progreso = get_object_or_404(Progreso, pk=id_progreso, activo=True)
-    id_project = progreso.proyecto.id
-    if request.method == 'POST':
-        progreso.activo = False
-        progreso.deleted_at = timezone.now()
-        progreso.deleted_by = request.user
-        progreso.save()
-        messages.success(request, 'Registro de progreso eliminado.')
-    return redirect('project_view', id_project=id_project)
 
 
 # ===================== CONTRATOS =====================
@@ -1329,7 +1379,9 @@ def create_contrato_proyecto(request, id_project):
             project._current_user = request.user
             project.save(update_fields=['monto_total'])
             messages.success(request, 'Contrato del proyecto registrado correctamente.')
-            return redirect('project_view', id_project=project.id)
+            from django.urls import reverse
+            url = reverse('project_view', kwargs={'id_project': project.id}) + '#tab-sedes'
+            return redirect(url)
         return render(request, 'create_contrato_proyecto.html', {'form': form, 'project': project})
 
 
@@ -1389,28 +1441,18 @@ def sede_create(request, id_project):
 @login_required
 def sede_view(request, id_sede):
     sede = get_object_or_404(Sede, pk=id_sede, activo=True)
-    insumos_sede = sede.insumos.filter(activo=True).select_related('insumo')
 
-    # Grupos con sus tareas pre-cargadas
-    grupos = list(
-        sede.grupos.filter(activo=True).prefetch_related(
-            Prefetch(
-                'tareas',
-                queryset=TareaChecklist.objects.filter(activo=True)
-                    .order_by('orden', 'created')
-                    .select_related('completado_por'),
-            )
-        )
+    tareas = (
+        sede.tareas.filter(activo=True)
+        .order_by('orden', 'created')
+        .select_related('completado_por')
+        .prefetch_related('participantes', 'subtareas')
     )
-
-    # Tareas sin grupo asignado
-    tareas_sin_grupo = sede.tareas.filter(activo=True, grupo__isnull=True).order_by('orden', 'created').select_related('completado_por')
 
     fotos = sede.fotos.filter(activo=True)
     plantillas = PlantillaTarea.objects.filter(activo=True).order_by('tipo', 'nombre')
     foto_form = FotoSedeForm()
     tarea_form = TareaChecklistForm()
-    grupo_form = GrupoTareaForm()
 
     # Actividad del día: tareas completadas hoy en esta sede, agrupadas por empleado
     today = timezone.localdate()
@@ -1419,7 +1461,7 @@ def sede_view(request, id_sede):
             sede=sede, activo=True, completado=True,
             fecha_completado__date=today,
         )
-        .select_related('completado_por', 'grupo')
+        .select_related('completado_por')
         .order_by('completado_por_id', 'fecha_completado')
     )
     # Agrupar por empleado
@@ -1430,18 +1472,28 @@ def sede_view(request, id_sede):
             actividad_hoy[emp] = []
         actividad_hoy[emp].append(t)
 
+    import json as _json
+    equipo_json = _json.dumps([
+        {'id': e.id, 'nombre': e.get_full_name(), 'cargo': e.get_cargo_display()}
+        for e in sede.proyecto.equipo.filter(is_active=True).order_by('apellido_paterno')
+    ])
+    # Mapa tarea_id → lista de ids de participantes (para restaurar estado en el template)
+    participantes_map = {
+        t.id: list(t.participantes.values_list('id', flat=True))
+        for t in tareas
+    }
+
     context = {
         'sede': sede,
         'project': sede.proyecto,
-        'insumos_sede': insumos_sede,
-        'grupos': grupos,
-        'tareas_sin_grupo': tareas_sin_grupo,
+        'tareas': tareas,
         'fotos': fotos,
         'foto_form': foto_form,
         'tarea_form': tarea_form,
-        'grupo_form': grupo_form,
         'plantillas': plantillas,
         'actividad_hoy': actividad_hoy,
+        'equipo_json': equipo_json,
+        'participantes_map_json': _json.dumps(participantes_map),
     }
     return render(request, 'sede_view.html', context)
 
@@ -1488,12 +1540,6 @@ def tarea_create(request, id_sede):
         if form.is_valid():
             tarea = form.save(commit=False)
             tarea.sede = sede
-            grupo_id = request.POST.get('grupo_id')
-            if grupo_id:
-                try:
-                    tarea.grupo = GrupoTarea.objects.get(pk=grupo_id, sede=sede, activo=True)
-                except GrupoTarea.DoesNotExist:
-                    pass
             ultimo_orden = sede.tareas.filter(activo=True).aggregate(m=db_Max('orden'))['m'] or 0
             tarea.orden = ultimo_orden + 1
             tarea.save()
@@ -1503,13 +1549,12 @@ def tarea_create(request, id_sede):
                     'id': tarea.id,
                     'descripcion': tarea.descripcion,
                     'orden': tarea.orden,
-                    'grupo_id': tarea.grupo_id,
                 })
     return redirect('sede_view', id_sede=sede.id)
 
 
 @login_required
-@cargo_required(*ROLES_CAMPO)
+@cargo_required('administrador', 'gerente', 'tecnico_soporte', 'instalador')
 def tarea_toggle(request, id_tarea):
     """AJAX: marca/desmarca una tarea como completada."""
     if request.method != 'POST':
@@ -1519,24 +1564,24 @@ def tarea_toggle(request, id_tarea):
     if tarea.completado:
         tarea.fecha_completado = timezone.now()
         tarea.completado_por = request.user
+        tarea.save()
+        # Auto-añadir al que marcó como participante
+        tarea.participantes.set([request.user])
+        # Devolver el equipo del proyecto para el modal de participantes
+        equipo = [
+            {'id': e.id, 'nombre': e.get_full_name(), 'cargo': e.get_cargo_display()}
+            for e in tarea.sede.proyecto.equipo.filter(is_active=True).order_by('apellido_paterno')
+        ]
     else:
         tarea.fecha_completado = None
         tarea.completado_por = None
-    tarea.save()
+        tarea.save()
+        tarea.participantes.clear()
+        equipo = []
     tarea.sede._sync_estado()
     pct_sede = tarea.sede.porcentaje_checklist
 
-    # Info del grupo (si tiene)
-    grupo_info = None
-    if tarea.grupo_id:
-        tarea.grupo.refresh_from_db()
-        grupo_info = {
-            'id': tarea.grupo_id,
-            'porcentaje': tarea.grupo.porcentaje,
-            'completado': tarea.grupo.completado,
-        }
-
-    nombre_usuario = tarea.completado_por.get_full_name() or tarea.completado_por.username if tarea.completado_por else ''
+    nombre_usuario = tarea.completado_por.get_full_name() if tarea.completado_por else ''
     fecha_str = tarea.fecha_completado.strftime('%d/%m/%Y %H:%M') if tarea.fecha_completado else ''
 
     return JsonResponse({
@@ -1544,10 +1589,66 @@ def tarea_toggle(request, id_tarea):
         'completado': tarea.completado,
         'porcentaje': pct_sede,
         'estado_sede': tarea.sede.estado,
-        'grupo': grupo_info,
         'completado_por': nombre_usuario,
         'fecha_completado': fecha_str,
+        'usuario_id': request.user.id,
+        'equipo': equipo,
     })
+
+
+@login_required
+@cargo_required(*ROLES_CAMPO)
+def tarea_set_participantes(request, id_tarea):
+    """AJAX: guarda los participantes de una tarea completada y auto-crea jornadas pendientes."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'method not allowed'}, status=405)
+    tarea = get_object_or_404(TareaChecklist, pk=id_tarea, activo=True, completado=True)
+    import json as _json
+    try:
+        body = _json.loads(request.body)
+        ids = body.get('participantes', [])
+    except (ValueError, KeyError):
+        ids = []
+    # Siempre incluir al que marcó la tarea
+    if tarea.completado_por_id and tarea.completado_por_id not in ids:
+        ids.append(tarea.completado_por_id)
+    # Validar que todos pertenezcan al equipo del proyecto
+    equipo_ids = set(tarea.sede.proyecto.equipo.values_list('id', flat=True))
+    ids_validos = [i for i in ids if i in equipo_ids]
+    tarea.participantes.set(ids_validos)
+
+    # Auto-crear jornada pendiente para cada participante si no tiene una ese día
+    proyecto = tarea.sede.proyecto
+    fecha_jornada = tarea.fecha_completado.date()
+    participantes_qs = Empleado.objects.filter(pk__in=ids_validos)
+    jornadas_creadas = []
+    for empleado in participantes_qs:
+        contrato = empleado.contratos_empleado.filter(activo=True).order_by('-created').first()
+        if not contrato:
+            continue
+        if not (contrato.fecha_inicio <= fecha_jornada <= contrato.fecha_fin):
+            continue
+        ya_existe = JornadaEmpleado.objects.filter(
+            contrato=contrato, proyecto=proyecto, fecha=fecha_jornada, activo=True,
+        ).exists()
+        if ya_existe:
+            continue
+        JornadaEmpleado.objects.create(
+            contrato=contrato,
+            proyecto=proyecto,
+            fecha=fecha_jornada,
+            dias=1.0,
+            estado='pendiente',
+            observacion=f'Tarea completada: {tarea.descripcion}',
+            registrado_por=request.user,
+        )
+        jornadas_creadas.append(empleado.get_full_name())
+
+    nombres = [
+        tarea.sede.proyecto.equipo.get(pk=i).get_full_name()
+        for i in ids_validos
+    ]
+    return JsonResponse({'ok': True, 'participantes': nombres, 'jornadas_creadas': jornadas_creadas})
 
 
 @login_required
@@ -1559,49 +1660,6 @@ def tarea_delete(request, id_tarea):
         tarea.activo = False
         tarea.save()
         tarea.sede._sync_estado()
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'ok': True})
-    return redirect('sede_view', id_sede=id_sede)
-
-
-@login_required
-@cargo_required(*ROLES_ADMIN)
-def grupo_create(request, id_sede):
-    """AJAX: crea un nuevo GrupoTarea dentro de una sede."""
-    sede = get_object_or_404(Sede, pk=id_sede, activo=True)
-    if request.method == 'POST':
-        form = GrupoTareaForm(request.POST)
-        if form.is_valid():
-            grupo = form.save(commit=False)
-            grupo.sede = sede
-            ultimo = sede.grupos.filter(activo=True).aggregate(m=db_Max('orden'))['m'] or 0
-            grupo.orden = ultimo + 1
-            grupo.save()
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'ok': True,
-                    'id': grupo.id,
-                    'nombre': grupo.nombre,
-                    'tipo': grupo.get_tipo_display(),
-                    'tipo_key': grupo.tipo,
-                    'orden': grupo.orden,
-                })
-        elif request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({'ok': False, 'errors': form.errors}, status=400)
-    return redirect('sede_view', id_sede=sede.id)
-
-
-@login_required
-@cargo_required(*ROLES_ADMIN)
-def grupo_delete(request, id_grupo):
-    """AJAX: desactiva (soft-delete) un GrupoTarea."""
-    grupo = get_object_or_404(GrupoTarea, pk=id_grupo, activo=True)
-    id_sede = grupo.sede.id
-    if request.method == 'POST':
-        grupo.activo = False
-        grupo.deleted_at = timezone.now()
-        grupo.deleted_by = request.user
-        grupo.save()
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
             return JsonResponse({'ok': True})
     return redirect('sede_view', id_sede=id_sede)
@@ -1656,8 +1714,9 @@ def aplicar_plantilla_sede(request, id_sede):
     except (ValueError, AttributeError):
         return JsonResponse({'ok': False, 'error': 'JSON inválido'}, status=400)
     plantilla = get_object_or_404(PlantillaTarea, pk=id_plantilla, activo=True)
-    items = plantilla.items.filter(activo=True).order_by('orden')
+    items = plantilla.items.prefetch_related('subitems').order_by('orden')
     ultimo_orden = sede.tareas.filter(activo=True).aggregate(m=db_Max('orden'))['m'] or 0
+    from .models import SubtareaChecklist
     nuevas = []
     for i, item in enumerate(items, start=1):
         tarea = TareaChecklist.objects.create(
@@ -1665,7 +1724,15 @@ def aplicar_plantilla_sede(request, id_sede):
             descripcion=item.descripcion,
             orden=ultimo_orden + i,
         )
-        nuevas.append({'id': tarea.id, 'descripcion': tarea.descripcion, 'orden': tarea.orden})
+        subtareas_data = []
+        for subitem in item.subitems.order_by('orden'):
+            sub = SubtareaChecklist.objects.create(
+                tarea=tarea,
+                descripcion=subitem.descripcion,
+                orden=subitem.orden,
+            )
+            subtareas_data.append({'id': sub.id, 'descripcion': sub.descripcion})
+        nuevas.append({'id': tarea.id, 'descripcion': tarea.descripcion, 'orden': tarea.orden, 'subtareas': subtareas_data})
     return JsonResponse({'ok': True, 'tareas': nuevas, 'count': len(nuevas)})
 
 
@@ -1776,7 +1843,7 @@ def payment_list(request):
     except ValueError:
         per_page = 10
 
-    payments = Pago.objects.filter(activo=True).select_related('proyecto').order_by('-fecha')
+    payments = PagoProyecto.objects.filter(activo=True).select_related('proyecto').order_by('-fecha')
     if search_proyecto:
         payments = payments.filter(proyecto__nombre__icontains=search_proyecto)
     if filter_tipo:
@@ -1799,7 +1866,6 @@ def payment_list(request):
 
 
 def _proyectos_pago_data():
-    from empleados.models import ContratoProyecto
     proyectos = Proyecto.objects.filter(activo=True).prefetch_related('pagos')
     contratos = {c.proyecto_id: c for c in ContratoProyecto.objects.filter(activo=True).select_related('proyecto')}
     data = {}
@@ -1850,7 +1916,7 @@ def create_payment(request):
 @login_required
 @cargo_required(*ROLES_ADMIN_SEC)
 def payment_detail(request, id_payment):
-    payment = get_object_or_404(Pago, pk=id_payment, activo=True)
+    payment = get_object_or_404(PagoProyecto, pk=id_payment, activo=True)
     if request.method == 'GET':
         return render(request, 'payment_detail.html', {
             'payment': payment,
@@ -1866,14 +1932,14 @@ def payment_detail(request, id_payment):
 
 @login_required
 def payment_view(request, id_payment):
-    payment = get_object_or_404(Pago, pk=id_payment, activo=True)
+    payment = get_object_or_404(PagoProyecto, pk=id_payment, activo=True)
     return render(request, 'payment_view.html', {'payment': payment})
 
 
 @login_required
 @cargo_required(*ROLES_ADMIN_SEC)
 def deactivate_payment(request, id_payment):
-    payment = get_object_or_404(Pago, id=id_payment, activo=True)
+    payment = get_object_or_404(PagoProyecto, id=id_payment, activo=True)
     if request.method == 'POST':
         payment.activo = False
         payment.deleted_at = timezone.now()
@@ -1890,9 +1956,13 @@ def filter_payments_by_project_name(request):
     start_date   = request.GET.get('start_date', '')
     end_date     = request.GET.get('end_date', '')
     filter_tipo  = request.GET.get('filter_tipo', '')
+    per_page = int(request.GET.get('per_page', 10))
+    if per_page not in (10, 20, 50, 100):
+        per_page = 10
+    page = request.GET.get('page', 1)
 
     projects = Proyecto.objects.filter(activo=True).values('nombre').distinct()
-    payments = Pago.objects.filter(activo=True).select_related('proyecto', 'proyecto__cliente')
+    payments = PagoProyecto.objects.filter(activo=True).select_related('proyecto', 'proyecto__cliente')
 
     if project_name:
         payments = payments.filter(proyecto__nombre__icontains=project_name)
@@ -1908,6 +1978,19 @@ def filter_payments_by_project_name(request):
     monto_transferencia = payments.filter(tipo_pago='transferencia').aggregate(total=Sum('monto'))['total'] or 0
     count_efectivo      = payments.filter(tipo_pago='efectivo').count()
     count_transferencia = payments.filter(tipo_pago='transferencia').count()
+    total_payments      = payments.count()
+
+    # PDF/Excel: lista completa; HTML: paginada
+    payments = payments.order_by('-fecha')
+    if 'pdf' in request.GET or 'excel' in request.GET:
+        payments_page = None
+    else:
+        paginator = Paginator(payments, per_page)
+        try:
+            payments_page = paginator.page(page)
+        except (PageNotAnInteger, EmptyPage):
+            payments_page = paginator.page(1)
+        payments = list(payments_page.object_list)
 
     context = {
         'payments': payments,
@@ -1921,6 +2004,9 @@ def filter_payments_by_project_name(request):
         'monto_transferencia': monto_transferencia,
         'count_efectivo': count_efectivo,
         'count_transferencia': count_transferencia,
+        'total_payments': total_payments,
+        'payments_page': payments_page,
+        'per_page': per_page,
         'now': timezone.now(),
         'generado_por': request.user.get_full_name() or request.user.username,
     }
@@ -2033,7 +2119,7 @@ def filter_payments_by_project_name(request):
 def payment_analysis(request):
     start_date = request.GET.get('start_date')
     end_date   = request.GET.get('end_date')
-    payments   = Pago.objects.filter(activo=True)
+    payments   = PagoProyecto.objects.filter(activo=True)
     if start_date:
         try:
             payments = payments.filter(fecha__gte=datetime.strptime(start_date, "%Y-%m-%d").date())
@@ -2047,11 +2133,30 @@ def payment_analysis(request):
     payment_type_counts = payments.values('tipo_pago').annotate(count=Count('tipo_pago'))
     type_labels = [t['tipo_pago'] for t in payment_type_counts]
     type_values = [t['count'] for t in payment_type_counts]
-    fig, ax = plt.subplots()
-    ax.pie(type_values, labels=type_labels, autopct='%1.1f%%', startangle=90)
+    _pay_colors = ['#1B4D90', '#2a9d8f', '#e9c46a', '#f4a261', '#e76f51', '#e76f51']
+    fig, ax = plt.subplots(figsize=(5, 5.5), facecolor='white')
+    fig.subplots_adjust(top=0.95, bottom=0.14)
+    if type_values:
+        wedges_p, _, autotexts_p = ax.pie(
+            type_values, autopct='%1.1f%%', startangle=90,
+            colors=_pay_colors[:len(type_values)],
+            wedgeprops={'linewidth': 2.5, 'edgecolor': 'white', 'width': 0.65},
+            pctdistance=0.75,
+        )
+        for t in autotexts_p:
+            t.set_fontsize(11)
+            t.set_fontweight('bold')
+        centre_p = plt.Circle((0, 0), 0.35, fc='white')
+        ax.add_patch(centre_p)
+        ax.legend(wedges_p, type_labels, loc='lower center',
+                  bbox_to_anchor=(0.5, -0.06), ncol=2, fontsize=10,
+                  frameon=False, handlelength=1.2)
+    else:
+        ax.text(0.5, 0.5, 'Sin datos', ha='center', va='center',
+                transform=ax.transAxes, fontsize=12, color='#888888')
     ax.axis('equal')
     buf = io.BytesIO()
-    plt.savefig(buf, format='png')
+    fig.savefig(buf, format='png', bbox_inches='tight', dpi=200)
     buf.seek(0)
     graphic = base64.b64encode(buf.getvalue()).decode('utf-8')
     plt.close(fig)
@@ -2103,7 +2208,7 @@ def plantilla_create(request):
 @cargo_required(*ROLES_ADMIN)
 def plantilla_detail(request, id_plantilla):
     plantilla = get_object_or_404(PlantillaTarea, pk=id_plantilla, activo=True)
-    items     = plantilla.items.filter(activo=True).order_by('orden')
+    items     = plantilla.items.all().order_by('orden')
     if request.method == 'GET':
         return render(request, 'plantilla_form.html', {
             'form': PlantillaTareaForm(instance=plantilla),
@@ -2149,7 +2254,7 @@ def item_plantilla_create(request, id_plantilla):
 @login_required
 @cargo_required(*ROLES_ADMIN)
 def item_plantilla_edit(request, id_item):
-    item = get_object_or_404(ItemPlantilla, pk=id_item, activo=True)
+    item = get_object_or_404(ItemPlantilla, pk=id_item)
     id_plantilla = item.plantilla.id
     if request.method == 'POST':
         form = ItemPlantillaForm(request.POST, instance=item)
@@ -2162,13 +2267,10 @@ def item_plantilla_edit(request, id_item):
 @login_required
 @cargo_required(*ROLES_ADMIN)
 def item_plantilla_delete(request, id_item):
-    item = get_object_or_404(ItemPlantilla, pk=id_item, activo=True)
+    item = get_object_or_404(ItemPlantilla, pk=id_item)
     id_plantilla = item.plantilla.id
     if request.method == 'POST':
-        item.activo     = False
-        item.deleted_at = timezone.now()
-        item.deleted_by = request.user
-        item.save()
+        item.delete()
         messages.success(request, 'Tarea eliminada de la plantilla.')
     return redirect('plantilla_detail', id_plantilla=id_plantilla)
 
@@ -2185,10 +2287,247 @@ def items_plantilla_reorder(request, id_plantilla):
         ids = _json.loads(request.body).get('ids', [])
     except (ValueError, AttributeError):
         return JsonResponse({'ok': False, 'error': 'JSON inválido'}, status=400)
-    items = {i.id: i for i in plantilla.items.filter(activo=True)}
+    items = {i.id: i for i in plantilla.items.all()}
     for posicion, item_id in enumerate(ids, start=1):
         item = items.get(int(item_id))
         if item:
             item.orden = posicion
             item.save(update_fields=['orden'])
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  SUBTAREAS DE CHECKLIST
+# ══════════════════════════════════════════════════════════════════════════════
+
+@login_required
+@cargo_required(*ROLES_CAMPO)
+def subtarea_create(request, id_tarea):
+    """AJAX POST: crea una subtarea para una tarea existente."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False}, status=405)
+    tarea = get_object_or_404(TareaChecklist, pk=id_tarea, activo=True)
+    import json as _json
+    try:
+        body = _json.loads(request.body)
+        desc = body.get('descripcion', '').strip()
+    except (ValueError, AttributeError):
+        desc = request.POST.get('descripcion', '').strip()
+    if not desc:
+        return JsonResponse({'ok': False, 'error': 'Descripción requerida'}, status=400)
+    ultimo = tarea.subtareas.filter(activo=True).aggregate(m=db_Max('orden'))['m'] or 0
+    sub = SubtareaChecklist.objects.create(tarea=tarea, descripcion=desc, orden=ultimo + 1)
+    return JsonResponse({'ok': True, 'id': sub.id, 'descripcion': sub.descripcion, 'orden': sub.orden})
+
+
+@login_required
+@cargo_required('administrador', 'gerente', 'tecnico_soporte', 'instalador')
+def subtarea_toggle(request, id_subtarea):
+    """AJAX POST: marca/desmarca una subtarea. Si todas están completas, auto-completa la tarea padre."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'method not allowed'}, status=405)
+    sub = get_object_or_404(SubtareaChecklist, pk=id_subtarea, activo=True)
+    tarea = sub.tarea
+
+    sub.completado = not sub.completado
+    if sub.completado:
+        sub.fecha_completado = timezone.now()
+        sub.completado_por = request.user
+    else:
+        sub.fecha_completado = None
+        sub.completado_por = None
+    sub.save()
+
+    # Auto-completar / descompletar tarea padre según el estado de todas las subtareas
+    todas = tarea.subtareas.filter(activo=True)
+    todas_completas = todas.exists() and not todas.filter(completado=False).exists()
+
+    tarea_cambio = False
+    if todas_completas and not tarea.completado:
+        tarea.completado = True
+        tarea.fecha_completado = timezone.now()
+        tarea.completado_por = request.user
+        tarea.save()
+        tarea.participantes.set([request.user])
+        tarea_cambio = True
+    elif not todas_completas and tarea.completado:
+        tarea.completado = False
+        tarea.fecha_completado = None
+        tarea.completado_por = None
+        tarea.save()
+        tarea.participantes.clear()
+        tarea_cambio = True
+
+    if tarea_cambio:
+        tarea.sede._sync_estado()
+
+    pct_sede = tarea.sede.porcentaje_checklist
+
+    equipo = []
+    completado_por_nombre = ''
+    fecha_completado_str = ''
+    if tarea_cambio and tarea.completado:
+        equipo = [
+            {'id': e.id, 'nombre': e.get_full_name(), 'cargo': e.get_cargo_display()}
+            for e in tarea.sede.proyecto.equipo.filter(is_active=True).order_by('apellido_paterno')
+        ]
+        completado_por_nombre = request.user.get_full_name()
+        fecha_completado_str = tarea.fecha_completado.strftime('%d/%m/%Y %H:%M') if tarea.fecha_completado else ''
+
+    return JsonResponse({
+        'ok': True,
+        'subtarea_completado': sub.completado,
+        'tarea_id': tarea.id,
+        'tarea_completado': tarea.completado,
+        'tarea_cambio': tarea_cambio,
+        'porcentaje': pct_sede,
+        'estado_sede': tarea.sede.estado,
+        'equipo': equipo,
+        'completado_por': completado_por_nombre,
+        'fecha_completado': fecha_completado_str,
+        'usuario_id': request.user.id,
+    })
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def subtarea_delete(request, id_subtarea):
+    """AJAX POST: elimina (soft-delete) una subtarea."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False}, status=405)
+    sub = get_object_or_404(SubtareaChecklist, pk=id_subtarea, activo=True)
+    sub.activo = False
+    sub.deleted_at = timezone.now()
+    sub.deleted_by = request.user
+    sub.save()
+    return JsonResponse({'ok': True})
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  SUB-ÍTEMS DE PLANTILLA
+# ══════════════════════════════════════════════════════════════════════════════
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def subitem_plantilla_create(request, id_item):
+    """POST: agrega un sub-ítem a un ítem de plantilla."""
+    item = get_object_or_404(ItemPlantilla, pk=id_item)
+    if request.method == 'POST':
+        desc = request.POST.get('descripcion', '').strip()
+        if desc:
+            ultimo = item.subitems.aggregate(m=db_Max('orden'))['m'] or 0
+            SubItemPlantilla.objects.create(item=item, descripcion=desc, orden=ultimo + 1)
+    return redirect('plantilla_detail', id_plantilla=item.plantilla.id)
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def subitem_plantilla_delete(request, id_subitem):
+    """POST: elimina un sub-ítem de plantilla."""
+    subitem = get_object_or_404(SubItemPlantilla, pk=id_subitem)
+    id_plantilla = subitem.item.plantilla.id
+    if request.method == 'POST':
+        subitem.delete()
+    return redirect('plantilla_detail', id_plantilla=id_plantilla)
+
+
+# ── Vista de Seguimiento de Avance ────────────────────────────────────────────
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
+def seguimiento_avance(request):
+    """
+    Tablero de seguimiento que muestra:
+    - % de avance por proyecto (promedio del porcentaje_checklist de sus sedes activas)
+    - % de avance por instalador/técnico (promedio del avance de los proyectos que tiene asignados)
+    """
+    from django.db.models import Avg
+
+    # ── Proyectos activos con progreso ───────────────────────────────────────
+    proyectos_qs = (
+        Proyecto.objects
+        .filter(activo=True)
+        .select_related('cliente')
+        .prefetch_related('sedes', 'equipo')
+        .order_by('estado_proyecto', 'nombre')
+    )
+
+    proyectos_avance = []
+    for proyecto in proyectos_qs:
+        sedes_activas = proyecto.sedes.filter(activo=True)
+        total_sedes = sedes_activas.count()
+        sedes_completadas = sedes_activas.filter(estado='completado').count()
+
+        if total_sedes > 0:
+            progreso = round(
+                sum(s.porcentaje_checklist for s in sedes_activas) / total_sedes
+            )
+        else:
+            progreso = 0
+
+        proyectos_avance.append({
+            'proyecto': proyecto,
+            'progreso': progreso,
+            'total_sedes': total_sedes,
+            'sedes_completadas': sedes_completadas,
+        })
+
+    # ── Instaladores y técnicos: avance basado en sus proyectos asignados ───────
+    from empleados.models import Empleado as EmpleadoModel
+
+    empleados_campo = (
+        EmpleadoModel.objects
+        .filter(is_active=True, cargo__in=['instalador', 'tecnico_soporte'])
+        .prefetch_related('proyectos_asignados__sedes')
+        .order_by('apellido_paterno', 'nombre')
+    )
+
+    empleados_avance = []
+    for emp in empleados_campo:
+        proyectos_emp = (
+            Proyecto.objects
+            .filter(equipo=emp, activo=True)
+            .prefetch_related('sedes')
+        )
+        if not proyectos_emp.exists():
+            continue
+
+        # Para cada proyecto del empleado calcula su % de avance (igual que sección proyectos)
+        detalle_proyectos = []
+        progresos = []
+        for proy in proyectos_emp:
+            sedes_activas = proy.sedes.filter(activo=True)
+            total_sedes = sedes_activas.count()
+            if total_sedes > 0:
+                prog = round(sum(s.porcentaje_checklist for s in sedes_activas) / total_sedes)
+            else:
+                prog = 0
+            progresos.append(prog)
+            detalle_proyectos.append({'proyecto': proy, 'progreso': prog})
+
+        porcentaje_empleado = round(sum(progresos) / len(progresos)) if progresos else 0
+
+        empleados_avance.append({
+            'empleado': emp,
+            'porcentaje': porcentaje_empleado,
+            'detalle_proyectos': detalle_proyectos,
+        })
+
+    # ── KPIs globales ────────────────────────────────────────────────────────
+    total_proyectos = len(proyectos_avance)
+    proyectos_completados = sum(1 for p in proyectos_avance if p['proyecto'].estado_proyecto == 'completado')
+    proyectos_en_progreso = sum(1 for p in proyectos_avance if p['proyecto'].estado_proyecto == 'en_progreso')
+    promedio_avance = (
+        round(sum(p['progreso'] for p in proyectos_avance) / total_proyectos)
+        if total_proyectos > 0 else 0
+    )
+
+    context = {
+        'proyectos_avance': proyectos_avance,
+        'empleados_avance': empleados_avance,
+        'total_proyectos': total_proyectos,
+        'proyectos_completados': proyectos_completados,
+        'proyectos_en_progreso': proyectos_en_progreso,
+        'promedio_avance': promedio_avance,
+    }
+    return render(request, 'seguimiento.html', context)
     return JsonResponse({'ok': True})

@@ -2,6 +2,11 @@
 {% block extra_css %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
+  .was-validated .form-control:valid,
+  .was-validated .form-select:valid { border-color: #dee2e6; background-image: none; }
+  .was-validated .form-control:valid:focus,
+  .was-validated .form-select:valid:focus { border-color: #dee2e6; box-shadow: 0 0 0 0.25rem rgba(39,128,227,.25); }
+  .valid-feedback { display: none; }
   #map { height: 320px; border-radius: 8px; border: 1px solid #dee2e6; }
   #map-hint { font-size: 0.8rem; color: #6c757d; margin-top: 4px; }
 
@@ -33,7 +38,7 @@
 {% endblock %}
 
 {% block content %}
-<main class="container-fluid px-5 py-4">
+<main class="container-fluid px-4 py-4">
   <div class="d-flex align-items-center gap-2 mb-3">
     <a href="{% url 'project_view' project.id %}" class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-arrow-left me-1"></i>Volver
@@ -45,7 +50,7 @@
 
   <div class="card border-0 shadow-sm rounded-3">
     <div class="card-body p-4">
-      <form method="POST">
+      <form method="POST" class="needs-validation" novalidate>
         {% csrf_token %}
 
         <div class="mb-3">
@@ -58,6 +63,7 @@
           <label class="form-label fw-semibold">Dirección <span class="text-danger">*</span></label>
           {{ form.direccion }}
           {% if form.direccion.errors %}<div class="text-danger small mt-1">{{ form.direccion.errors.0 }}</div>{% endif %}
+          <div class="form-text"><i class="bi bi-info-circle me-1"></i>Escribe la dirección manualmente. Si deseas ubicarla en el mapa, usa el <strong>buscador del mapa</strong> más abajo — escribir aquí no mueve el pin automáticamente.</div>
         </div>
 
         <div class="mb-3">
@@ -126,6 +132,14 @@
 
 {% block extra_js %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  document.querySelectorAll('.text-danger.small.mt-1').forEach(function(errorDiv) {
+    var prev = errorDiv.previousElementSibling;
+    if (prev && (prev.tagName === 'INPUT' || prev.tagName === 'SELECT' || prev.tagName === 'TEXTAREA')) {
+      prev.classList.add('is-invalid');
+    }
+  });
+</script>
 <script>
   const latInput = document.getElementById('id_latitud');
   const lngInput = document.getElementById('id_longitud');
@@ -271,5 +285,18 @@
   searchInput.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') clearResults();
   });
+</script>
+<script>
+  (function() {
+    'use strict';
+    window.addEventListener('load', function() {
+      Array.prototype.filter.call(document.getElementsByClassName('needs-validation'), function(form) {
+        form.addEventListener('submit', function(event) {
+          if (!form.checkValidity()) { event.preventDefault(); event.stopPropagation(); }
+          form.classList.add('was-validated');
+        }, false);
+      });
+    }, false);
+  })();
 </script>
 {% endblock %}

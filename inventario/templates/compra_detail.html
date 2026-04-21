@@ -17,7 +17,7 @@
 {% endblock %}
 
 {% block content %}
-<main class="container-fluid px-5 py-4">
+<main class="container-fluid px-4 py-4">
   <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb mb-0">
       <li class="breadcrumb-item"><a href="{% url 'compras' %}">Compras</a></li>
@@ -58,6 +58,13 @@
               <div class="text-danger small mt-1">{% for err in form.fecha.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
             </div>
+            <div class="mb-3">
+              <label class="form-label">N° Factura / Comprobante</label>
+              {{ form.numero_factura }}
+              {% if form.numero_factura.errors %}
+              <div class="text-danger small mt-1">{% for err in form.numero_factura.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+            </div>
           </div>
           <div class="col-lg-6">
             <div class="mb-3">
@@ -81,13 +88,6 @@
             <div class="mb-3">
               <label class="form-label">Total calculado</label>
               <div class="form-control bg-light fw-semibold" id="totalDisplay">Bs. 0.00</div>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">N° Factura / Comprobante</label>
-              {{ form.numero_factura }}
-              {% if form.numero_factura.errors %}
-              <div class="text-danger small mt-1">{% for err in form.numero_factura.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
             </div>
           </div>
         </div>

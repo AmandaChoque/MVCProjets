@@ -1,7 +1,7 @@
 from decimal import Decimal
-from datetime import date
 
 from django.contrib.auth.models import AbstractUser
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.conf import settings
 from django.db.models import Q
@@ -20,7 +20,7 @@ class Empleado(AbstractUser):
     POSITION_CHOICES = [
         ('administrador',    'Administrador'),
         ('gerente',          'Gerente'),
-        ('instalador',       'Supervisor'),
+        ('instalador',       'Instalador'),
         ('tecnico_soporte',  'Técnico'),
         ('secretaria',       'Secretaria'),
     ]
@@ -35,6 +35,12 @@ class Empleado(AbstractUser):
     class Meta:
         verbose_name = 'Empleado'
         verbose_name_plural = 'Empleados'
+
+    def get_full_name(self):
+        parts = [self.nombre, self.apellido_paterno]
+        if self.apellido_materno:
+            parts.append(self.apellido_materno)
+        return ' '.join(parts)
 
     def __str__(self):
         return f"{self.nombre} {self.apellido_paterno} {self.apellido_materno or ''} - CI: {self.carnet_identidad}"
@@ -71,88 +77,6 @@ class ContratoEmpleado(AuditModel):
         if self.monto_acordado and self.dias_laborales:
             return self.monto_acordado / Decimal(str(self.dias_laborales))
         return self.monto_acordado
-
-
-class ContratoProyecto(AuditModel):
-    proyecto       = models.ForeignKey('projects.Proyecto', on_delete=models.CASCADE, related_name='contratos', verbose_name="Proyecto")
-    fecha_firma    = models.DateField(verbose_name="Fecha de Firma")
-    fecha_inicio   = models.DateField(verbose_name="Fecha de Inicio")
-    fecha_fin      = models.DateField(verbose_name="Fecha de Fin")
-    monto_acordado          = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto Acordado (Bs.)")
-    porcentaje_multa_diaria = models.DecimalField(
-        max_digits=5, decimal_places=2, default=Decimal('0'),
-        verbose_name="% Multa Diaria",
-        validators=[MinValueValidator(Decimal('0')), MaxValueValidator(Decimal('100'))],
-    )
-    porcentaje_multa_maxima = models.DecimalField(
-        max_digits=5, decimal_places=2, default=Decimal('20'),
-        verbose_name="% Multa Máxima (tope)",
-        help_text="Tope máximo de multa acumulada como % del monto acordado. Al superarlo el estado pasa a 'crítico'.",
-        validators=[MinValueValidator(Decimal('0')), MaxValueValidator(Decimal('100'))],
-    )
-    observaciones  = models.TextField(blank=True, verbose_name="Observaciones")
-    documento      = models.FileField(upload_to='contratos/', null=True, blank=True, verbose_name="Documento")
-
-    class Meta:
-        verbose_name = 'Contrato de Proyecto'
-        verbose_name_plural = 'Contratos de Proyectos'
-        ordering = ['-created']
-        constraints = [
-            models.CheckConstraint(condition=Q(fecha_fin__gte=models.F('fecha_inicio')), name='contrato_proy_fecha_fin_gte_inicio'),
-            models.CheckConstraint(condition=Q(fecha_firma__lte=models.F('fecha_inicio')), name='contrato_proy_fecha_firma_lte_inicio'),
-            models.UniqueConstraint(fields=['proyecto'], condition=Q(activo=True), name='unique_contrato_proyecto_activo'),
-            models.CheckConstraint(condition=Q(monto_acordado__gt=0), name='contrato_proy_monto_positivo'),
-        ]
-
-    def __str__(self):
-        return f"Contrato proyecto — {self.proyecto.nombre}"
-
-    @property
-    def dias_retraso(self):
-        """Días corridos desde fecha_fin hasta hoy. 0 si el proyecto ya está completado o no hay retraso."""
-        if self.proyecto.estado_proyecto == 'completado':
-            return 0
-        hoy = date.today()
-        if hoy > self.fecha_fin:
-            return (hoy - self.fecha_fin).days
-        return 0
-
-    @property
-    def multa_acumulada(self):
-        """
-        Monto de multa acumulada en Bs. (días × % diario × monto_acordado),
-        con tope en porcentaje_multa_maxima % del monto acordado.
-        """
-        if self.dias_retraso == 0 or not self.porcentaje_multa_diaria:
-            return Decimal('0')
-        multa_sin_tope = (self.porcentaje_multa_diaria / Decimal('100')) * self.monto_acordado * self.dias_retraso
-        tope = (self.porcentaje_multa_maxima / Decimal('100')) * self.monto_acordado
-        return min(multa_sin_tope, tope)
-
-    @property
-    def multa_tope_alcanzado(self):
-        """True si la multa ya llegó al tope máximo definido en el contrato."""
-        if self.dias_retraso == 0 or not self.porcentaje_multa_diaria:
-            return False
-        multa_sin_tope = (self.porcentaje_multa_diaria / Decimal('100')) * self.monto_acordado * self.dias_retraso
-        tope = (self.porcentaje_multa_maxima / Decimal('100')) * self.monto_acordado
-        return multa_sin_tope >= tope
-
-    @property
-    def porcentaje_multa_sobre_contrato(self):
-        """% que representa la multa acumulada sobre el monto acordado."""
-        if not self.monto_acordado:
-            return Decimal('0')
-        return (self.multa_acumulada / self.monto_acordado) * Decimal('100')
-
-    @property
-    def estado_multa(self):
-        """'normal' sin retraso, 'en_multa' con retraso activo, 'critico' si alcanzó el tope."""
-        if self.dias_retraso == 0:
-            return 'normal'
-        if self.multa_tope_alcanzado:
-            return 'critico'
-        return 'en_multa'
 
 
 class PagoEmpleado(AuditModel):
@@ -212,7 +136,7 @@ class JornadaEmpleado(AuditModel):
         related_name='jornadas', verbose_name="Contrato"
     )
     proyecto = models.ForeignKey(
-        'projects.Proyecto', on_delete=models.PROTECT,
+        'projects.Proyecto', on_delete=models.CASCADE,
         related_name='jornadas_empleados', verbose_name="Proyecto trabajado"
     )
     fecha = models.DateField(verbose_name="Fecha")
@@ -230,6 +154,13 @@ class JornadaEmpleado(AuditModel):
         null=True, blank=True,
         related_name='jornadas_cubiertas',
         verbose_name="Pago que cubre esta jornada",
+    )
+    registrado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name='jornadas_registradas_por',
+        verbose_name="Registrado por",
     )
     class Meta:
         verbose_name = 'Jornada de Empleado'
@@ -250,6 +181,15 @@ class JornadaEmpleado(AuditModel):
     def __str__(self):
         emp = self.contrato.empleado
         return f"{emp.nombre} {emp.apellido_paterno} — {self.fecha} ({self.dias}d) — {self.proyecto.nombre}"
+
+    def clean(self):
+        if self.pago_id and self.contrato_id:
+            if self.pago.contrato_id != self.contrato_id:
+                raise ValidationError({'pago': 'El pago debe pertenecer al mismo contrato que la jornada.'})
+        if self.proyecto_id and self.contrato_id:
+            empleado = self.contrato.empleado
+            if not empleado.proyectos_asignados.filter(pk=self.proyecto_id).exists():
+                raise ValidationError({'proyecto': 'El empleado no está asignado al equipo de este proyecto.'})
 
     @property
     def monto(self):

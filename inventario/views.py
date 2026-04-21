@@ -180,6 +180,7 @@ def insumo_view(request, id_insumo):
         Requiere.objects
         .filter(insumo=insumo, activo=True)
         .select_related('proyecto')
+        .prefetch_related('lotes__compra')
         .order_by('-created')
     )
     return render(request, 'insumo_view.html', {
@@ -204,19 +205,32 @@ def deactivate_insumo(request, id_insumo):
 # ── Requiere (insumos por proyecto) ──────────────────────────────────────────
 
 def _lotes_fifo_json(insumos_activos, excluir_requiere_pk=None):
-    """Construye el JSON de lotes FIFO por insumo para el cálculo client-side."""
-    resultado = {}
-    for insumo in insumos_activos:
-        lotes = []
-        for compra in Compra.objects.filter(insumo=insumo, activo=True).order_by('fecha', 'created'):
-            consumido_qs = RequiereLote.objects.filter(compra=compra, requiere__activo=True)
-            if excluir_requiere_pk:
-                consumido_qs = consumido_qs.exclude(requiere_id=excluir_requiere_pk)
-            consumido = consumido_qs.aggregate(t=Sum('cantidad'))['t'] or 0
-            disponible = max(0, compra.cantidad - consumido)
-            if disponible > 0:
-                lotes.append({'d': disponible, 'p': float(compra.costo_unitario)})
-        resultado[str(insumo.id)] = lotes
+    """Construye el JSON de lotes FIFO por insumo para el cálculo client-side.
+    Usa 2 queries en lugar de O(N×M): una para consumidos agregados, otra para compras.
+    """
+    insumo_ids = [i.id for i in insumos_activos]
+    resultado = {str(i.id): [] for i in insumos_activos}
+    if not insumo_ids:
+        return json.dumps(resultado)
+
+    # 1 query: total consumido por compra para todos los insumos relevantes
+    consumed_qs = RequiereLote.objects.filter(
+        requiere__activo=True,
+        compra__insumo_id__in=insumo_ids,
+    )
+    if excluir_requiere_pk:
+        consumed_qs = consumed_qs.exclude(requiere_id=excluir_requiere_pk)
+    consumed_by_compra = dict(
+        consumed_qs.values('compra_id').annotate(t=Sum('cantidad')).values_list('compra_id', 't')
+    )
+
+    # 1 query: todas las compras activas de los insumos relevantes, ordenadas FIFO
+    for compra in Compra.objects.filter(insumo_id__in=insumo_ids, activo=True).order_by('insumo_id', 'fecha', 'created'):
+        consumido = consumed_by_compra.get(compra.id, 0)
+        disponible = max(0, compra.cantidad - consumido)
+        if disponible > 0:
+            resultado[str(compra.insumo_id)].append({'d': disponible, 'p': float(compra.costo_unitario)})
+
     return json.dumps(resultado)
 
 
@@ -226,9 +240,10 @@ def create_requiere(request, id_project):
     if project.estado_proyecto == 'completado':
         messages.error(request, 'No se pueden agregar insumos a un proyecto completado. Los precios quedan bloqueados.')
         return redirect('project_view', id_project=project.id)
-    insumos_activos = Insumo.objects.filter(activo=True)
-    insumos_con_stock = {str(i.id): i.stock for i in insumos_activos}
+    insumos_activos = list(Insumo.objects.filter(activo=True))
+    insumos_con_stock = {}
     for i in insumos_activos:
+        insumos_con_stock[str(i.id)]      = i.stock
         insumos_con_stock[f'min_{i.id}']  = i.stock_minimo
         insumos_con_stock[f'unit_{i.id}'] = i.unidad_abrev
 
@@ -268,7 +283,6 @@ def create_requiere(request, id_project):
                 requiere=requiere,
                 compra=lote_info['compra'],
                 cantidad=lote_info['cantidad'],
-                costo_unitario=lote_info['compra'].costo_unitario,
             )
 
         messages.success(request, f'Insumo "{requiere.insumo.nombre}" agregado al proyecto (total: Bs. {costo_total}).')
@@ -278,14 +292,15 @@ def create_requiere(request, id_project):
 
 @login_required
 def requiere_detail(request, id_requiere):
-    requiere = get_object_or_404(Requiere, pk=id_requiere)
+    requiere = get_object_or_404(Requiere.objects.prefetch_related('lotes__compra'), pk=id_requiere)
     project = requiere.proyecto
     if project.estado_proyecto == 'completado':
         messages.error(request, 'Los insumos de un proyecto completado no pueden modificarse. Los precios están bloqueados.')
         return redirect('project_view', id_project=project.id)
-    insumos_activos = Insumo.objects.filter(activo=True)
-    insumos_con_stock = {str(i.id): i.stock for i in insumos_activos}
+    insumos_activos = list(Insumo.objects.filter(activo=True))
+    insumos_con_stock = {}
     for i in insumos_activos:
+        insumos_con_stock[str(i.id)]      = i.stock
         insumos_con_stock[f'min_{i.id}']  = i.stock_minimo
         insumos_con_stock[f'unit_{i.id}'] = i.unidad_abrev
 
@@ -312,19 +327,18 @@ def requiere_detail(request, id_requiere):
 
         costo_total = sum(l['cantidad'] * l['compra'].costo_unitario for l in lotes_consumo)
 
-        # Reemplazar lotes anteriores con los nuevos
-        requiere.lotes.all().delete()
+        # Desactivar lotes anteriores (soft-delete) antes de crear los nuevos
+        RequiereLote.objects.filter(requiere=requiere).update(
+            activo=False, deleted_at=timezone.now(), deleted_by=request.user
+        )
 
-        updated = form.save(commit=False)
-        updated.costo_total = costo_total
-        updated.save()
+        updated = form.save()
 
         for lote_info in lotes_consumo:
             RequiereLote.objects.create(
                 requiere=updated,
                 compra=lote_info['compra'],
                 cantidad=lote_info['cantidad'],
-                costo_unitario=lote_info['compra'].costo_unitario,
             )
 
         messages.success(request, 'Insumo del proyecto actualizado correctamente.')
@@ -442,6 +456,10 @@ def inventario_report(request):
     search_nombre    = request.GET.get('search_nombre', '').strip()
     filter_categoria = request.GET.get('filter_categoria', '')
     filter_stock     = request.GET.get('filter_stock', '')
+    per_page = int(request.GET.get('per_page', 10))
+    if per_page not in (10, 20, 50, 100):
+        per_page = 10
+    page = request.GET.get('page', 1)
 
     qs = Insumo.objects.filter(activo=True).order_by('categoria', 'nombre')
     if search_nombre:
@@ -486,6 +504,17 @@ def inventario_report(request):
     chart_top_labels = json.dumps([f"{i.nombre[:20]}" for i in top_insumos])
     chart_top_valores = json.dumps([float(i.valor_stock) for i in top_insumos])
 
+    # PDF/Excel: lista completa; HTML: paginada
+    if 'pdf' in request.GET or 'excel' in request.GET:
+        insumos_page = None
+    else:
+        paginator = Paginator(insumos_list, per_page)
+        try:
+            insumos_page = paginator.page(page)
+        except (PageNotAnInteger, EmptyPage):
+            insumos_page = paginator.page(1)
+        insumos_list = list(insumos_page.object_list)
+
     context = {
         'insumos':           insumos_list,
         'total_insumos':     total_insumos,
@@ -497,6 +526,8 @@ def inventario_report(request):
         'filter_categoria':  filter_categoria,
         'filter_stock':      filter_stock,
         'categorias':        Insumo.CATEGORIA_CHOICES,
+        'insumos_page':      insumos_page,
+        'per_page':          per_page,
         'now':               timezone.now(),
         'generado_por':      request.user.get_full_name() or request.user.username,
         'chart_cat_labels':  chart_cat_labels,

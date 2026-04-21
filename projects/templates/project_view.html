@@ -35,7 +35,7 @@
 {% endblock %}
 
 {% block content %}
-<main class="container-fluid px-5 py-4">
+<main class="container-fluid px-4 py-4">
 
   <!-- ENCABEZADO -->
   <div class="d-flex justify-content-between align-items-start mb-3">
@@ -96,8 +96,6 @@
         <i class="bi bi-graph-up me-1"></i>Progreso
         {% if progreso_sedes > 0 %}
         <span class="badge bg-secondary ms-1 badge-count">{{ progreso_sedes }}%</span>
-        {% elif porcentaje_actual > 0 %}
-        <span class="badge bg-secondary ms-1 badge-count">{{ porcentaje_actual }}%</span>
         {% endif %}
       </button>
     </li>
@@ -199,12 +197,10 @@
     <!-- ── TAB PROGRESO ─────────────────────────────────────────────── -->
     <div class="tab-pane fade" id="tab-progreso">
       <div class="card border-0 shadow-sm rounded-3">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <div class="card-header bg-light">
           <h6 class="mb-0 fw-semibold">Progreso del Proyecto</h6>
-          <a href="{% url 'create_progreso' project.id %}" class="btn btn-sm btn-primary">+ Registrar avance</a>
         </div>
         <div class="card-body">
-          <!-- ── Progreso principal: basado en sedes ── -->
           {% if sedes %}
           <div class="mb-4">
             <div class="d-flex justify-content-between align-items-baseline mb-1">
@@ -244,52 +240,7 @@
             </div>
           </div>
           {% else %}
-          <!-- Sin sedes: mostrar progreso manual como principal -->
-          <div class="mb-4">
-            <div class="d-flex justify-content-between small mb-1">
-              <span class="text-muted">Avance registrado</span>
-              <span class="fw-semibold">{{ porcentaje_actual }}%</span>
-            </div>
-            <div class="progress progress-lg">
-              <div class="progress-bar {% if porcentaje_actual == 100 %}bg-success{% elif porcentaje_actual >= 50 %}bg-primary{% else %}bg-warning{% endif %} fw-semibold"
-                   role="progressbar" style="width:{{ porcentaje_actual }}%; font-size:0.7rem;"
-                   aria-valuenow="{{ porcentaje_actual }}" aria-valuemin="0" aria-valuemax="100">
-                {% if porcentaje_actual > 10 %}{{ porcentaje_actual }}%{% endif %}
-              </div>
-            </div>
-          </div>
-          {% endif %}
-          {% if progresos %}
-          <div class="table-responsive">
-            <table class="table table-sm table-hover align-middle small mb-0">
-              <thead class="table-light text-uppercase fw-semibold thead-xs">
-                <tr>
-                  <th scope="col">Registrado</th><th scope="col">Fecha</th><th scope="col" class="text-center">%</th>
-                  <th scope="col">Descripción</th><th scope="col">Observación</th>
-                  <th scope="col" class="text-end" style="width:60px;">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for prog in progresos %}
-                <tr>
-                  <td class="text-nowrap">
-                    {{ prog.created|date:"d/m/Y" }}
-                    <div class="text-muted text-xs">{{ prog.created|date:"H:i" }}</div>
-                  </td>
-                  <td class="text-nowrap">{{ prog.fecha|date:"d/m/Y" }}</td>
-                  <td class="text-center">
-                    <span class="badge {% if prog.porcentaje == 100 %}bg-success{% elif prog.porcentaje >= 50 %}bg-primary{% else %}bg-warning text-dark{% endif %}">
-                      {{ prog.porcentaje }}%
-                    </span>
-                  </td>
-                  <td>{{ prog.descripcion }}</td>
-                  <td class="text-muted">{{ prog.observacion|default:"—"|truncatechars:60 }}</td>
-                  <td class="text-end"><a href="{% url 'progreso_detail' prog.id %}" class="btn btn-sm btn-light">Editar</a></td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
+          <p class="text-muted small">Sin sedes registradas. El progreso se calcula automáticamente al completar tareas de checklist en cada sede.</p>
           {% endif %}
         </div>
       </div>
@@ -367,7 +318,7 @@
             <form method="POST" action="{% url 'equipo_add' project.id %}" class="d-flex gap-2 align-items-center flex-wrap">
               {% csrf_token %}
               <select name="empleado_id" class="form-select form-select-sm" style="max-width:280px" required>
-                <option value="">— Seleccionar empleado —</option>
+                <option value="">Seleccionar empleado</option>
                 {% for emp in empleados_disponibles %}
                 <option value="{{ emp.id }}">{{ emp.nombre }} {{ emp.apellido_paterno }} — {{ emp.get_cargo_display }}</option>
                 {% endfor %}
@@ -395,7 +346,15 @@
                 {% for item in equipo_proyecto %}
                 <tr>
                   <td class="px-3 fw-semibold">{{ item.empleado.nombre }} {{ item.empleado.apellido_paterno }}</td>
-                  <td class="text-muted">{{ item.empleado.get_cargo_display }}</td>
+                  <td>
+                    {% if item.empleado.cargo == 'instalador' %}
+                      <span class="badge bg-primary">{{ item.empleado.get_cargo_display }}</span>
+                    {% elif item.empleado.cargo == 'tecnico_soporte' %}
+                      <span class="badge bg-secondary">{{ item.empleado.get_cargo_display }}</span>
+                    {% else %}
+                      <span class="text-muted">{{ item.empleado.get_cargo_display }}</span>
+                    {% endif %}
+                  </td>
                   <td class="text-center text-muted">{{ item.ultima_fecha|date:"d/m/Y"|default:"—" }}</td>
                   <td class="text-center">{{ item.total_dias }}</td>
                   {% if not es_instalador_tecnico %}<td class="text-end fw-semibold">{{ item.costo|floatformat:2 }}</td>{% endif %}
@@ -428,47 +387,6 @@
 
     <!-- ── TAB SEDES ──────────────────────────────────────────────────── -->
     <div class="tab-pane fade" id="tab-sedes">
-
-      <!-- INDICADOR DE RITMO DEL PROYECTO -->
-      <div class="card border-0 shadow-sm rounded-3 mb-4
-        {% if ritmo_estado == 'ok' %}border-start border-success border-3
-        {% elif ritmo_estado == 'alerta' %}border-start border-warning border-3
-        {% else %}border-start border-danger border-3{% endif %}">
-        <div class="card-body py-3">
-          <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
-            <div>
-              <div class="d-flex align-items-center gap-2 mb-1">
-                <i class="bi bi-speedometer2 fs-5
-                  {% if ritmo_estado == 'ok' %}text-success
-                  {% elif ritmo_estado == 'alerta' %}text-warning
-                  {% else %}text-danger{% endif %}"></i>
-                <span class="fw-semibold">Ritmo de avance — esta semana</span>
-                {% if ritmo_estado == 'ok' %}
-                  <span class="badge bg-success">Al día</span>
-                {% elif ritmo_estado == 'alerta' %}
-                  <span class="badge bg-warning text-dark">Ligeramente atrasado</span>
-                {% else %}
-                  <span class="badge bg-danger">Atrasado — posible fin de semana</span>
-                {% endif %}
-              </div>
-              <div class="text-muted small">
-                <strong>{{ grupos_completados_semana }}</strong> instalación{{ grupos_completados_semana|pluralize:"es" }} completada{{ grupos_completados_semana|pluralize:"s" }}
-                de las <strong>{{ ritmo_esperado }}</strong> esperadas esta semana
-                (promedio del equipo: {{ ritmo_esperado }}/semana)
-              </div>
-            </div>
-            <div class="text-center">
-              <div class="display-6 fw-bold
-                {% if ritmo_estado == 'ok' %}text-success
-                {% elif ritmo_estado == 'alerta' %}text-warning
-                {% else %}text-danger{% endif %}">
-                {{ grupos_completados_semana }}<span class="fs-6 fw-normal text-muted">/{{ ritmo_esperado }}</span>
-              </div>
-              <div class="text-muted label-meta">últimos 7 días</div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       <!-- Mapa general del proyecto -->
       {% with sedes_con_coords=sedes %}
@@ -683,10 +601,70 @@
       </div>
 
 
+      <!-- Pagos del Cliente -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-semibold">Pagos del Cliente</h6>
+          <a href="{% url 'create_payment' %}?proyecto={{ project.id }}" class="btn btn-sm btn-primary">+ Registrar pago</a>
+        </div>
+        <div class="card-body {% if pagos_cliente %}p-0{% endif %}">
+          {% if pagos_cliente %}
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle small mb-0">
+              <thead class="table-light text-uppercase fw-semibold thead-xs">
+                <tr>
+                  <th scope="col" class="px-3">Fecha</th>
+                  <th scope="col" class="text-end">Monto (Bs.)</th>
+                  <th scope="col" class="text-end">Descuento (Bs.)</th>
+                  <th scope="col" class="text-end">Total cubierto (Bs.)</th>
+                  <th scope="col">Método</th>
+                  <th scope="col">Referencia</th>
+                  <th scope="col" class="px-3"></th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for pago in pagos_cliente %}
+                <tr>
+                  <td class="px-3 text-muted">{{ pago.fecha|date:"d/m/Y" }}</td>
+                  <td class="text-end fw-semibold">{{ pago.monto|floatformat:2 }}</td>
+                  <td class="text-end {% if pago.descuento %}text-warning{% else %}text-muted{% endif %}">
+                    {% if pago.descuento %}{{ pago.descuento|floatformat:2 }}{% else %}—{% endif %}
+                  </td>
+                  <td class="text-end fw-semibold text-success">{{ pago.monto_neto|floatformat:2 }}</td>
+                  <td>
+                    {% if pago.tipo_pago == 'efectivo' %}
+                      <span class="badge bg-success">Efectivo</span>
+                    {% else %}
+                      <span class="badge bg-info text-dark">Transferencia</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-muted">{{ pago.numero_referencia|default:"—" }}</td>
+                  <td class="px-3">
+                    <a href="{% url 'payment_view' pago.id %}" class="btn btn-sm btn-light py-0">Ver</a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+              <tfoot class="table-light">
+                <tr>
+                  <td class="px-3 fw-bold">Total pagado</td>
+                  <td class="text-end fw-bold">{{ total_pagado_cliente|floatformat:2 }}</td>
+                  <td colspan="2" class="text-end text-muted small">Saldo: <strong class="{% if saldo_cliente > 0 %}text-danger{% else %}text-success{% endif %}">Bs. {{ saldo_cliente|floatformat:2 }}</strong></td>
+                  <td colspan="3"></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+          {% else %}
+          <p class="text-muted small mb-0">Sin pagos registrados. <a href="{% url 'create_payment' %}?proyecto={{ project.id }}">Registrar el primero</a>.</p>
+          {% endif %}
+        </div>
+      </div>
+
       <!-- Historial de Cambios de Monto -->
       {% if historial_monto %}
       <div class="card border-0 shadow-sm rounded-3">
-        <div class="card-header bg-light"><h6 class="mb-0 fw-semibold">Historial de Cambios de Monto</h6></div>
+        <div class="card-header bg-light"><h6 class="mb-0 fw-semibold">Historial de Contrato</h6></div>
         <div class="card-body p-0">
           <div class="table-responsive">
             <table class="table table-sm align-middle small mb-0">
@@ -767,12 +745,17 @@
     el.style.width = (el.dataset.width || 0) + '%';
   });
 
-  // Persistir tab activo por proyecto
+  // Persistir tab activo por proyecto (con soporte de hash en URL)
   const storageKey = 'pvTab_{{ project.id }}';
+  const hashTarget = window.location.hash ? window.location.hash : null; // ej: '#tab-sedes'
   const saved = localStorage.getItem(storageKey);
-  if (saved) {
-    const btn = document.querySelector(`#projectTabs [data-bs-target="${saved}"]`);
-    if (btn) bootstrap.Tab.getOrCreateInstance(btn).show();
+  const targetTab = hashTarget || saved;
+  if (targetTab) {
+    const btn = document.querySelector(`#projectTabs [data-bs-target="${targetTab}"]`);
+    if (btn) {
+      bootstrap.Tab.getOrCreateInstance(btn).show();
+      localStorage.setItem(storageKey, targetTab);
+    }
   }
   document.querySelectorAll('#projectTabs [data-bs-toggle="tab"]').forEach(btn => {
     btn.addEventListener('shown.bs.tab', () => localStorage.setItem(storageKey, btn.getAttribute('data-bs-target')));

@@ -1,15 +1,18 @@
+from decimal import Decimal
+from datetime import date
+
 from django.conf import settings
 from django.db import models
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.utils import timezone
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 # Señal para actualizar automáticamente el estado del proyecto
 from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
 
 from django.db.models import Sum
-from django.core.validators import MaxValueValidator, MinValueValidator
 # Create your models here.
 
 # Auditoria
@@ -101,17 +104,16 @@ class Proyecto(AuditModel):
     ]
 
     PROJECT_TYPE_CHOICES = [
-        ('instalacion_nueva',      'Instalación Nueva'),
-        ('ampliacion',             'Ampliación'),
-        ('mantenimiento_garantia', 'Mantenimiento (Garantía)'),
-        ('mantenimiento_externo',  'Mantenimiento Externo'),
-        ('emergencia',             'Emergencia'),
+        ('instalacion_nueva',     'Instalación Nueva'),
+        ('ampliacion',            'Ampliación'),
+        ('mantenimiento_externo', 'Mantenimiento Externo'),
+        ('emergencia',            'Emergencia'),
     ]
     # Opciones para el estado del pago
     PAYMENT_STATE_CHOICES = [
-        ('no_pagado', 'No Pagado'),
-        ('parcial', 'Pago Parcial'),
-        ('pagado', 'Pago Completo'),
+        ('no_pagado', 'No pagado'),
+        ('parcial', 'Pago parcial'),
+        ('pagado', 'Pago completo'),
     ]
     codigo = models.CharField(max_length=20, unique=True, verbose_name="Código Proyecto")
     nombre = models.CharField(max_length=200, unique=True, verbose_name="Nombre Proyecto")
@@ -122,32 +124,18 @@ class Proyecto(AuditModel):
     fecha_fin = models.DateField(null=True, blank=True, verbose_name="Fecha de Finalización")
     observacion = models.TextField(blank=True, default='', verbose_name="Observación")
     # Desnormalización controlada: valor calculado mantenido automáticamente
-    # por la señal post_save/post_delete de Pago. Nunca modificar directamente.
+    # por la señal post_save/post_delete de PagoProyecto. Nunca modificar directamente.
     estado_pago = models.CharField(max_length=20, choices=PAYMENT_STATE_CHOICES, default='no_pagado', db_index=True, verbose_name="Estado de Pago")
     creado_por = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, verbose_name="Creado por")
     # PROTECT evita borrar un cliente que tenga proyectos asociados (previene pérdida de datos)
     cliente = models.ForeignKey(Cliente, on_delete=models.PROTECT, verbose_name="Contratista")
 
     monto_total = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Monto Total del Proyecto")
-    proyecto_origen = models.ForeignKey(
-        'self',
-        null=True, blank=True,
-        on_delete=models.SET_NULL,
-        related_name='proyectos_garantia',
-        verbose_name="Proyecto de Origen (Garantía)",
-        limit_choices_to={'tipo_proyecto': 'instalacion_nueva', 'activo': True},
-    )
     equipo = models.ManyToManyField(
         settings.AUTH_USER_MODEL, blank=True,
         related_name='proyectos_asignados',
         verbose_name="Equipo del Proyecto",
     )
-    ritmo_semanal = models.PositiveSmallIntegerField(
-        default=4,
-        verbose_name="Ritmo esperado (grupos/semana)",
-        help_text="Promedio de unidades de instalación completadas por semana (ej: 4 cámaras/semana).",
-    )
-
     def __str__(self):
         username = self.creado_por.username if self.creado_por else 'N/A'
         return self.nombre + ' - by ' + username
@@ -190,6 +178,94 @@ class Proyecto(AuditModel):
 
         self.save()
 
+# Contrato entre la empresa y el cliente por proyecto
+class ContratoProyecto(AuditModel):
+    proyecto       = models.ForeignKey('Proyecto', on_delete=models.CASCADE, related_name='contratos', verbose_name="Proyecto")
+    fecha_firma    = models.DateField(verbose_name="Fecha de Firma")
+    fecha_inicio   = models.DateField(verbose_name="Fecha de Inicio")
+    fecha_fin      = models.DateField(verbose_name="Fecha de Fin")
+    monto_acordado          = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto Acordado (Bs.)")
+    porcentaje_multa_diaria = models.DecimalField(
+        max_digits=5, decimal_places=2, default=Decimal('0'),
+        verbose_name="% Multa Diaria",
+        validators=[MinValueValidator(Decimal('0')), MaxValueValidator(Decimal('100'))],
+    )
+    porcentaje_multa_maxima = models.DecimalField(
+        max_digits=5, decimal_places=2, default=Decimal('20'),
+        verbose_name="% Multa Máxima (tope)",
+        help_text="Tope máximo de multa acumulada como % del monto acordado. Al superarlo el estado pasa a 'crítico'.",
+        validators=[MinValueValidator(Decimal('0')), MaxValueValidator(Decimal('100'))],
+    )
+    garantia_meses = models.PositiveSmallIntegerField(
+        default=0,
+        verbose_name="Meses de Garantía",
+        help_text="Meses de garantía incluidos en este contrato (0 = sin garantía).",
+    )
+    observaciones  = models.TextField(blank=True, verbose_name="Observaciones")
+    documento      = models.FileField(upload_to='contratos/', null=True, blank=True, verbose_name="Documento")
+
+    class Meta:
+        verbose_name = 'Contrato de Proyecto'
+        verbose_name_plural = 'Contratos de Proyectos'
+        ordering = ['-created']
+        constraints = [
+            models.CheckConstraint(condition=Q(fecha_fin__gte=models.F('fecha_inicio')), name='contrato_proy_fecha_fin_gte_inicio'),
+            models.CheckConstraint(condition=Q(fecha_firma__lte=models.F('fecha_inicio')), name='contrato_proy_fecha_firma_lte_inicio'),
+            models.UniqueConstraint(fields=['proyecto'], condition=Q(activo=True), name='unique_contrato_proyecto_activo'),
+            models.CheckConstraint(condition=Q(monto_acordado__gt=0), name='contrato_proy_monto_positivo'),
+        ]
+
+    def __str__(self):
+        return f"Contrato proyecto — {self.proyecto.nombre}"
+
+    @property
+    def dias_retraso(self):
+        """Días corridos desde fecha_fin hasta hoy. 0 si el proyecto ya está completado o no hay retraso."""
+        if self.proyecto.estado_proyecto == 'completado':
+            return 0
+        hoy = date.today()
+        if hoy > self.fecha_fin:
+            return (hoy - self.fecha_fin).days
+        return 0
+
+    @property
+    def multa_acumulada(self):
+        """
+        Monto de multa acumulada en Bs. (días × % diario × monto_acordado),
+        con tope en porcentaje_multa_maxima % del monto acordado.
+        """
+        if self.dias_retraso == 0 or not self.porcentaje_multa_diaria:
+            return Decimal('0')
+        multa_sin_tope = (self.porcentaje_multa_diaria / Decimal('100')) * self.monto_acordado * self.dias_retraso
+        tope = (self.porcentaje_multa_maxima / Decimal('100')) * self.monto_acordado
+        return min(multa_sin_tope, tope)
+
+    @property
+    def multa_tope_alcanzado(self):
+        """True si la multa ya llegó al tope máximo definido en el contrato."""
+        if self.dias_retraso == 0 or not self.porcentaje_multa_diaria:
+            return False
+        multa_sin_tope = (self.porcentaje_multa_diaria / Decimal('100')) * self.monto_acordado * self.dias_retraso
+        tope = (self.porcentaje_multa_maxima / Decimal('100')) * self.monto_acordado
+        return multa_sin_tope >= tope
+
+    @property
+    def porcentaje_multa_sobre_contrato(self):
+        """% que representa la multa acumulada sobre el monto acordado."""
+        if not self.monto_acordado:
+            return Decimal('0')
+        return (self.multa_acumulada / self.monto_acordado) * Decimal('100')
+
+    @property
+    def estado_multa(self):
+        """'normal' sin retraso, 'en_multa' con retraso activo, 'critico' si alcanzó el tope."""
+        if self.dias_retraso == 0:
+            return 'normal'
+        if self.multa_tope_alcanzado:
+            return 'critico'
+        return 'en_multa'
+
+
 # Auditoría de cambios al presupuesto del proyecto
 class HistorialPresupuesto(models.Model):
     fecha_modificacion = models.DateTimeField(auto_now_add=True, verbose_name="Fecha Modificación")
@@ -205,8 +281,8 @@ class HistorialPresupuesto(models.Model):
     proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='historial_presupuesto', verbose_name="Proyecto")
 
     class Meta:
-        verbose_name = 'Historial Presupuesto'
-        verbose_name_plural = 'Historiales de Presupuesto'
+        verbose_name = 'Historial Contrato'
+        verbose_name_plural = 'Historiales de Contrato'
         db_table = 'projects_historialpresupuesto'
 
     def __str__(self):
@@ -259,23 +335,6 @@ def sync_estado_pago_tras_cambio_monto(sender, instance, **kwargs):
             Proyecto.objects.filter(pk=instance.pk).update(estado_pago=nuevo_estado)
 
 
-# Progreso del Proyecto
-class Progreso(AuditModel):
-    proyecto = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='progresos', verbose_name="Proyecto")
-    fecha = models.DateField(verbose_name="Fecha")
-    porcentaje = models.PositiveIntegerField(validators=[MinValueValidator(0), MaxValueValidator(100)], verbose_name="Porcentaje (%)")
-    descripcion = models.CharField(max_length=255, verbose_name="Descripción")
-    observacion = models.TextField(blank=True, verbose_name="Observación")
-
-    class Meta:
-        verbose_name = 'Progreso'
-        verbose_name_plural = 'Progresos'
-        ordering = ['-fecha', '-created']
-
-    def __str__(self):
-        return f"{self.proyecto.nombre} — {self.porcentaje}% ({self.fecha})"
-
-
 # ── Plantilla de tareas para instalaciones ───────────────────────────────────
 
 class PlantillaTarea(AuditModel):
@@ -301,7 +360,7 @@ class PlantillaTarea(AuditModel):
         return f"{self.get_tipo_display()} — {self.nombre}"
 
 
-class ItemPlantilla(AuditModel):
+class ItemPlantilla(models.Model):
     plantilla   = models.ForeignKey(PlantillaTarea, on_delete=models.CASCADE, related_name='items', verbose_name="Plantilla")
     descripcion = models.CharField(max_length=255, verbose_name="Tarea")
     orden       = models.PositiveSmallIntegerField(default=1, verbose_name="Orden")
@@ -313,6 +372,20 @@ class ItemPlantilla(AuditModel):
 
     def __str__(self):
         return f"{self.orden}. {self.descripcion}"
+
+
+class SubItemPlantilla(models.Model):
+    item        = models.ForeignKey(ItemPlantilla, on_delete=models.CASCADE, related_name='subitems', verbose_name="Tarea padre")
+    descripcion = models.CharField(max_length=255, verbose_name="Subtarea")
+    orden       = models.PositiveSmallIntegerField(default=1, verbose_name="Orden")
+
+    class Meta:
+        verbose_name = 'Sub-ítem de Plantilla'
+        verbose_name_plural = 'Sub-ítems de Plantilla'
+        ordering = ['orden']
+
+    def __str__(self):
+        return f"  └ {self.descripcion}"
 
 
 # ── Sede (punto de instalación dentro de un proyecto) ────────────────────────
@@ -388,56 +461,10 @@ class FotoSede(AuditModel):
         return f"Foto — {self.sede.nombre} ({self.created.date() if self.created else ''})"
 
 
-# ── Grupo de instalación (unidad de trabajo dentro de una sede) ───────────────
-
-class GrupoTarea(AuditModel):
-    TIPO_CHOICES = [
-        ('camara_ip',        'Cámara IP'),
-        ('camara_analogica', 'Cámara Analógica'),
-        ('dvr_nvr',          'DVR / NVR'),
-        ('alarma',           'Sistema de Alarma'),
-        ('sensor',           'Sensor'),
-        ('fibra',            'Fibra Óptica'),
-        ('otro',             'Otro'),
-    ]
-    sede             = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='grupos', verbose_name="Sede")
-    nombre           = models.CharField(max_length=200, verbose_name="Nombre")
-    tipo             = models.CharField(max_length=20, choices=TIPO_CHOICES, verbose_name="Tipo")
-    orden            = models.PositiveSmallIntegerField(default=1, verbose_name="Orden")
-    fecha_completado = models.DateTimeField(null=True, blank=True, verbose_name="Fecha completado")
-
-    class Meta:
-        verbose_name = 'Grupo de Instalación'
-        verbose_name_plural = 'Grupos de Instalación'
-        ordering = ['orden', 'created']
-
-    def __str__(self):
-        return f"{self.get_tipo_display()} — {self.nombre}"
-
-    @property
-    def completado(self):
-        tareas = self.tareas.filter(activo=True)
-        if not tareas.exists():
-            return False
-        return not tareas.filter(completado=False).exists()
-
-    @property
-    def porcentaje(self):
-        total = self.tareas.filter(activo=True).count()
-        if total == 0:
-            return 0
-        completadas = self.tareas.filter(activo=True, completado=True).count()
-        return round(completadas / total * 100)
-
-
 # ── Tarea de checklist por sede ───────────────────────────────────────────────
 
 class TareaChecklist(AuditModel):
     sede              = models.ForeignKey(Sede, on_delete=models.CASCADE, related_name='tareas', verbose_name="Sede")
-    grupo             = models.ForeignKey(
-        GrupoTarea, on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='tareas', verbose_name="Grupo de instalación"
-    )
     descripcion       = models.CharField(max_length=255, verbose_name="Tarea")
     orden             = models.PositiveSmallIntegerField(default=0, verbose_name="Orden")
     completado        = models.BooleanField(default=False, verbose_name="Completado")
@@ -445,6 +472,10 @@ class TareaChecklist(AuditModel):
     completado_por    = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='+', verbose_name="Completado por"
+    )
+    participantes     = models.ManyToManyField(
+        settings.AUTH_USER_MODEL, blank=True,
+        related_name='tareas_participadas', verbose_name="Participantes"
     )
 
     class Meta:
@@ -461,6 +492,26 @@ class TareaChecklist(AuditModel):
     def __str__(self):
         estado = '✓' if self.completado else '○'
         return f"{estado} {self.descripcion} — {self.sede.nombre}"
+
+
+class SubtareaChecklist(AuditModel):
+    tarea            = models.ForeignKey(TareaChecklist, on_delete=models.CASCADE, related_name='subtareas', verbose_name="Tarea")
+    descripcion      = models.CharField(max_length=255, verbose_name="Subtarea")
+    orden            = models.PositiveSmallIntegerField(default=1, verbose_name="Orden")
+    completado       = models.BooleanField(default=False, verbose_name="Completado")
+    fecha_completado = models.DateTimeField(null=True, blank=True, verbose_name="Fecha completado")
+    completado_por   = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='+', verbose_name="Completado por"
+    )
+
+    class Meta:
+        verbose_name = 'Subtarea'
+        verbose_name_plural = 'Subtareas'
+        ordering = ['orden', 'created']
+
+    def __str__(self):
+        return f"  └ {'✓' if self.completado else '○'} {self.descripcion}"
 
 
 # ── Notificación interna ──────────────────────────────────────────────────────
@@ -494,6 +545,11 @@ class Notificacion(models.Model):
             ),
         ]
 
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        if self.sede_id and self.proyecto_id and self.sede.proyecto_id != self.proyecto_id:
+            raise ValidationError('El proyecto de la notificación no coincide con el proyecto de la sede.')
+
     def __str__(self):
         return f"[{self.tipo}] → {self.destinatario.username}: {self.mensaje[:60]}"
 
@@ -508,7 +564,7 @@ METODOS_PAGO = [
 ]
 
 
-class Pago(AuditModel):
+class PagoProyecto(AuditModel):
     monto             = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto recibido (Bs.)")
     descuento         = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Descuento / Multa aplicada (Bs.)")
     motivo_descuento  = models.CharField(max_length=300, blank=True, default='', verbose_name="Motivo del descuento")
@@ -519,7 +575,7 @@ class Pago(AuditModel):
 
     class Meta:
         verbose_name_plural = 'Pagos'
-        db_table = 'projects_pago'
+        db_table = 'projects_pagoproyecto'
         ordering = ['-fecha']
         constraints = [
             models.CheckConstraint(
@@ -543,31 +599,13 @@ class Pago(AuditModel):
         return f"Pago de {self.monto} Bs. ({self.get_tipo_pago_display()})"
 
 
-@receiver(post_save, sender='projects.Pago')
-@receiver(post_delete, sender='projects.Pago')
+@receiver(post_save, sender='projects.PagoProyecto')
+@receiver(post_delete, sender='projects.PagoProyecto')
 def update_project_payment_status(sender, instance, **kwargs):
     instance.proyecto._sync_estado_pago()
 
 
 # ── Señal: notificaciones de sede ────────────────────────────────────────────
-
-@receiver(post_save, sender=TareaChecklist)
-def sincronizar_grupo_completado(sender, instance, **kwargs):
-    """
-    Cuando se guarda una TareaChecklist con grupo, recalcula fecha_completado
-    del grupo: se llena cuando todas las tareas del grupo están completadas,
-    se limpia si alguna queda pendiente.
-    """
-    grupo = instance.grupo
-    if not grupo or not grupo.activo:
-        return
-    tareas = grupo.tareas.filter(activo=True)
-    todas_hechas = tareas.exists() and not tareas.filter(completado=False).exists()
-    if todas_hechas and not grupo.fecha_completado:
-        GrupoTarea.objects.filter(pk=grupo.pk).update(fecha_completado=timezone.now())
-    elif not todas_hechas and grupo.fecha_completado:
-        GrupoTarea.objects.filter(pk=grupo.pk).update(fecha_completado=None)
-
 
 @receiver(post_save, sender=TareaChecklist)
 def notificar_sede_completada(sender, instance, **kwargs):
@@ -595,7 +633,15 @@ def notificar_sede_completada(sender, instance, **kwargs):
         else:
             nuevo_estado = 'pendiente'
         if proyecto.estado_proyecto != nuevo_estado:
-            Proyecto.objects.filter(pk=proyecto.pk).update(estado_proyecto=nuevo_estado)
+            update_fields = {'estado_proyecto': nuevo_estado}
+            hoy = timezone.now().date()
+            # Primer avance → fijar fecha_inicio del proyecto
+            if nuevo_estado == 'en_progreso' and not proyecto.fecha_inicio:
+                update_fields['fecha_inicio'] = hoy
+            # Todas las sedes completadas → fijar fecha_fin del proyecto
+            if nuevo_estado == 'completado' and not proyecto.fecha_fin:
+                update_fields['fecha_fin'] = hoy
+            Proyecto.objects.filter(pk=proyecto.pk).update(**update_fields)
 
     if sede.estado == 'completado':
         admins = list(get_user_model().objects.filter(

@@ -19,7 +19,7 @@ class ProveedorForm(forms.ModelForm):
         model = Proveedor
         fields = [
             'nombre', 'rubro', 'nit', 'telefono', 'correo', 'direccion',
-            'encargado_nombre', 'encargado_cargo', 'encargado_celular', 'encargado_correo',
+            'encargado_nombre', 'encargado_cargo', 'encargado_celular',
         ]
         widgets = {
             'nombre':    forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: DIGIPORT S.R.L.', 'required': 'required'}),
@@ -30,7 +30,6 @@ class ProveedorForm(forms.ModelForm):
             'encargado_nombre':  forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre completo del encargado'}),
             'encargado_cargo':   forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Vendedor, Gerente Comercial'}),
             'encargado_celular': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Celular del encargado', 'inputmode': 'numeric', 'pattern': '[0-9]+', 'minlength': '7'}),
-            'encargado_correo':  forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'correo@encargado.com'}),
         }
 
     def clean_telefono(self):

@@ -1,11 +1,11 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="container-fluid py-3">
+<div class="container-fluid px-4 py-4">
 
-  <!-- ── CABECERA ──────────────────────────────────────────────── -->
-  <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+  <!-- ======================= ENCABEZADO ======================= -->
+  <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-      <h5 class="fw-semibold text-secondary mb-0">Mi Trabajo</h5>
+      <h4 class="fw-bold text-sobotec mb-0">Mi Jornada</h4>
       <span class="text-muted small">{{ request.user.nombre|default:request.user.username }} — {{ request.user.get_cargo_display }}</span>
     </div>
     <div class="d-flex gap-2">
@@ -23,84 +23,98 @@
     </div>
   </div>
 
-  <!-- ── RESUMEN RÁPIDO ─────────────────────────────────────────── -->
-  {% if mis_tareas_pendientes %}
-  <div class="alert alert-warning border-0 shadow-sm py-2 px-3 mb-3 d-flex align-items-center gap-3">
-    <span class="fw-bold fs-4">{{ mis_tareas_pendientes|length }}</span>
-    <div>
-      <div class="fw-semibold small">tarea{{ mis_tareas_pendientes|length|pluralize:"s" }} pendiente{{ mis_tareas_pendientes|length|pluralize:"s" }}</div>
-      <div class="text-muted small">en tus proyectos activos</div>
+  <!-- ======================= RESUMEN TAREAS ======================= -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2 px-3 d-flex align-items-center gap-3">
+      {% if mis_tareas_pendientes %}
+        <span class="badge bg-warning text-dark fs-6 fw-bold">{{ mis_tareas_pendientes|length }}</span>
+        <div>
+          <div class="fw-semibold small">tarea{{ mis_tareas_pendientes|length|pluralize:"s" }} pendiente{{ mis_tareas_pendientes|length|pluralize:"s" }}</div>
+          <div class="text-muted small">en tus proyectos activos</div>
+        </div>
+      {% else %}
+        <i class="bi bi-check-circle-fill text-success fs-5"></i>
+        <div>
+          <span class="fw-semibold small">¡Todo al día!</span>
+          <span class="text-muted small ms-1">No tienes tareas pendientes.</span>
+        </div>
+      {% endif %}
     </div>
   </div>
-  {% else %}
-  <div class="alert alert-success border-0 shadow-sm py-2 px-3 mb-3">
-    <i class="bi bi-check-circle-fill me-2"></i>
-    <span class="fw-semibold">¡Todo al día!</span> No tienes tareas pendientes.
-  </div>
-  {% endif %}
 
-  <!-- ── JORNADA DE HOY ───────────────────────────────────────────── -->
+  <!-- ======================= JORNADA DE HOY ======================= -->
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center"
          style="border-left:4px solid #198754;">
-      <div>
-        <span class="fw-semibold">Jornada de hoy</span>
-        <span class="text-muted small ms-2">{{ hoy }}</span>
-      </div>
+      <span class="fw-semibold small">Jornada de hoy <span class="text-muted fw-normal ms-1">{{ hoy }}</span></span>
       {% if contrato_activo %}
-        <a href="{% url 'create_jornada' contrato_activo.id %}"
-           class="btn btn-success btn-sm">
+        <a href="{% url 'create_jornada' contrato_activo.id %}" class="btn btn-success btn-sm">
           <i class="bi bi-plus-lg me-1"></i>Registrar jornada
         </a>
       {% endif %}
     </div>
-    <div class="card-body py-2 px-3">
+    <div class="card-body p-0">
       {% if not contrato_activo %}
-        <p class="text-muted small mb-0">No tienes un contrato activo. Contactá al administrador.</p>
-
+        <p class="text-muted small mb-0 px-3 py-2">No tienes un contrato activo. Contacta al administrador.</p>
       {% elif jornadas_hoy %}
-        <div class="d-flex flex-column gap-2">
-          {% for j in jornadas_hoy %}
-          <div class="d-flex justify-content-between align-items-center border-bottom pb-1">
-            <div>
-              <span class="fw-semibold small">{{ j.proyecto.nombre }}</span>
-              <span class="badge bg-secondary ms-1">
-                {% if j.dias == 1.0 %}Día completo{% else %}Medio día{% endif %}
-              </span>
-              {% if j.estado == 'aprobada' %}
-                <span class="badge bg-success ms-1">Aprobada</span>
-              {% elif j.estado == 'rechazada' %}
-                <span class="badge bg-danger ms-1" title="{{ j.motivo_rechazo }}">Rechazada</span>
-              {% else %}
-                <span class="badge bg-warning text-dark ms-1">Pendiente aprobación</span>
-              {% endif %}
-              {% if j.observacion %}
-                <div class="text-muted small">{{ j.observacion }}</div>
-              {% endif %}
-              {% if j.estado == 'rechazada' and j.motivo_rechazo %}
-                <div class="text-danger small"><i class="bi bi-exclamation-circle me-1"></i>{{ j.motivo_rechazo }}</div>
-              {% endif %}
-            </div>
-            {% if j.estado != 'aprobada' %}
-            <a href="{% url 'jornada_detail' j.id %}" class="btn btn-outline-secondary btn-sm py-0">
-              <i class="bi bi-pencil"></i>
-            </a>
-            {% endif %}
-          </div>
-          {% endfor %}
-        </div>
+        <table class="table table-sm table-hover align-middle small mb-0">
+          <thead class="table-light small text-uppercase fw-semibold">
+            <tr>
+              <th class="px-3">Proyecto</th>
+              <th>Duración</th>
+              <th>Estado</th>
+              <th>Observación</th>
+              <th class="text-end px-3" style="width:60px;">Acción</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for j in jornadas_hoy %}
+            <tr>
+              <td class="fw-semibold px-3">{{ j.proyecto.nombre }}</td>
+              <td>
+                {% if j.dias == 1.0 %}
+                  <span class="badge bg-secondary small">Día completo</span>
+                {% else %}
+                  <span class="badge bg-secondary small">Medio día</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if j.estado == 'aprobada' %}
+                  <span class="badge bg-success small">Aprobada</span>
+                {% elif j.estado == 'rechazada' %}
+                  <span class="badge bg-danger small" title="{{ j.motivo_rechazo }}">Rechazada</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark small">Pendiente</span>
+                {% endif %}
+              </td>
+              <td class="text-muted">
+                {% if j.observacion %}{{ j.observacion }}{% else %}—{% endif %}
+                {% if j.estado == 'rechazada' and j.motivo_rechazo %}
+                  <div class="text-danger small"><i class="bi bi-exclamation-circle me-1"></i>{{ j.motivo_rechazo }}</div>
+                {% endif %}
+              </td>
+              <td class="text-end px-3">
+                {% if j.estado != 'aprobada' %}
+                  <a href="{% url 'jornada_detail' j.id %}" class="btn btn-outline-secondary btn-sm py-0">
+                    <i class="bi bi-pencil"></i>
+                  </a>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       {% else %}
-        <p class="text-muted small mb-0">Aún no registraste tu jornada de hoy.</p>
+        <p class="text-muted small mb-0 px-3 py-2">Aún no registraste tu jornada de hoy.</p>
       {% endif %}
     </div>
   </div>
 
-  <!-- ── RESUMEN DE PAGOS ─────────────────────────────────────────── -->
+  <!-- ======================= MI BALANCE ======================= -->
   {% if resumen_pago %}
   <div class="card border-0 shadow-sm mb-3">
-    <div class="card-header bg-light py-2 px-3"
-         style="border-left:4px solid #0d6efd;">
-      <span class="fw-semibold">Mi balance</span>
+    <div class="card-header bg-light py-2 px-3" style="border-left:4px solid #0d6efd;">
+      <span class="fw-semibold small">Mi balance</span>
       <span class="text-muted small ms-2">Bs. {{ contrato_activo.monto_diario|floatformat:2 }} / día</span>
     </div>
     <div class="card-body py-2 px-3">
@@ -124,14 +138,15 @@
   </div>
   {% endif %}
 
-  <!-- ── PROYECTOS CON SEDES ────────────────────────────────────── -->
+  <!-- ======================= PROYECTOS CON SEDES ======================= -->
   {% for item in proyectos_data %}
   <div class="card border-0 shadow-sm mb-3">
-    <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 px-3"
+    <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center"
          style="border-left:4px solid #1B4D90;">
       <div>
         <span class="fw-semibold">{{ item.proyecto.nombre }}</span>
-        <span class="text-muted small ms-2">{{ item.proyecto.codigo }} · {{ item.proyecto.get_tipo_proyecto_display }}</span>
+        <span class="text-muted small ms-2">{{ item.proyecto.codigo }}</span>
+        <span class="badge bg-secondary small ms-1">{{ item.proyecto.get_tipo_proyecto_display }}</span>
       </div>
       <div class="d-flex align-items-center gap-2">
         <div class="progress" style="width:80px;height:6px;border-radius:4px;">
@@ -139,9 +154,9 @@
                style="width:{{ item.pct_global }}%;"></div>
         </div>
         {% if item.pct_global == 100 %}
-          <span class="badge bg-success">100%</span>
+          <span class="badge bg-success small">100%</span>
         {% else %}
-          <span class="badge bg-secondary">{{ item.pct_global }}%</span>
+          <span class="badge bg-secondary small">{{ item.pct_global }}%</span>
         {% endif %}
       </div>
     </div>
@@ -156,23 +171,22 @@
           style="border-left-width:3px !important;">
           <div class="d-flex justify-content-between align-items-start">
             <div>
-              <a href="{% url 'sede_view' sede.id %}" class="fw-semibold text-decoration-none">
+              <a href="{% url 'sede_view' sede.id %}" class="fw-semibold small text-decoration-none">
                 {{ sede.nombre }}
               </a>
               <div class="text-muted small"><i class="bi bi-geo-alt me-1"></i>{{ sede.direccion|truncatechars:60 }}</div>
             </div>
             <div class="ms-2 flex-shrink-0">
               {% if sede.estado == 'completado' %}
-                <span class="badge bg-success">Completada</span>
+                <span class="badge bg-success small">Completada</span>
               {% elif sede.estado == 'en_progreso' %}
-                <span class="badge bg-primary">{{ sede.porcentaje_checklist }}%</span>
+                <span class="badge bg-primary small">{{ sede.porcentaje_checklist }}%</span>
               {% else %}
-                <span class="badge bg-warning text-dark">Pendiente</span>
+                <span class="badge bg-warning text-dark small">Pendiente</span>
               {% endif %}
             </div>
           </div>
 
-          <!-- Tareas de esta sede -->
           {% with tareas_sede=sede.tareas.all %}
           {% if tareas_sede %}
           <div class="d-flex flex-wrap gap-1 mt-2">
@@ -194,31 +208,50 @@
         </div>
         {% endfor %}
       {% else %}
-        <p class="text-muted small mb-2 py-1">
-          Sin sedes registradas.
-          {% if es_admin %}<a href="{% url 'sede_create' item.proyecto.id %}">Agregar sede</a>.{% endif %}
-        </p>
+        <p class="text-muted small mb-0">Sin sedes registradas.</p>
       {% endif %}
 
-      <div class="mt-1">
+      <div class="mt-2">
         <a href="{% url 'project_view' item.proyecto.id %}" class="btn btn-sm btn-outline-secondary py-0">
           <i class="bi bi-eye me-1"></i>Ver proyecto completo
         </a>
-        {% if es_admin %}
-        <a href="{% url 'sede_create' item.proyecto.id %}" class="btn btn-sm btn-outline-primary py-0 ms-1">
-          <i class="bi bi-plus me-1"></i>Nueva sede
-        </a>
-        {% endif %}
       </div>
     </div>
   </div>
   {% empty %}
-  <div class="text-center text-muted py-5">
-    <i class="bi bi-briefcase" style="font-size:2.5rem;"></i>
-    <p class="mt-2">No tienes proyectos activos asignados.</p>
+  <div class="card border-0 shadow-sm">
+    <div class="card-body text-center text-muted py-5">
+      <i class="bi bi-briefcase" style="font-size:2.5rem;"></i>
+      <p class="mt-2 mb-0">No tienes proyectos activos asignados.</p>
+    </div>
   </div>
   {% endfor %}
 
+</div>
+
+<!-- Modal participantes de tarea -->
+<div class="modal fade" id="modalParticipantes" tabindex="-1" aria-labelledby="modalParticipantesLabel" aria-hidden="true" data-bs-backdrop="static">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title fw-semibold" id="modalParticipantesLabel">
+          <i class="bi bi-people me-2"></i>¿Quiénes trabajaron en esta tarea?
+        </h6>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted small mb-3">Selecciona a todos los que participaron en completar esta tarea.</p>
+        <div id="participantes-checkboxes" class="d-flex flex-column gap-2"></div>
+      </div>
+      <div class="modal-footer py-2 d-flex justify-content-between">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-solo-yo">
+          <i class="bi bi-person me-1"></i>Solo yo
+        </button>
+        <button type="button" class="btn btn-primary btn-sm" id="btn-guardar-participantes">
+          <i class="bi bi-check-lg me-1"></i>Guardar
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 
@@ -226,24 +259,115 @@
 <script>
 const CSRF = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
 
+// ── Estado del modal ──────────────────────────────────────────────────────────
+let _modalTareaId   = null;
+let _modalUsuarioId = null;
+let _modalBtn       = null;
+const modalEl = document.getElementById('modalParticipantes');
+const bsModal = modalEl ? new bootstrap.Modal(modalEl) : null;
+
+function guardarParticipantes(ids) {
+  fetch(`/tareas/${_modalTareaId}/participantes/`, {
+    method: 'POST',
+    headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+    body: JSON.stringify({participantes: ids}),
+  }).then(r => r.json()).then(res => {
+    if (res.ok && res.jornadas_creadas && res.jornadas_creadas.length > 0) {
+      mostrarAlertaJornadas(res.jornadas_creadas);
+    }
+  });
+  if (bsModal) {
+    if (document.activeElement) document.activeElement.blur();
+    bsModal.hide();
+  }
+}
+
+function mostrarAlertaJornadas(nombres) {
+  const div = document.createElement('div');
+  div.className = 'alert alert-success alert-dismissible fade show position-fixed bottom-0 end-0 m-3 shadow-sm';
+  div.style.zIndex = 9999;
+  div.style.maxWidth = '360px';
+  div.innerHTML = `
+    <i class="bi bi-calendar-check me-2"></i>
+    <strong>Jornada registrada</strong> para:<br>
+    <span class="small">${nombres.join(', ')}</span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 5000);
+}
+
+function abrirModalParticipantes(tareaId, usuarioId, equipo) {
+  _modalTareaId   = tareaId;
+  _modalUsuarioId = usuarioId;
+  const box = document.getElementById('participantes-checkboxes');
+  box.innerHTML = equipo.map(e => `
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="mp_${e.id}" value="${e.id}"
+             ${e.id === usuarioId ? 'checked' : ''}>
+      <label class="form-check-label" for="mp_${e.id}">
+        ${e.nombre} <span class="text-muted small">(${e.cargo})</span>
+      </label>
+    </div>
+  `).join('');
+  bsModal.show();
+}
+
+if (modalEl) {
+  document.getElementById('btn-guardar-participantes').addEventListener('click', () => {
+    const ids = [...document.querySelectorAll('#participantes-checkboxes input:checked')].map(i => parseInt(i.value));
+    if (!ids.includes(_modalUsuarioId)) ids.push(_modalUsuarioId);
+    guardarParticipantes(ids);
+  });
+  document.getElementById('btn-solo-yo').addEventListener('click', () => {
+    guardarParticipantes([_modalUsuarioId]);
+  });
+}
+
+// ── Toggle de tareas ──────────────────────────────────────────────────────────
 document.querySelectorAll('.tarea-pill').forEach(pill => {
   pill.addEventListener('click', function() {
     const id = this.dataset.id;
     const btn = this;
-    fetch(`/tareas/${id}/toggle/`, {
+
+    // Actualización optimista
+    const eraCompletado = btn.classList.contains('btn-success');
+    const ahoraCompletado = !eraCompletado;
+    btn.classList.toggle('btn-success', ahoraCompletado);
+    btn.classList.toggle('btn-outline-warning', !ahoraCompletado);
+    const icon = btn.querySelector('i');
+    if (icon) icon.className = ahoraCompletado ? 'bi bi-check-lg me-1' : 'bi bi-circle me-1';
+
+    fetch(`/tareas/${id}/alternar/`, {
       method: 'POST',
       headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'},
-    }).then(r => r.json()).then(data => {
-      if (!data.ok) return;
-      btn.classList.toggle('btn-success', data.completado);
-      btn.classList.toggle('btn-outline-warning', !data.completado);
-      const icon = btn.querySelector('i');
-      if (icon) icon.className = data.completado ? 'bi bi-check-lg me-1' : 'bi bi-circle me-1';
+    }).then(r => {
+      if (!r.ok) throw new Error('server_error');
+      return r.json();
+    }).then(data => {
+      if (!data.ok) {
+        btn.classList.toggle('btn-success', eraCompletado);
+        btn.classList.toggle('btn-outline-warning', !eraCompletado);
+        if (icon) icon.className = eraCompletado ? 'bi bi-check-lg me-1' : 'bi bi-circle me-1';
+        return;
+      }
+      if (data.completado) {
+        _modalTareaId   = parseInt(id);
+        _modalUsuarioId = data.usuario_id;
+        _modalBtn       = btn;
+        if (data.equipo && data.equipo.length > 1) {
+          abrirModalParticipantes(parseInt(id), data.usuario_id, data.equipo);
+        } else {
+          guardarParticipantes([data.usuario_id]);
+        }
+      }
     }).catch(() => {
+      btn.classList.toggle('btn-success', eraCompletado);
+      btn.classList.toggle('btn-outline-warning', !eraCompletado);
+      if (icon) icon.className = eraCompletado ? 'bi bi-check-lg me-1' : 'bi bi-circle me-1';
       const queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
-      queue.push({url: `/tareas/${id}/toggle/`, method: 'POST'});
+      queue.push({url: `/tareas/${id}/alternar/`, method: 'POST'});
       localStorage.setItem('offlineQueue', JSON.stringify(queue));
-      btn.style.opacity = '0.6';
       btn.title = 'Guardado offline';
     });
   });

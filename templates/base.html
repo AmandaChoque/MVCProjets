@@ -91,8 +91,8 @@
       }
       .sidebar .nav-link {
         color: #fff !important;
-        padding: 6px 10px;
-        font-size: 0.84rem;
+        padding: 4px 8px;
+        font-size: 0.81rem;
         border-radius: 6px;
         display: flex;
         align-items: center;
@@ -115,17 +115,17 @@
       }
       /* Sub-items */
       .sidebar .submenu .nav-link {
-        font-size: 0.8rem;
-        padding: 4px 8px 4px 12px;
+        font-size: 0.78rem;
+        padding: 3px 6px 3px 10px;
         border-radius: 5px;
       }
       /* Sección del sidebar */
       .sidebar-section {
-        font-size: 0.62rem;
+        font-size: 0.60rem;
         text-transform: uppercase;
-        letter-spacing: 0.12em;
+        letter-spacing: 0.10em;
         font-weight: 700;
-        padding: 8px 14px 2px;
+        padding: 5px 10px 1px;
         margin-top: 0;
         border-top: 1px solid rgba(255,255,255,0.12);
       }
@@ -159,7 +159,7 @@
       /* Main content */
       .main-content {
         margin-left: 260px;
-        padding: 20px;
+        padding: 14px;
         transition: margin-left 0.3s;
         min-height: calc(100vh - 56px);
       }
@@ -185,6 +185,9 @@
       .kpi-card.gray    { border-color: #6c757d; }
       .kpi-value { font-size: 1.8rem; font-weight: 700; line-height: 1.1; }
       .kpi-label { font-size: 0.78rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.05em; }
+
+      /* Utilidad de color de marca */
+      .text-sobotec { color: #1B4D90; }
 
       /* Responsive */
       @media (max-width: 992px) {
@@ -215,7 +218,7 @@
         >
           <span class="navbar-toggler-icon"></span>
         </button>
-        <a class="navbar-brand d-flex align-items-center gap-2">
+        <a class="navbar-brand d-flex align-items-center gap-2" href="{% url 'dashboard' %}">
           <img src="/static/common/logo.png" alt="Logo" style="height:34px; width:34px; border-radius:6px; object-fit:cover;">
           SOBOTEC S.R.L.
         </a>
@@ -266,21 +269,12 @@
       <ul class="nav flex-column px-2 pt-2" id="sidebarNav">
         {% if user.is_authenticated %}
 
-        <!-- Inicio: oculto para instalador/técnico -->
-        {% if not es_instalador_tecnico %}
-        <li class="nav-item">
-          <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active-link{% endif %}"
-             href="{% url 'dashboard' %}">
-            <i class="bi bi-house-door-fill me-2"></i>Inicio
-          </a>
-        </li>
-        {% endif %}
 
         {% if es_campo %}
         <li class="nav-item">
           <a class="nav-link {% if request.path == '/mi-trabajo/' %}active-link{% endif %}"
              href="{% url 'instalador_dashboard' %}">
-            <i class="bi bi-phone me-2"></i>Mi trabajo
+            <i class="bi bi-calendar-check me-2"></i>Mi Jornada
           </a>
         </li>
         {% endif %}
@@ -290,13 +284,22 @@
           <i class="bi bi-folder2 me-1"></i>Proyectos
         </li>
 
+        {% if es_admin_sec %}
+        <li class="nav-item">
+          <a class="nav-link {% if '/clientes' in request.path %}active-link{% endif %}"
+             href="{% url 'clientes' %}">
+            <i class="bi bi-person-lines-fill me-2"></i>Clientes
+          </a>
+        </li>
+        {% endif %}
+
         <li class="nav-item">
           <a class="nav-link" data-bs-toggle="collapse" href="#projectSubmenu"
              aria-expanded="{% if '/projects' in request.path or '/progreso' in request.path or request.resolver_match.url_name == 'project_report' or request.resolver_match.url_name == 'project_analysis' %}true{% else %}false{% endif %}">
             <i class="bi bi-folder2-open me-2"></i>Proyectos
             <i class="bi bi-chevron-down chevron"></i>
           </a>
-          <div class="collapse submenu {% if '/projects' in request.path or '/progreso' in request.path or request.resolver_match.url_name == 'project_report' or request.resolver_match.url_name == 'project_analysis' %}show{% endif %}" id="projectSubmenu">
+          <div class="collapse submenu {% if '/projects' in request.path or '/progreso' in request.path or request.resolver_match.url_name == 'project_report' or request.resolver_match.url_name == 'project_analysis' or request.resolver_match.url_name == 'seguimiento_avance' %}show{% endif %}" id="projectSubmenu">
             <ul class="nav flex-column ms-2">
               <li>
                 <a class="nav-link {% if request.resolver_match.url_name == 'projects' %}active-link{% endif %}"
@@ -305,6 +308,12 @@
                 </a>
               </li>
               {% if not es_instalador_tecnico %}
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'seguimiento_avance' %}active-link{% endif %}"
+                   href="{% url 'seguimiento_avance' %}">
+                  <i class="bi bi-graph-up-arrow me-2"></i>Seguimiento
+                </a>
+              </li>
               <li>
                 <a class="nav-link {% if request.resolver_match.url_name == 'project_report' %}active-link{% endif %}"
                    href="{% url 'project_report' %}">
@@ -323,12 +332,6 @@
         </li>
 
         {% if es_admin_sec %}
-        <li class="nav-item">
-          <a class="nav-link {% if '/clientes' in request.path %}active-link{% endif %}"
-             href="{% url 'clientes' %}">
-            <i class="bi bi-person-lines-fill me-2"></i>Clientes
-          </a>
-        </li>
         <li class="nav-item">
           <a class="nav-link" data-bs-toggle="collapse" href="#paymentSubmenu"
              aria-expanded="{% if '/payments' in request.path %}true{% else %}false{% endif %}">
@@ -472,7 +475,24 @@
     </div>
 
     <!-- Main Content — role="main" para lectores de pantalla; id para skip-link -->
-    <div class="main-content" id="main-content" role="main">{% block content %}{% endblock %}</div>
+    <div class="main-content" id="main-content" role="main">
+      <!-- Mensajes del sistema (global) -->
+      {% if messages %}
+      <div class="px-2 pt-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show d-flex align-items-center gap-2" role="alert">
+          {% if message.tags == 'success' %}<i class="bi bi-check-circle-fill flex-shrink-0"></i>
+          {% elif message.tags == 'danger' or message.tags == 'error' %}<i class="bi bi-x-circle-fill flex-shrink-0"></i>
+          {% elif message.tags == 'warning' %}<i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
+          {% else %}<i class="bi bi-info-circle-fill flex-shrink-0"></i>{% endif %}
+          <span>{{ message }}</span>
+          <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% block content %}{% endblock %}
+    </div>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>

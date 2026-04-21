@@ -26,6 +26,13 @@ class EmpleadoForm(forms.ModelForm):
         label="Confirmar contraseña",
         widget=forms.PasswordInput(attrs={'class': 'form-control', 'autocomplete': 'new-password'})
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk:
+            self.fields['password1'].required = False
+            self.fields['password2'].required = False
+            self.fields['username'].required = False
     cargo = forms.ChoiceField(
         choices=[('', 'Seleccionar cargo')] + Empleado.POSITION_CHOICES,
         widget=forms.Select(attrs={'class': 'form-select', 'required': 'required'}),
@@ -82,6 +89,8 @@ class EmpleadoForm(forms.ModelForm):
 
     def clean_username(self):
         username = self.cleaned_data.get('username', '').strip()
+        if not username and self.instance and self.instance.pk:
+            return self.instance.username
         qs = Empleado.objects.filter(username=username)
         if self.instance and self.instance.pk:
             qs = qs.exclude(pk=self.instance.pk)
@@ -233,6 +242,12 @@ class JornadaEmpleadoForm(forms.ModelForm):
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         label='Observación',
     )
+    companeros = forms.ModelMultipleChoiceField(
+        queryset=Empleado.objects.none(),
+        required=False,
+        label='Compañeros que también trabajaron este día',
+        widget=forms.CheckboxSelectMultiple(),
+    )
 
     class Meta:
         model = JornadaEmpleado
@@ -242,21 +257,37 @@ class JornadaEmpleadoForm(forms.ModelForm):
     def __init__(self, *args, empleado=None, es_admin=False, contrato=None, **kwargs):
         super().__init__(*args, **kwargs)
         self._contrato = contrato
+        self._empleado = empleado
         base_qs = Proyecto.objects.filter(activo=True, estado_proyecto__in=['pendiente', 'en_progreso'])
         if es_admin or empleado is None:
             self.fields['proyecto'].queryset = base_qs
         else:
             self.fields['proyecto'].queryset = base_qs.filter(equipo=empleado)
-        self.fields['proyecto'].empty_label = '— Seleccionar proyecto —'
+        self.fields['proyecto'].empty_label = 'Seleccionar proyecto'
+        # El queryset de compañeros se filtra por proyecto vía JS en el template,
+        # pero lo inicializamos con todos los del equipo de los proyectos disponibles
+        # para que los IDs enviados pasen la validación del ModelMultipleChoiceField.
+        if not es_admin and empleado is not None:
+            self.fields['companeros'].queryset = Empleado.objects.filter(
+                is_active=True,
+                proyectos_asignados__in=base_qs.filter(equipo=empleado),
+            ).exclude(pk=empleado.pk).distinct()
+        else:
+            self.fields['companeros'].queryset = Empleado.objects.filter(is_active=True)
 
     def clean(self):
         cleaned_data = super().clean()
         fecha    = cleaned_data.get('fecha')
         dias     = cleaned_data.get('dias')
+        proyecto = cleaned_data.get('proyecto')
         contrato = self._contrato
 
         if not fecha or not dias or not contrato:
             return cleaned_data
+
+        if proyecto and not proyecto.equipo.filter(pk=contrato.empleado.pk).exists():
+            self.add_error('proyecto',
+                f'{contrato.empleado.get_full_name()} no pertenece al equipo de este proyecto.')
 
         dias_decimal = Decimal(str(dias))
 

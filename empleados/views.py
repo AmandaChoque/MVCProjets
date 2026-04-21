@@ -6,14 +6,14 @@ from django.http import HttpResponse
 from django.db.models import Q, Count, Sum, OuterRef, Subquery
 from django.utils import timezone
 from django.template.loader import get_template
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from xhtml2pdf import pisa
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
-from .models import Empleado, PagoEmpleado, ContratoEmpleado, ContratoProyecto, JornadaEmpleado
+from .models import Empleado, PagoEmpleado, ContratoEmpleado, JornadaEmpleado
 from .forms import EmpleadoForm, ContratoEmpleadoForm, ContratoEmpleadoDesdeEmpleadoForm, JornadaEmpleadoForm, PagoEmpleadoForm
-from projects.models import Proyecto, TareaChecklist
+from projects.models import Proyecto, TareaChecklist, ContratoProyecto
 from projects.decorators import cargo_required, ROLES_ADMIN, ROLES_ADMIN_SEC, ROLES_CAMPO
 
 
@@ -107,55 +107,54 @@ def employee_view(request, id_employee):
 @login_required
 @cargo_required(*ROLES_ADMIN)
 def employee_workload(request):
-    empleados = Empleado.objects.filter(is_active=True).annotate(
-        monto_contratos=Sum(
-            'contratos_empleado__monto_acordado',
-            filter=Q(contratos_empleado__activo=True)
-        ),
-    ).order_by('nombre')
-
-    empleados_list = list(empleados)
-    for emp in empleados_list:
-        proyectos_activos_qs = emp.proyectos_asignados.filter(
-            activo=True,
-            estado_proyecto__in=['pendiente', 'en_progreso'],
-        )
-        proyectos_completados_count = emp.proyectos_asignados.filter(
-            activo=True,
-            estado_proyecto='completado',
-        ).count()
-
-        ids_activos = list(proyectos_activos_qs.values_list('id', flat=True))
-        contratos_proyecto_map = {
-            cp.proyecto_id: cp
-            for cp in ContratoProyecto.objects.filter(proyecto_id__in=ids_activos, activo=True)
-        }
-        dias_por_proyecto = {
-            row['proyecto_id']: row['total']
-            for row in JornadaEmpleado.objects.filter(
-                contrato__empleado=emp, activo=True,
-                proyecto_id__in=ids_activos,
-            ).values('proyecto_id').annotate(total=Sum('dias'))
-        }
-        emp.proyectos_activos = len(ids_activos)
-        emp.proyectos_completados = proyectos_completados_count
-        emp.total_dias = sum(dias_por_proyecto.values())
-        emp.contratos_activos_list = [
-            {
-                'proyecto': p,
-                'contrato_proyecto': contratos_proyecto_map.get(p.id),
-                'dias_trabajados': dias_por_proyecto.get(p.id, 0),
+    # ── Tab 1: jornadas pendientes de aprobar ─────────────────────────────────
+    jornadas_pend_qs = (
+        JornadaEmpleado.objects.filter(activo=True, estado='pendiente')
+        .select_related('contrato__empleado', 'proyecto')
+        .order_by('contrato__empleado__apellido_paterno', 'fecha')
+    )
+    pendientes_map = {}
+    for j in jornadas_pend_qs:
+        emp = j.contrato.empleado
+        if emp.id not in pendientes_map:
+            pendientes_map[emp.id] = {
+                'empleado': emp,
+                'contrato': j.contrato,
+                'jornadas': [],
+                'total_dias': 0,
             }
-            for p in proyectos_activos_qs
-        ]
+        pendientes_map[emp.id]['jornadas'].append(j)
+        pendientes_map[emp.id]['total_dias'] += j.dias
 
-    empleados_list.sort(key=lambda e: e.proyectos_activos, reverse=True)
-    max_proyectos = max((e.proyectos_activos for e in empleados_list), default=1) or 1
-    total_con_proyectos = sum(1 for e in empleados_list if e.proyectos_activos > 0)
+    # ── Tab 2: jornadas aprobadas sin pago asignado ───────────────────────────
+    jornadas_sin_pagar_qs = (
+        JornadaEmpleado.objects.filter(activo=True, estado='aprobada', pago__isnull=True)
+        .select_related('contrato__empleado', 'proyecto')
+        .order_by('contrato__empleado__apellido_paterno', 'fecha')
+    )
+    sin_pagar_map = {}
+    for j in jornadas_sin_pagar_qs:
+        emp = j.contrato.empleado
+        if emp.id not in sin_pagar_map:
+            sin_pagar_map[emp.id] = {
+                'empleado': emp,
+                'contrato': j.contrato,
+                'jornadas': [],
+                'total_dias': 0,
+                'total_monto': 0,
+            }
+        sin_pagar_map[emp.id]['jornadas'].append(j)
+        sin_pagar_map[emp.id]['total_dias'] += j.dias
+        sin_pagar_map[emp.id]['total_monto'] += j.monto
+
+    total_monto_pendiente = sum(g['total_monto'] for g in sin_pagar_map.values())
+
     return render(request, 'employee_workload.html', {
-        'empleados': empleados_list,
-        'max_proyectos': max_proyectos,
-        'total_con_proyectos': total_con_proyectos,
+        'pendientes_por_empleado': list(pendientes_map.values()),
+        'sin_pagar_por_empleado': list(sin_pagar_map.values()),
+        'total_pendientes': jornadas_pend_qs.count(),
+        'total_sin_pagar': jornadas_sin_pagar_qs.count(),
+        'total_monto_pendiente': total_monto_pendiente,
     })
 
 
@@ -169,10 +168,7 @@ def employee_detail(request, id_employee):
     form = EmpleadoForm(request.POST, instance=empleado)
     if form.is_valid():
         empleado = form.save(commit=False)
-        apellido_materno = form.cleaned_data.get('apellido_materno') or ''
-        empleado.first_name = form.cleaned_data['nombre']
-        empleado.last_name  = f"{form.cleaned_data['apellido_paterno']} {apellido_materno}".strip()
-        empleado.email      = form.cleaned_data.get('correo') or ''
+        empleado.email = form.cleaned_data.get('correo') or ''
         nueva_password = form.cleaned_data.get('password1')
         if nueva_password:
             empleado.set_password(nueva_password)
@@ -236,6 +232,10 @@ def employees(request):
 def employee_report(request):
     search_nombre = request.GET.get('search_nombre', '').strip()
     filter_cargo  = request.GET.get('filter_cargo', '')
+    per_page = int(request.GET.get('per_page', 10))
+    if per_page not in (10, 20, 50, 100):
+        per_page = 10
+    page = request.GET.get('page', 1)
 
     empleados_qs = Empleado.objects.filter(is_active=True).prefetch_related(
         'contratos_empleado'
@@ -279,6 +279,17 @@ def employee_report(request):
     tot_devengado = sum(emp.total_ganado  for emp in empleados_list)
     tot_saldo     = sum(emp.saldo_pendiente for emp in empleados_list)
 
+    # PDF/Excel: lista completa; HTML: paginada
+    if 'pdf' in request.GET or 'excel' in request.GET:
+        empleados_page = None
+    else:
+        paginator = Paginator(empleados_list, per_page)
+        try:
+            empleados_page = paginator.page(page)
+        except (PageNotAnInteger, EmptyPage):
+            empleados_page = paginator.page(1)
+        empleados_list = list(empleados_page.object_list)
+
     context = {
         'empleados':      empleados_list,
         'search_nombre':  search_nombre,
@@ -290,6 +301,8 @@ def employee_report(request):
         'cargo_counts':   cargo_counts,
         'tot_devengado':  tot_devengado,
         'tot_saldo':      tot_saldo,
+        'empleados_page': empleados_page,
+        'per_page':       per_page,
         'now':            timezone.now(),
         'generado_por':   request.user.get_full_name() or request.user.username,
     }
@@ -503,6 +516,7 @@ def deactivate_contrato_empleado(request, id_contrato):
 
 @login_required
 def create_jornada(request, id_contrato):
+    import json
     contrato = get_object_or_404(ContratoEmpleado, pk=id_contrato, activo=True)
     cargo = getattr(request.user, 'cargo', None)
     if cargo not in ROLES_ADMIN and contrato.empleado != request.user:
@@ -516,6 +530,19 @@ def create_jornada(request, id_contrato):
     total_pagado    = contrato.pagos.filter(activo=True).aggregate(t=Sum('monto'))['t'] or 0
     saldo_pendiente = total_ganado - total_pagado
 
+    # Mapa proyecto_id → lista de compañeros para filtrado JS en el template
+    base_qs = Proyecto.objects.filter(activo=True, estado_proyecto__in=['pendiente', 'en_progreso'])
+    if not es_admin:
+        proyectos_disponibles = base_qs.filter(equipo=contrato.empleado)
+    else:
+        proyectos_disponibles = base_qs
+    companeros_por_proyecto = {}
+    for p in proyectos_disponibles.prefetch_related('equipo'):
+        companeros_por_proyecto[p.id] = [
+            {'id': e.id, 'nombre': e.get_full_name(), 'cargo': e.get_cargo_display()}
+            for e in p.equipo.filter(is_active=True).exclude(pk=contrato.empleado.pk)
+        ]
+
     if request.method == 'GET':
         form = JornadaEmpleadoForm(
             empleado=contrato.empleado, es_admin=es_admin, contrato=contrato,
@@ -525,10 +552,50 @@ def create_jornada(request, id_contrato):
             request.POST, empleado=contrato.empleado, es_admin=es_admin, contrato=contrato,
         )
         if form.is_valid():
+            # Guardar la jornada propia
             jornada = form.save(commit=False)
             jornada.contrato = contrato
             jornada.dias = form.cleaned_data['dias']
             jornada.save()
+
+            # Crear jornadas para los compañeros seleccionados
+            companeros = form.cleaned_data.get('companeros', [])
+            errores_companeros = []
+            creadas_companeros = []
+            for companero in companeros:
+                contrato_comp = companero.contratos_empleado.filter(activo=True).order_by('-created').first()
+                if not contrato_comp:
+                    errores_companeros.append(f'{companero.get_full_name()} no tiene contrato activo.')
+                    continue
+                fecha = form.cleaned_data['fecha']
+                if not (contrato_comp.fecha_inicio <= fecha <= contrato_comp.fecha_fin):
+                    errores_companeros.append(
+                        f'{companero.get_full_name()}: la fecha está fuera del rango de su contrato.'
+                    )
+                    continue
+                ya_existe = JornadaEmpleado.objects.filter(
+                    contrato=contrato_comp, proyecto=jornada.proyecto, fecha=fecha, activo=True,
+                ).exists()
+                if ya_existe:
+                    errores_companeros.append(
+                        f'{companero.get_full_name()} ya tiene jornada registrada ese día en este proyecto.'
+                    )
+                    continue
+                JornadaEmpleado.objects.create(
+                    contrato=contrato_comp,
+                    proyecto=jornada.proyecto,
+                    fecha=fecha,
+                    dias=jornada.dias,
+                    observacion=jornada.observacion,
+                    registrado_por=request.user,
+                )
+                creadas_companeros.append(companero.get_full_name())
+
+            if creadas_companeros:
+                messages.success(request, f'Jornada registrada también para: {", ".join(creadas_companeros)}.')
+            for err in errores_companeros:
+                messages.warning(request, err)
+
             messages.success(request, 'Jornada registrada correctamente.')
             if not es_admin:
                 return redirect('instalador_dashboard')
@@ -540,6 +607,7 @@ def create_jornada(request, id_contrato):
         'total_ganado': total_ganado, 'total_pagado': total_pagado,
         'saldo_pendiente': saldo_pendiente,
         'from_dashboard': not es_admin,
+        'companeros_por_proyecto_json': json.dumps(companeros_por_proyecto),
     })
 
 
@@ -568,12 +636,12 @@ def jornada_detail(request, id_jornada):
             if es_admin:
                 return redirect('contrato_empleado_detail', id_contrato=contrato.id)
             return redirect('instalador_dashboard')
-    # Tareas completadas ese día en ese proyecto (para vista del admin)
+    # Tareas completadas ese día en ese proyecto donde el empleado fue participante
     tareas_del_dia = TareaChecklist.objects.filter(
         sede__proyecto=jornada.proyecto,
         completado=True,
-        fecha_completado=jornada.fecha,
-        completado_por=contrato.empleado,
+        fecha_completado__date=jornada.fecha,
+        participantes=contrato.empleado,
         activo=True,
     ).select_related('sede').order_by('sede__nombre', 'orden')
     return render(request, 'jornada_detail.html', {
@@ -627,12 +695,35 @@ def revisar_jornadas_proyecto(request, id_proyecto):
     from projects.models import Proyecto
     proyecto = get_object_or_404(Proyecto, pk=id_proyecto, activo=True)
 
+    # Aprobación en lote: aprobar todas las pendientes con evidencia de tareas
+    if request.method == 'POST' and request.POST.get('accion') == 'aprobar_con_evidencia':
+        pendientes = JornadaEmpleado.objects.filter(
+            activo=True, proyecto=proyecto, estado='pendiente',
+        ).select_related('contrato__empleado')
+        aprobadas = 0
+        for j in pendientes:
+            tiene_evidencia = TareaChecklist.objects.filter(
+                sede__proyecto=proyecto,
+                completado=True,
+                fecha_completado__date=j.fecha,
+                participantes=j.contrato.empleado,
+                activo=True,
+            ).exists()
+            if tiene_evidencia:
+                j.estado = 'aprobada'
+                j.motivo_rechazo = ''
+                j.save()
+                aprobadas += 1
+        messages.success(request, f'{aprobadas} jornada(s) aprobada(s) automáticamente por evidencia de tareas.')
+        return redirect('revisar_jornadas_proyecto', id_proyecto=id_proyecto)
+
     # Todos los empleados asignados al proyecto
-    empleados = proyecto.equipo.filter(activo=True).order_by('apellido_paterno', 'nombre')
+    empleados = proyecto.equipo.filter(is_active=True).order_by('apellido_paterno', 'nombre')
 
     estado_filtro = request.GET.get('estado', 'pendiente')
 
     empleados_data = []
+    total_pendientes_con_evidencia = 0
     for emp in empleados:
         contrato = emp.contratos_empleado.filter(activo=True).order_by('-created').first()
         if not contrato:
@@ -640,7 +731,19 @@ def revisar_jornadas_proyecto(request, id_proyecto):
         qs = contrato.jornadas.filter(activo=True, proyecto=proyecto)
         if estado_filtro in ('pendiente', 'aprobada', 'rechazada'):
             qs = qs.filter(estado=estado_filtro)
-        jornadas = qs.order_by('-fecha')
+        jornadas = list(qs.select_related('registrado_por').order_by('-fecha'))
+        # Anotar cada jornada con las tareas completadas ese día por ese empleado
+        for j in jornadas:
+            j.tareas_del_dia = list(TareaChecklist.objects.filter(
+                sede__proyecto=proyecto,
+                completado=True,
+                fecha_completado__date=j.fecha,
+                participantes=emp,
+                activo=True,
+            ).select_related('sede').order_by('sede__nombre', 'orden'))
+            j.tareas_completadas_count = len(j.tareas_del_dia)
+            if j.estado == 'pendiente' and j.tareas_completadas_count > 0:
+                total_pendientes_con_evidencia += 1
         empleados_data.append({
             'empleado': emp,
             'contrato': contrato,
@@ -652,6 +755,7 @@ def revisar_jornadas_proyecto(request, id_proyecto):
         'proyecto': proyecto,
         'empleados_data': empleados_data,
         'estado_filtro': estado_filtro,
+        'total_pendientes_con_evidencia': total_pendientes_con_evidencia,
     })
 
 
@@ -758,6 +862,13 @@ def pagos_empleados_list(request):
     total_monto = qs.aggregate(t=Sum('monto'))['t'] or 0
     contratos_activos = ContratoEmpleado.objects.filter(activo=True).select_related('empleado').order_by('empleado__nombre')
 
+    empleados_con_deuda = (
+        JornadaEmpleado.objects.filter(activo=True, estado='aprobada', pago__isnull=True)
+        .values('contrato__empleado_id')
+        .distinct()
+        .count()
+    )
+
     return render(request, 'pagos_empleados_list.html', {
         'pagos': pagos_page,
         'search_empleado': search_empleado,
@@ -765,6 +876,7 @@ def pagos_empleados_list(request):
         'contratos_activos': contratos_activos,
         'per_page': per_page,
         'total_monto': total_monto,
+        'empleados_con_deuda': empleados_con_deuda,
     })
 
 

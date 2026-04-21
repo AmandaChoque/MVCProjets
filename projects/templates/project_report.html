@@ -1,41 +1,74 @@
 {% extends 'base.html' %}
 {% block extra_css %}
 <style>
-  .label-xs   { font-size: 0.72rem; }
-  .text-xs    { font-size: 0.70rem; }
-  .text-xxs   { font-size: 0.68rem; }
-  .kpi-amount { font-size: 1.35rem; }
-  .thead-xs   { font-size: 0.71rem; }
-  .tfoot-sm   { font-size: 0.78rem; }
-  .label-meta { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em; }
+  .label-xs    { font-size: 0.68rem; }
+  .text-xs     { font-size: 0.66rem; }
+  .text-xxs    { font-size: 0.63rem; }
+  .stat-sep    { color: #dee2e6; }
+  .thead-xs    { font-size: 0.67rem; }
+  .tfoot-sm    { font-size: 0.72rem; }
+  .table-report td, .table-report th { font-size: 0.75rem; }
+  .cod-muted   { font-size: 0.63rem; color: #adb5bd; }
+  .periodo-txt { font-size: 0.68rem; color: #6c757d; white-space: nowrap; }
+  .saldo-neg   { color: #dc3545; }
+  .saldo-ok    { color: #198754; }
 </style>
 {% endblock %}
 {% block content %}
-<div class="container-fluid py-3">
+<div class="container-fluid px-4 py-4">
 
   <!-- ── ENCABEZADO ────────────────────────────────────────────── -->
   <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-    <h5 class="fw-semibold text-secondary mb-0">Reporte de Proyectos</h5>
-    <div class="d-flex gap-2">
-      <a href="?pdf=1&search_nombre={{ search_nombre|default:'' }}&project_type={{ project_type|default:'' }}&project_status={{ project_status|default:'' }}&filter_estado_pago={{ filter_estado_pago|default:'' }}&filter_cumplimiento={{ filter_cumplimiento|default:'' }}"
+    <h4 class="fw-bold text-sobotec mb-0">Reporte de Proyectos</h4>
+    <div class="d-flex gap-2 flex-wrap">
+      <a href="?pdf=1&search_nombre={{ search_nombre|default:'' }}&project_type={{ project_type|default:'' }}&project_status={{ project_status|default:'' }}&filter_estado_pago={{ filter_estado_pago|default:'' }}&filter_cumplimiento={{ filter_cumplimiento|default:'' }}&fecha_desde={{ fecha_desde|default:'' }}&fecha_hasta={{ fecha_hasta|default:'' }}"
          target="_blank" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-eye me-1"></i>Vista PDF
       </a>
-      <a href="?pdf=1&download=1&search_nombre={{ search_nombre|default:'' }}&project_type={{ project_type|default:'' }}&project_status={{ project_status|default:'' }}&filter_estado_pago={{ filter_estado_pago|default:'' }}&filter_cumplimiento={{ filter_cumplimiento|default:'' }}"
+      <a href="?pdf=1&download=1&search_nombre={{ search_nombre|default:'' }}&project_type={{ project_type|default:'' }}&project_status={{ project_status|default:'' }}&filter_estado_pago={{ filter_estado_pago|default:'' }}&filter_cumplimiento={{ filter_cumplimiento|default:'' }}&fecha_desde={{ fecha_desde|default:'' }}&fecha_hasta={{ fecha_hasta|default:'' }}"
          class="btn btn-outline-danger btn-sm">
         <i class="bi bi-download me-1"></i>PDF
       </a>
-      <a href="?excel=1&search_nombre={{ search_nombre|default:'' }}&project_type={{ project_type|default:'' }}&project_status={{ project_status|default:'' }}&filter_estado_pago={{ filter_estado_pago|default:'' }}&filter_cumplimiento={{ filter_cumplimiento|default:'' }}"
+      <a href="?excel=1&search_nombre={{ search_nombre|default:'' }}&project_type={{ project_type|default:'' }}&project_status={{ project_status|default:'' }}&filter_estado_pago={{ filter_estado_pago|default:'' }}&filter_cumplimiento={{ filter_cumplimiento|default:'' }}&fecha_desde={{ fecha_desde|default:'' }}&fecha_hasta={{ fecha_hasta|default:'' }}"
          class="btn btn-outline-success btn-sm">
         <i class="bi bi-file-earmark-excel me-1"></i>Excel
       </a>
     </div>
   </div>
 
+  <!-- ── PER PAGE + CONTADOR (igual a listas) ─────────────────── -->
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+    <form method="get" action="{% url 'project_report' %}" class="d-flex align-items-center gap-2">
+      <input type="hidden" name="search_nombre"       value="{{ search_nombre|default:'' }}">
+      <input type="hidden" name="project_type"        value="{{ project_type|default:'' }}">
+      <input type="hidden" name="project_status"      value="{{ project_status|default:'' }}">
+      <input type="hidden" name="filter_estado_pago"  value="{{ filter_estado_pago|default:'' }}">
+      <input type="hidden" name="filter_cumplimiento" value="{{ filter_cumplimiento|default:'' }}">
+      <input type="hidden" name="fecha_desde"         value="{{ fecha_desde|default:'' }}">
+      <input type="hidden" name="fecha_hasta"         value="{{ fecha_hasta|default:'' }}">
+      <input type="hidden" name="page" value="1">
+      <span class="small text-muted">Mostrar:</span>
+      <select name="per_page" class="form-select form-select-sm" style="width:80px;" onchange="this.form.submit()">
+        <option value="10"  {% if per_page == 10  %}selected{% endif %}>10</option>
+        <option value="20"  {% if per_page == 20  %}selected{% endif %}>20</option>
+        <option value="50"  {% if per_page == 50  %}selected{% endif %}>50</option>
+        <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+      </select>
+    </form>
+    {% if projects_page %}
+    <div class="text-muted small">
+      Mostrando {{ projects_page.start_index }} – {{ projects_page.end_index }}
+      de {{ projects_page.paginator.count }} registros
+    </div>
+    {% endif %}
+  </div>
+
   <!-- ── FILTROS ───────────────────────────────────────────────── -->
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">
       <form method="get" action="{% url 'project_report' %}" class="row g-2 align-items-end">
+
+        <!-- Fila 1: nombre, tipo, estado, pago, plazo -->
         <div class="col-md-3">
           <label class="form-label form-label-sm text-muted mb-1 label-xs">Nombre</label>
           <input type="text" name="search_nombre" class="form-control form-control-sm"
@@ -45,11 +78,10 @@
           <label class="form-label form-label-sm text-muted mb-1 label-xs">Tipo</label>
           <select name="project_type" class="form-select form-select-sm">
             <option value="">Todos</option>
-            <option value="instalacion_nueva"      {% if project_type == 'instalacion_nueva' %}selected{% endif %}>Instalación Nueva</option>
-            <option value="ampliacion"             {% if project_type == 'ampliacion' %}selected{% endif %}>Ampliación</option>
-            <option value="mantenimiento_garantia" {% if project_type == 'mantenimiento_garantia' %}selected{% endif %}>Mant. Garantía</option>
-            <option value="mantenimiento_externo"  {% if project_type == 'mantenimiento_externo' %}selected{% endif %}>Mant. Externo</option>
-            <option value="emergencia"             {% if project_type == 'emergencia' %}selected{% endif %}>Emergencia</option>
+            <option value="instalacion_nueva"     {% if project_type == 'instalacion_nueva' %}selected{% endif %}>Instalación Nueva</option>
+            <option value="ampliacion"            {% if project_type == 'ampliacion' %}selected{% endif %}>Ampliación</option>
+            <option value="mantenimiento_externo" {% if project_type == 'mantenimiento_externo' %}selected{% endif %}>Mant. Externo</option>
+            <option value="emergencia"            {% if project_type == 'emergencia' %}selected{% endif %}>Emergencia</option>
           </select>
         </div>
         <div class="col-md-2">
@@ -62,7 +94,7 @@
           </select>
         </div>
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1 label-xs">Estado de Pago</label>
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Pago</label>
           <select name="filter_estado_pago" class="form-select form-select-sm">
             <option value="">Todos</option>
             <option value="no_pagado" {% if filter_estado_pago == 'no_pagado' %}selected{% endif %}>No Pagado</option>
@@ -71,7 +103,7 @@
           </select>
         </div>
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1 label-xs">Cumplimiento</label>
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Plazo</label>
           <select name="filter_cumplimiento" class="form-select form-select-sm">
             <option value="">Todos</option>
             <option value="vencido"   {% if filter_cumplimiento == 'vencido' %}selected{% endif %}>Plazo Vencido</option>
@@ -79,123 +111,127 @@
             <option value="sin_fecha" {% if filter_cumplimiento == 'sin_fecha' %}selected{% endif %}>Sin Fecha Fin</option>
           </select>
         </div>
-        <div class="col-md-1">
-          <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
+
+        <!-- Fila 2: fechas + per_page + botones -->
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Inicio desde</label>
+          <input type="date" name="fecha_desde" class="form-control form-control-sm"
+                 value="{{ fecha_desde|default:'' }}">
         </div>
-        <div class="col-auto">
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Inicio hasta</label>
+          <input type="date" name="fecha_hasta" class="form-control form-control-sm"
+                 value="{{ fecha_hasta|default:'' }}">
+        </div>
+        <div class="col-md-auto d-flex gap-1 align-items-end">
+          <button type="submit" class="btn btn-dark btn-sm">Filtrar</button>
           <a href="{% url 'project_report' %}" class="btn btn-outline-secondary btn-sm" title="Limpiar filtros">
             <i class="bi bi-x-lg"></i>
           </a>
         </div>
+
       </form>
     </div>
   </div>
 
-  <!-- ── KPIs financieros ──────────────────────────────────────── -->
+  <!-- ── KPI RESUMEN ──────────────────────────────────────────── -->
   <div class="row g-3 mb-3">
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md">
       <div class="card kpi-card blue border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-primary">{{ projects|length }}</div>
+          <div class="kpi-value text-primary">{% if projects_page %}{{ projects_page.paginator.count }}{% else %}{{ projects|length }}{% endif %}</div>
           <div class="kpi-label">Proyectos</div>
-          <div class="text-muted text-xs">registros filtrados</div>
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
-      <div class="card kpi-card teal border-0 shadow-sm h-100">
-        <div class="card-body py-3 px-3">
-          <div class="kpi-value text-success kpi-amount">Bs. {{ monto_total|floatformat:2 }}</div>
-          <div class="kpi-label">Monto Contratado</div>
-          <div class="text-muted text-xs">total presupuestado</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md">
       <div class="card kpi-card green border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-success kpi-amount">Bs. {{ total_cobrado|floatformat:2 }}</div>
-          <div class="kpi-label">Cobrado</div>
-          <div class="text-muted text-xs">pagos recibidos</div>
+          <div class="kpi-value text-success">{{ count_completado }}</div>
+          <div class="kpi-label">Completados</div>
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md">
+      <div class="card kpi-card primary border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-info">{{ count_en_progreso }}</div>
+          <div class="kpi-label">En Progreso</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md">
+      <div class="card kpi-card yellow border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-warning">{{ count_pendiente }}</div>
+          <div class="kpi-label">Pendientes</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md">
+      <div class="card kpi-card teal border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-success" style="font-size:1.3rem;">{{ monto_total|floatformat:2 }}</div>
+          <div class="kpi-label">Contratado Bs.</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md">
+      <div class="card kpi-card green border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-success" style="font-size:1.3rem;">{{ total_cobrado|floatformat:2 }}</div>
+          <div class="kpi-label">Cobrado Bs.</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md">
       <div class="card kpi-card red border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-danger" style="font-size:1.35rem;">Bs. {{ total_saldo|floatformat:2 }}</div>
-          <div class="kpi-label">Saldo Pendiente</div>
-          <div class="text-muted text-xs">por cobrar</div>
+          <div class="kpi-value text-danger" style="font-size:1.3rem;">{{ total_saldo|floatformat:2 }}</div>
+          <div class="kpi-label">Saldo Bs.{% if count_vencidos %} <span class="badge bg-danger ms-1" style="font-size:.6rem;">{{ count_vencidos }} venc.</span>{% endif %}</div>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- ── Resumen de estado y cumplimiento ─────────────────────── -->
-  <div class="card border-0 shadow-sm mb-3">
-    <div class="card-body py-2 px-3 d-flex flex-wrap gap-2 align-items-center">
-      <span class="text-muted fw-semibold label-meta">Estado:</span>
-      <span class="badge bg-success">{{ count_completado }} Completados</span>
-      <span class="badge bg-primary">{{ count_en_progreso }} En Progreso</span>
-      <span class="badge bg-warning text-dark">{{ count_pendiente }} Pendientes</span>
-      <span class="text-muted mx-1">|</span>
-      <span class="text-muted fw-semibold label-meta">Plazo:</span>
-      <span class="badge bg-danger">{{ count_vencidos }} Vencidos</span>
-      <span class="badge bg-success">{{ count_en_plazo }} En Plazo</span>
-      <span class="badge bg-secondary">{{ count_sin_fecha }} Sin Fecha</span>
     </div>
   </div>
 
   <!-- ── TABLA ─────────────────────────────────────────────────── -->
   <div class="card border-0 shadow-sm">
-    <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
-      <span class="fw-semibold small">Detalle de proyectos</span>
-      <span class="text-muted small">{{ projects|length }} registro(s)</span>
+    <div class="card-header bg-light py-2">
+      <span class="fw-semibold small">Detalle de Proyectos</span>
     </div>
     <div class="table-responsive">
-      <table class="table table-sm table-hover align-middle small mb-0">
+      <table class="table table-sm table-hover align-middle mb-0 table-report">
         <thead class="table-light text-uppercase fw-semibold thead-xs">
           <tr>
-            <th scope="col" class="px-3">Código</th>
-            <th scope="col">Nombre</th>
+            <th scope="col" class="px-3">Proyecto</th>
             <th scope="col">Contratante</th>
             <th scope="col">Tipo</th>
             <th scope="col">Estado</th>
-            <th scope="col" style="width:90px;">Avance</th>
-            <th scope="col">Pago</th>
+            <th scope="col" style="width:100px;">Avance</th>
             <th scope="col" class="text-end">Monto (Bs.)</th>
-            <th scope="col" class="text-end">Cobrado (Bs.)</th>
-            <th scope="col" class="text-end">Saldo (Bs.)</th>
+            <th scope="col" class="text-end">Cobrado / Saldo</th>
             <th scope="col">Período</th>
-            <th scope="col">Cumplimiento</th>
           </tr>
         </thead>
         <tbody>
           {% for project in projects %}
           {% with cobrado=project.monto_cobrado|default:0 %}
           <tr>
-            <td class="px-3 text-muted">{{ project.codigo }}</td>
-            <td>
+            <td class="px-3">
               <a href="{% url 'project_view' project.id %}" class="text-decoration-none fw-semibold">
                 {{ project.nombre }}
               </a>
+              <div class="cod-muted">{{ project.codigo }}</div>
             </td>
             <td class="text-muted">
               {% if project.cliente %}{{ project.cliente.nombre }} {{ project.cliente.apellido_paterno }}
               {% else %}—{% endif %}
             </td>
-            <td>
-              {% if project.tipo_proyecto == 'instalacion_nueva' %}
-                <span class="badge bg-secondary">Instalación</span>
-              {% elif project.tipo_proyecto == 'ampliacion' %}
-                <span class="badge bg-info text-dark">Ampliación</span>
-              {% elif project.tipo_proyecto == 'mantenimiento_garantia' %}
-                <span class="badge bg-warning text-dark">Mant. Garantía</span>
-              {% elif project.tipo_proyecto == 'mantenimiento_externo' %}
-                <span class="badge bg-secondary">Mant. Externo</span>
-              {% else %}
-                <span class="badge bg-danger">Emergencia</span>
-              {% endif %}
+            <td class="text-muted">
+              {% if project.tipo_proyecto == 'instalacion_nueva' %}Instalación
+              {% elif project.tipo_proyecto == 'ampliacion' %}Ampliación
+              {% elif project.tipo_proyecto == 'mantenimiento_externo' %}Mant. Externo
+              {% else %}Emergencia{% endif %}
             </td>
             <td>
               {% if project.estado_proyecto == 'completado' %}
@@ -205,59 +241,56 @@
               {% else %}
                 <span class="badge bg-warning text-dark">Pendiente</span>
               {% endif %}
+              {% if project.cumplimiento == 'vencido' %}
+                <div class="text-xxs text-danger mt-1">Vencido hace {{ project.dias_info }}d</div>
+              {% elif project.cumplimiento == 'en_plazo' %}
+                <div class="text-xxs text-muted mt-1">{{ project.dias_info }}d restantes</div>
+              {% elif project.cumplimiento == 'sin_fecha' %}
+                <div class="text-xxs text-muted mt-1">Sin fecha fin</div>
+              {% endif %}
             </td>
             <td>
               {% with avance=project.ultimo_avance|default:0 %}
               <div class="d-flex align-items-center gap-1">
-                <div class="progress flex-grow-1" style="height:5px;min-width:40px;border-radius:3px;">
-                  <div class="progress-bar
-                    {% if avance == 100 %}bg-success
-                    {% elif avance > 0 %}bg-primary
-                    {% else %}bg-secondary{% endif %}"
+                <div class="progress flex-grow-1" style="height:4px;min-width:40px;border-radius:3px;">
+                  <div class="progress-bar bg-secondary"
                     role="progressbar"
                     style="width:{{ avance }}%"
                     aria-valuenow="{{ avance }}" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
-                <span class="text-muted" style="font-size:0.7rem;white-space:nowrap;">{{ avance }}%</span>
+                <span class="text-muted text-xs">{{ avance }}%</span>
               </div>
               {% endwith %}
             </td>
-            <td>
-              {% if project.estado_pago == 'pagado' %}
-                <span class="badge bg-success">Pagado</span>
-              {% elif project.estado_pago == 'parcial' %}
-                <span class="badge bg-info text-dark">Parcial</span>
-              {% else %}
-                <span class="badge bg-danger">No Pagado</span>
-              {% endif %}
-            </td>
             <td class="text-end fw-semibold">{{ project.monto_total|floatformat:2 }}</td>
-            <td class="text-end text-success">{{ cobrado|floatformat:2 }}</td>
-            <td class="text-end text-danger">{{ project.monto_saldo|floatformat:2 }}</td>
-            <td class="text-muted text-nowrap">
-              {{ project.contrato_fecha_inicio|date:"d/m/Y"|default:"—" }}
-              {% if project.contrato_fecha_fin %}
-              <br><span class="text-muted">{{ project.contrato_fecha_fin|date:"d/m/Y" }}</span>
+            <td class="text-end">
+              <div class="text-muted text-xs">Cob: {{ cobrado|floatformat:2 }}</div>
+              <div class="fw-semibold {% if project.monto_saldo > 0 %}saldo-neg{% else %}saldo-ok{% endif %} text-xs">
+                Sal: {{ project.monto_saldo|floatformat:2 }}
+              </div>
+              {% if project.estado_pago == 'pagado' %}
+                <span class="badge bg-success" style="font-size:.6rem;">Pagado</span>
+              {% elif project.estado_pago == 'parcial' %}
+                <span class="badge bg-info text-dark" style="font-size:.6rem;">Parcial</span>
+              {% else %}
+                <span class="badge bg-danger" style="font-size:.6rem;">No Pagado</span>
               {% endif %}
             </td>
-            <td>
-              {% if project.cumplimiento == 'completado' %}
-                <span class="badge bg-success">Completado</span>
-              {% elif project.cumplimiento == 'vencido' %}
-                <span class="badge bg-danger">Vencido</span>
-                <div class="text-danger text-xxs">hace {{ project.dias_info }}d</div>
-              {% elif project.cumplimiento == 'en_plazo' %}
-                <span class="badge bg-success">En Plazo</span>
-                <div class="text-muted text-xxs">{{ project.dias_info }}d restantes</div>
+            <td class="periodo-txt">
+              {% if project.contrato_fecha_inicio %}
+                <div>{{ project.contrato_fecha_inicio|date:"d/m/Y" }}</div>
+                {% if project.contrato_fecha_fin %}
+                  <div>{{ project.contrato_fecha_fin|date:"d/m/Y" }}</div>
+                {% endif %}
               {% else %}
-                <span class="badge bg-secondary">Sin Fecha</span>
+                —
               {% endif %}
             </td>
           </tr>
           {% endwith %}
           {% empty %}
           <tr>
-            <td colspan="12" class="text-center text-muted py-4">
+            <td colspan="8" class="text-center text-muted py-4">
               <i class="bi bi-inbox me-1"></i>No se encontraron proyectos con los filtros seleccionados.
             </td>
           </tr>
@@ -266,17 +299,57 @@
         {% if projects %}
         <tfoot class="table-light fw-semibold tfoot-sm">
           <tr>
-            <td colspan="7" class="text-end px-3">Totales:</td>
+            <td colspan="5" class="text-end px-3">Totales:</td>
             <td class="text-end">Bs. {{ monto_total|floatformat:2 }}</td>
-            <td class="text-end text-success">Bs. {{ total_cobrado|floatformat:2 }}</td>
-            <td class="text-end text-danger">Bs. {{ total_saldo|floatformat:2 }}</td>
-            <td colspan="2"></td>
+            <td class="text-end">
+              <div class="text-muted text-xs">Cob: {{ total_cobrado|floatformat:2 }}</div>
+              <div class="text-xs">Sal: {{ total_saldo|floatformat:2 }}</div>
+            </td>
+            <td></td>
           </tr>
         </tfoot>
         {% endif %}
       </table>
     </div>
+
   </div>
+
+  <!-- ── PAGINACIÓN (igual a listas) ──────────────────────────── -->
+  {% if projects_page and projects_page.paginator.num_pages > 1 %}
+  {% with p=projects_page params="search_nombre="|add:search_nombre|add:"&project_type="|add:project_type|default:''|add:"&project_status="|add:project_status|default:''|add:"&filter_estado_pago="|add:filter_estado_pago|default:''|add:"&filter_cumplimiento="|add:filter_cumplimiento|default:''|add:"&fecha_desde="|add:fecha_desde|default:''|add:"&fecha_hasta="|add:fecha_hasta|default:''|add:"&per_page="|add:per_page|stringformat:"s" %}
+  <nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center mb-0">
+
+      {% if p.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ p.previous_page_number }}&{{ params }}">Anterior</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+      {% endif %}
+
+      {% for num in p.paginator.page_range %}
+        {% if num == p.number %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num == 1 or num == p.paginator.num_pages or num >= p.number|add:"-2" and num <= p.number|add:"2" %}
+          <li class="page-item"><a class="page-link" href="?page={{ num }}&{{ params }}">{{ num }}</a></li>
+        {% elif num == p.number|add:"-3" or num == p.number|add:"3" %}
+          <li class="page-item disabled"><span class="page-link">…</span></li>
+        {% endif %}
+      {% endfor %}
+
+      {% if p.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ p.next_page_number }}&{{ params }}">Siguiente</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+      {% endif %}
+
+    </ul>
+  </nav>
+  {% endwith %}
+  {% endif %}
 
 </div>
 {% endblock %}

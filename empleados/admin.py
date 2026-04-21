@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import Empleado, ContratoEmpleado, ContratoProyecto, JornadaEmpleado
+from .models import Empleado, ContratoEmpleado, JornadaEmpleado
 
 
 @admin.register(Empleado)
@@ -22,13 +22,6 @@ class ContratoEmpleadoAdmin(admin.ModelAdmin):
     search_fields = ('empleado__nombre', 'empleado__apellido_paterno')
     ordering = ('-created',)
 
-
-@admin.register(ContratoProyecto)
-class ContratoProyectoAdmin(admin.ModelAdmin):
-    list_display = ('proyecto', 'monto_acordado', 'fecha_inicio', 'fecha_fin', 'activo')
-    list_filter = ('activo',)
-    search_fields = ('proyecto__nombre',)
-    ordering = ('-created',)
 
 
 @admin.register(JornadaEmpleado)

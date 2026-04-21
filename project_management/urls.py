@@ -21,84 +21,85 @@ from django.conf.urls.static import static
 from projects import views
 
 
-
-
-
 urlpatterns = [
     path('', views.landing_view, name='landing'),
     path('dashboard/', views.dashboard_home, name='dashboard'),
     path('admin/', admin.site.urls),
-    # path('', views.home, name='home'),
     path('signup/', views.signup, name='signup'),
     path('signout/', views.signout, name='signout'),
     path('signin/', views.signin, name='signin'),
     path('extend-session/', views.extend_session, name='extend_session'),
     path('cambiar-contrasena/', views.cambiar_contrasena, name='cambiar_contrasena'),
-    
-    # Proyects
-    path('projects/', views.projects, name='projects'),
-    path('projects/create/', views.create_project, name='create_project'),
-    path('projects/<int:id_project>/', views.project_detail, name='project_detail'),
-    path('projects/<int:id_project>/view/', views.project_view, name='project_view'),
-    path('projects/<int:id_project>/complete/', views.project_complete, name='project_complete'),
-    path('projects/<int:id_project>/delete/', views.project_delete, name='project_delete'),
-    path('projects/<int:id_project>/deactivate/', views.deactivate_project, name='project_deactivate'),
-    path('projects/<int:id_project>/progreso/nuevo/', views.create_progreso, name='create_progreso'),
-    path('progreso/<int:id_progreso>/', views.progreso_detail, name='progreso_detail'),
-    path('progreso/<int:id_progreso>/eliminar/', views.deactivate_progreso, name='deactivate_progreso'),
+
+    # Proyectos
+    path('proyectos/', views.projects, name='projects'),
+    path('proyectos/nuevo/', views.create_project, name='create_project'),
+    path('proyectos/analisis/', views.project_analysis, name='project_analysis'),
+    path('proyectos/seguimiento/', views.seguimiento_avance, name='seguimiento_avance'),
+    path('proyectos/reporte/', views.project_report, name='project_report'),
+    path('proyectos/<int:id_project>/', views.project_detail, name='project_detail'),
+    path('proyectos/<int:id_project>/ver/', views.project_view, name='project_view'),
+    path('proyectos/<int:id_project>/completar/', views.project_complete, name='project_complete'),
+    path('proyectos/<int:id_project>/eliminar/', views.project_delete, name='project_delete'),
+    path('proyectos/<int:id_project>/desactivar/', views.deactivate_project, name='project_deactivate'),
 
     # Sedes de Instalación
-    path('projects/<int:id_project>/sedes/nueva/', views.sede_create, name='sede_create'),
+    path('proyectos/<int:id_project>/sedes/nueva/', views.sede_create, name='sede_create'),
     path('sedes/<int:id_sede>/', views.sede_detail, name='sede_detail'),
     path('sedes/<int:id_sede>/ver/', views.sede_view, name='sede_view'),
-    path('sedes/<int:id_sede>/deactivate/', views.sede_deactivate, name='sede_deactivate'),
-    # Grupos de instalación dentro de una sede
-    path('sedes/<int:id_sede>/grupos/nuevo/', views.grupo_create, name='grupo_create'),
-    path('grupos/<int:id_grupo>/eliminar/', views.grupo_delete, name='grupo_delete'),
+    path('sedes/<int:id_sede>/desactivar/', views.sede_deactivate, name='sede_deactivate'),
+
     # Checklist de tareas
     path('sedes/<int:id_sede>/tareas/nueva/', views.tarea_create, name='tarea_create'),
-    path('tareas/<int:id_tarea>/toggle/', views.tarea_toggle, name='tarea_toggle'),
+    path('tareas/<int:id_tarea>/alternar/', views.tarea_toggle, name='tarea_toggle'),
+    path('tareas/<int:id_tarea>/participantes/', views.tarea_set_participantes, name='tarea_set_participantes'),
     path('tareas/<int:id_tarea>/editar/', views.tarea_edit, name='tarea_edit'),
     path('tareas/<int:id_tarea>/eliminar/', views.tarea_delete, name='tarea_delete'),
-    path('sedes/<int:id_sede>/tareas/reorder/', views.tareas_reorder, name='tareas_reorder'),
+    path('tareas/<int:id_tarea>/subtareas/nueva/', views.subtarea_create, name='subtarea_create'),
+    path('subtareas/<int:id_subtarea>/alternar/', views.subtarea_toggle, name='subtarea_toggle'),
+    path('subtareas/<int:id_subtarea>/eliminar/', views.subtarea_delete, name='subtarea_delete'),
+    path('sedes/<int:id_sede>/tareas/reordenar/', views.tareas_reorder, name='tareas_reorder'),
     path('sedes/<int:id_sede>/aplicar-plantilla/', views.aplicar_plantilla_sede, name='aplicar_plantilla_sede'),
+
     # Fotos de sede
     path('sedes/<int:id_sede>/fotos/subir/', views.foto_upload, name='foto_upload'),
     path('fotos/<int:id_foto>/eliminar/', views.foto_delete, name='foto_delete'),
+
     # QR por insumo instalado
     path('insumos-proyecto/<int:id_requiere>/qr/', views.qr_insumo, name='qr_insumo'),
+
     # Notificaciones
     path('notificaciones/', views.notificaciones_list, name='notificaciones_list'),
     path('notificaciones/<int:id_notif>/leer/', views.notificacion_marcar_leida, name='notificacion_leer'),
     path('notificaciones/leer-todas/', views.notificaciones_marcar_todas, name='notificaciones_leer_todas'),
-    # Equipo del Proyecto
-    path('projects/<int:id_project>/equipo/agregar/', views.equipo_add, name='equipo_add'),
-    path('projects/<int:id_project>/equipo/<int:id_employee>/remover/', views.equipo_remove, name='equipo_remove'),
-    # Contrato del Proyecto
-    path('projects/<int:id_project>/contrato-proyecto/nuevo/', views.create_contrato_proyecto, name='create_contrato_proyecto'),
-    path('contratos/proyecto/<int:id_contrato>/', views.contrato_proyecto_detail, name='contrato_proyecto_detail'),
-    path('contratos/proyecto/<int:id_contrato>/deactivate/', views.deactivate_contrato_proyecto, name='contrato_proyecto_deactivate'),
 
-    # clientes
+    # Equipo del Proyecto
+    path('proyectos/<int:id_project>/equipo/agregar/', views.equipo_add, name='equipo_add'),
+    path('proyectos/<int:id_project>/equipo/<int:id_employee>/remover/', views.equipo_remove, name='equipo_remove'),
+
+    # Contrato del Proyecto
+    path('proyectos/<int:id_project>/contrato-proyecto/nuevo/', views.create_contrato_proyecto, name='create_contrato_proyecto'),
+    path('contratos/proyecto/<int:id_contrato>/', views.contrato_proyecto_detail, name='contrato_proyecto_detail'),
+    path('contratos/proyecto/<int:id_contrato>/desactivar/', views.deactivate_contrato_proyecto, name='contrato_proyecto_deactivate'),
+
+    # Clientes
     path('clientes/', views.clientes, name='clientes'),
     path('clientes/nuevo/', views.create_cliente, name='create_cliente'),
     path('clientes/<int:id_cliente>/', views.cliente_detail, name='cliente_detail'),
     path('clientes/<int:id_cliente>/ver/', views.cliente_view, name='cliente_view'),
-    path('clientes/<int:id_cliente>/deactivate/', views.deactivate_cliente, name='cliente_deactivate'),
-
-    # Analysis y Reporte de proyectos
-    path('reporte-analisis/', views.project_analysis, name='project_analysis'),
-    path('project_report/', views.project_report, name='project_report'),
+    path('clientes/<int:id_cliente>/desactivar/', views.deactivate_cliente, name='cliente_deactivate'),
 
     # Plantillas de tareas
-    path('plantillas/',                                       views.plantillas_list,          name='plantillas_list'),
-    path('plantillas/nueva/',                                 views.plantilla_create,         name='plantilla_create'),
-    path('plantillas/<int:id_plantilla>/',                    views.plantilla_detail,         name='plantilla_detail'),
-    path('plantillas/<int:id_plantilla>/deactivate/',         views.plantilla_deactivate,     name='plantilla_deactivate'),
-    path('plantillas/<int:id_plantilla>/items/nuevo/',        views.item_plantilla_create,    name='item_plantilla_create'),
-    path('plantillas/items/<int:id_item>/eliminar/',          views.item_plantilla_delete,    name='item_plantilla_delete'),
-    path('plantillas/items/<int:id_item>/editar/',            views.item_plantilla_edit,      name='item_plantilla_edit'),
-    path('plantillas/<int:id_plantilla>/items/reorder/',      views.items_plantilla_reorder,  name='items_plantilla_reorder'),
+    path('plantillas/', views.plantillas_list, name='plantillas_list'),
+    path('plantillas/nueva/', views.plantilla_create, name='plantilla_create'),
+    path('plantillas/<int:id_plantilla>/', views.plantilla_detail, name='plantilla_detail'),
+    path('plantillas/<int:id_plantilla>/desactivar/', views.plantilla_deactivate, name='plantilla_deactivate'),
+    path('plantillas/<int:id_plantilla>/items/nuevo/', views.item_plantilla_create, name='item_plantilla_create'),
+    path('plantillas/items/<int:id_item>/eliminar/', views.item_plantilla_delete, name='item_plantilla_delete'),
+    path('plantillas/items/<int:id_item>/editar/', views.item_plantilla_edit, name='item_plantilla_edit'),
+    path('plantillas/items/<int:id_item>/subitems/nuevo/', views.subitem_plantilla_create, name='subitem_plantilla_create'),
+    path('plantillas/subitems/<int:id_subitem>/eliminar/', views.subitem_plantilla_delete, name='subitem_plantilla_delete'),
+    path('plantillas/<int:id_plantilla>/items/reordenar/', views.items_plantilla_reorder, name='items_plantilla_reorder'),
 
     # Módulo Empleados
     path('', include('empleados.urls')),
@@ -106,13 +107,13 @@ urlpatterns = [
     # Módulo Inventario
     path('', include('inventario.urls')),
 
-    # Pagos del cliente (proyecto)
-    path('payments/',                                views.payment_list,                      name='payments'),
-    path('payments/create/',                         views.create_payment,                    name='create_payment'),
-    path('payments/<int:id_payment>/',               views.payment_detail,                    name='payment_detail'),
-    path('payments/<int:id_payment>/view/',          views.payment_view,                      name='payment_view'),
-    path('payments/<int:id_payment>/deactivate/',    views.deactivate_payment,                name='payment_deactivate'),
-    path('payments/filter/',                         views.filter_payments_by_project_name,   name='filter_payments_by_project_name'),
-    path('payment-analysis/',                        views.payment_analysis,                  name='payment_analysis'),
+    # Pagos del cliente al proyecto
+    path('pagos/', views.payment_list, name='payments'),
+    path('pagos/nuevo/', views.create_payment, name='create_payment'),
+    path('pagos/filtrar/', views.filter_payments_by_project_name, name='filter_payments_by_project_name'),
+    path('pagos/analisis/', views.payment_analysis, name='payment_analysis'),
+    path('pagos/<int:id_payment>/', views.payment_detail, name='payment_detail'),
+    path('pagos/<int:id_payment>/ver/', views.payment_view, name='payment_view'),
+    path('pagos/<int:id_payment>/desactivar/', views.deactivate_payment, name='payment_deactivate'),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

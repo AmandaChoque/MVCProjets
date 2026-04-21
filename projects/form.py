@@ -1,8 +1,6 @@
 from django.forms import ModelForm
 from django import forms
-from django.db.models import Max
-from .models import Proyecto, Cliente, Progreso, Sede, FotoSede, TareaChecklist, Pago, PlantillaTarea, ItemPlantilla, GrupoTarea
-from empleados.models import ContratoProyecto
+from .models import Proyecto, Cliente, Sede, FotoSede, TareaChecklist, PagoProyecto, PlantillaTarea, ItemPlantilla, ContratoProyecto
 import re
 from decimal import Decimal, InvalidOperation
 
@@ -13,6 +11,7 @@ class ProjectForm(forms.ModelForm):
     cliente = forms.ModelChoiceField(
         queryset=Cliente.objects.all(),
         required=True,
+        empty_label='Seleccionar cliente',
         widget=forms.Select(attrs={'class': 'form-select'}),
         error_messages={'required': 'Debe seleccionar un cliente.'}
     )
@@ -24,17 +23,9 @@ class ProjectForm(forms.ModelForm):
             'placeholder': 'Ej: 5000 o 5000.50 (opcional si se registra contrato)',
         })
     )
-    proyecto_origen = forms.ModelChoiceField(
-        queryset=Proyecto.objects.filter(tipo_proyecto='instalacion_nueva', activo=True),
-        required=False,
-        empty_label='— Sin proyecto de origen —',
-        label="Proyecto de Instalación Original",
-        widget=forms.Select(attrs={'class': 'form-select', 'id': 'id_proyecto_origen'}),
-    )
-
     class Meta:
         model = Proyecto
-        fields = ['codigo', 'nombre', 'descripcion', 'observacion', 'estado_proyecto', 'tipo_proyecto', 'proyecto_origen', 'monto_total', 'cliente', 'ritmo_semanal']
+        fields = ['codigo', 'nombre', 'descripcion', 'observacion', 'estado_proyecto', 'tipo_proyecto', 'monto_total', 'cliente']
         widgets = {
             'codigo':           forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el codigo'}),
             'nombre':           forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el nombre'}),
@@ -43,18 +34,7 @@ class ProjectForm(forms.ModelForm):
             'estado_proyecto':  forms.Select(attrs={'class': 'form-select'}),
             'tipo_proyecto':    forms.Select(attrs={'class': 'form-select', 'id': 'id_tipo_proyecto'}),
             'cliente':          forms.Select(attrs={'class': 'form-select'}),
-            'ritmo_semanal':    forms.NumberInput(attrs={'class': 'form-control', 'min': 1, 'max': 50}),
         }
-
-    def clean(self):
-        cleaned_data = super().clean()
-        tipo = cleaned_data.get('tipo_proyecto')
-        origen = cleaned_data.get('proyecto_origen')
-        if tipo == 'mantenimiento_garantia' and not origen:
-            self.add_error('proyecto_origen', 'Debe indicar el proyecto de instalación original para un mantenimiento en garantía.')
-        if tipo != 'mantenimiento_garantia' and origen:
-            cleaned_data['proyecto_origen'] = None
-        return cleaned_data
 
     def clean_monto_total(self):
         valor = self.cleaned_data.get('monto_total')
@@ -117,39 +97,6 @@ class ClienteForm(forms.ModelForm):
             raise forms.ValidationError('El teléfono debe tener al menos 7 dígitos.')
         return telefono
 
-
-class ProgresoForm(forms.ModelForm):
-    class Meta:
-        model = Progreso
-        fields = ['fecha', 'porcentaje', 'descripcion', 'observacion']
-        widgets = {
-            'fecha':       forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
-            'porcentaje':  forms.NumberInput(attrs={'class': 'form-control', 'min': '0', 'max': '100', 'placeholder': 'Ej: 75'}),
-            'descripcion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Resumen del avance'}),
-            'observacion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Detalles adicionales, problemas encontrados, etc.'}),
-        }
-
-    def __init__(self, *args, **kwargs):
-        self.proyecto = kwargs.pop('proyecto', None)
-        super().__init__(*args, **kwargs)
-
-    def clean_porcentaje(self):
-        valor = self.cleaned_data.get('porcentaje')
-        if valor is None:
-            raise forms.ValidationError('El porcentaje es obligatorio.')
-        if valor < 0 or valor > 100:
-            raise forms.ValidationError('El porcentaje debe estar entre 0 y 100.')
-        if self.proyecto:
-            qs = self.proyecto.progresos.filter(activo=True)
-            if self.instance and self.instance.pk:
-                qs = qs.exclude(pk=self.instance.pk)
-            max_porcentaje = qs.aggregate(maximo=Max('porcentaje'))['maximo']
-            if max_porcentaje is not None and valor < max_porcentaje:
-                raise forms.ValidationError(
-                    f'El porcentaje no puede ser menor al máximo ya registrado ({max_porcentaje}%). '
-                    f'El progreso no puede retroceder.'
-                )
-        return valor
 
 
 class _ContratoBaseForm(forms.ModelForm):
@@ -220,7 +167,12 @@ class ContratoProyectoForm(_ContratoBaseForm):
 
     class Meta(_ContratoBaseForm.Meta):
         fields = ['fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado',
-                  'porcentaje_multa_diaria', 'porcentaje_multa_maxima', 'observaciones', 'documento']
+                  'garantia_meses', 'porcentaje_multa_diaria', 'porcentaje_multa_maxima',
+                  'observaciones', 'documento']
+        widgets = {
+            **_ContratoBaseForm.Meta.widgets,
+            'garantia_meses': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'placeholder': 'Ej: 12'}),
+        }
 
     def clean_porcentaje_multa_diaria(self):
         valor = str(self.cleaned_data.get('porcentaje_multa_diaria', '') or '').strip()
@@ -263,7 +215,7 @@ class PaymentForm(forms.ModelForm):
     )
 
     class Meta:
-        model = Pago
+        model = PagoProyecto
         fields = ['monto', 'descuento', 'motivo_descuento', 'fecha', 'tipo_pago', 'numero_referencia', 'proyecto']
         widgets = {
             'fecha':             forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
@@ -309,8 +261,8 @@ class SedeForm(forms.ModelForm):
         model = Sede
         fields = ['nombre', 'direccion', 'descripcion', 'latitud', 'longitud', 'plantilla']
         widgets = {
-            'nombre':      forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Casa #210 Calle 2, Edificio Central'}),
-            'direccion':   forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Dirección completa'}),
+            'nombre':      forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Casa #210 Calle 2, Edificio Central', 'required': True}),
+            'direccion':   forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Dirección completa', 'required': True}),
             'descripcion': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Indicaciones adicionales, referencias, instrucciones de acceso...'}),
             'latitud':     forms.TextInput(attrs={'class': 'form-control form-control-sm', 'placeholder': 'Ej: -17.3935000', 'id': 'id_latitud'}),
             'longitud':    forms.TextInput(attrs={'class': 'form-control form-control-sm', 'placeholder': 'Ej: -66.1570000', 'id': 'id_longitud'}),
@@ -321,7 +273,7 @@ class SedeForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['plantilla'].queryset = PlantillaTarea.objects.filter(activo=True).order_by('tipo', 'nombre')
         self.fields['plantilla'].required = False
-        self.fields['plantilla'].empty_label = '— Sin plantilla (tareas manuales) —'
+        self.fields['plantilla'].empty_label = 'Seleccionar plantilla'
 
 
 class PlantillaTareaForm(forms.ModelForm):
@@ -371,15 +323,4 @@ class TareaChecklistForm(forms.ModelForm):
         }
 
 
-class GrupoTareaForm(forms.ModelForm):
-    class Meta:
-        model = GrupoTarea
-        fields = ['nombre', 'tipo']
-        widgets = {
-            'nombre': forms.TextInput(attrs={
-                'class': 'form-control form-control-sm',
-                'placeholder': 'Ej: Cámara 1 – Entrada principal',
-            }),
-            'tipo': forms.Select(attrs={'class': 'form-select form-select-sm'}),
-        }
 

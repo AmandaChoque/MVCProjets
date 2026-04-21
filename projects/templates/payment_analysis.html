@@ -1,11 +1,20 @@
 {% extends 'base.html' %}
+{% block extra_css %}
+<style>
+  .label-xs    { font-size: 0.68rem; }
+  .text-xs     { font-size: 0.66rem; }
+  .thead-xs    { font-size: 0.67rem; }
+  .table-report td, .table-report th { font-size: 0.75rem; }
+  .stat-sep    { color: #dee2e6; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-3">
+<div class="container-fluid px-4 py-4">
 
   <!-- ── ENCABEZADO ────────────────────────────────────────────── -->
   <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-    <h5 class="fw-semibold text-secondary mb-0">Análisis de Pagos</h5>
+    <h4 class="fw-bold text-sobotec mb-0">Análisis de Pagos</h4>
   </div>
 
   <!-- ── FILTROS ───────────────────────────────────────────────── -->
@@ -13,12 +22,12 @@
     <div class="card-body py-2">
       <form method="get" action="{% url 'payment_analysis' %}" class="row g-2 align-items-end">
         <div class="col-md-4">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Fecha inicio</label>
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Fecha inicio</label>
           <input type="date" name="start_date" class="form-control form-control-sm"
                  value="{{ start_date|default:'' }}">
         </div>
         <div class="col-md-4">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Fecha fin</label>
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Fecha fin</label>
           <input type="date" name="end_date" class="form-control form-control-sm"
                  value="{{ end_date|default:'' }}">
         </div>
@@ -32,50 +41,44 @@
     </div>
   </div>
 
-  <!-- ── KPIs ──────────────────────────────────────────────────── -->
+  <!-- ── KPI RESUMEN ──────────────────────────────────────────── -->
   <div class="row g-3 mb-3">
     <div class="col-6 col-md-3">
       <div class="card kpi-card blue border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
           <div class="kpi-value text-primary">{{ total_pagos }}</div>
-          <div class="kpi-label">Total Pagos</div>
-          <div class="text-muted" style="font-size:0.7rem;">registros filtrados</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="card kpi-card teal border-0 shadow-sm h-100">
-        <div class="card-body py-3 px-3">
-          <div class="kpi-value text-success" style="font-size:1.35rem;">Bs. {{ total_monto|floatformat:2 }}</div>
-          <div class="kpi-label">Monto Total</div>
-          <div class="text-muted" style="font-size:0.7rem;">cobrado en el período</div>
+          <div class="kpi-label">Pagos</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
       <div class="card kpi-card green border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-success" style="font-size:1.35rem;">Bs. {{ total_efectivo|floatformat:2 }}</div>
-          <div class="kpi-label">En Efectivo</div>
-          <div class="text-muted" style="font-size:0.7rem;">pagos en efectivo</div>
+          <div class="kpi-value text-success" style="font-size:1.4rem;">{{ total_monto|floatformat:2 }}</div>
+          <div class="kpi-label">Total Cobrado Bs.</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="card kpi-card blue border-0 shadow-sm h-100">
+      <div class="card kpi-card teal border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-primary" style="font-size:1.35rem;">Bs. {{ total_transfer|floatformat:2 }}</div>
-          <div class="kpi-label">Por Transferencia</div>
-          <div class="text-muted" style="font-size:0.7rem;">pagos transferidos</div>
+          <div class="kpi-value text-info" style="font-size:1.4rem;">{{ total_efectivo|floatformat:2 }}</div>
+          <div class="kpi-label">Efectivo Bs.</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card primary border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value" style="font-size:1.4rem; color:#0d6efd;">{{ total_transfer|floatformat:2 }}</div>
+          <div class="kpi-label">Transferencia Bs.</div>
         </div>
       </div>
     </div>
   </div>
 
   {% if message %}
-  <div class="alert alert-info small" role="alert">
-    {{ message }}
-  </div>
+  <div class="alert alert-secondary small" role="alert">{{ message }}</div>
   {% else %}
 
   <!-- ── GRÁFICO ───────────────────────────────────────────────── -->
@@ -96,8 +99,8 @@
       <span class="text-muted small">{{ total_pagos }} registro(s)</span>
     </div>
     <div class="table-responsive">
-      <table class="table table-sm table-hover align-middle small mb-0">
-        <thead class="table-light text-uppercase fw-semibold" style="font-size:0.71rem;">
+      <table class="table table-sm table-hover align-middle mb-0 table-report">
+        <thead class="table-light text-uppercase fw-semibold thead-xs">
           <tr>
             <th>Tipo de Pago</th>
             <th class="text-center">Cantidad</th>

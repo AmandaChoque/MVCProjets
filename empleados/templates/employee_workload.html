@@ -1,240 +1,234 @@
 {% extends 'base.html' %}
 {% block extra_css %}
 <style>
-  .workload-bar { height: 6px; border-radius: 3px; background: #e9ecef; overflow: hidden; }
-  .workload-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
-  .row-expand { cursor: pointer; transition: background 0.15s; }
-  .row-expand:hover { background-color: #f8f9fa; }
-  .chevron-icon { transition: transform 0.2s ease; font-size: 0.75rem; color: #adb5bd; }
-  .chevron-icon.open { transform: rotate(90deg); }
-  .expand-panel { background: #f8f9fa; border-top: 1px solid #e9ecef; }
-  .project-card {
-    background: #fff; border: 1px solid #e9ecef; border-radius: 8px;
-    padding: 12px 14px; transition: box-shadow 0.15s;
-  }
-  .project-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .thead-xs  { font-size: 0.67rem; }
+  .table-report td, .table-report th { font-size: 0.75rem; }
+  .nav-tabs .nav-link { font-size: 0.85rem; color: #6c757d; border: none; border-bottom: 2px solid transparent; border-radius: 0; }
+  .nav-tabs .nav-link:hover { color: #264653; background: transparent; }
+  .nav-tabs .nav-link.active { font-weight: 600; color: #0d6efd; border-bottom: 2px solid #0d6efd; background: transparent; }
+  .tab-content { padding-top: 1.25rem; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-3">
+<div class="container-fluid px-4 py-4">
 
-  <!-- ======================= ENCABEZADO ======================= -->
-  <div class="mb-2 d-flex justify-content-between align-items-center">
+  <!-- ENCABEZADO -->
+  <div class="mb-3 d-flex justify-content-between align-items-center">
     <a href="{% url 'employees' %}" class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-arrow-left me-1"></i>Volver
     </a>
-    <h5 class="fw-semibold text-secondary mb-0">Carga de Trabajo por Empleado</h5>
-    <div class="text-muted small">
-      {{ empleados|length }} empleado{{ empleados|length|pluralize }} activo{{ empleados|length|pluralize }}
-    </div>
+    <h4 class="fw-bold text-sobotec mb-0">Gestión de Jornadas</h4>
+    <div></div>
   </div>
 
-  <!-- ======================= RESUMEN ======================= -->
+  <!-- KPIs -->
   <div class="row g-3 mb-3">
-    <div class="col-6 col-md-3">
-      <div class="card kpi-card blue border-0 shadow-sm h-100">
-        <div class="card-body py-3 px-3">
-          <div class="kpi-value text-primary">{{ empleados|length }}</div>
-          <div class="kpi-label">Empleados activos</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="card kpi-card green border-0 shadow-sm h-100">
-        <div class="card-body py-3 px-3">
-          <div class="kpi-value text-success">{{ total_con_proyectos }}</div>
-          <div class="kpi-label">Con proyectos asignados</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="card kpi-card red border-0 shadow-sm h-100">
-        <div class="card-body py-3 px-3">
-          <div class="kpi-value text-danger">{{ empleados|length|add:"-"|add:total_con_proyectos }}</div>
-          <div class="kpi-label">Sin asignación</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4">
       <div class="card kpi-card yellow border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-warning">{{ max_proyectos }}</div>
-          <div class="kpi-label">Máx. proyectos por empleado</div>
+          <div class="kpi-value text-warning">{{ total_pendientes }}</div>
+          <div class="kpi-label">Jornadas por aprobar</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4">
+      <div class="card kpi-card red border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-danger">{{ total_sin_pagar }}</div>
+          <div class="kpi-label">Aprobadas sin pagar</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4">
+      <div class="card kpi-card teal border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value" style="font-size:1.3rem; color:#20c997;">{{ total_monto_pendiente|floatformat:2 }}</div>
+          <div class="kpi-label">Monto por pagar Bs.</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ======================= TABLA ======================= -->
-  <div class="table-responsive">
-    <table class="table table-sm table-hover align-middle small">
-      <thead class="table-light small text-uppercase fw-semibold">
-        <tr>
-          <th style="width:28px;"></th>
-          <th>Empleado</th>
-          <th>Cargo</th>
-          <th style="width:160px;">Carga</th>
-          <th class="text-center">En progreso</th>
-          <th class="text-center">Completados</th>
-          <th class="text-end pe-3">Días trabajados</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for emp in empleados %}
+  <!-- TABS -->
+  <ul class="nav nav-tabs mb-0" id="tabsJornadas">
+    <li class="nav-item">
+      <button class="nav-link active" id="tab-aprobar" data-bs-toggle="tab"
+              data-bs-target="#pane-aprobar" type="button">
+        <i class="bi bi-clock-history me-1"></i>Por aprobar
+        {% if total_pendientes > 0 %}
+        <span class="badge bg-warning text-dark ms-1">{{ total_pendientes }}</span>
+        {% endif %}
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" id="tab-pagar" data-bs-toggle="tab"
+              data-bs-target="#pane-pagar" type="button">
+        <i class="bi bi-cash-coin me-1"></i>Por pagar
+        {% if total_sin_pagar > 0 %}
+        <span class="badge bg-danger ms-1">{{ total_sin_pagar }}</span>
+        {% endif %}
+      </button>
+    </li>
+  </ul>
 
-        <!-- Fila empleado -->
-        <tr class="row-expand" data-bs-toggle="collapse" data-bs-target="#proy_{{ emp.id }}">
-          <td class="ps-2">
-            <i class="bi bi-chevron-right chevron-icon" id="chev_{{ emp.id }}"></i>
-          </td>
-          <td class="fw-semibold">
-            <a href="{% url 'employee_view' emp.id %}" class="text-decoration-none text-dark"
-               onclick="event.stopPropagation()">
-              {{ emp.nombre }} {{ emp.apellido_paterno }}{% if emp.apellido_materno %} {{ emp.apellido_materno }}{% endif %}
-            </a>
-          </td>
-          <td>
-            {% if emp.cargo == 'administrador' %}
-              <span class="badge bg-danger small">Administrador</span>
-            {% elif emp.cargo == 'gerente' %}
-              <span class="badge bg-primary small">Gerente</span>
-            {% elif emp.cargo == 'instalador' %}
-              <span class="badge bg-info text-dark small">Supervisor</span>
-            {% elif emp.cargo == 'tecnico_soporte' %}
-              <span class="badge bg-warning text-dark small">Técnico</span>
-            {% elif emp.cargo == 'secretaria' %}
-              <span class="badge bg-success small">Secretaria</span>
-            {% else %}
-              <span class="badge bg-secondary small">{{ emp.get_cargo_display }}</span>
-            {% endif %}
-          </td>
-          <td>
-            {% if emp.proyectos_activos > 0 %}
-              {% widthratio emp.proyectos_activos max_proyectos 100 as bar_pct %}
-              <div class="d-flex align-items-center gap-2">
-                <div class="workload-bar flex-grow-1">
-                  {% if bar_pct >= 75 %}
-                    <div class="workload-bar-fill bg-danger" data-width="{{ bar_pct }}"></div>
-                  {% elif bar_pct >= 40 %}
-                    <div class="workload-bar-fill bg-warning" data-width="{{ bar_pct }}"></div>
-                  {% else %}
-                    <div class="workload-bar-fill bg-success" data-width="{{ bar_pct }}"></div>
-                  {% endif %}
-                </div>
-                <span class="text-muted" style="font-size:0.72rem;min-width:14px;">{{ emp.proyectos_activos }}</span>
-              </div>
-            {% else %}
-              <span class="text-muted">Sin asignación</span>
-            {% endif %}
-          </td>
-          <td class="text-center">
-            {% if emp.proyectos_activos > 0 %}
-              <span class="badge bg-primary rounded-pill">{{ emp.proyectos_activos }}</span>
-            {% else %}
-              <span class="text-muted">—</span>
-            {% endif %}
-          </td>
-          <td class="text-center">
-            {% if emp.proyectos_completados > 0 %}
-              <span class="badge bg-success rounded-pill">{{ emp.proyectos_completados }}</span>
-            {% else %}
-              <span class="text-muted">—</span>
-            {% endif %}
-          </td>
-          <td class="text-end pe-3">
-            {% if emp.total_dias > 0 %}
-              {{ emp.total_dias|floatformat:1 }} días
-            {% else %}
-              <span class="text-muted">—</span>
-            {% endif %}
-          </td>
-        </tr>
+  <div class="tab-content">
 
-        <!-- Panel expandible: proyectos -->
-        <tr class="collapse" id="proy_{{ emp.id }}">
-          <td colspan="7" class="p-0 border-0">
-            <div class="expand-panel px-4 py-3">
-              {% if emp.contratos_activos_list %}
-              <p class="small fw-semibold text-primary mb-3">
-                <i class="bi bi-folder2-open me-1"></i>
-                Proyectos asignados ({{ emp.contratos_activos_list|length }})
-              </p>
-              <div class="row g-2">
-                {% for c in emp.contratos_activos_list %}
-                <div class="col-md-6 col-lg-4">
-                  <div class="project-card">
-                    <div class="d-flex justify-content-between align-items-start mb-1">
-                      <a href="{% url 'project_view' c.proyecto.id %}"
-                         class="fw-semibold text-decoration-none text-dark small"
-                         onclick="event.stopPropagation()">
-                        {{ c.proyecto.nombre }}
-                      </a>
-                      {% if c.proyecto.estado_proyecto == 'en_progreso' %}
-                        <span class="badge bg-primary fw-normal ms-2" style="font-size:0.65rem;">En progreso</span>
-                      {% else %}
-                        <span class="badge bg-warning text-dark fw-normal ms-2" style="font-size:0.65rem;">Pendiente</span>
-                      {% endif %}
-                    </div>
-                    <div class="text-muted" style="font-size:0.72rem;">
-                      <span class="me-2"><i class="bi bi-tag me-1"></i>{{ c.proyecto.codigo }}</span>
-                      <span><i class="bi bi-briefcase me-1"></i>{{ c.proyecto.get_tipo_proyecto_display }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between mt-2 pt-2 border-top" style="font-size:0.72rem;">
-                      <span class="text-muted">
-                        {% if c.contrato_proyecto %}
-                          <i class="bi bi-calendar3 me-1"></i>
-                          {{ c.contrato_proyecto.fecha_inicio|date:"d/m/Y" }} — {{ c.contrato_proyecto.fecha_fin|date:"d/m/Y" }}
-                        {% else %}
-                          <i class="bi bi-calendar3 me-1"></i>Sin contrato registrado
-                        {% endif %}
-                      </span>
-                      <span class="fw-semibold text-dark">
-                        <i class="bi bi-clock me-1"></i>{{ c.dias_trabajados|floatformat:1 }} días
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                {% endfor %}
-              </div>
-              {% else %}
-              <p class="text-muted small mb-0">
-                <i class="bi bi-info-circle me-1"></i>Sin proyectos activos asignados.
-              </p>
-              {% endif %}
+    <!-- ══ TAB 1: POR APROBAR ══ -->
+    <div class="tab-pane fade show active" id="pane-aprobar" role="tabpanel">
+      {% if pendientes_por_empleado %}
+        {% for grupo in pendientes_por_empleado %}
+        <div class="card border-0 shadow-sm mb-3">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+            <div>
+              <span class="fw-semibold">
+                {{ grupo.empleado.nombre }} {{ grupo.empleado.apellido_paterno }}
+                {% if grupo.empleado.apellido_materno %} {{ grupo.empleado.apellido_materno }}{% endif %}
+              </span>
+              <span class="text-muted small ms-2">— {{ grupo.empleado.get_cargo_display }}</span>
             </div>
-          </td>
-        </tr>
-
-        {% empty %}
-        <tr>
-          <td colspan="7" class="text-center text-muted py-3 small">
-            No hay empleados activos registrados.
-          </td>
-        </tr>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge bg-warning text-dark">{{ grupo.jornadas|length }} jornada{{ grupo.jornadas|length|pluralize }}</span>
+              <span class="badge bg-secondary">{{ grupo.total_dias|floatformat:1 }} días</span>
+              <a href="{% url 'revisar_jornadas_proyecto' grupo.jornadas.0.proyecto.id %}"
+                 class="btn btn-sm btn-outline-primary py-0">
+                <i class="bi bi-check2-all me-1"></i>Ver en proyecto
+              </a>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0 table-report">
+              <thead class="table-light text-uppercase fw-semibold thead-xs">
+                <tr>
+                  <th>Fecha</th>
+                  <th>Proyecto</th>
+                  <th class="text-center">Días</th>
+                  <th>Observación</th>
+                  <th class="text-center">Acción</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for j in grupo.jornadas %}
+                <tr id="jornada-row-{{ j.id }}">
+                  <td>{{ j.fecha|date:"d/m/Y" }}</td>
+                  <td>
+                    <a href="{% url 'project_view' j.proyecto.id %}" class="text-decoration-none">
+                      {{ j.proyecto.nombre }}
+                    </a>
+                  </td>
+                  <td class="text-center">
+                    {% if j.dias == 0.5 %}
+                      <span class="badge bg-info text-dark">½ día</span>
+                    {% else %}
+                      <span class="badge bg-primary">1 día</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-muted">{{ j.observacion|default:"—" }}</td>
+                  <td class="text-center">
+                    <form method="POST" action="{% url 'aprobar_jornada' j.id %}" class="d-inline">
+                      {% csrf_token %}
+                      <button type="submit" class="btn btn-success btn-sm py-0 px-2">
+                        <i class="bi bi-check-lg me-1"></i>Aprobar
+                      </button>
+                    </form>
+                    <a href="{% url 'jornada_detail' j.id %}" class="btn btn-outline-secondary btn-sm py-0 px-2 ms-1">
+                      <i class="bi bi-pencil"></i>
+                    </a>
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
         {% endfor %}
-      </tbody>
-    </table>
-  </div>
+      {% else %}
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-check2-circle fs-1 d-block mb-2 text-success"></i>
+          No hay jornadas pendientes de aprobar.
+        </div>
+      {% endif %}
+    </div>
 
+    <!-- ══ TAB 2: POR PAGAR ══ -->
+    <div class="tab-pane fade" id="pane-pagar" role="tabpanel">
+      {% if sin_pagar_por_empleado %}
+        {% for grupo in sin_pagar_por_empleado %}
+        <div class="card border-0 shadow-sm mb-3">
+          <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+            <div>
+              <span class="fw-semibold">
+                {{ grupo.empleado.nombre }} {{ grupo.empleado.apellido_paterno }}
+                {% if grupo.empleado.apellido_materno %} {{ grupo.empleado.apellido_materno }}{% endif %}
+              </span>
+              <span class="text-muted small ms-2">— {{ grupo.empleado.get_cargo_display }}</span>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+              <span class="badge bg-secondary">{{ grupo.total_dias|floatformat:1 }} días</span>
+              <span class="badge bg-danger">Bs. {{ grupo.total_monto|floatformat:2 }}</span>
+              <a href="{% url 'create_pago_empleado' grupo.contrato.id %}"
+                 class="btn btn-sm btn-success py-0">
+                <i class="bi bi-cash-coin me-1"></i>Registrar pago
+              </a>
+            </div>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0 table-report">
+              <thead class="table-light text-uppercase fw-semibold thead-xs">
+                <tr>
+                  <th>Fecha</th>
+                  <th>Proyecto</th>
+                  <th class="text-center">Días</th>
+                  <th class="text-end pe-3">Monto</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for j in grupo.jornadas %}
+                <tr>
+                  <td>{{ j.fecha|date:"d/m/Y" }}</td>
+                  <td>
+                    <a href="{% url 'project_view' j.proyecto.id %}" class="text-decoration-none">
+                      {{ j.proyecto.nombre }}
+                    </a>
+                  </td>
+                  <td class="text-center">
+                    {% if j.dias == 0.5 %}
+                      <span class="badge bg-info text-dark">½ día</span>
+                    {% else %}
+                      <span class="badge bg-primary">1 día</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-end pe-3 fw-semibold">Bs. {{ j.monto|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+                <tr class="table-light fw-semibold">
+                  <td colspan="3" class="text-end">Total acumulado:</td>
+                  <td class="text-end pe-3 text-danger">Bs. {{ grupo.total_monto|floatformat:2 }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-cash-stack fs-1 d-block mb-2 text-success"></i>
+          Todos los empleados están al día en sus pagos.
+        </div>
+      {% endif %}
+    </div>
+
+  </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  document.querySelectorAll('.workload-bar-fill').forEach(el => {
-    el.style.width = (el.dataset.width || 0) + '%';
-  });
-
-  document.querySelectorAll('.row-expand').forEach(row => {
-    const target = row.getAttribute('data-bs-target');
-    if (!target) return;
-    const empId = target.replace('#proy_', '');
-    const chevron = document.getElementById('chev_' + empId);
-    const collapseEl = document.querySelector(target);
-    if (!collapseEl || !chevron) return;
-    collapseEl.addEventListener('show.bs.collapse', () => chevron.classList.add('open'));
-    collapseEl.addEventListener('hide.bs.collapse', () => chevron.classList.remove('open'));
-  });
+  // Activar tab según parámetro URL (?tab=pagar)
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('tab') === 'pagar') {
+    const tabPagar = document.getElementById('tab-pagar');
+    if (tabPagar) bootstrap.Tab.getOrCreateInstance(tabPagar).show();
+  }
 </script>
 {% endblock %}

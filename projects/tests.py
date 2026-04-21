@@ -3,8 +3,8 @@ from datetime import date
 
 from django.test import TestCase
 
-from .models import Cliente, Proyecto, Pago, Progreso
-from .form import ProgresoForm, PaymentForm
+from .models import Cliente, Proyecto, Pago
+from .form import PaymentForm
 from empleados.models import Empleado
 from inventario.forms import InsumoForm
 
@@ -122,75 +122,7 @@ class PaymentFormCleanMontoTest(TestCase):
 
 
 # ===========================================================================
-# 2. ProgresoForm — clean_porcentaje (regla de no-retroceso)
-# ===========================================================================
-
-class ProgresoFormCleanPorcentajeTest(TestCase):
-    """Valida que el progreso no pueda retroceder."""
-
-    def setUp(self):
-        self.empleado = crear_empleado()
-        self.proyecto = crear_proyecto(self.empleado)
-
-    def _data(self, porcentaje):
-        return {
-            'fecha': date.today().isoformat(),
-            'porcentaje': porcentaje,
-            'descripcion': 'Avance de prueba',
-            'observacion': '',
-        }
-
-    def test_primer_progreso_valido(self):
-        """Sin progresos anteriores, cualquier valor 0-100 es valido."""
-        form = ProgresoForm(data=self._data(40), proyecto=self.proyecto)
-        self.assertTrue(form.is_valid(), form.errors)
-
-    def test_progreso_mayor_al_anterior_valido(self):
-        Progreso.objects.create(
-            proyecto=self.proyecto,
-            fecha=date.today(),
-            porcentaje=50,
-            descripcion='Primer avance',
-        )
-        form = ProgresoForm(data=self._data(75), proyecto=self.proyecto)
-        self.assertTrue(form.is_valid(), form.errors)
-
-    def test_progreso_igual_al_maximo_valido(self):
-        """Mantener el mismo porcentaje es permitido."""
-        Progreso.objects.create(
-            proyecto=self.proyecto,
-            fecha=date.today(),
-            porcentaje=60,
-            descripcion='Avance',
-        )
-        form = ProgresoForm(data=self._data(60), proyecto=self.proyecto)
-        self.assertTrue(form.is_valid(), form.errors)
-
-    def test_progreso_menor_al_maximo_invalido(self):
-        """Retroceder el porcentaje debe ser rechazado."""
-        Progreso.objects.create(
-            proyecto=self.proyecto,
-            fecha=date.today(),
-            porcentaje=80,
-            descripcion='Avance alto',
-        )
-        form = ProgresoForm(data=self._data(50), proyecto=self.proyecto)
-        self.assertFalse(form.is_valid())
-        self.assertIn('porcentaje', form.errors)
-
-    def test_porcentaje_mayor_a_100_invalido(self):
-        form = ProgresoForm(data=self._data(110), proyecto=self.proyecto)
-        self.assertFalse(form.is_valid())
-        self.assertIn('porcentaje', form.errors)
-
-    def test_porcentaje_negativo_invalido(self):
-        form = ProgresoForm(data=self._data(-10), proyecto=self.proyecto)
-        self.assertFalse(form.is_valid())
-        self.assertIn('porcentaje', form.errors)
-
-
-# ===========================================================================
-# 3. Proyecto._sync_estado_pago — logica de negocio y senal post_save
+# 2. Proyecto._sync_estado_pago — logica de negocio y senal post_save
 # ===========================================================================
 
 class UpdatePaymentStatusTest(TestCase):
@@ -260,7 +192,7 @@ class UpdatePaymentStatusTest(TestCase):
 
 
 # ===========================================================================
-# 4. InsumoForm — clean_costo_unitario
+# 3. InsumoForm — clean_costo_unitario
 # ===========================================================================
 
 class InsumoFormCleanCostoTest(TestCase):

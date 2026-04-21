@@ -1,15 +1,25 @@
 {% extends 'base.html' %}
+{% block extra_css %}
+<style>
+  .label-xs    { font-size: 0.68rem; }
+  .text-xs     { font-size: 0.66rem; }
+  .thead-xs    { font-size: 0.67rem; }
+  .tfoot-sm    { font-size: 0.72rem; }
+  .table-report td, .table-report th { font-size: 0.75rem; }
+  .stat-sep    { color: #dee2e6; }
+</style>
+{% endblock %}
+
 {% block content %}
+<div class="container-fluid px-4 py-4">
 
-<div class="container-fluid py-3">
-
-  <!-- ======================= ENCABEZADO ======================= -->
+  <!-- ── ENCABEZADO ────────────────────────────────────────────── -->
   <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-    <h5 class="fw-semibold text-secondary mb-0">Reporte de Pagos</h5>
+    <h4 class="fw-bold text-sobotec mb-0">Reporte de Pagos</h4>
     <div class="d-flex gap-2">
       <a href="?pdf=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}&filter_tipo={{ filter_tipo }}"
          target="_blank" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-file-earmark-pdf me-1"></i>Vista previa PDF
+        <i class="bi bi-eye me-1"></i>Vista previa PDF
       </a>
       <a href="?pdf=1&download=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}&filter_tipo={{ filter_tipo }}"
          class="btn btn-outline-danger btn-sm">
@@ -22,113 +32,122 @@
     </div>
   </div>
 
+  <!-- ── PER PAGE + CONTADOR ──────────────────────────────────── -->
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+    <form method="get" action="{% url 'filter_payments_by_project_name' %}" class="d-flex align-items-center gap-2">
+      <input type="hidden" name="project_name" value="{{ project_name|default:'' }}">
+      <input type="hidden" name="start_date"   value="{{ start_date|default:'' }}">
+      <input type="hidden" name="end_date"     value="{{ end_date|default:'' }}">
+      <input type="hidden" name="filter_tipo"  value="{{ filter_tipo|default:'' }}">
+      <input type="hidden" name="page" value="1">
+      <span class="small text-muted">Mostrar:</span>
+      <select name="per_page" class="form-select form-select-sm" style="width:80px;" onchange="this.form.submit()">
+        <option value="10"  {% if per_page == 10  %}selected{% endif %}>10</option>
+        <option value="20"  {% if per_page == 20  %}selected{% endif %}>20</option>
+        <option value="50"  {% if per_page == 50  %}selected{% endif %}>50</option>
+        <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+      </select>
+    </form>
+    {% if payments_page %}
+    <div class="text-muted small">
+      Mostrando {{ payments_page.start_index }} – {{ payments_page.end_index }}
+      de {{ payments_page.paginator.count }} registros
+    </div>
+    {% endif %}
+  </div>
 
-  <!-- ======================= FILTROS ======================= -->
+  <!-- ── FILTROS ───────────────────────────────────────────────── -->
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">
       <form method="get" action="{% url 'filter_payments_by_project_name' %}" class="row g-2 align-items-end">
-
         <div class="col-md-3">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Proyecto</label>
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Proyecto</label>
           <select name="project_name" class="form-select form-select-sm">
             <option value="">Todos los proyectos</option>
             {% for project in projects %}
-            <option value="{{ project.nombre }}"
-              {% if project.nombre == project_name %}selected{% endif %}>
+            <option value="{{ project.nombre }}" {% if project.nombre == project_name %}selected{% endif %}>
               {{ project.nombre }}
             </option>
             {% endfor %}
           </select>
         </div>
-
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Fecha inicio</label>
-          <input type="date" name="start_date" class="form-control form-control-sm"
-                 value="{{ start_date }}">
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Fecha inicio</label>
+          <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date }}">
         </div>
-
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Fecha fin</label>
-          <input type="date" name="end_date" class="form-control form-control-sm"
-                 value="{{ end_date }}">
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Fecha fin</label>
+          <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date }}">
         </div>
-
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Método de pago</label>
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Método de pago</label>
           <select class="form-select form-select-sm" name="filter_tipo">
             <option value="">Todos</option>
             <option value="efectivo"      {% if filter_tipo == "efectivo"      %}selected{% endif %}>Efectivo</option>
             <option value="transferencia" {% if filter_tipo == "transferencia" %}selected{% endif %}>Transferencia</option>
           </select>
         </div>
-
         <div class="col-md-1">
           <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
         </div>
-
         <div class="col-md-1">
-          <a href="{% url 'filter_payments_by_project_name' %}"
-             class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
+          <a href="{% url 'filter_payments_by_project_name' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
         </div>
-
       </form>
     </div>
   </div>
 
-
-  <!-- ======================= TARJETAS RESUMEN ======================= -->
+  <!-- ── KPI RESUMEN ──────────────────────────────────────────── -->
   <div class="row g-3 mb-3">
     <div class="col-6 col-md-3">
       <div class="card kpi-card blue border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-primary">{{ payments|length }}</div>
-          <div class="kpi-label">Total Registros</div>
+          <div class="kpi-value text-primary">{% if payments_page %}{{ payments_page.paginator.count }}{% else %}{{ total_payments }}{% endif %}</div>
+          <div class="kpi-label">Registros</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
       <div class="card kpi-card green border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-success" style="font-size:1.35rem;">Bs. {{ total_monto|floatformat:2 }}</div>
-          <div class="kpi-label">Monto Total</div>
+          <div class="kpi-value text-success" style="font-size:1.4rem;">{{ total_monto|floatformat:2 }}</div>
+          <div class="kpi-label">Total Bs.</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
       <div class="card kpi-card teal border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-info" style="font-size:1.35rem;">Bs. {{ monto_efectivo|floatformat:2 }}</div>
-          <div class="kpi-label">En Efectivo <span class="text-muted fw-normal" style="font-size:.7rem;">({{ count_efectivo }} pago{{ count_efectivo|pluralize }})</span></div>
+          <div class="kpi-value text-info" style="font-size:1.4rem;">{{ monto_efectivo|floatformat:2 }}</div>
+          <div class="kpi-label">Efectivo Bs. <span class="text-muted fw-normal">({{ count_efectivo }})</span></div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
       <div class="card kpi-card primary border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-primary" style="font-size:1.35rem;">Bs. {{ monto_transferencia|floatformat:2 }}</div>
-          <div class="kpi-label">Transferencia <span class="text-muted fw-normal" style="font-size:.7rem;">({{ count_transferencia }} pago{{ count_transferencia|pluralize }})</span></div>
+          <div class="kpi-value" style="font-size:1.4rem; color:#0d6efd;">{{ monto_transferencia|floatformat:2 }}</div>
+          <div class="kpi-label">Transferencia Bs. <span class="text-muted fw-normal">({{ count_transferencia }})</span></div>
         </div>
       </div>
     </div>
   </div>
 
-
-  <!-- ======================= TABLA ======================= -->
+  <!-- ── TABLA ─────────────────────────────────────────────────── -->
   <div class="card border-0 shadow-sm mb-3">
-    <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+    <div class="card-header bg-light py-2">
       <span class="fw-semibold small">Detalle de Pagos</span>
-      <span class="text-muted small">{{ payments|length }} registro(s)</span>
     </div>
     <div class="table-responsive">
-      <table class="table table-sm table-hover align-middle small mb-0">
-        <thead class="table-light small text-uppercase fw-semibold">
+      <table class="table table-sm table-hover align-middle mb-0 table-report">
+        <thead class="table-light text-uppercase fw-semibold thead-xs">
           <tr>
             <th>Proyecto</th>
             <th>Contratante</th>
             <th>Tipo Proyecto</th>
             <th>Estado Proyecto</th>
-            <th>Monto Total Proy. (Bs.)</th>
-            <th>Monto Pago (Bs.)</th>
+            <th class="text-end">Monto Total Proy. (Bs.)</th>
+            <th class="text-end">Monto Pago (Bs.)</th>
             <th>Fecha</th>
             <th>Tipo Pago</th>
           </tr>
@@ -137,23 +156,17 @@
           {% for payment in payments %}
           <tr>
             <td class="fw-semibold">{{ payment.proyecto.nombre }}</td>
-
-            <td>
+            <td class="text-muted">
               {% if payment.proyecto.cliente %}
                 {{ payment.proyecto.cliente.nombre }} {{ payment.proyecto.cliente.apellido_paterno }}
-              {% else %}
-                <span class="text-muted">—</span>
-              {% endif %}
+              {% else %}—{% endif %}
             </td>
-
-            <td>
-              {% if payment.proyecto.tipo_proyecto == 'licitacion' %}
-                <span class="badge bg-secondary">Licitación</span>
-              {% else %}
-                <span class="badge bg-dark">Contrat. Directa</span>
-              {% endif %}
+            <td class="text-muted">
+              {% if payment.proyecto.tipo_proyecto == 'instalacion_nueva' %}Instalación
+              {% elif payment.proyecto.tipo_proyecto == 'ampliacion' %}Ampliación
+              {% elif payment.proyecto.tipo_proyecto == 'mantenimiento_externo' %}Mant. Externo
+              {% else %}Emergencia{% endif %}
             </td>
-
             <td>
               {% if payment.proyecto.estado_proyecto == 'completado' %}
                 <span class="badge bg-success">Completado</span>
@@ -163,11 +176,9 @@
                 <span class="badge bg-warning text-dark">Pendiente</span>
               {% endif %}
             </td>
-
             <td class="text-end">{{ payment.proyecto.monto_total|floatformat:2 }}</td>
             <td class="text-end fw-semibold">{{ payment.monto|floatformat:2 }}</td>
-            <td>{{ payment.fecha|date:"d/m/Y" }}</td>
-
+            <td class="text-muted">{{ payment.fecha|date:"d/m/Y" }}</td>
             <td>
               {% if payment.tipo_pago == 'transferencia' %}
                 <span class="badge bg-primary">Transferencia</span>
@@ -178,15 +189,14 @@
           </tr>
           {% empty %}
           <tr>
-            <td colspan="8" class="text-center text-muted py-3 small">
+            <td colspan="8" class="text-center text-muted py-3">
               No se encontraron pagos con los filtros seleccionados.
             </td>
           </tr>
           {% endfor %}
         </tbody>
-
         {% if payments %}
-        <tfoot class="table-light fw-semibold small">
+        <tfoot class="table-light fw-semibold tfoot-sm">
           <tr>
             <td colspan="5" class="text-end text-muted">Totales:</td>
             <td class="text-end">Bs. {{ total_monto|floatformat:2 }}</td>
@@ -194,10 +204,46 @@
           </tr>
         </tfoot>
         {% endif %}
-
       </table>
     </div>
   </div>
+
+  <!-- ── PAGINACIÓN ───────────────────────────────────────────── -->
+  {% if payments_page and payments_page.paginator.num_pages > 1 %}
+  {% with p=payments_page params="project_name="|add:project_name|default:''|add:"&start_date="|add:start_date|default:''|add:"&end_date="|add:end_date|default:''|add:"&filter_tipo="|add:filter_tipo|default:''|add:"&per_page="|add:per_page|stringformat:"s" %}
+  <nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center mb-0">
+
+      {% if p.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ p.previous_page_number }}&{{ params }}">Anterior</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+      {% endif %}
+
+      {% for num in p.paginator.page_range %}
+        {% if num == p.number %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num == 1 or num == p.paginator.num_pages or num >= p.number|add:"-2" and num <= p.number|add:"2" %}
+          <li class="page-item"><a class="page-link" href="?page={{ num }}&{{ params }}">{{ num }}</a></li>
+        {% elif num == p.number|add:"-3" or num == p.number|add:"3" %}
+          <li class="page-item disabled"><span class="page-link">…</span></li>
+        {% endif %}
+      {% endfor %}
+
+      {% if p.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ p.next_page_number }}&{{ params }}">Siguiente</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+      {% endif %}
+
+    </ul>
+  </nav>
+  {% endwith %}
+  {% endif %}
 
 </div>
 {% endblock %}

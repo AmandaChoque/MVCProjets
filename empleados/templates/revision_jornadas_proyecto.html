@@ -1,6 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
-<main class="container-fluid px-5 py-4">
+<main class="container-fluid px-4 py-4">
 
   <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb mb-0">
@@ -10,25 +10,41 @@
     </ol>
   </nav>
 
-  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+  <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
     <div>
       <h5 class="fw-semibold mb-0">Revisión de jornadas</h5>
       <span class="text-muted small">{{ proyecto.nombre }} · {{ proyecto.codigo }}</span>
     </div>
-    <!-- Filtro de estado -->
-    <div class="btn-group btn-group-sm" role="group">
-      <a href="?estado=pendiente"
-         class="btn {% if estado_filtro == 'pendiente' %}btn-warning{% else %}btn-outline-warning{% endif %}">
-        Pendientes
-      </a>
-      <a href="?estado=aprobada"
-         class="btn {% if estado_filtro == 'aprobada' %}btn-success{% else %}btn-outline-success{% endif %}">
-        Aprobadas
-      </a>
-      <a href="?estado=rechazada"
-         class="btn {% if estado_filtro == 'rechazada' %}btn-danger{% else %}btn-outline-danger{% endif %}">
-        Rechazadas
-      </a>
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <!-- Filtro de estado -->
+      <div class="btn-group btn-group-sm" role="group">
+        <a href="?estado=pendiente"
+           class="btn {% if estado_filtro == 'pendiente' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+          Pendientes
+        </a>
+        <a href="?estado=aprobada"
+           class="btn {% if estado_filtro == 'aprobada' %}btn-success{% else %}btn-outline-success{% endif %}">
+          Aprobadas
+        </a>
+        <a href="?estado=rechazada"
+           class="btn {% if estado_filtro == 'rechazada' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+          Rechazadas
+        </a>
+      </div>
+      <!-- Botón aprobar en lote -->
+      {% if estado_filtro == 'pendiente' and total_pendientes_con_evidencia > 0 %}
+      <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="aprobar_con_evidencia">
+        <button type="submit" class="btn btn-success btn-sm"
+                title="Aprueba todas las jornadas pendientes que tienen al menos una tarea completada ese día"
+                onclick="return confirm('¿Aprobar {{ total_pendientes_con_evidencia }} jornada(s) con evidencia de tareas?')">
+          <i class="bi bi-check2-all me-1"></i>
+          Aprobar con evidencia
+          <span class="badge bg-white text-success ms-1">{{ total_pendientes_con_evidencia }}</span>
+        </button>
+      </form>
+      {% endif %}
     </div>
   </div>
 
@@ -67,6 +83,7 @@
               <th>Días</th>
               <th>Observación</th>
               <th>Tareas completadas</th>
+              <th>Registrado por</th>
               <th class="text-center">Estado</th>
               <th class="text-end px-3">Acciones</th>
             </tr>
@@ -84,12 +101,46 @@
               </td>
               <td class="text-muted">{{ j.observacion|default:"—" }}</td>
               <td>
-                {% with tareas=j.proyecto.tareas_proyecto.filter %}
-                <!-- Tareas completadas ese día por este empleado -->
-                {% endwith %}
-                <a href="{% url 'jornada_detail' j.id %}" class="text-decoration-none small text-primary">
-                  <i class="bi bi-eye me-1"></i>Ver tareas
-                </a>
+                {% if j.tareas_completadas_count > 0 %}
+                  <div class="d-flex align-items-center gap-1 flex-wrap">
+                    <button class="btn btn-success btn-sm py-0 px-2"
+                            type="button"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#tareas-j{{ j.id }}"
+                            title="Ver tareas completadas ese día">
+                      <i class="bi bi-check2-circle me-1"></i>{{ j.tareas_completadas_count }} tarea{{ j.tareas_completadas_count|pluralize:"s" }}
+                    </button>
+                    <a href="{% url 'jornada_detail' j.id %}" class="text-decoration-none small text-primary">
+                      <i class="bi bi-eye me-1"></i>Ver
+                    </a>
+                  </div>
+                  <div class="collapse mt-1" id="tareas-j{{ j.id }}">
+                    <ul class="list-unstyled mb-0 small text-muted ps-1" style="border-left:2px solid #198754;">
+                      {% for t in j.tareas_del_dia %}
+                      <li class="py-0" style="font-size:0.72rem;">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>
+                        <span class="text-muted">[{{ t.sede.nombre }}]</span> {{ t.descripcion }}
+                      </li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                {% else %}
+                  <span class="badge bg-secondary me-1" title="Sin tareas registradas ese día">
+                    Sin evidencia
+                  </span>
+                  <a href="{% url 'jornada_detail' j.id %}" class="text-decoration-none small text-primary">
+                    <i class="bi bi-eye me-1"></i>Ver
+                  </a>
+                {% endif %}
+              </td>
+              <td>
+                {% if j.registrado_por and j.registrado_por != item.empleado %}
+                  <span class="text-warning small" title="Esta jornada fue registrada por un compañero">
+                    <i class="bi bi-person-fill-exclamation me-1"></i>{{ j.registrado_por.nombre }} {{ j.registrado_por.apellido_paterno }}
+                  </span>
+                {% else %}
+                  <span class="text-muted small">—</span>
+                {% endif %}
               </td>
               <td class="text-center">
                 {% if j.estado == 'aprobada' %}
@@ -97,7 +148,15 @@
                 {% elif j.estado == 'rechazada' %}
                   <span class="badge bg-danger" title="{{ j.motivo_rechazo }}">Rechazada</span>
                 {% else %}
-                  <span class="badge bg-warning text-dark">Pendiente</span>
+                  {% if j.tareas_completadas_count > 0 %}
+                    <span class="badge bg-warning text-dark">
+                      <i class="bi bi-clock me-1"></i>Pendiente
+                    </span>
+                  {% else %}
+                    <span class="badge bg-secondary">
+                      <i class="bi bi-question-circle me-1"></i>Pendiente
+                    </span>
+                  {% endif %}
                 {% endif %}
               </td>
               <td class="text-end px-3">
@@ -154,6 +213,13 @@
             <p class="small text-muted mb-2">
               Empleado: <strong>{{ item.empleado.nombre }} {{ item.empleado.apellido_paterno }}</strong>
             </p>
+            {% if j.registrado_por and j.registrado_por != item.empleado %}
+            <div class="alert alert-warning py-2 small mb-2">
+              <i class="bi bi-person-fill-exclamation me-1"></i>
+              Esta jornada fue registrada por
+              <strong>{{ j.registrado_por.nombre }} {{ j.registrado_por.apellido_paterno }}</strong>.
+            </div>
+            {% endif %}
             <label class="form-label">Motivo <span class="text-muted small">(opcional)</span></label>
             <textarea name="motivo_rechazo" class="form-control" rows="3"
                       placeholder="Ej: fecha incorrecta, empleado no asignado ese día..."></textarea>

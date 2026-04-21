@@ -1,6 +1,6 @@
 from django.contrib import admin
 from projects.models import (
-    Proyecto, HistorialPresupuesto, Cliente, Progreso, Pago,
+    Proyecto, HistorialPresupuesto, Cliente, PagoProyecto, ContratoProyecto,
 )
 from empleados.models import PagoEmpleado
 from inventario.models import Proveedor, Insumo, Compra
@@ -28,8 +28,8 @@ class ClienteAdmin(admin.ModelAdmin):
         return Cliente.all_objects.all()
 
 
-@admin.register(Pago)
-class PagoAdmin(admin.ModelAdmin):
+@admin.register(PagoProyecto)
+class PagoProyectoAdmin(admin.ModelAdmin):
     list_display = ('id', 'monto', 'fecha', 'tipo_pago', 'numero_referencia', 'proyecto', 'activo', 'created')
     list_filter = ('activo', 'tipo_pago')
     search_fields = ('proyecto__nombre', 'proyecto__codigo')
@@ -38,21 +38,21 @@ class PagoAdmin(admin.ModelAdmin):
 
 
 
+@admin.register(ContratoProyecto)
+class ContratoProyectoAdmin(admin.ModelAdmin):
+    list_display = ('proyecto', 'monto_acordado', 'fecha_inicio', 'fecha_fin', 'activo')
+    list_filter = ('activo',)
+    search_fields = ('proyecto__nombre',)
+    ordering = ('-created',)
+    readonly_fields = ('created', 'updated_at', 'deleted_at', 'deleted_by')
+
+
 @admin.register(HistorialPresupuesto)
-class HistorialPresupuestoAdmin(admin.ModelAdmin):
+class HistorialContratoAdmin(admin.ModelAdmin):
     list_display = ('proyecto', 'monto_anterior', 'monto_actual', 'motivo_cambio', 'fecha_modificacion')
     list_filter = ('proyecto',)
     search_fields = ('proyecto__nombre', 'motivo_cambio')
     ordering = ('-fecha_modificacion',)
-    list_per_page = 20
-
-
-@admin.register(Progreso)
-class ProgresoAdmin(admin.ModelAdmin):
-    list_display = ('proyecto', 'fecha', 'porcentaje', 'descripcion', 'created')
-    list_filter = ('proyecto',)
-    search_fields = ('proyecto__nombre', 'descripcion')
-    ordering = ('-fecha',)
     list_per_page = 20
 
 

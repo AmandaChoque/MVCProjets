@@ -444,7 +444,7 @@
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-6">
+    <div class="col-6 col-md-4">
       <div class="card kpi-card blue border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
           <div class="kpi-value text-primary">{{ total_clientes }}</div>
@@ -452,13 +452,23 @@
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-6">
+    <div class="col-6 col-md-4">
       <div class="card kpi-card primary border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
           <div class="kpi-value text-info">{{ total_empleados }}</div>
           <div class="kpi-label">Empleados Activos</div>
         </div>
       </div>
+    </div>
+    <div class="col-6 col-md-4">
+      <a href="{% url 'pagos_empleados_list' %}" class="text-decoration-none">
+        <div class="card kpi-card {% if alertas_empleados %}red{% else %}green{% endif %} border-0 shadow-sm h-100">
+          <div class="card-body py-3 px-3">
+            <div class="kpi-value {% if alertas_empleados %}text-danger{% else %}text-success{% endif %}">{{ alertas_empleados|length }}</div>
+            <div class="kpi-label">Con Pagos Pendientes</div>
+          </div>
+        </div>
+      </a>
     </div>
   </div>
 
@@ -651,7 +661,6 @@
   }
 </script>
 <script>
-  // Gráfico de dona - Estado
   new Chart(document.getElementById('chartEstado'), {
     type: 'doughnut',
     data: {
@@ -672,7 +681,6 @@
     }
   });
 
-  // Gráfico de barras - Tipo
   new Chart(document.getElementById('chartTipo'), {
     type: 'bar',
     data: {
@@ -680,7 +688,7 @@
       datasets: [{
         label: 'Proyectos',
         data: {{ tipos_values|safe }},
-        backgroundColor: ['#264653', '#2a9d8f', '#e9c46a', '#e76f51'],
+        backgroundColor: ['#264653', '#2a9d8f', '#e9c46a', '#f4a261', '#e76f51'],
         borderRadius: 5,
       }]
     },

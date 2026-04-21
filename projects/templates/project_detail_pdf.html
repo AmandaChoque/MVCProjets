@@ -199,7 +199,7 @@
           </tr>
           <tr>
             <td class="lbl">Avance actual</td>
-            <td><b>{{ porcentaje_actual }}%</b></td>
+            <td><b>{{ progreso_sedes }}%</b></td>
           </tr>
           <tr>
             <td class="lbl">Fecha inicio</td>
@@ -248,35 +248,6 @@
     </tr>
   </table>
 
-  <!-- ══ PROGRESO ══ -->
-  <div class="section">
-    <div class="section-title">Historial de Progreso</div>
-    {% if progresos %}
-    <table class="list">
-      <thead>
-        <tr>
-          <th>Fecha</th>
-          <th class="text-center">% Avance</th>
-          <th>Descripción</th>
-          <th>Observación</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for p in progresos %}
-        <tr>
-          <td>{{ p.fecha|date:"d/m/Y" }}</td>
-          <td class="text-center"><b>{{ p.porcentaje }}%</b></td>
-          <td>{{ p.descripcion|default:"—" }}</td>
-          <td>{{ p.observacion|default:"—" }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-    <p class="no-data">Sin registros de progreso.</p>
-    {% endif %}
-  </div>
-
   <!-- ══ PAGOS DEL CLIENTE ══ -->
   <div class="section">
     <div class="section-title">Pagos del Cliente</div>
@@ -285,9 +256,11 @@
       <thead>
         <tr>
           <th>Fecha</th>
-          <th class="text-right">Monto (Bs.)</th>
-          <th>Estado</th>
-          <th>Tipo</th>
+          <th class="text-right">Monto recibido (Bs.)</th>
+          <th class="text-right">Descuento (Bs.)</th>
+          <th class="text-right">Total cubierto (Bs.)</th>
+          <th>Método</th>
+          <th>Referencia</th>
         </tr>
       </thead>
       <tbody>
@@ -295,22 +268,21 @@
         <tr>
           <td>{{ pago.fecha|date:"d/m/Y" }}</td>
           <td class="text-right">{{ pago.monto|floatformat:2 }}</td>
+          <td class="text-right">{% if pago.descuento %}{{ pago.descuento|floatformat:2 }}{% else %}—{% endif %}</td>
+          <td class="text-right">{{ pago.monto_neto|floatformat:2 }}</td>
           <td>
-            {% if pago.estado == 'pagado' %}<span class="badge badge-ok">Pagado</span>
-            {% else %}<span class="badge badge-warn">Pendiente</span>{% endif %}
+            {% if pago.tipo_pago == 'efectivo' %}<span class="badge badge-ok">Efectivo</span>
+            {% else %}<span class="badge badge-info">Transferencia</span>{% endif %}
           </td>
-          <td>
-            {% if pago.tipo_pago == 'completo' %}<span class="badge badge-info">Completo</span>
-            {% else %}<span class="badge badge-muted">Parcial</span>{% endif %}
-          </td>
+          <td>{{ pago.numero_referencia|default:"—" }}</td>
         </tr>
         {% endfor %}
       </tbody>
       <tfoot>
         <tr>
-          <td>TOTAL</td>
+          <td>TOTAL PAGADO</td>
           <td class="text-right">{{ total_pagado_cliente|floatformat:2 }}</td>
-          <td colspan="2"></td>
+          <td colspan="4"></td>
         </tr>
       </tfoot>
     </table>
@@ -319,52 +291,41 @@
     {% endif %}
   </div>
 
-  <!-- ══ CONTRATOS EMPLEADOS ══ -->
+  <!-- ══ EQUIPO DEL PROYECTO ══ -->
   <div class="section">
-    <div class="section-title">Contratos de Empleados</div>
-    {% if contratos_con_pagos %}
-    {% for item in contratos_con_pagos %}
-    <table class="data" style="margin-bottom:6px;">
-      <tr>
-        <td class="lbl">Empleado</td>
-        <td>{{ item.contrato.empleado.nombre }} {{ item.contrato.empleado.apellido_paterno }} — <i>{{ item.contrato.empleado.get_cargo_display }}</i></td>
-        <td class="lbl">Monto acordado</td>
-        <td class="text-right">Bs. {{ item.contrato.monto_acordado|floatformat:2 }}</td>
-      </tr>
-      <tr>
-        <td class="lbl">Total pagado</td>
-        <td class="text-right">Bs. {{ item.total_pagado|floatformat:2 }}</td>
-        <td class="lbl">Saldo pendiente</td>
-        <td class="text-right">Bs. {{ item.saldo_pendiente|floatformat:2 }}</td>
-      </tr>
-      {% if item.pagos %}
-      <tr>
-        <td colspan="4" style="padding:0;">
-          <table class="list" style="margin:0;">
-            <thead>
-              <tr>
-                <th>Fecha pago</th>
-                <th class="text-right">Monto (Bs.)</th>
-                <th>Concepto</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for pago in item.pagos %}
-              <tr>
-                <td>{{ pago.fecha|date:"d/m/Y" }}</td>
-                <td class="text-right">{{ pago.monto|floatformat:2 }}</td>
-                <td>{{ pago.concepto|default:"—" }}</td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </td>
-      </tr>
-      {% endif %}
+    <div class="section-title">Equipo del Proyecto</div>
+    {% if equipo_proyecto %}
+    <table class="list">
+      <thead>
+        <tr>
+          <th>Empleado</th>
+          <th>Cargo</th>
+          <th class="text-center">Días trabajados</th>
+          <th class="text-right">Costo (Bs.)</th>
+          <th>Última jornada</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in equipo_proyecto %}
+        <tr>
+          <td>{{ item.empleado.nombre }} {{ item.empleado.apellido_paterno }}</td>
+          <td>{{ item.empleado.get_cargo_display }}</td>
+          <td class="text-center">{{ item.total_dias }}</td>
+          <td class="text-right">{{ item.costo|floatformat:2 }}</td>
+          <td>{{ item.ultima_fecha|date:"d/m/Y"|default:"—" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3" class="text-right">TOTAL PERSONAL</td>
+          <td class="text-right">{{ costo_personal|floatformat:2 }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
     </table>
-    {% endfor %}
     {% else %}
-    <p class="no-data">Sin contratos de empleados.</p>
+    <p class="no-data">Sin empleados asignados al proyecto.</p>
     {% endif %}
   </div>
 

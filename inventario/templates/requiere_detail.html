@@ -17,7 +17,7 @@
 {% endblock %}
 
 {% block content %}
-<main class="container-fluid px-5 py-4">
+<main class="container-fluid px-4 py-4">
   <nav aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb mb-0">
       <li class="breadcrumb-item"><a href="{% url 'projects' %}">Proyectos</a></li>
@@ -37,7 +37,7 @@
         <tr>
           <td>{{ lote.compra.fecha }}</td>
           <td class="text-end">{{ lote.cantidad }} {{ requiere.insumo.unidad_abrev }}</td>
-          <td class="text-end">Bs. {{ lote.costo_unitario|floatformat:2 }}</td>
+          <td class="text-end">Bs. {{ lote.compra.costo_unitario|floatformat:2 }}</td>
           <td class="text-end">Bs. {{ lote.subtotal|floatformat:2 }}</td>
         </tr>
       {% endfor %}
@@ -65,6 +65,7 @@
               {% if form.insumo.errors %}
               <div class="text-danger small mt-1">{% for err in form.insumo.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
+              <div id="stockInfo" class="form-text mt-1"></div>
             </div>
             <div class="mb-3">
               <label class="form-label">Cantidad <span class="text-danger">*</span></label>
