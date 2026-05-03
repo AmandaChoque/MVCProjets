@@ -1,147 +1,276 @@
 {% extends 'base.html' %}
+{% block extra_css %}
+<style>
+  .label-xs  { font-size: 0.68rem; }
+  .text-xs   { font-size: 0.66rem; }
+  .text-xxs  { font-size: 0.63rem; }
+  .cod-muted { font-size: 0.63rem; color: #adb5bd; }
+</style>
+{% endblock %}
 {% block content %}
-
 <div class="container-fluid px-4 py-4">
 
-  <!-- ENCABEZADO -->
-  <div class="d-flex justify-content-between align-items-center mb-3">
-    <h4 class="fw-bold text-sobotec mb-0">Análisis Financiero</h4>
-    <a href="{% url 'projects' %}" class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-arrow-left me-1"></i>Volver
+  <!-- ── ENCABEZADO ────────────────────────────────────────────── -->
+  <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <h4 class="fw-bold text-sobotec mb-0">Rentabilidad por Proyecto</h4>
+    <a href="{% url 'project_report' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Reporte de Proyectos
     </a>
   </div>
 
-  <!-- KPIs -->
-  <div class="row g-3 mb-4">
+  <!-- ── PER PAGE + CONTADOR ───────────────────────────────────── -->
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+    <form method="get" action="{% url 'analisis_financiero' %}" class="d-flex align-items-center gap-2">
+      <input type="hidden" name="proyecto_id" value="{{ proyecto_id|default:'' }}">
+      <input type="hidden" name="estado"      value="{{ filter_estado|default:'' }}">
+      <input type="hidden" name="fecha_desde" value="{{ fecha_desde|default:'' }}">
+      <input type="hidden" name="fecha_hasta" value="{{ fecha_hasta|default:'' }}">
+      <input type="hidden" name="page"   value="1">
+      <span class="small text-muted">Mostrar:</span>
+      <select name="per_page" class="form-select form-select-sm" style="width:80px;" onchange="this.form.submit()">
+        <option value="10"  {% if per_page == 10  %}selected{% endif %}>10</option>
+        <option value="20"  {% if per_page == 20  %}selected{% endif %}>20</option>
+        <option value="50"  {% if per_page == 50  %}selected{% endif %}>50</option>
+        <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+      </select>
+    </form>
+    {% if filas_page %}
+    <div class="text-muted small">
+      Mostrando {{ filas_page.start_index }} – {{ filas_page.end_index }}
+      de {{ filas_page.paginator.count }} proyectos
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── FILTROS ───────────────────────────────────────────────── -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+      <form method="get" action="{% url 'analisis_financiero' %}" class="row g-2 align-items-end">
+        <div class="col-md-5">
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Proyecto</label>
+          <select name="proyecto_id" class="form-select form-select-sm">
+            <option value="">Selecciona proyecto</option>
+            {% for p in proyectos_lista %}
+            <option value="{{ p.id }}" {% if proyecto_id == p.id|stringformat:"s" %}selected{% endif %}>
+              {{ p.codigo }} — {{ p.nombre }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Estado</label>
+          <select name="estado" class="form-select form-select-sm">
+            <option value="">Todos</option>
+            <option value="pendiente"   {% if filter_estado == 'pendiente'   %}selected{% endif %}>Pendiente</option>
+            <option value="en_progreso" {% if filter_estado == 'en_progreso' %}selected{% endif %}>En Progreso</option>
+            <option value="completado"  {% if filter_estado == 'completado'  %}selected{% endif %}>Completado</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Creado desde</label>
+          <input type="date" name="fecha_desde" class="form-control form-control-sm"
+                 value="{{ fecha_desde|default:'' }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Creado hasta</label>
+          <input type="date" name="fecha_hasta" class="form-control form-control-sm"
+                 value="{{ fecha_hasta|default:'' }}">
+        </div>
+        <div class="col-md-auto d-flex gap-1 align-items-end">
+          <button type="submit" class="btn btn-dark btn-sm">Filtrar</button>
+          <a href="{% url 'analisis_financiero' %}" class="btn btn-outline-secondary btn-sm" title="Limpiar filtros">
+            <i class="bi bi-x-lg"></i>
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── KPIs ──────────────────────────────────────────────────── -->
+  <div class="row g-3 mb-3">
     <div class="col-6 col-md">
       <div class="card kpi-card blue border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-primary">Bs. {{ totales.presupuesto|floatformat:2 }}</div>
-          <div class="kpi-label">Presupuesto Total</div>
+          <div class="kpi-value text-primary" style="font-size:1.2rem;">{{ totales.presupuesto|floatformat:2 }}</div>
+          <div class="kpi-label">Presupuesto Bs.</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md">
       <div class="card kpi-card red border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-danger">Bs. {{ totales.costo_total|floatformat:2 }}</div>
-          <div class="kpi-label">Costo Real</div>
+          <div class="kpi-value text-danger" style="font-size:1.2rem;">{{ totales.costo_total|floatformat:2 }}</div>
+          <div class="kpi-label">Costo Real Bs.</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md">
       <div class="card kpi-card teal border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value" style="color:#20c997;">Bs. {{ totales.cobrado|floatformat:2 }}</div>
-          <div class="kpi-label">Total Cobrado</div>
+          <div class="kpi-value" style="color:#20c997; font-size:1.2rem;">{{ totales.cobrado|floatformat:2 }}</div>
+          <div class="kpi-label">Total Cobrado Bs.</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md">
       <div class="card kpi-card {% if totales.rentabilidad >= 0 %}green{% else %}red{% endif %} border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value {% if totales.rentabilidad >= 0 %}text-success{% else %}text-danger{% endif %}">
-            Bs. {{ totales.rentabilidad|floatformat:2 }}
+          <div class="kpi-value {% if totales.rentabilidad >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-size:1.2rem;">
+            {{ totales.rentabilidad|floatformat:2 }}
           </div>
-          <div class="kpi-label">Rentabilidad Global · {{ totales.margen }}%</div>
+          <div class="kpi-label">Rentabilidad Bs. · {{ totales.margen }}%</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- TABLA -->
+  <!-- ── TABLA ─────────────────────────────────────────────────── -->
   <div class="card border-0 shadow-sm mb-3">
-    <div class="card-body p-0">
-      <div class="table-responsive" style="overflow:visible;">
-        <table class="table table-sm table-hover align-middle small">
-          <thead class="table-light small text-uppercase fw-semibold">
-            <tr>
-              <th>Proyecto</th>
-              <th>Cliente</th>
-              <th>Estado</th>
-              <th class="text-end">Presupuesto (Bs.)</th>
-              <th class="text-end">Insumos (Bs.)</th>
-              <th class="text-end">Personal (Bs.)</th>
-              <th class="text-end">Costo Real (Bs.)</th>
-              <th class="text-end">Cobrado (Bs.)</th>
-              <th class="text-end">Saldo (Bs.)</th>
-              <th class="text-end">Rentabilidad (Bs.)</th>
-              <th class="text-center">Margen</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for f in filas %}
-            <tr>
-              <td>
-                <a href="{% url 'project_view' id_project=f.proyecto.id %}" class="text-decoration-none fw-semibold">
-                  {{ f.proyecto.nombre }}
-                </a>
-                <div class="text-muted" style="font-size:0.72rem;">{{ f.proyecto.codigo }}</div>
-              </td>
-              <td class="text-muted">{{ f.proyecto.cliente.nombre }} {{ f.proyecto.cliente.apellido_paterno }}</td>
-              <td>
-                {% if f.proyecto.estado_proyecto == 'completado' %}
-                  <span class="badge bg-success">Completado</span>
-                {% elif f.proyecto.estado_proyecto == 'en_progreso' %}
-                  <span class="badge bg-primary">En Progreso</span>
-                {% else %}
-                  <span class="badge bg-secondary">Pendiente</span>
-                {% endif %}
-              </td>
-              <td class="text-end">{{ f.proyecto.monto_total|floatformat:2 }}</td>
-              <td class="text-end text-muted">{{ f.costo_insumos|floatformat:2 }}</td>
-              <td class="text-end text-muted">{{ f.costo_personal|floatformat:2 }}</td>
-              <td class="text-end text-danger">{{ f.costo_total|floatformat:2 }}</td>
-              <td class="text-end text-primary">{{ f.cobrado|floatformat:2 }}</td>
-              <td class="text-end {% if f.saldo > 0 %}text-warning{% else %}text-success{% endif %}">
-                {{ f.saldo|floatformat:2 }}
-              </td>
-              <td class="text-end fw-semibold {% if f.rentabilidad >= 0 %}text-success{% else %}text-danger{% endif %}">
-                {{ f.rentabilidad|floatformat:2 }}
-              </td>
-              <td class="text-center">
-                {% if f.margen >= 30 %}
-                  <span class="badge bg-success">{{ f.margen }}%</span>
-                {% elif f.margen >= 10 %}
-                  <span class="badge bg-warning text-dark">{{ f.margen }}%</span>
-                {% elif f.margen >= 0 %}
-                  <span class="badge bg-danger">{{ f.margen }}%</span>
-                {% else %}
-                  <span class="badge bg-dark">{{ f.margen }}%</span>
-                {% endif %}
-              </td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="11" class="text-center text-muted py-4 small">No hay proyectos activos.</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-          {% if filas %}
-          <tfoot class="table-light fw-semibold small text-uppercase">
-            <tr>
-              <td colspan="3">Totales</td>
-              <td class="text-end">{{ totales.presupuesto|floatformat:2 }}</td>
-              <td class="text-end text-muted">{{ totales.costo_insumos|floatformat:2 }}</td>
-              <td class="text-end text-muted">{{ totales.costo_personal|floatformat:2 }}</td>
-              <td class="text-end text-danger">{{ totales.costo_total|floatformat:2 }}</td>
-              <td class="text-end text-primary">{{ totales.cobrado|floatformat:2 }}</td>
-              <td class="text-end">—</td>
-              <td class="text-end {% if totales.rentabilidad >= 0 %}text-success{% else %}text-danger{% endif %}">
-                {{ totales.rentabilidad|floatformat:2 }}
-              </td>
-              <td class="text-center">
-                {% if totales.margen >= 30 %}<span class="badge bg-success">{{ totales.margen }}%</span>
-                {% elif totales.margen >= 10 %}<span class="badge bg-warning text-dark">{{ totales.margen }}%</span>
-                {% else %}<span class="badge bg-danger">{{ totales.margen }}%</span>{% endif %}
-              </td>
-            </tr>
-          </tfoot>
-          {% endif %}
-        </table>
-      </div>
+    <div class="table-responsive" style="overflow:visible;">
+      <table class="table table-sm table-hover align-middle small">
+        <thead class="table-light small text-uppercase fw-semibold">
+          <tr>
+            <th scope="col" class="px-3">Proyecto</th>
+            <th scope="col">Cliente</th>
+            <th scope="col">Estado</th>
+            <th scope="col" class="text-end">Presupuesto (Bs.)</th>
+            <th scope="col" class="text-end">Insumos (Bs.)</th>
+            <th scope="col" class="text-end">Personal (Bs.)</th>
+            <th scope="col" class="text-end">Garantía (Bs.)</th>
+            <th scope="col" class="text-end">Costo Real (Bs.)</th>
+            <th scope="col" class="text-end">Cobrado (Bs.)</th>
+            <th scope="col" class="text-end">Saldo (Bs.)</th>
+            <th scope="col" class="text-end">Rentabilidad (Bs.)</th>
+            <th scope="col" class="text-center">Margen</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for f in filas %}
+          <tr>
+            <td class="px-3">
+              <a href="{% url 'project_view' id_project=f.proyecto.id %}" class="text-decoration-none fw-semibold">
+                {{ f.proyecto.nombre }}
+              </a>
+              <div class="cod-muted">{{ f.proyecto.codigo }}</div>
+            </td>
+            <td class="text-muted">
+              {% if f.proyecto.cliente %}{{ f.proyecto.cliente.nombre }} {{ f.proyecto.cliente.apellido_paterno }}
+              {% else %}—{% endif %}
+            </td>
+            <td>
+              {% if f.proyecto.estado_proyecto == 'completado' %}
+                <span class="badge bg-success">Completado</span>
+              {% elif f.proyecto.estado_proyecto == 'en_progreso' %}
+                <span class="badge bg-primary">En Progreso</span>
+              {% else %}
+                <span class="badge bg-warning text-dark">Pendiente</span>
+              {% endif %}
+            </td>
+            <td class="text-end fw-semibold">{{ f.proyecto.monto_total|floatformat:2 }}</td>
+            <td class="text-end text-muted">
+              {{ f.costo_insumos|floatformat:2 }}
+              {% if f.costo_insumos_garantia %}
+              <div class="text-xxs text-warning mt-0" title="Insumos agregados bajo período de garantía">
+                <i class="bi bi-shield-check"></i> {{ f.costo_insumos_garantia|floatformat:2 }} garantía
+              </div>
+              {% endif %}
+            </td>
+            <td class="text-end text-muted">{{ f.costo_personal|floatformat:2 }}</td>
+            <td class="text-end {% if f.costo_garantia %}text-danger{% else %}text-muted{% endif %}">
+              {% if f.costo_garantia %}{{ f.costo_garantia|floatformat:2 }}{% else %}—{% endif %}
+            </td>
+            <td class="text-end text-danger">{{ f.costo_total|floatformat:2 }}</td>
+            <td class="text-end text-primary">{{ f.cobrado|floatformat:2 }}</td>
+            <td class="text-end {% if f.saldo > 0 %}text-warning{% else %}text-success{% endif %}">
+              {{ f.saldo|floatformat:2 }}
+            </td>
+            <td class="text-end fw-semibold {% if f.rentabilidad >= 0 %}text-success{% else %}text-danger{% endif %}">
+              {{ f.rentabilidad|floatformat:2 }}
+            </td>
+            <td class="text-center">
+              {% if f.margen >= 30 %}
+                <span class="badge bg-success">{{ f.margen }}%</span>
+              {% elif f.margen >= 10 %}
+                <span class="badge bg-warning text-dark">{{ f.margen }}%</span>
+              {% elif f.margen >= 0 %}
+                <span class="badge bg-danger">{{ f.margen }}%</span>
+              {% else %}
+                <span class="badge bg-dark">{{ f.margen }}%</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="12" class="text-center text-muted py-4">
+              <i class="bi bi-inbox me-1"></i>No se encontraron proyectos con los filtros seleccionados.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+        {% if filas %}
+        <tfoot class="table-light fw-semibold small text-uppercase">
+          <tr>
+            <td colspan="3" class="px-3">Totales</td>
+            <td class="text-end">{{ totales.presupuesto|floatformat:2 }}</td>
+            <td class="text-end text-muted">{{ totales.costo_insumos|floatformat:2 }}</td>
+            <td class="text-end text-muted">{{ totales.costo_personal|floatformat:2 }}</td>
+            <td class="text-end {% if totales.costo_garantia %}text-danger{% else %}text-muted{% endif %}">
+              {% if totales.costo_garantia %}{{ totales.costo_garantia|floatformat:2 }}{% else %}—{% endif %}
+            </td>
+            <td class="text-end text-danger">{{ totales.costo_total|floatformat:2 }}</td>
+            <td class="text-end text-primary">{{ totales.cobrado|floatformat:2 }}</td>
+            <td class="text-end">—</td>
+            <td class="text-end {% if totales.rentabilidad >= 0 %}text-success{% else %}text-danger{% endif %}">
+              {{ totales.rentabilidad|floatformat:2 }}
+            </td>
+            <td class="text-center">
+              {% if totales.margen >= 30 %}<span class="badge bg-success">{{ totales.margen }}%</span>
+              {% elif totales.margen >= 10 %}<span class="badge bg-warning text-dark">{{ totales.margen }}%</span>
+              {% else %}<span class="badge bg-danger">{{ totales.margen }}%</span>{% endif %}
+            </td>
+          </tr>
+        </tfoot>
+        {% endif %}
+      </table>
     </div>
   </div>
+
+  <!-- ── PAGINACIÓN ────────────────────────────────────────────── -->
+  {% if filas_page and filas_page.paginator.num_pages > 1 %}
+  {% with p=filas_page %}
+  <nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center mb-0">
+
+      {% if p.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ p.previous_page_number }}&proyecto_id={{ proyecto_id|default:'' }}&estado={{ filter_estado|default:'' }}&fecha_desde={{ fecha_desde|default:'' }}&fecha_hasta={{ fecha_hasta|default:'' }}&per_page={{ per_page }}">Anterior</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+      {% endif %}
+
+      {% for num in p.paginator.page_range %}
+        {% if num == p.number %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num == 1 or num == p.paginator.num_pages or num >= p.number|add:"-2" and num <= p.number|add:"2" %}
+          <li class="page-item"><a class="page-link" href="?page={{ num }}&proyecto_id={{ proyecto_id|default:'' }}&estado={{ filter_estado|default:'' }}&fecha_desde={{ fecha_desde|default:'' }}&fecha_hasta={{ fecha_hasta|default:'' }}&per_page={{ per_page }}">{{ num }}</a></li>
+        {% elif num == p.number|add:"-3" or num == p.number|add:"3" %}
+          <li class="page-item disabled"><span class="page-link">…</span></li>
+        {% endif %}
+      {% endfor %}
+
+      {% if p.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ p.next_page_number }}&proyecto_id={{ proyecto_id|default:'' }}&estado={{ filter_estado|default:'' }}&fecha_desde={{ fecha_desde|default:'' }}&fecha_hasta={{ fecha_hasta|default:'' }}&per_page={{ per_page }}">Siguiente</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+      {% endif %}
+
+    </ul>
+  </nav>
+  {% endwith %}
+  {% endif %}
 
 </div>
 {% endblock %}

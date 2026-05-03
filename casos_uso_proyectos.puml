@@ -1,0 +1,243 @@
+@startuml casos_uso_proyectos
+title Diagrama de Casos de Uso — Módulo Proyectos\nSistema SOBOTEC S.R.L.
+
+left to right direction
+
+skinparam actorStyle hollow
+skinparam packageStyle rectangle
+skinparam backgroundColor #FFFFFF
+skinparam usecaseBackgroundColor #DDEEFF
+skinparam usecaseBorderColor #336699
+skinparam usecaseFontSize 12
+skinparam actorFontSize 13
+skinparam actorBorderColor #333333
+skinparam packageBorderColor #666666
+skinparam packageBackgroundColor #F8F8F8
+skinparam packageFontStyle bold
+skinparam arrowColor #444444
+skinparam noteBackgroundColor #FFFFCC
+skinparam noteBorderColor #CCAA00
+
+' ═══════════════════════════════════════════════
+'  ACTORES
+' ═══════════════════════════════════════════════
+actor "Administrador\n/ Gerente" as ADM
+actor "Secretaria"               as SEC
+actor "Instalador\n/ Técnico de Soporte" as CAMPO
+actor "Sistema\n(automático)"    as SIS
+
+' ═══════════════════════════════════════════════
+'  SISTEMA — FRONTERA DEL SISTEMA
+' ═══════════════════════════════════════════════
+rectangle "Sistema SOBOTEC — Módulo Proyectos" {
+
+    ' ── Gestión de Clientes ─────────────────────
+    package "Gestión de Clientes" as PKG_CL {
+        usecase "Registrar cliente"       as UC_CL1
+        usecase "Editar cliente"          as UC_CL2
+        usecase "Desactivar cliente"      as UC_CL3
+        usecase "Consultar clientes"      as UC_CL4
+    }
+
+    ' ── Gestión de Proyectos ────────────────────
+    package "Gestión de Proyectos" as PKG_PR {
+        usecase "Crear proyecto"              as UC_PR1
+        usecase "Editar proyecto"             as UC_PR2
+        usecase "Completar proyecto"          as UC_PR3
+        usecase "Desactivar / Eliminar"       as UC_PR4
+        usecase "Ver listado / detalle"       as UC_PR5
+        usecase "Ver seguimiento de avance"   as UC_PR6
+        usecase "Ver análisis financiero"     as UC_PR7
+        usecase "Generar reporte PDF / Excel" as UC_PR8
+        usecase "Ver calendario de equipo"    as UC_PR9
+    }
+
+    ' ── Equipo del Proyecto ─────────────────────
+    package "Equipo del Proyecto" as PKG_EQ {
+        usecase "Agregar empleado al equipo"       as UC_EQ1
+        usecase "Remover empleado del equipo"      as UC_EQ2
+        usecase "Editar cronograma por empleado"   as UC_EQ3
+        usecase "Ver planificación Gantt"          as UC_EQ4
+    }
+
+    ' ── Sedes e Instalación ─────────────────────
+    package "Sedes e Instalación" as PKG_SE {
+        usecase "Crear sede"                       as UC_SE1
+        usecase "Editar / Desactivar sede"         as UC_SE2
+        usecase "Aplicar plantilla de tareas"      as UC_SE3
+        usecase "Crear / Editar tarea checklist"   as UC_SE4
+        usecase "Completar tarea / subtarea"       as UC_SE5
+        usecase "Crear subtarea"                   as UC_SE6
+        usecase "Subir / Eliminar fotos de sede"   as UC_SE7
+        usecase "Ver detalle de sede"              as UC_SE8
+        usecase "Gestionar participantes\nde tarea" as UC_SE9
+        usecase "Reordenar tareas\nen sede"         as UC_SE10
+    }
+
+    ' ── Contratos y Pagos ───────────────────────
+    package "Contratos y Pagos" as PKG_CP {
+        usecase "Crear contrato de proyecto"  as UC_CP1
+        usecase "Ver / Desactivar contrato"   as UC_CP2
+        usecase "Registrar pago de cliente"   as UC_PG1
+        usecase "Editar / Desactivar pago"    as UC_PG2
+        usecase "Confirmar pago"              as UC_PG3
+        usecase "Ver análisis de pagos"       as UC_PG4
+    }
+
+    ' ── Plantillas de Tareas ────────────────────
+    package "Plantillas de Tareas" as PKG_PT {
+        usecase "Crear / Editar plantilla"     as UC_PT1
+        usecase "Gestionar ítems y subítems"   as UC_PT2
+        usecase "Reordenar ítems\nde plantilla" as UC_PT3
+    }
+
+    ' ── Garantías Post-entrega ──────────────────
+    package "Garantías Post-entrega" as PKG_GA {
+        usecase "Ver garantías"                 as UC_GA1
+        usecase "Registrar incidencia"          as UC_GA2
+        usecase "Gestionar estado incidencia"   as UC_GA3
+    }
+
+    ' ── Notificaciones ──────────────────────────
+    package "Notificaciones" as PKG_NT {
+        usecase "Ver notificaciones"          as UC_NT1
+        usecase "Marcar como leída"           as UC_NT2
+    }
+
+    ' ── Procesos automáticos ────────────────────
+    package "Automático (señales Django)" as PKG_AUTO {
+        usecase "Crear Garantía al\ncompletar proyecto"    as SA1
+        usecase "Sincronizar estado_pago\ndel proyecto"    as SA2
+        usecase "Registrar historial de\nestado / presupuesto" as SA3
+        usecase "Notificar admins al\ncompletar sede"      as SA4
+        usecase "Copiar plantilla\nal crear sede"          as SA5
+    }
+
+}
+
+' ═══════════════════════════════════════════════
+'  ASOCIACIONES — ADMINISTRADOR / GERENTE
+' ═══════════════════════════════════════════════
+ADM --> UC_CL1
+ADM --> UC_CL2
+ADM --> UC_CL3
+ADM --> UC_CL4
+
+ADM --> UC_PR1
+ADM --> UC_PR2
+ADM --> UC_PR3
+ADM --> UC_PR4
+ADM --> UC_PR5
+ADM --> UC_PR6
+ADM --> UC_PR7
+ADM --> UC_PR8
+ADM --> UC_PR9
+
+ADM --> UC_EQ1
+ADM --> UC_EQ2
+ADM --> UC_EQ3
+ADM --> UC_EQ4
+
+ADM --> UC_SE1
+ADM --> UC_SE2
+ADM --> UC_SE3
+ADM --> UC_SE4
+ADM --> UC_SE5
+ADM --> UC_SE6
+ADM --> UC_SE7
+ADM --> UC_SE8
+ADM --> UC_SE9
+ADM --> UC_SE10
+
+ADM --> UC_CP1
+ADM --> UC_CP2
+ADM --> UC_PG1
+ADM --> UC_PG2
+ADM --> UC_PG3
+ADM --> UC_PG4
+
+ADM --> UC_PT1
+ADM --> UC_PT2
+ADM --> UC_PT3
+
+ADM --> UC_GA1
+ADM --> UC_GA2
+ADM --> UC_GA3
+
+ADM --> UC_NT1
+ADM --> UC_NT2
+
+' ═══════════════════════════════════════════════
+'  ASOCIACIONES — SECRETARIA
+' ═══════════════════════════════════════════════
+SEC --> UC_CL1
+SEC --> UC_CL2
+SEC --> UC_CL4
+
+SEC --> UC_PR1
+SEC --> UC_PR5
+SEC --> UC_PR7
+SEC --> UC_PR8
+
+SEC --> UC_CP1
+SEC --> UC_CP2
+SEC --> UC_PG1
+SEC --> UC_PG2
+SEC --> UC_PG3
+SEC --> UC_PG4
+
+SEC --> UC_GA1
+SEC --> UC_GA2
+SEC --> UC_GA3
+
+SEC --> UC_NT1
+SEC --> UC_NT2
+
+' ═══════════════════════════════════════════════
+'  ASOCIACIONES — INSTALADOR / TÉCNICO
+' ═══════════════════════════════════════════════
+CAMPO --> UC_PR5
+CAMPO --> UC_PR9
+
+CAMPO --> UC_SE5
+CAMPO --> UC_SE6
+CAMPO --> UC_SE7
+CAMPO --> UC_SE8
+CAMPO --> UC_SE9
+
+CAMPO --> UC_NT1
+CAMPO --> UC_NT2
+
+' ═══════════════════════════════════════════════
+'  ASOCIACIONES — SISTEMA
+' ═══════════════════════════════════════════════
+SIS --> SA1
+SIS --> SA2
+SIS --> SA3
+SIS --> SA4
+SIS --> SA5
+
+' ═══════════════════════════════════════════════
+'  RELACIONES «include» y «extend»
+' ═══════════════════════════════════════════════
+UC_PR3 .> SA3 : <<include>>
+UC_PR3 .> SA1 : <<extend>>
+UC_PR2 .> SA3 : <<extend>>
+
+UC_PG1 .> SA2 : <<include>>
+UC_PG2 .> SA2 : <<include>>
+
+UC_SE1 .> SA5 : <<extend>>
+UC_SE5 .> SA4 : <<extend>>
+
+note right of SA1
+  Solo se crea si el contrato
+  tiene garantia_meses > 0
+end note
+
+note right of SA3
+  Se dispara al cambiar
+  estado_proyecto o monto_total
+end note
+
+@enduml

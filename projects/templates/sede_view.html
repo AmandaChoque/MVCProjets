@@ -30,7 +30,7 @@
         <a href="{% url 'project_view' project.id %}" class="btn btn-outline-secondary btn-sm">
           <i class="bi bi-arrow-left me-1"></i>Volver
         </a>
-        <h5 class="mb-0 fw-semibold" style="color:#1B4D90;">{{ sede.nombre }}</h5>
+        <h5 class="mb-0 fw-semibold" style="color:#1B4D90;">{{ sede.direccion }} {{ sede.nombre }}</h5>
         {% if sede.estado == 'completado' %}
           <span class="badge bg-success">Completada</span>
         {% elif sede.estado == 'en_progreso' %}
@@ -419,7 +419,7 @@
 {% if sede.latitud and sede.longitud %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script type="application/json" id="sede-coords">
-  {"lat": {{ sede.latitud|unlocalize }}, "lng": {{ sede.longitud|unlocalize }}, "nombre": "{{ sede.nombre|escapejs }}", "direccion": "{{ sede.direccion|escapejs }}"}
+  {"lat": {{ sede.latitud|unlocalize }}, "lng": {{ sede.longitud|unlocalize }}, "nombre": "{{ sede.nombre|escapejs }}", "direccion": "{{ sede.direccion|escapejs }} {{ sede.nombre|escapejs }}"}
 </script>
 <script>
   (function() {
@@ -523,6 +523,9 @@ function guardarParticipantes(ids) {
       if (res.jornadas_creadas && res.jornadas_creadas.length > 0) {
         mostrarAlertaJornadas(res.jornadas_creadas);
       }
+      if (res.sin_contrato && res.sin_contrato.length > 0) {
+        mostrarAlertaSinContrato(res.sin_contrato);
+      }
     }
   });
   if (document.activeElement) document.activeElement.blur();
@@ -544,6 +547,22 @@ function mostrarAlertaJornadas(nombres) {
   setTimeout(() => div.remove(), 5000);
 }
 
+function mostrarAlertaSinContrato(nombres) {
+  const div = document.createElement('div');
+  div.className = 'alert alert-danger alert-dismissible fade show position-fixed bottom-0 end-0 m-3 shadow-sm';
+  div.style.zIndex = 9999;
+  div.style.maxWidth = '420px';
+  div.innerHTML = `
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    <strong>Jornada NO registrada</strong> para:<br>
+    <span class="small">${nombres.join(', ')}</span><br>
+    <span class="small">No tienen contrato vigente para la fecha de esta tarea.<br>
+    <strong>Avisa al administrador</strong> para que registre la jornada manualmente.</span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  document.body.appendChild(div);
+}
+
 if (modalEl) {
   document.getElementById('btn-guardar-participantes').addEventListener('click', () => {
     const ids = [...document.querySelectorAll('#participantes-checkboxes input:checked')].map(i => parseInt(i.value));
@@ -563,7 +582,7 @@ function bindTareaEvents(li) {
   const chk = li.querySelector('.tarea-check');
   if (chk) {
     chk.addEventListener('change', function() {
-      fetch(`/tareas/${id}/toggle/`, {
+      fetch(`/tareas/${id}/alternar/`, {
         method: 'POST',
         headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'},
       }).then(r => r.json()).then(data => {
@@ -591,7 +610,7 @@ function bindTareaEvents(li) {
         }
       }).catch(() => {
         const queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
-        queue.push({url: `/tareas/${id}/toggle/`, method: 'POST'});
+        queue.push({url: `/tareas/${id}/alternar/`, method: 'POST'});
         localStorage.setItem('offlineQueue', JSON.stringify(queue));
         li.style.opacity = '0.7';
         li.title = 'Guardado offline — se sincronizará al reconectar';

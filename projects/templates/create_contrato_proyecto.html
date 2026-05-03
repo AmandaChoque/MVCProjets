@@ -18,13 +18,9 @@
 
 {% block content %}
 <main class="container-fluid px-4 py-4">
-  <nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb mb-0">
-      <li class="breadcrumb-item"><a href="{% url 'projects' %}">Proyectos</a></li>
-      <li class="breadcrumb-item"><a href="{% url 'project_view' project.id %}">{{ project.nombre }}</a></li>
-      <li class="breadcrumb-item active" aria-current="page">Nuevo contrato</li>
-    </ol>
-  </nav>
+  <div class="mb-3">
+    <a href="{% url 'project_view' project.id %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+  </div>
 
   <div class="card border-0 shadow-sm rounded-3">
     <div class="card-body p-4">
@@ -78,7 +74,25 @@
               {% if form.porcentaje_multa_diaria.errors %}
               <div class="text-danger small mt-1">{% for err in form.porcentaje_multa_diaria.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
-              <div class="form-text text-muted">Porcentaje del monto que se aplica por cada día de retraso. Ej: 0.50. Dejar vacío si no aplica.</div>
+              <div class="form-text text-muted">Porcentaje del monto que se aplica por cada día de retraso. Ej: 2 = 2% diario. Dejar vacío si no aplica.</div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">% Multa Máxima (tope)</label>
+              {{ form.porcentaje_multa_maxima }}
+              {% if form.porcentaje_multa_maxima.errors %}
+              <div class="text-danger small mt-1">{% for err in form.porcentaje_multa_maxima.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+              <div class="form-text text-muted">Tope máximo de multa acumulada. Al alcanzarlo el contrato pasa a estado <strong>crítico</strong>. Por defecto: 20%.</div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Meses de Garantía</label>
+              {{ form.garantia_meses }}
+              {% if form.garantia_meses.errors %}
+              <div class="text-danger small mt-1">{% for err in form.garantia_meses.errors %}{{ err }}{% endfor %}</div>
+              {% endif %}
+              <div class="form-text text-muted">Aplica solo para instalaciones nuevas. 0 = sin garantía.</div>
             </div>
 
             <div class="mb-3">

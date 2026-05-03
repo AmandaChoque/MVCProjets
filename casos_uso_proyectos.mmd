@@ -1,0 +1,139 @@
+%%{init: {"theme": "default"}}%%
+graph LR
+    %% =========================================================
+    %% DIAGRAMA DE CASOS DE USO — MÓDULO PROYECTOS
+    %% Sistema: SOBOTEC S.R.L.
+    %% =========================================================
+
+    %% ---- ACTORES ----
+    ADM["👤 Administrador\n/ Gerente"]
+    SEC["👤 Secretaria"]
+    CAMPO["👤 Instalador\n/ Técnico de Soporte"]
+    SIS["⚙ Sistema"]
+
+    subgraph BOUNDARY["«sistema» SOBOTEC — Módulo Proyectos"]
+
+        subgraph GC["Gestión de Clientes"]
+            UC_CL1("Registrar cliente")
+            UC_CL2("Editar cliente")
+            UC_CL3("Desactivar cliente")
+            UC_CL4("Consultar clientes")
+        end
+
+        subgraph GP["Gestión de Proyectos"]
+            UC_PR1("Crear proyecto")
+            UC_PR2("Editar proyecto")
+            UC_PR3("Completar proyecto")
+            UC_PR4("Desactivar / Eliminar proyecto")
+            UC_PR5("Ver listado / detalle")
+            UC_PR6("Ver seguimiento de avance")
+            UC_PR7("Ver análisis financiero")
+            UC_PR8("Generar reporte PDF / Excel")
+            UC_PR9("Ver calendario de equipo")
+        end
+
+        subgraph GEQ["Equipo del Proyecto"]
+            UC_EQ1("Agregar empleado al equipo")
+            UC_EQ2("Remover empleado del equipo")
+            UC_EQ3("Editar cronograma por empleado")
+            UC_EQ4("Ver planificación Gantt")
+        end
+
+        subgraph GSE["Sedes e Instalación"]
+            UC_SE1("Crear sede")
+            UC_SE2("Editar / Desactivar sede")
+            UC_SE3("Aplicar plantilla de tareas")
+            UC_SE4("Crear / Editar tarea checklist")
+            UC_SE5("Completar tarea / subtarea")
+            UC_SE6("Crear subtarea")
+            UC_SE7("Subir / Eliminar fotos de sede")
+            UC_SE8("Ver detalle de sede")
+        end
+
+        subgraph GCP["Contratos y Pagos"]
+            UC_CP1("Crear contrato de proyecto")
+            UC_CP2("Ver / Desactivar contrato")
+            UC_PG1("Registrar pago de cliente")
+            UC_PG2("Editar / Desactivar pago")
+            UC_PG3("Confirmar pago")
+            UC_PG4("Ver análisis de pagos")
+        end
+
+        subgraph GPT["Plantillas de Tareas"]
+            UC_PT1("Crear / Editar plantilla")
+            UC_PT2("Gestionar ítems y subítems")
+        end
+
+        subgraph GGA["Garantías Post-entrega"]
+            UC_GA1("Ver garantías")
+            UC_GA2("Registrar incidencia de garantía")
+            UC_GA3("Gestionar estado de incidencia")
+        end
+
+        subgraph GNT["Notificaciones"]
+            UC_NT1("Ver notificaciones")
+            UC_NT2("Marcar notificación como leída")
+        end
+
+        subgraph GAUTO["«automático»"]
+            SA1("Crear Garantía al completar proyecto")
+            SA2("Sincronizar estado_pago del proyecto")
+            SA3("Registrar historial de estado / presupuesto")
+            SA4("Notificar admins al completar sede")
+            SA5("Copiar plantilla al crear sede")
+        end
+
+    end
+
+    %% =========================================================
+    %% ADMINISTRADOR / GERENTE — acceso completo
+    %% =========================================================
+    ADM --> UC_CL1 & UC_CL2 & UC_CL3 & UC_CL4
+    ADM --> UC_PR1 & UC_PR2 & UC_PR3 & UC_PR4 & UC_PR5 & UC_PR6 & UC_PR7 & UC_PR8 & UC_PR9
+    ADM --> UC_EQ1 & UC_EQ2 & UC_EQ3 & UC_EQ4
+    ADM --> UC_SE1 & UC_SE2 & UC_SE3 & UC_SE4 & UC_SE5 & UC_SE6 & UC_SE7 & UC_SE8
+    ADM --> UC_CP1 & UC_CP2 & UC_PG1 & UC_PG2 & UC_PG3 & UC_PG4
+    ADM --> UC_PT1 & UC_PT2
+    ADM --> UC_GA1 & UC_GA2 & UC_GA3
+    ADM --> UC_NT1 & UC_NT2
+
+    %% =========================================================
+    %% SECRETARIA — gestión administrativa (sin operaciones críticas)
+    %% =========================================================
+    SEC --> UC_CL1 & UC_CL2 & UC_CL4
+    SEC --> UC_PR1 & UC_PR5 & UC_PR7 & UC_PR8
+    SEC --> UC_CP1 & UC_CP2 & UC_PG1 & UC_PG2 & UC_PG4
+    SEC --> UC_GA1 & UC_GA2 & UC_GA3
+    SEC --> UC_NT1 & UC_NT2
+
+    %% =========================================================
+    %% INSTALADOR / TÉCNICO DE SOPORTE — trabajo en campo
+    %% =========================================================
+    CAMPO --> UC_PR5 & UC_PR9
+    CAMPO --> UC_SE5 & UC_SE6 & UC_SE7 & UC_SE8
+    CAMPO --> UC_NT1 & UC_NT2
+
+    %% =========================================================
+    %% SISTEMA — procesos automáticos (señales Django)
+    %% =========================================================
+    SIS --> SA1 & SA2 & SA3 & SA4 & SA5
+
+    %% =========================================================
+    %% RELACIONES «include» y «extend»
+    %% =========================================================
+    %% Completar proyecto siempre dispara historial y (si hay contrato) garantía
+    UC_PR3 -. «include» .-> SA3
+    UC_PR3 -. «extend» .-> SA1
+
+    %% Editar proyecto dispara historial solo si cambia estado o monto
+    UC_PR2 -. «extend» .-> SA3
+
+    %% Toda modificación de pago recalcula estado_pago del proyecto
+    UC_PG1 -. «include» .-> SA2
+    UC_PG2 -. «include» .-> SA2
+
+    %% Crear sede con plantilla seleccionada copia los ítems
+    UC_SE1 -. «extend» .-> SA5
+
+    %% Completar la última tarea dispara notificación si sede queda al 100%
+    UC_SE5 -. «extend» .-> SA4

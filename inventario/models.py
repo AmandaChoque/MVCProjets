@@ -135,9 +135,10 @@ class Insumo(AuditModel):
 
 
 class Requiere(AuditModel):
-    proyecto       = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='insumos', verbose_name="Proyecto")
-    insumo         = models.ForeignKey(Insumo, on_delete=models.SET_NULL, null=True, related_name='proyectos', verbose_name="Insumo")
-    cantidad       = models.PositiveIntegerField(verbose_name="Cantidad")
+    proyecto        = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='insumos', verbose_name="Proyecto")
+    insumo          = models.ForeignKey(Insumo, on_delete=models.SET_NULL, null=True, related_name='proyectos', verbose_name="Insumo")
+    cantidad        = models.PositiveIntegerField(verbose_name="Cantidad")
+    durante_garantia = models.BooleanField(default=False, verbose_name="Agregado durante período de garantía")
 
     class Meta:
         verbose_name = 'Insumo del Proyecto'

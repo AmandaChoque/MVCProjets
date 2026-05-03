@@ -49,7 +49,7 @@
               {% if notif.sede %}
                 &nbsp;·&nbsp;
                 <a href="{% url 'sede_view' notif.sede.id %}" class="text-decoration-none text-muted">
-                  {{ notif.sede.nombre }}
+                  {{ notif.sede.direccion }}
                 </a>
               {% endif %}
             </div>

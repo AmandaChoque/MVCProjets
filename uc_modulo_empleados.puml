@@ -1,0 +1,118 @@
+@startuml uc_modulo_empleados
+title MÓDULO DE EMPLEADOS\nSistema SOBOTEC S.R.L.
+
+left to right direction
+
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam backgroundColor #FFFFFF
+skinparam usecaseBackgroundColor #F5F5F5
+skinparam usecaseBorderColor #777777
+skinparam usecaseFontSize 11
+skinparam actorFontSize 12
+skinparam packageBorderColor #777777
+skinparam packageBackgroundColor #FFFFFF
+skinparam packageFontStyle bold
+skinparam arrowColor #444444
+skinparam nodesep 25
+skinparam ranksep 70
+
+' ── ACTORES ──────────────────────────────────────
+actor "Administrador\n/ Gerente"         as ADM
+actor "Secretaria"                       as SEC
+actor "Instalador\n/ Técnico de Soporte" as CAMPO
+
+rectangle "MÓDULO DE EMPLEADOS" {
+
+    ' ── COLUMNA 1: UCs principales ────────────────
+    together {
+        usecase "Gestionar\nEmpleado"       as UC1
+        usecase "Gestionar\nContrato"       as UC2
+        usecase "Gestionar\nJornada"        as UC3
+        usecase "Gestionar\nPago Empleado"  as UC4
+        usecase "Generar\nReporte"          as UC5
+    }
+
+    ' ── COLUMNA 2: sub-casos agrupados por padre ──
+    together {
+        usecase "Registrar /\nEditar empleado" as S1
+        usecase "Desactivar\nempleado"         as S2
+    }
+    together {
+        usecase "Crear\ncontrato"              as S3
+        usecase "Ver PDF\ncontrato"            as S4
+        usecase "Desactivar\ncontrato"         as S5
+    }
+    together {
+        usecase "Registrar\njornada"           as S6
+        usecase "Aprobar /\nRechazar jornada"  as S7
+        usecase "Ver carga\nde trabajo"        as S15
+    }
+    together {
+        usecase "Registrar\npago"              as S8
+        usecase "Confirmar\npago"              as S9
+        usecase "Desactivar\npago"             as S10
+    }
+    together {
+        usecase "Reporte\nPDF / Excel"         as S11
+    }
+
+    ' flechas ocultas para ordenar columna 2 verticalmente
+    S2  -[hidden]-> S3
+    S5  -[hidden]-> S6
+    S15 -[hidden]-> S8
+    S10 -[hidden]-> S11
+
+    ' ── COLUMNA 3: sub-sub-casos ──────────────────
+    usecase "Reactivar\nempleado"              as S14
+    usecase "Revisión jornadas\npor proyecto"  as S12
+    usecase "Aprobar todas\njornadas"          as S16
+    usecase "Ver mi\ntrabajo"                  as S13
+
+    ' flechas ocultas que empujan a columna 3
+    S2  -[hidden]-> S14
+    S7  -[hidden]-> S12
+    S15 -[hidden]-> S16
+    S16 -[hidden]-> S13
+}
+
+' ── ASOCIACIONES ACTORES → columna 1 ─────────────
+ADM   --> UC1
+ADM   --> UC2
+ADM   --> UC3
+ADM   --> UC4
+ADM   --> UC5
+
+SEC   --> UC1
+SEC   --> UC2
+SEC   --> UC4
+SEC   --> UC5
+
+CAMPO --> UC3
+
+' ── INCLUDE columna 1 → columna 2 ────────────────
+UC1 .> S1  : <<include>>
+UC1 .> S2  : <<include>>
+
+UC2 .> S3  : <<include>>
+UC2 .> S4  : <<include>>
+UC2 .> S5  : <<include>>
+
+UC3 .> S6  : <<include>>
+UC3 .> S7  : <<include>>
+UC3 .> S15 : <<include>>
+
+UC4 .> S8  : <<include>>
+UC4 .> S9  : <<include>>
+UC4 .> S10 : <<include>>
+
+UC5 .> S11 : <<include>>
+
+' ── INCLUDE / EXTEND columna 2 → columna 3 ───────
+UC1 .> S14 : <<extend>>
+
+S7  .> S12 : <<include>>
+S15 .> S16 : <<include>>
+UC3 .> S13 : <<extend>>
+
+@enduml

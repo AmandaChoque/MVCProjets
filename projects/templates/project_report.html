@@ -8,6 +8,7 @@
   .tfoot-sm    { font-size: 0.72rem; }
   .cod-muted   { font-size: 0.63rem; color: #adb5bd; }
   .periodo-txt { font-size: 0.68rem; color: #6c757d; white-space: nowrap; }
+  .nombre-col  { max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .saldo-neg   { color: #dc3545; }
   .saldo-ok    { color: #198754; }
 </style>
@@ -194,9 +195,7 @@
 
   <!-- ── TABLA ─────────────────────────────────────────────────── -->
   <div class="card border-0 shadow-sm mb-3">
-    <div class="card-header bg-light py-2">
-      <span class="fw-semibold small">Detalle de Proyectos</span>
-    </div>
+    
     <div class="table-responsive" style="overflow:visible;">
       <table class="table table-sm table-hover align-middle small">
         <thead class="table-light small text-uppercase fw-semibold">
@@ -208,28 +207,35 @@
             <th scope="col" style="width:100px;">Avance</th>
             <th scope="col" class="text-end">Monto (Bs.)</th>
             <th scope="col" class="text-end">Cobrado / Saldo</th>
-            <th scope="col">Período</th>
+            <th scope="col">Período Contrato</th>
+            <th scope="col">Ejecución</th>
           </tr>
         </thead>
         <tbody>
           {% for project in projects %}
           {% with cobrado=project.monto_cobrado|default:0 %}
           <tr>
-            <td class="px-3">
-              <a href="{% url 'project_view' project.id %}" class="text-decoration-none fw-semibold">
+            <td class="px-3 nombre-col">
+              <a href="{% url 'project_view' project.id %}" class="text-decoration-none fw-semibold"
+                 title="{{ project.nombre }}">
                 {{ project.nombre }}
               </a>
-              <div class="cod-muted">{{ project.codigo }}</div>
+              <div class="cod-muted">{{ project.codigo }}{% if project.num_empleados %} · {{ project.num_empleados }} empl.{% endif %}</div>
             </td>
             <td class="text-muted">
               {% if project.cliente %}{{ project.cliente.nombre }} {{ project.cliente.apellido_paterno }}
               {% else %}—{% endif %}
             </td>
-            <td class="text-muted">
-              {% if project.tipo_proyecto == 'instalacion_nueva' %}Instalación
-              {% elif project.tipo_proyecto == 'ampliacion' %}Ampliación
-              {% elif project.tipo_proyecto == 'mantenimiento_externo' %}Mant. Externo
-              {% else %}Emergencia{% endif %}
+            <td>
+              {% if project.tipo_proyecto == 'instalacion_nueva' %}
+                <span class="badge bg-primary fw-normal">Instalación</span>
+              {% elif project.tipo_proyecto == 'ampliacion' %}
+                <span class="badge bg-info text-dark fw-normal">Ampliación</span>
+              {% elif project.tipo_proyecto == 'mantenimiento_externo' %}
+                <span class="badge bg-secondary fw-normal">Mant. Externo</span>
+              {% else %}
+                <span class="badge bg-warning text-dark fw-normal">Emergencia</span>
+              {% endif %}
             </td>
             <td>
               {% if project.estado_proyecto == 'completado' %}
@@ -284,11 +290,21 @@
                 —
               {% endif %}
             </td>
+            <td class="periodo-txt">
+              {% if project.fecha_inicio %}
+                <div>{{ project.fecha_inicio|date:"d/m/Y" }}</div>
+                {% if project.fecha_fin %}
+                  <div>{{ project.fecha_fin|date:"d/m/Y" }}</div>
+                {% endif %}
+              {% else %}
+                —
+              {% endif %}
+            </td>
           </tr>
           {% endwith %}
           {% empty %}
           <tr>
-            <td colspan="8" class="text-center text-muted py-4">
+            <td colspan="9" class="text-center text-muted py-4">
               <i class="bi bi-inbox me-1"></i>No se encontraron proyectos con los filtros seleccionados.
             </td>
           </tr>
@@ -303,6 +319,7 @@
               <div class="text-muted text-xs">Cob: {{ total_cobrado|floatformat:2 }}</div>
               <div class="text-xs">Sal: {{ total_saldo|floatformat:2 }}</div>
             </td>
+            <td></td>
             <td></td>
           </tr>
         </tfoot>

@@ -36,6 +36,14 @@ class Empleado(AbstractUser):
         verbose_name = 'Empleado'
         verbose_name_plural = 'Empleados'
 
+    @property
+    def activo(self):
+        return self.is_active
+
+    @activo.setter
+    def activo(self, value):
+        self.is_active = value
+
     def get_full_name(self):
         parts = [self.nombre, self.apellido_paterno]
         if self.apellido_materno:
@@ -47,7 +55,13 @@ class Empleado(AbstractUser):
 
 
 class ContratoEmpleado(AuditModel):
+    TIPO_CHOICES = [
+        ('diario',   'Por día (jornada)'),
+        ('mensual',  'Mensual'),
+    ]
+
     empleado        = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='contratos_empleado', verbose_name="Empleado")
+    tipo_contrato   = models.CharField(max_length=10, choices=TIPO_CHOICES, default='diario', verbose_name="Tipo de contrato")
     dias_laborales  = models.PositiveIntegerField(default=28, verbose_name="Días laborales acordados",
                           validators=[MinValueValidator(1)])
     fecha_firma     = models.DateField(verbose_name="Fecha de Firma")
@@ -74,6 +88,9 @@ class ContratoEmpleado(AuditModel):
 
     @property
     def monto_diario(self):
+        """Para diario: monto/días. Para mensual: monto_acordado es el salario del mes completo."""
+        if self.tipo_contrato == 'mensual':
+            return self.monto_acordado
         if self.monto_acordado and self.dias_laborales:
             return self.monto_acordado / Decimal(str(self.dias_laborales))
         return self.monto_acordado
@@ -87,6 +104,10 @@ class PagoEmpleado(AuditModel):
         ('dia_extra',    'Día extra fuera del contrato'),
         ('otro',         'Otro'),
     ]
+    ESTADO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('pagado',    'Pagado'),
+    ]
 
     monto     = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto (Bs.)")
     fecha     = models.DateField(db_index=True, verbose_name="Fecha de Pago")
@@ -96,6 +117,7 @@ class PagoEmpleado(AuditModel):
         related_name='pagos', verbose_name="Contrato"
     )
     concepto  = models.CharField(max_length=20, choices=CONCEPTO_CHOICES, verbose_name="Concepto")
+    estado    = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='pagado', verbose_name="Estado")
 
     class Meta:
         verbose_name = 'Pago a Empleado'

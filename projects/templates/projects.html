@@ -90,24 +90,24 @@
 
         <!-- Fechas de inicio -->
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Inicio desde</label>
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Inicio desde contrato</label>
           <input type="date" class="form-control form-control-sm" name="fecha_inicio_desde"
                  value="{{ fecha_inicio_desde }}">
         </div>
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Inicio hasta</label>
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Inicio hasta contrato</label>
           <input type="date" class="form-control form-control-sm" name="fecha_inicio_hasta"
                  value="{{ fecha_inicio_hasta }}">
         </div>
 
         <!-- Fechas de fin -->
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Fin desde</label>
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Culminación desde</label>
           <input type="date" class="form-control form-control-sm" name="fecha_fin_desde"
                  value="{{ fecha_fin_desde }}">
         </div>
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Fin hasta</label>
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Culminación hasta</label>
           <input type="date" class="form-control form-control-sm" name="fecha_fin_hasta"
                  value="{{ fecha_fin_hasta }}">
         </div>
@@ -136,6 +136,9 @@
           <th>Contratante</th>
           <th>Tipo</th>
           <th>Estado</th>
+          <th>Período Contrato</th>
+          <th>Ejecución</th>
+          <th style="min-width:120px;">Avance</th>
           {% if not es_instalador_tecnico %}<th>Estado Pago</th>{% endif %}
           {% if not es_instalador_tecnico %}<th>Monto Total (Bs.)</th>{% endif %}
           <th class="text-end" style="width:60px;">Acciones</th>
@@ -143,9 +146,18 @@
       </thead>
       <tbody>
         {% for project in projects %}
-        <tr>
+        <tr class="project-row" data-href="{% url 'project_view' project.id %}" style="cursor:pointer;">
           <td class="text-muted">{{ project.codigo }}</td>
-          <td class="fw-semibold">{{ project.nombre }}</td>
+          <td class="fw-semibold">
+            {{ project.nombre }}
+            {% if project.contrato_fecha_fin and project.estado_proyecto != 'completado' %}
+              {% if project.contrato_fecha_fin < today %}
+                <span class="badge bg-danger ms-1" title="Plazo vencido el {{ project.contrato_fecha_fin|date:'d/m/Y' }}">
+                  <i class="bi bi-exclamation-circle-fill"></i> Vencido
+                </span>
+              {% endif %}
+            {% endif %}
+          </td>
           <td>
             {% if project.cliente %}
               {{ project.cliente.nombre }} {{ project.cliente.apellido_paterno }}
@@ -165,6 +177,44 @@
               <span class="badge bg-warning text-dark small">Pendiente</span>
             {% endif %}
           </td>
+          <td class="periodo-txt">
+            {% if project.contrato_fecha_inicio %}
+              <div>{{ project.contrato_fecha_inicio|date:"d/m/Y" }}</div>
+              {% if project.contrato_fecha_fin %}
+                <div>{{ project.contrato_fecha_fin|date:"d/m/Y" }}</div>
+              {% endif %}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td class="periodo-txt">
+            {% if project.fecha_inicio %}
+              <div>{{ project.fecha_inicio|date:"d/m/Y" }}</div>
+              {% if project.fecha_fin %}
+                <div>{{ project.fecha_fin|date:"d/m/Y" }}</div>
+              {% endif %}
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td style="min-width:120px;">
+            {% if project.ultimo_avance is not None %}
+              <div class="d-flex align-items-center gap-1">
+                <div class="progress flex-grow-1" style="height:6px;">
+                  {% if project.ultimo_avance == 100 %}
+                    <div class="progress-bar bg-success bar-pct" data-w="{{ project.ultimo_avance }}"></div>
+                  {% elif project.ultimo_avance >= 50 %}
+                    <div class="progress-bar bg-primary bar-pct" data-w="{{ project.ultimo_avance }}"></div>
+                  {% else %}
+                    <div class="progress-bar bg-warning bar-pct" data-w="{{ project.ultimo_avance }}"></div>
+                  {% endif %}
+                </div>
+                <span class="text-muted" style="font-size:0.7rem;white-space:nowrap;">{{ project.ultimo_avance }}%</span>
+              </div>
+            {% else %}
+              <span class="text-muted" style="font-size:0.72rem;">Sin sedes</span>
+            {% endif %}
+          </td>
           {% if not es_instalador_tecnico %}
           <td>
             {% if project.estado_pago == 'pagado' %}
@@ -182,7 +232,7 @@
               <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
               <ul class="dropdown-menu dropdown-menu-end shadow-sm">
                 <li>
-                  <a class="dropdown-item" href="{% url 'project_view' project.id %}">Ver</a>
+                  <a class="dropdown-item" href="{% url 'project_view' project.id %}">Detalle</a>
                 </li>
                 {% if not es_instalador_tecnico %}
                 <li>
@@ -205,7 +255,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="9" class="text-center text-muted py-3 small">
+          <td colspan="12" class="text-center text-muted py-3 small">
             No se encontraron proyectos con los filtros seleccionados.
           </td>
         </tr>
@@ -286,6 +336,16 @@
     const button = event.relatedTarget;
     document.getElementById('projectNombre').textContent = button.getAttribute('data-nombre');
     document.getElementById('deleteForm').action = `/projects/${button.getAttribute('data-id')}/deactivate/`;
+  });
+  document.querySelectorAll('.bar-pct[data-w]').forEach(el => {
+    el.style.width = el.dataset.w + '%';
+  });
+
+  document.querySelectorAll('.project-row').forEach(row => {
+    row.addEventListener('click', function(e) {
+      if (e.target.closest('.dropdown')) return;
+      window.location.href = this.dataset.href;
+    });
   });
 </script>
 

@@ -1,0 +1,14 @@
+```mermaid
+sequenceDiagram
+    participant U as Usuario (Admin)
+    participant V as View
+    participant M as Model (Proyecto)
+    participant DB as DB
+
+    U->>V: POST /proyectos/nuevo/
+    V->>M: create_proyecto()
+    M->>DB: Proyecto.objects.create()
+    DB-->>M: OK
+    M-->>V: Proyecto instance
+    V-->>U: Redirect /proyectos/{id}/
+```

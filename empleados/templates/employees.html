@@ -20,6 +20,7 @@
       <form method="GET" action="{% url 'employees' %}" class="d-flex align-items-center gap-2">
         <input type="hidden" name="search_nombre" value="{{ search_nombre }}">
         <input type="hidden" name="filter_cargo" value="{{ filter_cargo }}">
+        <input type="hidden" name="filter_estado" value="{{ filter_estado }}">
         <input type="hidden" name="page" value="1">
         <span class="small text-muted">Mostrar:</span>
         <select name="per_page" class="form-select form-select-sm" style="width: 80px;" onchange="this.form.submit()">
@@ -44,7 +45,7 @@
       <form method="GET" action="{% url 'employees' %}" class="row g-2">
         <input type="hidden" name="per_page" value="{{ per_page }}">
 
-        <div class="col-md-5">
+        <div class="col-md-4">
           <input
             type="text"
             class="form-control form-control-sm"
@@ -54,7 +55,7 @@
           />
         </div>
 
-        <div class="col-md-3">
+        <div class="col-md-2">
           <select class="form-select form-select-sm" name="filter_cargo">
             <option value="">Cargo</option>
             <option value="administrador" {% if filter_cargo == "administrador" %}selected{% endif %}>Administrador</option>
@@ -62,6 +63,14 @@
             <option value="instalador" {% if filter_cargo == "instalador" %}selected{% endif %}>Instalador</option>
             <option value="tecnico_soporte" {% if filter_cargo == "tecnico_soporte" %}selected{% endif %}>Técnico</option>
             <option value="secretaria" {% if filter_cargo == "secretaria" %}selected{% endif %}>Secretaria</option>
+          </select>
+        </div>
+
+        <div class="col-md-2">
+          <select class="form-select form-select-sm" name="filter_estado">
+            <option value="activo"        {% if filter_estado == "activo" %}selected{% endif %}>Habilitados</option>
+            <option value="deshabilitado" {% if filter_estado == "deshabilitado" %}selected{% endif %}>Deshabilitados</option>
+            <option value="todos"         {% if filter_estado == "todos" %}selected{% endif %}>Todos</option>
           </select>
         </div>
 
@@ -96,8 +105,13 @@
 
       <tbody>
         {% for employee in employees %}
-        <tr>
-          <td class="small fw-semibold">{{ employee.nombre }} {{ employee.apellido_paterno }}{% if employee.apellido_materno %} {{ employee.apellido_materno }}{% endif %}</td>
+        <tr {% if not employee.is_active %}class="table-secondary text-muted"{% endif %}>
+          <td class="small fw-semibold">
+            {{ employee.nombre }} {{ employee.apellido_paterno }}{% if employee.apellido_materno %} {{ employee.apellido_materno }}{% endif %}
+            {% if not employee.is_active %}
+              <span class="badge bg-secondary fw-normal ms-1" style="font-size:0.65rem;">Inhabilitado</span>
+            {% endif %}
+          </td>
 
           <td>
             {% if employee.cargo == 'administrador' %}
@@ -134,19 +148,32 @@
                   <a class="dropdown-item" href="{% url 'employee_view' employee.id %}">Ver</a>
                 </li>
                 {% if es_admin %}
-                <li>
-                  <a class="dropdown-item" href="{% url 'employee_detail' employee.id %}">Editar</a>
-                </li>
-                <li><hr class="dropdown-divider"></li>
-                <li>
-                  <button class="dropdown-item text-danger"
-                    data-bs-toggle="modal"
-                    data-bs-target="#deleteModal"
-                    data-id="{{ employee.id }}"
-                    data-nombre="{{ employee.nombre }} {{ employee.apellido_paterno }}">
-                    Inhabilitar
-                  </button>
-                </li>
+                  {% if employee.is_active %}
+                  <li>
+                    <a class="dropdown-item" href="{% url 'employee_detail' employee.id %}">Editar</a>
+                  </li>
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <button class="dropdown-item text-danger"
+                      data-bs-toggle="modal"
+                      data-bs-target="#deleteModal"
+                      data-id="{{ employee.id }}"
+                      data-nombre="{{ employee.nombre }} {{ employee.apellido_paterno }}">
+                      Inhabilitar
+                    </button>
+                  </li>
+                  {% else %}
+                  <li><hr class="dropdown-divider"></li>
+                  <li>
+                    <button class="dropdown-item text-success"
+                      data-bs-toggle="modal"
+                      data-bs-target="#reactivateModal"
+                      data-id="{{ employee.id }}"
+                      data-nombre="{{ employee.nombre }} {{ employee.apellido_paterno }}">
+                      Habilitar
+                    </button>
+                  </li>
+                  {% endif %}
                 {% endif %}
               </ul>
             </div>
@@ -172,7 +199,7 @@
 
       {% if employees.has_previous %}
       <li class="page-item">
-        <a class="page-link" href="?page={{ employees.previous_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_cargo={{ filter_cargo }}">
+        <a class="page-link" href="?page={{ employees.previous_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_cargo={{ filter_cargo }}&filter_estado={{ filter_estado }}">
           Anterior
         </a>
       </li>
@@ -185,7 +212,7 @@
           <li class="page-item active"><span class="page-link">{{ num }}</span></li>
         {% elif num > employees.number|add:'-3' and num < employees.number|add:'3' %}
           <li class="page-item">
-            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_cargo={{ filter_cargo }}">
+            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_cargo={{ filter_cargo }}&filter_estado={{ filter_estado }}">
               {{ num }}
             </a>
           </li>
@@ -194,7 +221,7 @@
 
       {% if employees.has_next %}
       <li class="page-item">
-        <a class="page-link" href="?page={{ employees.next_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_cargo={{ filter_cargo }}">
+        <a class="page-link" href="?page={{ employees.next_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_cargo={{ filter_cargo }}&filter_estado={{ filter_estado }}">
           Siguiente
         </a>
       </li>
@@ -230,6 +257,29 @@
   </div>
 </div>
 
+<!-- Modal Confirmar Habilitación -->
+<div class="modal fade" id="reactivateModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Confirmar Habilitación</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        ¿Está seguro que desea habilitar nuevamente al empleado
+        <strong id="reactivateNombre"></strong>?
+      </div>
+      <div class="modal-footer">
+        <form method="POST" id="reactivateForm">
+          {% csrf_token %}
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-success btn-sm">Habilitar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   const deleteModal = document.getElementById('deleteModal');
   deleteModal.addEventListener('show.bs.modal', function (event) {
@@ -238,6 +288,15 @@
     const empleadoNombre = button.getAttribute('data-nombre');
     document.getElementById('empleadoNombre').textContent = empleadoNombre;
     document.getElementById('deleteForm').action = `/employees/${empleadoId}/deactivate/`;
+  });
+
+  const reactivateModal = document.getElementById('reactivateModal');
+  reactivateModal.addEventListener('show.bs.modal', function (event) {
+    const button = event.relatedTarget;
+    const empleadoId = button.getAttribute('data-id');
+    const empleadoNombre = button.getAttribute('data-nombre');
+    document.getElementById('reactivateNombre').textContent = empleadoNombre;
+    document.getElementById('reactivateForm').action = `/empleados/${empleadoId}/habilitar/`;
   });
 </script>
 

@@ -1,0 +1,172 @@
+@startuml uc_modulo_proyectos
+title MÓDULO DE PROYECTOS\nSistema SOBOTEC S.R.L.
+
+left to right direction
+
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam backgroundColor #FFFFFF
+skinparam usecaseBackgroundColor #F5F5F5
+skinparam usecaseBorderColor #777777
+skinparam usecaseFontSize 11
+skinparam actorFontSize 12
+skinparam packageBorderColor #777777
+skinparam packageBackgroundColor #FFFFFF
+skinparam packageFontStyle bold
+skinparam arrowColor #444444
+skinparam nodesep 25
+skinparam ranksep 70
+
+' ── ACTORES ──────────────────────────────────────
+actor "Administrador\n/ Gerente"         as ADM
+actor "Secretaria"                       as SEC
+actor "Instalador\n/ Técnico de Soporte" as CAMPO
+
+rectangle "MÓDULO DE PROYECTOS" {
+
+    ' ── COLUMNA 1: UCs principales ────────────────
+    together {
+        usecase "Gestionar\nCliente"             as UC1
+        usecase "Gestionar\nProyecto"            as UC2
+        usecase "Gestionar\nSedes / Instalación" as UC3
+        usecase "Registrar\nPago"                as UC4
+        usecase "Generar\nReporte"               as UC5
+        usecase "Gestionar\nGarantías"           as UC6
+        usecase "Gestionar\nPlantillas"          as UC7
+        usecase "Notificaciones"                 as UC8
+        usecase "Seguimiento y\nPlanificación"   as UC9
+    }
+
+    ' ── COLUMNA 2: sub-casos agrupados por padre ──
+    together {
+        usecase "Registrar /\nEditar cliente"  as S1
+        usecase "Desactivar\ncliente"          as S2
+    }
+    together {
+        usecase "Crear / Editar\nproyecto"         as S3
+        usecase "Asignar equipo\ny cronograma"     as S4
+        usecase "Gestionar Contrato\nde Proyecto"  as S22
+    }
+    together {
+        usecase "Gestionar\nchecklist"         as S6
+        usecase "Subir fotos\nde sede"         as S7
+    }
+    together {
+        usecase "Registrar /\nEditar pago"     as S8
+        usecase "Ver análisis\nde pagos"       as S9
+    }
+    together {
+        usecase "Filtrar datos\nde reporte"    as S10
+        usecase "Análisis\nfinanciero"         as S11
+    }
+    together {
+        usecase "Ver garantías\nvigentes"      as S12
+        usecase "Gestionar\nincidencia"        as S13
+    }
+    together {
+        usecase "Crear / Editar\nplantilla"    as S18
+        usecase "Gestionar\nítems y subítems"  as S19
+    }
+    together {
+        usecase "Ver /\nMarcar leídas"         as S20
+    }
+    together {
+        usecase "Seguimiento\nde Avance"       as S25
+        usecase "Análisis\nde Proyecto"        as S26
+        usecase "Planificación\nGantt"         as S27
+        usecase "Calendario\nde Equipo"        as S28
+    }
+
+    ' flechas ocultas para ordenar columna 2 verticalmente
+    S2  -[hidden]-> S3
+    S22 -[hidden]-> S6
+    S7  -[hidden]-> S8
+    S9  -[hidden]-> S10
+    S11 -[hidden]-> S12
+    S13 -[hidden]-> S18
+    S19 -[hidden]-> S20
+    S20 -[hidden]-> S25
+
+    ' ── COLUMNA 3: sub-sub-casos ─────────────────
+    usecase "Crear / Ver\ncontrato"         as S23
+    usecase "Desactivar\ncontrato"          as S24
+    usecase "Aplicar plantilla\nde tareas"  as S14
+    usecase "Completar /\nOrdenar tareas"   as S15
+    usecase "PDF / Excel\nde proyectos"     as S16
+    usecase "PDF / Excel\nde pagos"         as S17
+    usecase "Reordenar\nítems"              as S21
+
+    ' flechas ocultas que empujan a columna 3
+    S4  -[hidden]-> S23
+    S7  -[hidden]-> S14
+    S13 -[hidden]-> S16
+    S19 -[hidden]-> S21
+}
+
+' ── ASOCIACIONES ACTORES → columna 1 ─────────────
+ADM   --> UC1
+ADM   --> UC2
+ADM   --> UC3
+ADM   --> UC4
+ADM   --> UC5
+ADM   --> UC6
+ADM   --> UC7
+ADM   --> UC8
+ADM   --> UC9
+
+SEC   --> UC1
+SEC   --> UC2
+SEC   --> UC4
+SEC   --> UC5
+SEC   --> UC6
+SEC   --> UC8
+SEC   --> UC9
+
+CAMPO --> UC2
+CAMPO --> UC3
+CAMPO --> UC8
+CAMPO --> UC9
+
+' ── INCLUDE columna 1 → columna 2 ────────────────
+UC1 .> S1  : <<include>>
+UC1 .> S2  : <<include>>
+
+UC2 .> S3  : <<include>>
+UC2 .> S4  : <<include>>
+UC2 .> S22 : <<include>>
+
+UC3 .> S6  : <<include>>
+UC3 .> S7  : <<include>>
+
+UC4 .> S8  : <<include>>
+UC4 .> S9  : <<include>>
+
+UC5 .> S10 : <<include>>
+UC5 .> S11 : <<include>>
+
+UC6 .> S12 : <<include>>
+UC6 .> S13 : <<include>>
+
+UC7 .> S18 : <<include>>
+UC7 .> S19 : <<include>>
+
+UC8 .> S20 : <<include>>
+
+UC9 .> S25 : <<include>>
+UC9 .> S26 : <<include>>
+UC9 .> S27 : <<include>>
+UC9 .> S28 : <<include>>
+
+' ── INCLUDE columna 2 → columna 3 ────────────────
+S22 .> S23 : <<include>>
+S22 .> S24 : <<include>>
+
+S6  .> S14 : <<include>>
+S6  .> S15 : <<include>>
+
+S10 .> S16 : <<include>>
+S10 .> S17 : <<include>>
+
+S19 .> S21 : <<include>>
+
+@enduml

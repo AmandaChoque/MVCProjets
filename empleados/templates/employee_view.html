@@ -1,11 +1,8 @@
 {% extends 'base.html' %} {% block content %}
 <main class="container-fluid px-4 py-4">
-  <nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb mb-0">
-      <li class="breadcrumb-item"><a href="{% url 'employees' %}">Empleados</a></li>
-      <li class="breadcrumb-item active" aria-current="page">Ver empleado</li>
-    </ol>
-  </nav>
+  <div class="mb-3">
+    <a href="{% url 'employees' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+  </div>
 
   <!-- TARJETA -->
   <div class="card border-0 shadow-sm rounded-3">
@@ -111,7 +108,12 @@
                     {% if item.contrato.activo %}
                       <span class="badge bg-success fw-normal">Activo</span>
                     {% else %}
-                      <span class="badge bg-secondary fw-normal">Inactivo</span>
+                      <span class="badge bg-danger fw-normal">Vencido</span>
+                    {% endif %}
+                    {% if item.jornadas_pendientes > 0 %}
+                      <br><span class="badge bg-warning text-dark fw-normal mt-1" title="Jornadas pendientes de aprobar">
+                        <i class="bi bi-clock me-1"></i>{{ item.jornadas_pendientes }} pendiente{{ item.jornadas_pendientes|pluralize:"s" }}
+                      </span>
                     {% endif %}
                   </td>
                   <td class="text-center text-muted small">

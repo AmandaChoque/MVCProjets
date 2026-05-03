@@ -18,13 +18,9 @@
 
 {% block content %}
 <main class="container-fluid px-4 py-4">
-  <nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb mb-0">
-      <li class="breadcrumb-item"><a href="{% url 'employees' %}">Empleados</a></li>
-      <li class="breadcrumb-item"><a href="{% url 'employee_view' contrato.empleado.id %}">{{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }}</a></li>
-      <li class="breadcrumb-item active" aria-current="page">Contrato</li>
-    </ol>
-  </nav>
+  <div class="mb-3">
+    <a href="{% url 'employee_view' contrato.empleado.id %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+  </div>
   <div class="mb-3">
     <span class="badge bg-secondary fw-normal">{{ contrato.dias_laborales }} días laborales</span>
     <span class="badge bg-primary fw-normal">Bs. {{ contrato.monto_diario|floatformat:2 }}/día</span>
@@ -32,9 +28,21 @@
     {% if contrato.activo %}
       <span class="badge bg-success fw-normal">Activo</span>
     {% else %}
-      <span class="badge bg-secondary fw-normal">Inactivo</span>
+      <span class="badge bg-danger fw-normal">Contrato vencido</span>
     {% endif %}
   </div>
+
+  {% if not contrato.activo %}
+  <div class="alert alert-danger d-flex align-items-start gap-2 mb-4 py-2">
+    <i class="bi bi-exclamation-triangle-fill fs-5 mt-1 flex-shrink-0"></i>
+    <div>
+      <strong>Este contrato está vencido.</strong>
+      Las jornadas registradas bajo este contrato siguen siendo válidas y pueden aprobarse normalmente.
+      Para registrar nuevas jornadas, el empleado necesita un contrato vigente o
+      puedes crearlas manualmente desde aquí.
+    </div>
+  </div>
+  {% endif %}
 
   <!-- Balance de jornadas -->
   <div class="row g-3 mb-4">
@@ -74,6 +82,31 @@
     </div>
   </div>
 
+  <!-- Progreso días trabajados vs días laborales -->
+  <div class="card border-0 shadow-sm mb-4 px-3 py-3">
+    <div class="d-flex justify-content-between align-items-center mb-1 small">
+      <span class="fw-semibold">Avance de jornadas</span>
+      <span class="text-muted">
+        {{ total_dias }} / {{ contrato.dias_laborales }} días
+        {% if contrato.tipo_contrato == 'mensual' %}<span class="badge bg-info text-dark ms-1">Mensual</span>{% else %}<span class="badge bg-secondary ms-1">Por día</span>{% endif %}
+      </span>
+    </div>
+    <div class="progress" style="height:8px; border-radius:4px;">
+      <div class="progress-bar
+        {% if pct_dias >= 100 %}bg-danger
+        {% elif pct_dias >= 85 %}bg-warning
+        {% else %}bg-success{% endif %}"
+        style="width:{{ pct_dias }}%" role="progressbar"
+        aria-valuenow="{{ pct_dias }}" aria-valuemin="0" aria-valuemax="100">
+      </div>
+    </div>
+    {% if pct_dias >= 100 %}
+    <div class="mt-1 text-danger small"><i class="bi bi-exclamation-triangle me-1"></i>Se superaron los días laborales acordados ({{ total_dias }} / {{ contrato.dias_laborales }}).</div>
+    {% elif pct_dias >= 85 %}
+    <div class="mt-1 text-warning small"><i class="bi bi-clock me-1"></i>Quedan pocos días disponibles en el contrato.</div>
+    {% endif %}
+  </div>
+
   <div class="row g-4">
 
     <!-- Formulario del contrato -->
@@ -90,14 +123,14 @@
             {% endif %}
 
             <div class="mb-3">
-              <label class="form-label">Empleado <span class="text-danger">*</span></label>
-              {{ form.empleado }}
-              {% if form.empleado.errors %}<div class="text-danger small mt-1">{% for err in form.empleado.errors %}{{ err }}{% endfor %}</div>{% endif %}
+              <label class="form-label">Tipo de contrato <span class="text-danger">*</span></label>
+              {{ form.tipo_contrato }}
+              {% if form.tipo_contrato.errors %}<div class="text-danger small mt-1">{% for err in form.tipo_contrato.errors %}{{ err }}{% endfor %}</div>{% endif %}
             </div>
             <div class="mb-3">
-              <label class="form-label">Período del Contrato <span class="text-danger">*</span></label>
+              <label class="form-label">Días laborales acordados <span class="text-danger">*</span></label>
               {{ form.dias_laborales }}
-              <div class="form-text text-muted">Días laborales acordados en el contrato (ej: 28). Monto diario = Monto acordado ÷ días laborales.</div>
+              <div class="form-text text-muted">Para contrato por día: días del período (ej: 28). Monto diario = Monto acordado ÷ días laborales.</div>
             </div>
             <div class="mb-3">
               <label class="form-label">Monto Acordado (Bs.) <span class="text-danger">*</span></label>
@@ -242,7 +275,19 @@
             {% for pago in pagos %}
             <tr>
               <td class="px-3">{{ pago.fecha|date:"d/m/Y" }}</td>
-              <td>{{ pago.get_concepto_display }}</td>
+              <td>
+                {% if pago.concepto == 'pago_jornada' %}
+                  <span class="badge bg-primary fw-normal">{{ pago.get_concepto_display }}</span>
+                {% elif pago.concepto == 'adelanto' %}
+                  <span class="badge bg-warning text-dark fw-normal">{{ pago.get_concepto_display }}</span>
+                {% elif pago.concepto == 'liquidacion' %}
+                  <span class="badge bg-success fw-normal">{{ pago.get_concepto_display }}</span>
+                {% elif pago.concepto == 'dia_extra' %}
+                  <span class="badge bg-info text-dark fw-normal">{{ pago.get_concepto_display }}</span>
+                {% else %}
+                  <span class="badge bg-secondary fw-normal">{{ pago.get_concepto_display }}</span>
+                {% endif %}
+              </td>
               <td><span class="badge bg-secondary fw-normal">{{ pago.get_tipo_pago_display }}</span></td>
               <td class="text-end fw-semibold px-3">{{ pago.monto|floatformat:2 }}</td>
               {% if es_admin %}

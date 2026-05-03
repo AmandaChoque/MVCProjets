@@ -54,9 +54,16 @@ class EmpleadoForm(forms.ModelForm):
         widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'ejemplo@correo.com'})
     )
 
+    is_active = forms.BooleanField(
+        required=False,
+        label="Empleado activo",
+        initial=True,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input', 'role': 'switch'}),
+    )
+
     class Meta:
         model = Empleado
-        fields = ['nombre', 'apellido_paterno', 'apellido_materno', 'numero_celular', 'cargo', 'carnet_identidad']
+        fields = ['nombre', 'apellido_paterno', 'apellido_materno', 'numero_celular', 'cargo', 'carnet_identidad', 'is_active']
         widgets = {
             'nombre':           forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre', 'required': 'required'}),
             'apellido_paterno': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Apellido Paterno', 'required': 'required'}),
@@ -122,6 +129,7 @@ class _ContratoEmpleadoBase(forms.ModelForm):
         model = ContratoEmpleado
         fields = []
         widgets = {
+            'tipo_contrato':  forms.Select(attrs={'class': 'form-select'}),
             'fecha_firma':    forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
             'fecha_inicio':   forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
             'fecha_fin':      forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
@@ -160,7 +168,7 @@ class _ContratoEmpleadoBase(forms.ModelForm):
 
 class ContratoEmpleadoForm(_ContratoEmpleadoBase):
     class Meta(_ContratoEmpleadoBase.Meta):
-        fields = ['empleado', 'fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'dias_laborales', 'observaciones', 'documento']
+        fields = ['empleado', 'tipo_contrato', 'fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'dias_laborales', 'observaciones', 'documento']
         widgets = {**_ContratoEmpleadoBase.Meta.widgets, 'empleado': forms.Select(attrs={'class': 'form-select'})}
 
     def __init__(self, *args, **kwargs):
@@ -196,7 +204,7 @@ class ContratoEmpleadoForm(_ContratoEmpleadoBase):
 class ContratoEmpleadoDesdeEmpleadoForm(_ContratoEmpleadoBase):
     """Contrato de empleado creado desde el perfil del empleado (sin campo empleado)."""
     class Meta(_ContratoEmpleadoBase.Meta):
-        fields = ['fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'dias_laborales', 'observaciones', 'documento']
+        fields = ['tipo_contrato', 'fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'dias_laborales', 'observaciones', 'documento']
 
     def __init__(self, *args, empleado=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -234,7 +242,7 @@ class JornadaEmpleadoForm(forms.ModelForm):
         label='Días trabajados',
     )
     fecha = forms.DateField(
-        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
+        widget=forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
         label='Fecha',
     )
     observacion = forms.CharField(
@@ -291,7 +299,7 @@ class JornadaEmpleadoForm(forms.ModelForm):
 
         dias_decimal = Decimal(str(dias))
 
-        if not (contrato.fecha_inicio <= fecha <= contrato.fecha_fin):
+        if contrato.activo and not (contrato.fecha_inicio <= fecha <= contrato.fecha_fin):
             self.add_error('fecha',
                 f'La fecha debe estar entre {contrato.fecha_inicio} y {contrato.fecha_fin} (rango del contrato).')
 

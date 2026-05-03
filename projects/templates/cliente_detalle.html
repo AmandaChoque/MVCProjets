@@ -19,12 +19,9 @@
 
 {% block content %}
 <main class="container-fluid px-4 py-4">
-  <nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb mb-0">
-      <li class="breadcrumb-item"><a href="{% url 'clientes' %}">Clientes</a></li>
-      <li class="breadcrumb-item active" aria-current="page">Editar cliente</li>
-    </ol>
-  </nav>
+  <div class="mb-3">
+    <a href="{% url 'clientes' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+  </div>
 
   <!-- TARJETA -->
   <div class="card border-0 shadow-sm rounded-3">
@@ -77,17 +74,6 @@
                 {% if form.nombre_entidad.errors %}
                 <div class="text-danger small mt-1">
                   {% for err in form.nombre_entidad.errors %}{{ err }}{% endfor %}
-                </div>
-                {% endif %}
-              </div>
-              <div class="mb-3">
-                <label class="form-label" for="{{ form.representante_legal.id_for_label }}">
-                  Representante Legal <span class="text-danger">*</span>
-                </label>
-                {{ form.representante_legal }}
-                {% if form.representante_legal.errors %}
-                <div class="text-danger small mt-1">
-                  {% for err in form.representante_legal.errors %}{{ err }}{% endfor %}
                 </div>
                 {% endif %}
               </div>
@@ -196,13 +182,11 @@
   const tipoSelect    = document.getElementById('id_tipo_contratante');
   const divEntidad    = document.getElementById('div_entidad_publica');
   const nombreEntidad = document.getElementById('id_nombre_entidad');
-  const repLegal      = document.getElementById('id_representante_legal');
 
   function toggleEntidad() {
     const esEntidad = tipoSelect.value === 'entidad_publica';
     divEntidad.classList.toggle('d-none', !esEntidad);
     nombreEntidad.required = esEntidad;
-    repLegal.required      = esEntidad;
   }
 
   tipoSelect.addEventListener('change', toggleEntidad);

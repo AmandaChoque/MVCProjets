@@ -1,0 +1,85 @@
+@startuml uc_03_sedes_instalacion
+title Casos de Uso — Sedes e Instalación\nSistema SOBOTEC S.R.L.
+
+left to right direction
+
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam backgroundColor #FFFFFF
+skinparam usecaseBackgroundColor #F5F5F5
+skinparam usecaseBorderColor #777777
+skinparam usecaseFontSize 12
+skinparam actorFontSize 12
+skinparam packageBorderColor #777777
+skinparam packageBackgroundColor #FFFFFF
+skinparam packageFontStyle bold
+skinparam arrowColor #444444
+skinparam noteBackgroundColor #FFFFCC
+skinparam noteBorderColor #CCAA00
+
+' ── ACTORES ──────────────────────────────────────
+actor "Administrador\n/ Gerente"         as ADM   #F5F5F5
+actor "Instalador\n/ Técnico de Soporte" as CAMPO #F5F5F5
+actor "Sistema\n(automático)"            as SIS   #F5F5F5
+
+' ── BOUNDARY ─────────────────────────────────────
+rectangle "Sistema SOBOTEC — Sedes e Instalación" {
+
+    usecase "Crear sede"                     as UC1
+    usecase "Editar / Desactivar sede"       as UC2
+    usecase "Ver detalle de sede"            as UC3
+    usecase "Aplicar plantilla de tareas"    as UC4
+    usecase "Crear / Editar tarea checklist" as UC5
+    usecase "Completar tarea"                as UC6
+    usecase "Crear subtarea"                 as UC7
+    usecase "Completar subtarea"             as UC8
+    usecase "Subir fotos de sede"            as UC9
+    usecase "Eliminar foto de sede"          as UC10
+
+    usecase "Copiar plantilla\nal crear sede"     as SA1
+    usecase "Notificar admins al\ncompletar sede" as SA2
+}
+
+' ── ASOCIACIONES: Administrador / Gerente ────────
+ADM --> UC1
+ADM --> UC2
+ADM --> UC3
+ADM --> UC4
+ADM --> UC5
+ADM --> UC6
+ADM --> UC7
+ADM --> UC8
+ADM --> UC9
+ADM --> UC10
+
+' ── ASOCIACIONES: Instalador / Técnico ───────────
+CAMPO --> UC3
+CAMPO --> UC6
+CAMPO --> UC7
+CAMPO --> UC8
+CAMPO --> UC9
+
+' ── ASOCIACIONES: Sistema ────────────────────────
+SIS --> SA1
+SIS --> SA2
+
+' ── INCLUDE / EXTEND ─────────────────────────────
+UC1 .> SA1 : <<extend>>
+UC6 .> SA2 : <<extend>>
+
+note right of UC1
+  Solo Administrador / Gerente
+  puede crear y editar sedes.
+end note
+
+note right of SA1
+  Solo si se seleccionó una
+  plantilla al crear la sede.
+end note
+
+note right of SA2
+  Se dispara cuando el checklist
+  de la sede llega al 100%.
+end note
+
+@enduml

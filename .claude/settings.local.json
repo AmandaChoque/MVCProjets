@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(venv/Scripts/python manage.py makemigrations --name split_contrato_models)",
+      "Bash(venv/Scripts/python manage.py makemigrations --name=\"update_tipo_proyecto_and_cargo_choices\")",
+      "Bash(venv/Scripts/python append_forms.py)",
+      "Bash(venv/Scripts/python manage.py check)",
+      "Bash(venv\\\\Scripts\\\\python.exe manage.py makemigrations empleados --name=\"asignacion_diaria_dias_laborales\")",
+      "Bash(venv/Scripts/python.exe manage.py makemigrations empleados --name=\"asignacion_diaria_dias_laborales\")",
+      "Bash(venv/Scripts/python.exe manage.py makemigrations projects --name=\"plantilla_tarea_sede\")",
+      "Bash(venv/Scripts/python.exe manage.py migrate)",
+      "Bash(venv/Scripts/python.exe manage.py check)",
+      "Bash(venv/Scripts/python manage.py makemigrations --name=\"remove_grupo_tarea_ritmo_semanal\")",
+      "Bash(venv/Scripts/python manage.py makemigrations inventario --name=\"remove_costo_total_compra_costo_unitario_requirelote\")",
+      "Bash(venv/Scripts/python -c ':*)",
+      "Bash(venv/Scripts/python manage.py shell -c ':*)",
+      "Bash(venv\\\\Scripts\\\\python.exe manage.py makemigrations inventario --name=\"remove_sede_requiere_add_unique_lote\")",
+      "Bash(\"venv/Scripts/python.exe\" manage.py makemigrations inventario --name=\"remove_sede_requiere_add_unique_lote\")",
+      "Bash(\"venv/Scripts/python.exe\" manage.py migrate inventario)",
+      "Bash(venv/Scripts/python manage.py makemigrations --name=\"move_contratoproyecto_to_projects_add_validations\")",
+      "Bash(venv/Scripts/python manage.py makemigrations --name=\"itemplatilla_sin_auditmodel_jornada_cascade\")",
+      "Bash(venv/Scripts/python manage.py show_urls)"
+    ]
+  }
+}

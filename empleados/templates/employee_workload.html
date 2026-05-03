@@ -1,58 +1,21 @@
 {% extends 'base.html' %}
-{% block extra_css %}
-<style>
-  .nav-tabs .nav-link { font-size: 0.85rem; color: #6c757d; border: none; border-bottom: 2px solid transparent; border-radius: 0; }
-  .nav-tabs .nav-link:hover { color: #264653; background: transparent; }
-  .nav-tabs .nav-link.active { font-weight: 600; color: #0d6efd; border-bottom: 2px solid #0d6efd; background: transparent; }
-  .tab-content { padding-top: 1.25rem; }
-</style>
-{% endblock %}
-
 {% block content %}
 <div class="container-fluid px-4 py-4">
 
   <!-- ENCABEZADO -->
-  <div class="mb-3 d-flex justify-content-between align-items-center">
-    <a href="{% url 'employees' %}" class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-arrow-left me-1"></i>Volver
-    </a>
-    <h4 class="fw-bold text-sobotec mb-0">Gestión de Jornadas</h4>
-    <div></div>
-  </div>
-
-  <!-- KPIs -->
-  <div class="row g-3 mb-3">
-    <div class="col-6 col-md-4">
-      <div class="card kpi-card yellow border-0 shadow-sm h-100">
-        <div class="card-body py-3 px-3">
-          <div class="kpi-value text-warning">{{ total_pendientes }}</div>
-          <div class="kpi-label">Jornadas por aprobar</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-4">
-      <div class="card kpi-card red border-0 shadow-sm h-100">
-        <div class="card-body py-3 px-3">
-          <div class="kpi-value text-danger">{{ total_sin_pagar }}</div>
-          <div class="kpi-label">Aprobadas sin pagar</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-4">
-      <div class="card kpi-card teal border-0 shadow-sm h-100">
-        <div class="card-body py-3 px-3">
-          <div class="kpi-value" style="font-size:1.3rem; color:#20c997;">{{ total_monto_pendiente|floatformat:2 }}</div>
-          <div class="kpi-label">Monto por pagar Bs.</div>
-        </div>
-      </div>
+  <div class="mb-2">
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <h4 class="fw-bold text-sobotec mb-0">Gestión de Jornadas</h4>
     </div>
   </div>
 
-  <!-- TABS -->
-  <ul class="nav nav-tabs mb-0" id="tabsJornadas">
+  
+  <!-- TABS
+  <ul class="nav nav-tabs mb-0" id="tabsJornadas" style="border-bottom: 1px solid #dee2e6;">
     <li class="nav-item">
       <button class="nav-link active" id="tab-aprobar" data-bs-toggle="tab"
-              data-bs-target="#pane-aprobar" type="button">
+              data-bs-target="#pane-aprobar" type="button"
+              style="font-size:0.85rem; color:#6c757d; border:none; border-bottom:2px solid transparent; border-radius:0; padding:.5rem 1rem;">
         <i class="bi bi-clock-history me-1"></i>Por aprobar
         {% if total_pendientes > 0 %}
         <span class="badge bg-warning text-dark ms-1">{{ total_pendientes }}</span>
@@ -61,59 +24,94 @@
     </li>
     <li class="nav-item">
       <button class="nav-link" id="tab-pagar" data-bs-toggle="tab"
-              data-bs-target="#pane-pagar" type="button">
+              data-bs-target="#pane-pagar" type="button"
+              style="font-size:0.85rem; color:#6c757d; border:none; border-bottom:2px solid transparent; border-radius:0; padding:.5rem 1rem;">
         <i class="bi bi-cash-coin me-1"></i>Por pagar
         {% if total_sin_pagar > 0 %}
         <span class="badge bg-danger ms-1">{{ total_sin_pagar }}</span>
         {% endif %}
       </button>
-    </li>
-  </ul>
-
-  <div class="tab-content">
-
-    <!-- ══ TAB 1: POR APROBAR ══ -->
-    <div class="tab-pane fade show active" id="pane-aprobar" role="tabpanel">
-      {% if pendientes_por_empleado %}
-        {% for grupo in pendientes_por_empleado %}
-        <div class="card border-0 shadow-sm mb-3">
-          <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
-            <div>
-              <span class="fw-semibold">
-                {{ grupo.empleado.nombre }} {{ grupo.empleado.apellido_paterno }}
-                {% if grupo.empleado.apellido_materno %} {{ grupo.empleado.apellido_materno }}{% endif %}
-              </span>
-              <span class="text-muted small ms-2">— {{ grupo.empleado.get_cargo_display }}</span>
+    </li> -->
+  <!-- </ul> -->
+  
+  <!-- FILTRO -->
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-body py-2">
+          <form method="GET" action="{% url 'employee_workload' %}" class="row g-2 align-items-end">
+            <div class="col-md-5">
+              <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Empleado</label>
+              <select name="filter_empleado" class="form-select form-select-sm">
+                <option value="">Todos los empleados</option>
+                {% for emp in empleados_pendientes %}
+                <option value="{{ emp.id }}"
+                  {% if filter_empleado|stringformat:"s" == emp.id|stringformat:"s" %}selected{% endif %}>
+                  {{ emp.nombre }} {{ emp.apellido_paterno }} — {{ emp.get_cargo_display }}
+                </option>
+                {% endfor %}
+              </select>
             </div>
-            <div class="d-flex align-items-center gap-2">
-              <span class="badge bg-warning text-dark">{{ grupo.jornadas|length }} jornada{{ grupo.jornadas|length|pluralize }}</span>
-              <span class="badge bg-secondary">{{ grupo.total_dias|floatformat:1 }} días</span>
-              <a href="{% url 'revisar_jornadas_proyecto' grupo.jornadas.0.proyecto.id %}"
-                 class="btn btn-sm btn-outline-primary py-0">
-                <i class="bi bi-check2-all me-1"></i>Ver en proyecto
-              </a>
+            <div class="col-6 col-md-2">
+              <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
+            </div>
+            <div class="col-6 col-md-1">
+              <a href="{% url 'employee_workload' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- KPIs -->
+      <div class="row g-3 mb-3">
+        <div class="col-6 col-md-4">
+          <div class="card kpi-card yellow border-0 shadow-sm h-100">
+            <div class="card-body py-3 px-3">
+              <div class="kpi-value text-warning">{{ total_pendientes }}</div>
+              <div class="kpi-label">Jornadas por aprobar</div>
             </div>
           </div>
+        </div>
+      </div>
+      <!-- TABLA -->
+      <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+          <span class="fw-semibold small">Detalle de Jornadas</span>
+          {% if jornadas_pendientes %}
+          <form method="POST" action="{% url 'aprobar_todas_jornadas' %}"
+                onsubmit="return confirm('¿Aprobar todas las jornadas pendientes{% if filter_empleado %} de este empleado{% endif %}?')">
+            {% csrf_token %}
+            <input type="hidden" name="filter_empleado" value="{{ filter_empleado }}">
+            <button type="submit" class="btn btn-outline-success btn-sm">
+              <i class="bi bi-check2-all me-1"></i>Aprobación automatica
+            </button>
+          </form>
+          {% endif %}
+        </div>
+        <div class="card-body p-0">
           <div class="table-responsive" style="overflow:visible;">
             <table class="table table-sm table-hover align-middle small">
               <thead class="table-light small text-uppercase fw-semibold">
                 <tr>
-                  <th>Fecha</th>
-                  <th>Proyecto</th>
-                  <th class="text-center">Días</th>
-                  <th>Observación</th>
-                  <th class="text-center">Acción</th>
+                  <th class="px-3 py-2">Empleado</th>
+                  <th class="py-2">Proyecto</th>
+                  <th class="py-2">Fecha</th>
+                  <th class="text-center py-2">Días</th>
+                  <th class="py-2">Observación</th>
+                  <th class="text-end py-2" style="width:60px;">Acciones</th>
                 </tr>
               </thead>
               <tbody>
-                {% for j in grupo.jornadas %}
-                <tr id="jornada-row-{{ j.id }}">
-                  <td>{{ j.fecha|date:"d/m/Y" }}</td>
+                {% for j in jornadas_pendientes %}
+                <tr>
+                  <td class="px-3 fw-semibold">
+                    {{ j.contrato.empleado.nombre }} {{ j.contrato.empleado.apellido_paterno }}
+                    <div class="text-muted" style="font-size:0.72rem;">{{ j.contrato.empleado.get_cargo_display }}</div>
+                  </td>
                   <td>
-                    <a href="{% url 'project_view' j.proyecto.id %}" class="text-decoration-none">
+                    <a href="{% url 'project_view' j.proyecto.id %}" class="text-decoration-none small">
                       {{ j.proyecto.nombre }}
                     </a>
                   </td>
+                  <td class="small">{{ j.fecha|date:"d/m/Y" }}</td>
                   <td class="text-center">
                     {% if j.dias == 0.5 %}
                       <span class="badge bg-info text-dark">½ día</span>
@@ -121,17 +119,45 @@
                       <span class="badge bg-primary">1 día</span>
                     {% endif %}
                   </td>
-                  <td class="text-muted">{{ j.observacion|default:"—" }}</td>
-                  <td class="text-center">
-                    <form method="POST" action="{% url 'aprobar_jornada' j.id %}" class="d-inline">
-                      {% csrf_token %}
-                      <button type="submit" class="btn btn-success btn-sm py-0 px-2">
-                        <i class="bi bi-check-lg me-1"></i>Aprobar
-                      </button>
-                    </form>
-                    <a href="{% url 'jornada_detail' j.id %}" class="btn btn-outline-secondary btn-sm py-0 px-2 ms-1">
-                      <i class="bi bi-pencil"></i>
-                    </a>
+                  <td class="text-muted small">{{ j.observacion|default:"—"|truncatechars:50 }}</td>
+                  <td class="text-end">
+                    <div class="dropdown">
+                      <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
+                      <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        <li>
+                          <a class="dropdown-item small" href="{% url 'jornada_detail' j.id %}">
+                            <i class="bi bi-eye me-2"></i>Ver / Editar
+                          </a>
+                        </li>
+                        <li><hr class="dropdown-divider my-1"></li>
+                        <li>
+                          <form method="POST" action="{% url 'aprobar_jornada' j.id %}">
+                            {% csrf_token %}
+                            <input type="hidden" name="next"
+                              value="{% url 'employee_workload' %}{% if filter_empleado %}?filter_empleado={{ filter_empleado }}{% endif %}">
+                            <button type="submit" class="dropdown-item small text-success">
+                              <i class="bi bi-check-lg me-2"></i>Aprobar
+                            </button>
+                          </form>
+                        </li>
+                        <li>
+                          <button class="dropdown-item small text-danger"
+                                  data-bs-toggle="modal" data-bs-target="#modalRechazar"
+                                  data-id="{{ j.id }}"
+                                  data-nombre="{{ j.contrato.empleado.nombre }} {{ j.contrato.empleado.apellido_paterno }}"
+                                  data-fecha="{{ j.fecha|date:'d/m/Y' }}">
+                            <i class="bi bi-x-lg me-2"></i>Rechazar
+                          </button>
+                        </li>
+                      </ul>
+                    </div>
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="6" class="text-center text-muted py-4 small">
+                    <i class="bi bi-check2-circle fs-3 d-block mb-2 text-success"></i>
+                    No hay jornadas pendientes{% if filter_empleado %} para este empleado{% endif %}.
                   </td>
                 </tr>
                 {% endfor %}
@@ -139,94 +165,205 @@
             </table>
           </div>
         </div>
-        {% endfor %}
-      {% else %}
-        <div class="text-center text-muted py-5">
-          <i class="bi bi-check2-circle fs-1 d-block mb-2 text-success"></i>
-          No hay jornadas pendientes de aprobar.
-        </div>
-      {% endif %}
-    </div>
+      </div>
 
-    <!-- ══ TAB 2: POR PAGAR ══ -->
-    <div class="tab-pane fade" id="pane-pagar" role="tabpanel">
-      {% if sin_pagar_por_empleado %}
-        {% for grupo in sin_pagar_por_empleado %}
-        <div class="card border-0 shadow-sm mb-3">
-          <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
-            <div>
-              <span class="fw-semibold">
-                {{ grupo.empleado.nombre }} {{ grupo.empleado.apellido_paterno }}
-                {% if grupo.empleado.apellido_materno %} {{ grupo.empleado.apellido_materno }}{% endif %}
-              </span>
-              <span class="text-muted small ms-2">— {{ grupo.empleado.get_cargo_display }}</span>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-              <span class="badge bg-secondary">{{ grupo.total_dias|floatformat:1 }} días</span>
-              <span class="badge bg-danger">Bs. {{ grupo.total_monto|floatformat:2 }}</span>
-              <a href="{% url 'create_pago_empleado' grupo.contrato.id %}"
-                 class="btn btn-sm btn-success py-0">
-                <i class="bi bi-cash-coin me-1"></i>Registrar pago
-              </a>
-            </div>
-          </div>
-          <div class="table-responsive" style="overflow:visible;">
-            <table class="table table-sm table-hover align-middle small">
-              <thead class="table-light small text-uppercase fw-semibold">
-                <tr>
-                  <th>Fecha</th>
-                  <th>Proyecto</th>
-                  <th class="text-center">Días</th>
-                  <th class="text-end pe-3">Monto</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for j in grupo.jornadas %}
-                <tr>
-                  <td>{{ j.fecha|date:"d/m/Y" }}</td>
-                  <td>
-                    <a href="{% url 'project_view' j.proyecto.id %}" class="text-decoration-none">
-                      {{ j.proyecto.nombre }}
+  <!-- ══ CALENDARIO DE JORNADAS ══ -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <span class="fw-semibold small"><i class="bi bi-calendar3 me-1"></i>Calendario de Jornadas</span>
+      <div class="d-flex gap-2 align-items-center flex-wrap">
+        <span class="badge fw-normal" style="background:#198754; font-size:0.72rem;">Aprobada</span>
+        <span class="badge bg-warning text-dark fw-normal" style="font-size:0.72rem;">Pendiente</span>
+        <span class="badge bg-danger fw-normal" style="font-size:0.72rem;">Rechazada</span>
+        <!-- Toggle Mes / Semana -->
+        <div class="btn-group btn-group-sm ms-2">
+          <a href="?cal_vista=mes&filter_empleado={{ filter_empleado }}"
+             class="btn {% if cal_vista == 'mes' %}btn-dark{% else %}btn-outline-secondary{% endif %}">Mes</a>
+          <a href="?cal_vista=semana&filter_empleado={{ filter_empleado }}"
+             class="btn {% if cal_vista == 'semana' %}btn-dark{% else %}btn-outline-secondary{% endif %}">Semana</a>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+
+      {% if filter_empleado %}
+
+      <!-- Navegación -->
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="d-flex gap-1 align-items-center">
+          <a href="{{ cal_nav_prev }}" class="btn btn-sm btn-outline-secondary px-2">
+            <i class="bi bi-chevron-left"></i>
+          </a>
+          <a href="{{ cal_nav_hoy }}" class="btn btn-sm btn-outline-secondary">Hoy</a>
+          <a href="{{ cal_nav_next }}" class="btn btn-sm btn-outline-secondary px-2">
+            <i class="bi bi-chevron-right"></i>
+          </a>
+        </div>
+        <span class="fw-semibold small">{{ cal_mes_nombre }}</span>
+        <div style="width:130px;"></div>
+      </div>
+
+      {% if cal_vista == 'mes' %}
+      <!-- ── VISTA MENSUAL ── -->
+      <div class="table-responsive">
+        <table class="table table-bordered mb-0" style="table-layout:fixed;">
+          <thead>
+            <tr class="text-center text-muted small text-uppercase fw-semibold bg-light">
+              <th class="py-2">Lun</th><th class="py-2">Mar</th><th class="py-2">Mié</th>
+              <th class="py-2">Jue</th><th class="py-2">Vie</th>
+              <th class="py-2 text-secondary">Sáb</th><th class="py-2 text-secondary">Dom</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for week in cal_weeks %}
+            <tr>
+              {% for day in week %}
+              <td class="p-1 align-top cal-day{% if not day.num %} cal-empty{% elif day.is_today %} cal-today{% endif %}"
+                  style="height:72px;">
+                {% if day.num %}
+                  <div class="text-end mb-1" style="font-size:0.78rem;">
+                    <span class="{% if day.is_today %}fw-bold text-primary{% else %}text-muted{% endif %}">{{ day.num }}</span>
+                  </div>
+                  {% if day.jornada %}
+                    {% with j=day.jornada %}
+                    <a href="{% url 'jornada_detail' j.id %}" class="text-decoration-none d-block">
+                      {% if j.estado == 'aprobada' %}
+                        <span class="badge w-100" style="background:#198754; font-size:0.68rem;">
+                          <i class="bi bi-check-lg"></i> {% if j.dias == 0.5 %}½{% else %}1{% endif %}d
+                        </span>
+                      {% elif j.estado == 'pendiente' %}
+                        <span class="badge bg-warning text-dark w-100" style="font-size:0.68rem;">
+                          <i class="bi bi-clock"></i> {% if j.dias == 0.5 %}½{% else %}1{% endif %}d
+                        </span>
+                      {% elif j.estado == 'rechazada' %}
+                        <span class="badge bg-danger w-100" style="font-size:0.68rem;">
+                          <i class="bi bi-x-lg"></i> {% if j.dias == 0.5 %}½{% else %}1{% endif %}d
+                        </span>
+                      {% endif %}
                     </a>
-                  </td>
-                  <td class="text-center">
-                    {% if j.dias == 0.5 %}
-                      <span class="badge bg-info text-dark">½ día</span>
-                    {% else %}
-                      <span class="badge bg-primary">1 día</span>
-                    {% endif %}
-                  </td>
-                  <td class="text-end pe-3 fw-semibold">Bs. {{ j.monto|floatformat:2 }}</td>
-                </tr>
-                {% endfor %}
-                <tr class="table-light fw-semibold">
-                  <td colspan="3" class="text-end">Total acumulado:</td>
-                  <td class="text-end pe-3 text-danger">Bs. {{ grupo.total_monto|floatformat:2 }}</td>
-                </tr>
-              </tbody>
-            </table>
+                    {% endwith %}
+                  {% endif %}
+                {% endif %}
+              </td>
+              {% endfor %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      {% else %}
+      <!-- ── VISTA SEMANAL ── -->
+      <div class="row g-2">
+        {% for day in cal_week_days %}
+        <div class="col">
+          {% if day.jornada %}
+          <a href="{% url 'jornada_detail' day.jornada.id %}" class="text-decoration-none">
+          {% endif %}
+          <div class="border rounded p-2 h-100 cal-semana-day
+               {% if day.is_today %}cal-semana-hoy{% endif %}
+               {% if day.jornada %}cal-semana-clickable{% endif %}">
+            <div class="text-center mb-2">
+              <div class="small text-muted text-uppercase fw-semibold" style="font-size:0.7rem;">{{ day.dia_nombre }}</div>
+              <div class="fw-bold {% if day.is_today %}text-primary{% endif %}" style="font-size:1.2rem;">{{ day.num }}</div>
+            </div>
+            {% if day.jornada %}
+              {% with j=day.jornada %}
+              <div class="text-center">
+                {% if j.estado == 'aprobada' %}
+                  <span class="badge mb-1" style="background:#198754; font-size:0.72rem;">
+                    <i class="bi bi-check-lg me-1"></i>Aprobada
+                  </span>
+                {% elif j.estado == 'pendiente' %}
+                  <span class="badge bg-warning text-dark mb-1" style="font-size:0.72rem;">
+                    <i class="bi bi-clock me-1"></i>Pendiente
+                  </span>
+                {% elif j.estado == 'rechazada' %}
+                  <span class="badge bg-danger mb-1" style="font-size:0.72rem;">
+                    <i class="bi bi-x-lg me-1"></i>Rechazada
+                  </span>
+                {% endif %}
+                <div class="small text-muted mt-1" style="font-size:0.72rem;">
+                  {% if j.dias == 0.5 %}½ día{% else %}1 día{% endif %}
+                </div>
+                <div class="small text-muted text-truncate mt-1" style="font-size:0.7rem;" title="{{ j.proyecto.nombre }}">
+                  {{ j.proyecto.nombre }}
+                </div>
+              </div>
+              {% endwith %}
+            {% else %}
+              <div class="text-center text-muted" style="font-size:0.72rem; margin-top:0.5rem;">—</div>
+            {% endif %}
           </div>
+          {% if day.jornada %}</a>{% endif %}
         </div>
         {% endfor %}
-      {% else %}
-        <div class="text-center text-muted py-5">
-          <i class="bi bi-cash-stack fs-1 d-block mb-2 text-success"></i>
-          Todos los empleados están al día en sus pagos.
-        </div>
+      </div>
       {% endif %}
-    </div>
 
+      {% else %}
+      <div class="text-center text-muted py-4 small">
+        <i class="bi bi-person-circle fs-2 d-block mb-2"></i>
+        Usa el filtro de arriba para seleccionar un empleado y ver su calendario.
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal: Rechazar jornada -->
+<div class="modal fade" id="modalRechazar" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" id="formRechazar">
+        {% csrf_token %}
+        <input type="hidden" name="next"
+               value="{% url 'employee_workload' %}{% if filter_empleado %}?filter_empleado={{ filter_empleado }}{% endif %}">
+        <div class="modal-header">
+          <h6 class="modal-title fw-semibold">Rechazar jornada</h6>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <p class="small text-muted mb-2" id="rechazarDescripcion"></p>
+          <label class="form-label small fw-semibold">
+            Motivo de rechazo <span class="text-muted fw-normal">(opcional)</span>
+          </label>
+          <textarea name="motivo_rechazo" class="form-control form-control-sm" rows="3"
+                    placeholder="Describe el motivo..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger btn-sm">
+            <i class="bi bi-x-lg me-1"></i>Rechazar
+          </button>
+        </div>
+      </form>
+    </div>
   </div>
 </div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .cal-empty  { background: #f8f9fa; }
+  .cal-today  { background: #eef2ff; }
+  .cal-semana-day       { background: #fff; transition: box-shadow .15s; min-height: 130px; }
+  .cal-semana-hoy       { background: #eef2ff; border-color: #6ea8fe !important; }
+  .cal-semana-clickable { cursor: pointer; }
+  .cal-semana-clickable:hover { box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-  // Activar tab según parámetro URL (?tab=pagar)
-  const params = new URLSearchParams(window.location.search);
-  if (params.get('tab') === 'pagar') {
-    const tabPagar = document.getElementById('tab-pagar');
-    if (tabPagar) bootstrap.Tab.getOrCreateInstance(tabPagar).show();
-  }
+  document.getElementById('modalRechazar').addEventListener('show.bs.modal', function (e) {
+    const btn = e.relatedTarget;
+    document.getElementById('formRechazar').action = `/jornadas/${btn.getAttribute('data-id')}/rechazar/`;
+    document.getElementById('rechazarDescripcion').textContent =
+      `Jornada de ${btn.getAttribute('data-nombre')} — ${btn.getAttribute('data-fecha')}`;
+  });
 </script>
 {% endblock %}

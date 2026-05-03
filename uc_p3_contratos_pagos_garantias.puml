@@ -1,0 +1,117 @@
+@startuml uc_p3_contratos_pagos_garantias
+title Casos de Uso — Parte 3: Contratos, Pagos y Garantías\nSistema SOBOTEC S.R.L.
+
+left to right direction
+
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam backgroundColor #FFFFFF
+skinparam usecaseBackgroundColor #DDEEFF
+skinparam usecaseBorderColor #336699
+skinparam usecaseFontSize 12
+skinparam actorFontSize 12
+skinparam packageBorderColor #777777
+skinparam packageBackgroundColor #F5F5F5
+skinparam packageFontStyle bold
+skinparam arrowColor #444444
+skinparam noteBackgroundColor #FFFFCC
+skinparam noteBorderColor #CCAA00
+
+' ── ACTORES ──────────────────────────────────────
+actor "Administrador\n/ Gerente" as ADM #4A90D9
+actor "Secretaria"               as SEC #27AE60
+actor "Sistema\n(automático)"    as SIS #C0392B
+
+' ── BOUNDARY ─────────────────────────────────────
+rectangle "Sistema SOBOTEC — Contratos, Pagos y Garantías" {
+
+    package "Contrato de Proyecto" {
+        usecase "Crear contrato de proyecto"  as UC_CP1
+        usecase "Ver detalle del contrato"    as UC_CP2
+        usecase "Desactivar contrato"         as UC_CP3
+    }
+
+    package "Pagos del Cliente" {
+        usecase "Registrar pago de cliente"   as UC_PG1
+        usecase "Editar pago"                 as UC_PG2
+        usecase "Confirmar pago"              as UC_PG3
+        usecase "Desactivar pago"             as UC_PG4
+        usecase "Ver análisis de pagos"       as UC_PG5
+    }
+
+    package "Garantías Post-entrega" {
+        usecase "Ver listado de garantías"         as UC_GA1
+        usecase "Registrar incidencia"             as UC_GA2
+        usecase "Gestionar estado de incidencia"   as UC_GA3
+        usecase "Desactivar incidencia"            as UC_GA4
+    }
+
+    package "Automático" {
+        usecase "Crear Garantía al\ncompletar proyecto"  as SA1
+        usecase "Sincronizar estado_pago\ndel proyecto"  as SA2
+    }
+}
+
+' ── ASOCIACIONES: Administrador / Gerente ────────
+ADM --> UC_CP1
+ADM --> UC_CP2
+ADM --> UC_CP3
+ADM --> UC_PG1
+ADM --> UC_PG2
+ADM --> UC_PG3
+ADM --> UC_PG4
+ADM --> UC_PG5
+ADM --> UC_GA1
+ADM --> UC_GA2
+ADM --> UC_GA3
+ADM --> UC_GA4
+
+' ── ASOCIACIONES: Secretaria ─────────────────────
+SEC --> UC_CP1
+SEC --> UC_CP2
+SEC --> UC_PG1
+SEC --> UC_PG2
+SEC --> UC_PG4
+SEC --> UC_PG5
+SEC --> UC_GA1
+SEC --> UC_GA2
+SEC --> UC_GA3
+SEC --> UC_GA4
+
+' ── ASOCIACIONES: Sistema ────────────────────────
+SIS --> SA1
+SIS --> SA2
+
+' ── INCLUDE / EXTEND ─────────────────────────────
+UC_PG1 .> SA2 : <<include>>
+UC_PG2 .> SA2 : <<include>>
+UC_PG4 .> SA2 : <<include>>
+
+' SA1 es disparado desde Gestión de Proyectos (Parte 1)
+UC_CP1 .> SA1 : <<extend>>
+
+note right of UC_PG3
+  Confirmar pago: solo
+  Administrador / Gerente.
+end note
+
+note right of UC_CP3
+  Desactivar contrato: solo
+  Administrador / Gerente.
+end note
+
+note right of SA1
+  Se crea automáticamente al
+  completar el proyecto si
+  garantia_meses > 0 en el
+  contrato.
+end note
+
+note right of SA2
+  Recalcula estado_pago del
+  proyecto (no_pagado / parcial
+  / pagado) tras cada cambio
+  en los pagos.
+end note
+
+@enduml

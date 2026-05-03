@@ -1,0 +1,68 @@
+{% extends 'base.html' %}
+{% block content %}
+<main class="container py-4" style="max-width:560px;">
+  <div class="mb-3">
+    <a href="{% url 'payments' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Volver
+    </a>
+  </div>
+
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-warning bg-opacity-10 py-3">
+      <h5 class="fw-bold mb-0"><i class="bi bi-cash-coin me-2 text-warning"></i>Confirmar Pago de Proyecto</h5>
+    </div>
+    <div class="card-body">
+
+      <!-- Resumen -->
+      <div class="mb-4 p-3 bg-light rounded small">
+        <div class="row g-2">
+          <div class="col-6">
+            <span class="text-muted">Proyecto</span>
+            <div class="fw-semibold">{{ payment.proyecto.nombre }}</div>
+          </div>
+          <div class="col-6">
+            <span class="text-muted">Cliente</span>
+            <div class="fw-semibold">{{ payment.proyecto.cliente.nombre }} {{ payment.proyecto.cliente.apellido_paterno }}</div>
+          </div>
+          <div class="col-6">
+            <span class="text-muted">Monto pendiente</span>
+            <div class="fw-bold text-success fs-5">Bs. {{ payment.monto|floatformat:2 }}</div>
+          </div>
+          <div class="col-6">
+            <span class="text-muted">Monto total proyecto</span>
+            <div class="fw-semibold">Bs. {{ payment.proyecto.monto_total|floatformat:2 }}</div>
+          </div>
+        </div>
+      </div>
+
+      <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+          <label class="form-label fw-semibold small">Fecha de pago <span class="text-danger">*</span></label>
+          <input type="date" name="fecha" class="form-control form-control-sm" required
+            value="{{ payment.fecha|date:'Y-m-d' }}">
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold small">Método de pago</label>
+          <select name="tipo_pago" class="form-select form-select-sm">
+            <option value="efectivo" {% if payment.tipo_pago == 'efectivo' %}selected{% endif %}>Efectivo</option>
+            <option value="transferencia" {% if payment.tipo_pago == 'transferencia' %}selected{% endif %}>Transferencia</option>
+          </select>
+        </div>
+        <div class="mb-4">
+          <label class="form-label fw-semibold small">N° Referencia / Comprobante</label>
+          <input type="text" name="numero_referencia" class="form-control form-control-sm"
+            value="{{ payment.numero_referencia }}" placeholder="Opcional">
+        </div>
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-success btn-sm px-4">
+            <i class="bi bi-check-circle me-1"></i>Confirmar pago
+          </button>
+          <a href="{% url 'payments' %}" class="btn btn-outline-secondary btn-sm">Cancelar</a>
+        </div>
+      </form>
+
+    </div>
+  </div>
+</main>
+{% endblock %}

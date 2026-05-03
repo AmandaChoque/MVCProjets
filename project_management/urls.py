@@ -38,10 +38,11 @@ urlpatterns = [
     path('proyectos/seguimiento/', views.seguimiento_avance, name='seguimiento_avance'),
     path('proyectos/reporte/', views.project_report, name='project_report'),
     path('proyectos/financiero/', views.analisis_financiero, name='analisis_financiero'),
+    path('proyectos/planificacion/', views.planificacion_gantt, name='planificacion_gantt'),
+    path('proyectos/calendario/', views.calendario_equipo, name='calendario_equipo'),
     path('proyectos/<int:id_project>/', views.project_detail, name='project_detail'),
     path('proyectos/<int:id_project>/ver/', views.project_view, name='project_view'),
-    path('proyectos/<int:id_project>/completar/', views.project_complete, name='project_complete'),
-    path('proyectos/<int:id_project>/eliminar/', views.project_delete, name='project_delete'),
+path('proyectos/<int:id_project>/eliminar/', views.project_delete, name='project_delete'),
     path('proyectos/<int:id_project>/desactivar/', views.deactivate_project, name='project_deactivate'),
 
     # Sedes de Instalación
@@ -77,6 +78,7 @@ urlpatterns = [
     # Equipo del Proyecto
     path('proyectos/<int:id_project>/equipo/agregar/', views.equipo_add, name='equipo_add'),
     path('proyectos/<int:id_project>/equipo/<int:id_employee>/remover/', views.equipo_remove, name='equipo_remove'),
+    path('proyectos/<int:id_project>/equipo/<int:id_employee>/cronograma/', views.asignacion_edit, name='asignacion_edit'),
 
     # Contrato del Proyecto
     path('proyectos/<int:id_project>/contrato-proyecto/nuevo/', views.create_contrato_proyecto, name='create_contrato_proyecto'),
@@ -108,6 +110,13 @@ urlpatterns = [
     # Módulo Inventario
     path('', include('inventario.urls')),
 
+    # Garantías post-instalación
+    path('garantias/', views.garantias_list, name='garantias_list'),
+    path('garantias/<int:id_garantia>/', views.garantia_detail, name='garantia_detail'),
+    path('garantias/<int:id_garantia>/incidencias/nueva/', views.incidencia_garantia_create, name='incidencia_garantia_create'),
+    path('garantias/incidencias/<int:id_incidencia>/', views.incidencia_garantia_detail, name='incidencia_garantia_detail'),
+    path('garantias/incidencias/<int:id_incidencia>/desactivar/', views.incidencia_garantia_deactivate, name='incidencia_garantia_deactivate'),
+
     # Pagos del cliente al proyecto
     path('pagos/', views.payment_list, name='payments'),
     path('pagos/nuevo/', views.create_payment, name='create_payment'),
@@ -116,5 +125,6 @@ urlpatterns = [
     path('pagos/<int:id_payment>/', views.payment_detail, name='payment_detail'),
     path('pagos/<int:id_payment>/ver/', views.payment_view, name='payment_view'),
     path('pagos/<int:id_payment>/desactivar/', views.deactivate_payment, name='payment_deactivate'),
+    path('pagos/<int:id_payment>/confirmar/', views.confirmar_pago_proyecto, name='confirmar_pago_proyecto'),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

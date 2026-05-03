@@ -24,7 +24,7 @@
     <!-- Fila 2: per_page + contador -->
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
       <form method="GET" action="{% url 'pagos_empleados_list' %}" class="d-flex align-items-center gap-2">
-        <input type="hidden" name="search_empleado" value="{{ search_empleado }}">
+        <input type="hidden" name="empleado_id" value="{{ empleado_id }}">
         <input type="hidden" name="search_proyecto" value="{{ search_proyecto }}">
         <input type="hidden" name="page" value="1">
         <span class="small text-muted">Mostrar:</span>
@@ -43,15 +43,13 @@
 
   </div>
 
-  <!-- BANNER: jornadas sin pagar -->
+  <!-- BANNER: pagos pendientes de confirmación -->
   {% if empleados_con_deuda > 0 %}
   <div class="alert alert-warning alert-dismissible fade show" role="alert">
     <i class="bi bi-exclamation-triangle-fill me-2"></i>
     <strong>{{ empleados_con_deuda }} empleado{{ empleados_con_deuda|pluralize }}</strong>
-    tiene{{ empleados_con_deuda|pluralize:"n" }} jornadas aprobadas pendientes de pago.
-    <a href="{% url 'employee_workload' %}?tab=pagar" class="alert-link ms-2">
-      <i class="bi bi-cash-coin me-1"></i>Ver jornadas
-    </a>
+    tiene{{ empleados_con_deuda|pluralize:"n" }} pagos pendientes de confirmar
+    {% if total_pendiente_monto %}&mdash; Bs. {{ total_pendiente_monto|floatformat:2 }}{% endif %}.
     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
   </div>
   {% endif %}
@@ -62,8 +60,14 @@
       <form method="GET" action="{% url 'pagos_empleados_list' %}" class="row g-2">
         <input type="hidden" name="per_page" value="{{ per_page }}">
         <div class="col-md-4">
-          <input type="text" class="form-control form-control-sm" name="search_empleado"
-            value="{{ search_empleado|default:'' }}" placeholder="Buscar por empleado" />
+          <select name="empleado_id" class="form-select form-select-sm">
+            <option value="">Todos los empleados</option>
+            {% for emp in empleados_con_pagos %}
+            <option value="{{ emp.id }}" {% if empleado_id|stringformat:"s" == emp.id|stringformat:"s" %}selected{% endif %}>
+              {{ emp.nombre }} {{ emp.apellido_paterno }} — {{ emp.get_cargo_display }}
+            </option>
+            {% endfor %}
+          </select>
         </div>
         <div class="col-md-4">
           <input type="text" class="form-control form-control-sm" name="search_proyecto"
@@ -100,8 +104,8 @@
     <div class="col-6 col-md-3">
       <div class="card kpi-card yellow border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-warning">{{ empleados_con_deuda }}</div>
-          <div class="kpi-label">Con Jornadas Pendientes</div>
+          <div class="kpi-value text-warning" style="font-size:1.3rem;">{{ total_pendiente_monto|floatformat:2 }}</div>
+          <div class="kpi-label">Por Confirmar Bs.</div>
         </div>
       </div>
     </div>
@@ -125,22 +129,46 @@
     <table class="table table-sm table-hover align-middle small">
       <thead class="table-light small text-uppercase fw-semibold">
         <tr>
-          <th>Empleado</th>
+          <th class="px-3">Empleado</th>
           <th>Concepto</th>
+          <th>Estado</th>
           <th>Método</th>
           <th>Fecha</th>
           <th class="text-end">Monto (Bs.)</th>
-          <th class="text-end" style="width:60px;">Acciones</th>
+          <th class="text-end">Contrato (Bs.)</th>
+          <th class="text-end">Días trab.</th>
+          <th class="text-end">Saldo (Bs.)</th>
+          <th class="text-end" style="width:80px;">Acciones</th>
         </tr>
       </thead>
       <tbody>
-        {% for pago in pagos %}
+        {% for item in pagos_data %}
+        {% with pago=item.obj %}
         <tr>
-          <td class="fw-semibold">
+          <td class="px-3 fw-semibold">
             {{ pago.contrato.empleado.nombre }} {{ pago.contrato.empleado.apellido_paterno }}
             <div class="text-muted" style="font-size:0.75rem;">{{ pago.contrato.empleado.get_cargo_display }}</div>
           </td>
-          <td class="small">{{ pago.get_concepto_display }}</td>
+          <td class="small">
+            {% if pago.concepto == 'pago_jornada' %}
+              <span class="badge bg-primary fw-normal">{{ pago.get_concepto_display }}</span>
+            {% elif pago.concepto == 'adelanto' %}
+              <span class="badge bg-warning text-dark fw-normal">{{ pago.get_concepto_display }}</span>
+            {% elif pago.concepto == 'liquidacion' %}
+              <span class="badge bg-success fw-normal">{{ pago.get_concepto_display }}</span>
+            {% elif pago.concepto == 'dia_extra' %}
+              <span class="badge bg-info text-dark fw-normal">{{ pago.get_concepto_display }}</span>
+            {% else %}
+              <span class="badge bg-secondary fw-normal">{{ pago.get_concepto_display }}</span>
+            {% endif %}
+          </td>
+          <td class="small">
+            {% if pago.estado == 'pendiente' %}
+              <span class="badge bg-warning text-dark fw-normal"><i class="bi bi-clock me-1"></i>Pendiente</span>
+            {% else %}
+              <span class="badge bg-success fw-normal"><i class="bi bi-check-circle me-1"></i>Pagado</span>
+            {% endif %}
+          </td>
           <td class="small">
             {% if pago.tipo_pago == 'transferencia' %}
             <span class="badge bg-primary">Transferencia</span>
@@ -150,8 +178,18 @@
           </td>
           <td class="small">{{ pago.fecha|date:"d/m/Y" }}</td>
           <td class="text-end fw-semibold">{{ pago.monto|floatformat:2 }}</td>
+          <td class="text-end text-muted small">{{ pago.contrato.monto_acordado|floatformat:2 }}</td>
+          <td class="text-end small">{{ item.dias|floatformat:1 }}</td>
+          <td class="text-end small fw-semibold {% if item.saldo > 0 %}text-danger{% else %}text-success{% endif %}">
+            {{ item.saldo|floatformat:2 }}
+          </td>
           <td class="text-end">
             {% if es_admin %}
+            {% if pago.estado == 'pendiente' %}
+            <a href="{% url 'confirmar_pago_empleado' pago.id %}" class="btn btn-sm btn-success" title="Confirmar pago">
+              <i class="bi bi-check-circle"></i>
+            </a>
+            {% else %}
             <div class="dropdown">
               <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
               <ul class="dropdown-menu dropdown-menu-end shadow-sm">
@@ -159,20 +197,22 @@
               </ul>
             </div>
             {% endif %}
+            {% endif %}
           </td>
         </tr>
+        {% endwith %}
         {% empty %}
         <tr>
-          <td colspan="6" class="text-center text-muted py-3 small">No hay pagos registrados.</td>
+          <td colspan="9" class="text-center text-muted py-3 small">No hay pagos registrados.</td>
         </tr>
         {% endfor %}
       </tbody>
       {% if pagos %}
       <tfoot class="table-light small text-uppercase fw-semibold">
         <tr>
-          <td colspan="4" class="text-end fw-semibold">Total (Bs.):</td>
+          <td colspan="4" class="px-3 text-end fw-semibold">Total (Bs.):</td>
           <td class="text-end fw-bold">{{ total_monto|floatformat:2 }}</td>
-          <td></td>
+          <td colspan="4"></td>
         </tr>
       </tfoot>
       {% endif %}
@@ -186,7 +226,7 @@
     <ul class="pagination pagination-sm justify-content-center mb-0">
       {% if pagos.has_previous %}
       <li class="page-item">
-        <a class="page-link" href="?page={{ pagos.previous_page_number }}&per_page={{ per_page }}&search_empleado={{ search_empleado }}&search_proyecto={{ search_proyecto }}">Anterior</a>
+        <a class="page-link" href="?page={{ pagos.previous_page_number }}&per_page={{ per_page }}&empleado_id={{ empleado_id }}&search_proyecto={{ search_proyecto }}">Anterior</a>
       </li>
       {% else %}
       <li class="page-item disabled"><span class="page-link">Anterior</span></li>
@@ -197,14 +237,14 @@
           <li class="page-item active"><span class="page-link">{{ num }}</span></li>
         {% elif num > pagos.number|add:'-3' and num < pagos.number|add:'3' %}
           <li class="page-item">
-            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&search_empleado={{ search_empleado }}&search_proyecto={{ search_proyecto }}">{{ num }}</a>
+            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&empleado_id={{ empleado_id }}&search_proyecto={{ search_proyecto }}">{{ num }}</a>
           </li>
         {% endif %}
       {% endfor %}
 
       {% if pagos.has_next %}
       <li class="page-item">
-        <a class="page-link" href="?page={{ pagos.next_page_number }}&per_page={{ per_page }}&search_empleado={{ search_empleado }}&search_proyecto={{ search_proyecto }}">Siguiente</a>
+        <a class="page-link" href="?page={{ pagos.next_page_number }}&per_page={{ per_page }}&empleado_id={{ empleado_id }}&search_proyecto={{ search_proyecto }}">Siguiente</a>
       </li>
       {% else %}
       <li class="page-item disabled"><span class="page-link">Siguiente</span></li>

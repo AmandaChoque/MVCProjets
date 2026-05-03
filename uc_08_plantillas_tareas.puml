@@ -1,0 +1,60 @@
+@startuml uc_08_plantillas_tareas
+title Casos de Uso — Plantillas de Tareas\nSistema SOBOTEC S.R.L.
+
+left to right direction
+
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam backgroundColor #FFFFFF
+skinparam usecaseBackgroundColor #F5F5F5
+skinparam usecaseBorderColor #777777
+skinparam usecaseFontSize 12
+skinparam actorFontSize 12
+skinparam packageBorderColor #777777
+skinparam packageBackgroundColor #FFFFFF
+skinparam packageFontStyle bold
+skinparam arrowColor #444444
+skinparam noteBackgroundColor #FFFFCC
+skinparam noteBorderColor #CCAA00
+
+' ── ACTORES ──────────────────────────────────────
+actor "Administrador\n/ Gerente" as ADM #F5F5F5
+
+' ── BOUNDARY ─────────────────────────────────────
+rectangle "Sistema SOBOTEC — Plantillas de Tareas" {
+
+    usecase "Crear plantilla"          as UC1
+    usecase "Editar plantilla"         as UC2
+    usecase "Desactivar plantilla"     as UC3
+    usecase "Agregar ítem"             as UC4
+    usecase "Editar ítem"              as UC5
+    usecase "Eliminar ítem"            as UC6
+    usecase "Reordenar ítems"          as UC7
+    usecase "Agregar subítem al ítem"  as UC8
+    usecase "Eliminar subítem"         as UC9
+}
+
+' ── ASOCIACIONES: Administrador / Gerente ────────
+ADM --> UC1
+ADM --> UC2
+ADM --> UC3
+ADM --> UC4
+ADM --> UC5
+ADM --> UC6
+ADM --> UC7
+ADM --> UC8
+ADM --> UC9
+
+note right of UC1
+  Tipos de plantilla:
+  camara_ip / camara_analogica /
+  dvr_nvr / alarma / sensor / otro.
+end note
+
+note right of UC4
+  Los ítems se copian como
+  TareaChecklist al aplicar
+  la plantilla a una sede.
+end note
+
+@enduml

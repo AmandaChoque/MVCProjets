@@ -1,0 +1,52 @@
+@startuml uc_05_contratos_proyecto
+title Casos de Uso — Contratos de Proyecto\nSistema SOBOTEC S.R.L.
+
+left to right direction
+
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam backgroundColor #FFFFFF
+skinparam usecaseBackgroundColor #F5F5F5
+skinparam usecaseBorderColor #777777
+skinparam usecaseFontSize 12
+skinparam actorFontSize 12
+skinparam packageBorderColor #777777
+skinparam packageBackgroundColor #FFFFFF
+skinparam packageFontStyle bold
+skinparam arrowColor #444444
+skinparam noteBackgroundColor #FFFFCC
+skinparam noteBorderColor #CCAA00
+
+' ── ACTORES ──────────────────────────────────────
+actor "Administrador\n/ Gerente" as ADM #F5F5F5
+actor "Secretaria"               as SEC #F5F5F5
+
+' ── BOUNDARY ─────────────────────────────────────
+rectangle "Sistema SOBOTEC — Contratos de Proyecto" {
+
+    usecase "Crear contrato de proyecto" as UC1
+    usecase "Ver detalle del contrato"   as UC2
+    usecase "Desactivar contrato"        as UC3
+}
+
+' ── ASOCIACIONES: Administrador / Gerente ────────
+ADM --> UC1
+ADM --> UC2
+ADM --> UC3
+
+' ── ASOCIACIONES: Secretaria ─────────────────────
+SEC --> UC1
+SEC --> UC2
+
+note right of UC1
+  El contrato fija monto_acordado,
+  fecha_fin, penalidad diaria y
+  meses de garantía.
+end note
+
+note right of UC3
+  Solo Administrador / Gerente
+  puede desactivar un contrato.
+end note
+
+@enduml

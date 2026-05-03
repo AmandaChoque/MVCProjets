@@ -222,23 +222,24 @@
         <h2 class="fw-bold mb-1" style="color:#111827;">Iniciar Sesión</h2>
         <p class="text-muted small mb-4">Ingresa tus credenciales para acceder al sistema</p>
 
-        <!-- Alerta de error -->
+        <!-- Alerta de credenciales incorrectas -->
         {% if error %}
-        <div class="alert alert-danger d-flex align-items-center gap-2 py-2 small mb-3" role="alert">
-          <i class="bi bi-exclamation-circle-fill flex-shrink-0"></i>
-          <span>{{ error }}</span>
+        <div class="alert d-flex align-items-center gap-2 py-2 small mb-3" role="alert"
+             style="background:#fff3cd;border:1px solid #ffc107;color:#856404;">
+          <i class="bi bi-shield-exclamation-fill flex-shrink-0" style="color:#e67e22;font-size:1.1rem;"></i>
+          <span><strong>{{ error }}</strong></span>
         </div>
         {% endif %}
 
         <!-- Formulario -->
-        <form action="{% url 'signin' %}" method="POST">
+        <form action="{% url 'signin' %}" method="POST" novalidate>
           {% csrf_token %}
           {% if request.GET.next %}<input type="hidden" name="next" value="{{ request.GET.next }}">{% endif %}
 
           <!-- Usuario -->
           <div class="mb-3">
-            <label for="username" class="form-label">Usuario</label>
-            <div class="input-group {% if error %}has-error{% endif %}">
+            <label for="username" class="form-label">Usuario <span class="text-danger">*</span></label>
+            <div class="input-group" id="group-username">
               <span class="input-group-text">
                 <i class="bi bi-person-fill"></i>
               </span>
@@ -246,25 +247,28 @@
                      class="form-control"
                      placeholder="Nombre de usuario"
                      autocomplete="username"
-                     autofocus required>
+                     value="{{ username_value }}"
+                     autofocus>
             </div>
+            <div class="text-danger small mt-1" id="error-username" style="display:none;">Este campo es obligatorio.</div>
           </div>
 
           <!-- Contraseña -->
           <div class="mb-4">
-            <label for="password" class="form-label">Contraseña</label>
-            <div class="input-group {% if error %}has-error{% endif %}">
+            <label for="password" class="form-label">Contraseña <span class="text-danger">*</span></label>
+            <div class="input-group" id="group-password">
               <span class="input-group-text">
                 <i class="bi bi-lock-fill"></i>
               </span>
               <input type="password" name="password" id="password"
                      class="form-control border-end-0"
                      placeholder="Contraseña"
-                     autocomplete="current-password" required>
+                     autocomplete="current-password">
               <button class="btn btn-outline-secondary border-start-0" type="button" id="togglePw" tabindex="-1">
                 <i class="bi bi-eye" id="toggleIcon"></i>
               </button>
             </div>
+            <div class="text-danger small mt-1" id="error-password" style="display:none;">Este campo es obligatorio.</div>
           </div>
 
           <!-- Botón -->
@@ -305,6 +309,33 @@
     const show = pwInput.type === 'password';
     pwInput.type = show ? 'text' : 'password';
     toggleIcon.className = show ? 'bi bi-eye-slash' : 'bi bi-eye';
+  });
+
+  document.querySelector('form').addEventListener('submit', function (e) {
+    var ok = true;
+    ['username', 'password'].forEach(function (id) {
+      var input  = document.getElementById(id);
+      var group  = document.getElementById('group-' + id);
+      var errDiv = document.getElementById('error-' + id);
+      if (!input.value.trim()) {
+        group.classList.add('has-error');
+        errDiv.style.display = 'block';
+        ok = false;
+      } else {
+        group.classList.remove('has-error');
+        errDiv.style.display = 'none';
+      }
+    });
+    if (!ok) e.preventDefault();
+  });
+
+  ['username', 'password'].forEach(function (id) {
+    document.getElementById(id).addEventListener('input', function () {
+      if (this.value.trim()) {
+        document.getElementById('group-' + id).classList.remove('has-error');
+        document.getElementById('error-' + id).style.display = 'none';
+      }
+    });
   });
 </script>
 </body>

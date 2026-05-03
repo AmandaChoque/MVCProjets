@@ -1,91 +1,106 @@
 {% extends 'base.html' %}
-
-{% block extra_css %}
-<style>
-  .progress { border-radius: 6px; }
-  .progress-bar { font-size: 0.72rem; font-weight: 600; transition: width 0.6s ease; }
-  .progress-lg { height: 18px; }
-  .progress-md { height: 12px; }
-  .avatar-initials {
-    width: 36px; height: 36px; border-radius: 50%;
-    background: #1B4D90; color: #fff;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 0.75rem; font-weight: 700; flex-shrink: 0;
-  }
-  .estado-badge-pendiente   { background: #ffc107; color: #212529; }
-  .estado-badge-en_progreso { background: #0d6efd; color: #fff; }
-  .estado-badge-completado  { background: #198754; color: #fff; }
-  .row-hover:hover { background: #f8f9fa; }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="container-fluid px-3 py-3">
+<div class="container-fluid px-4 py-4">
 
-  <!-- Cabecera -->
-  <div class="d-flex align-items-center justify-content-between mb-3 flex-wrap gap-2">
+  <!-- ENCABEZADO -->
+  <div class="d-flex justify-content-between align-items-center mb-2">
     <div>
-      <h5 class="fw-bold text-sobotec mb-0">
-        <i class="bi bi-graph-up-arrow me-2"></i>Seguimiento de Avance
-      </h5>
-      <small class="text-muted">Progreso de proyectos e instaladores en tiempo real</small>
+      <h4 class="fw-bold text-sobotec mb-0">Seguimiento de Avance</h4>
+      <span class="text-muted small">Progreso de proyectos e instaladores en tiempo real</span>
     </div>
     <a href="{% url 'projects' %}" class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-arrow-left me-1"></i>Proyectos
     </a>
   </div>
 
-  <!-- KPIs globales -->
-  <div class="row g-3 mb-4">
-    <div class="col-6 col-md-3">
-      <div class="card kpi-card blue border-0 shadow-sm h-100">
-        <div class="card-body py-3 px-3">
-          <div class="kpi-value text-sobotec">{{ total_proyectos }}</div>
-          <div class="kpi-label">Total proyectos</div>
+ 
+
+  <!-- FILTROS -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+      <form method="GET" action="{% url 'seguimiento_avance' %}" class="row g-2 align-items-end">
+
+        <div class="col-md-3">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Nombre del proyecto</label>
+          <input type="text" class="form-control form-control-sm" name="q"
+                 value="{{ search_nombre }}" placeholder="Buscar por nombre...">
         </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="card kpi-card yellow border-0 shadow-sm h-100">
-        <div class="card-body py-3 px-3">
-          <div class="kpi-value text-warning">{{ proyectos_en_progreso }}</div>
-          <div class="kpi-label">En progreso</div>
+
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Estado</label>
+          <select class="form-select form-select-sm" name="estado">
+            <option value="">Todos</option>
+            <option value="pendiente"   {% if filter_estado == "pendiente"   %}selected{% endif %}>Pendiente</option>
+            <option value="en_progreso" {% if filter_estado == "en_progreso" %}selected{% endif %}>En Progreso</option>
+            <option value="completado"  {% if filter_estado == "completado"  %}selected{% endif %}>Completado</option>
+          </select>
         </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="card kpi-card green border-0 shadow-sm h-100">
-        <div class="card-body py-3 px-3">
-          <div class="kpi-value text-success">{{ proyectos_completados }}</div>
-          <div class="kpi-label">Completados</div>
+
+        <div class="col-md-3">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Instalador / Técnico</label>
+          <select class="form-select form-select-sm" name="empleado">
+            <option value="">Todos</option>
+            {% for emp in empleados_campo %}
+            <option value="{{ emp.id }}" {% if filter_empleado == emp.id %}selected{% endif %}>
+              {{ emp.nombre }} {{ emp.apellido_paterno }} — {{ emp.get_cargo_display }}
+            </option>
+            {% endfor %}
+          </select>
         </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="card kpi-card teal border-0 shadow-sm h-100">
-        <div class="card-body py-3 px-3">
-          <div class="kpi-value text-info">{{ promedio_avance }}%</div>
-          <div class="kpi-label">Avance promedio</div>
+
+        <div class="col-6 col-md-2">
+          <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
         </div>
-      </div>
+        <div class="col-6 col-md-1">
+          <a href="{% url 'seguimiento_avance' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
+        </div>
+
+      </form>
     </div>
   </div>
-
+   <!-- KPIs -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body py-3 px-3">
+          <div class="fw-bold fs-4 text-sobotec">{{ total_proyectos }}</div>
+          <div class="text-muted small">Total proyectos</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body py-3 px-3">
+          <div class="fw-bold fs-4 text-warning">{{ proyectos_en_progreso }}</div>
+          <div class="text-muted small">En progreso</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body py-3 px-3">
+          <div class="fw-bold fs-4 text-success">{{ proyectos_completados }}</div>
+          <div class="text-muted small">Completados</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body py-3 px-3">
+          <div class="fw-bold fs-4 text-primary">{{ promedio_avance }}%</div>
+          <div class="text-muted small">Avance promedio</div>
+        </div>
+      </div>
+    </div>
+  </div>  
+  <!-- CONTENIDO -->
   <div class="row g-3">
 
-    <!-- ── Avance por Proyecto ──────────────────────────────────────────── -->
+    <!-- Avance por Proyecto -->
     <div class="col-12 col-xl-7">
       <div class="card border-0 shadow-sm mb-3">
-        <div class="card-header bg-light d-flex align-items-center justify-content-between py-2 px-3"
-             style="border-left:4px solid #1B4D90;">
-          <span class="fw-semibold text-sobotec">
-            <i class="bi bi-folder2-open me-2"></i>Avance por Proyecto
-          </span>
-          <span class="badge bg-secondary">{{ total_proyectos }}</span>
-        </div>
         <div class="card-body p-0">
-          {% if proyectos_avance %}
-          <div class="table-responsive" style="overflow:visible;">
+          <div class="table-responsive">
             <table class="table table-sm table-hover align-middle small">
               <thead class="table-light small text-uppercase fw-semibold">
                 <tr>
@@ -97,11 +112,10 @@
               </thead>
               <tbody>
                 {% for item in proyectos_avance %}
-                <tr class="row-hover">
+                <tr>
                   <td class="px-3 py-2">
                     <a href="{% url 'project_detail' item.proyecto.id %}"
-                       class="fw-semibold text-decoration-none text-sobotec"
-                       style="font-size:0.85rem;">
+                       class="fw-semibold text-decoration-none text-sobotec" style="font-size:0.85rem;">
                       {{ item.proyecto.nombre }}
                     </a>
                     <div class="text-muted" style="font-size:0.72rem;">
@@ -113,21 +127,16 @@
                   </td>
                   <td class="px-3 py-2">
                     <div class="d-flex align-items-center gap-2">
-                      <div class="progress flex-grow-1 progress-lg">
-                        <div class="progress-bar
+                      <div class="progress flex-grow-1" style="height:14px; border-radius:4px;">
+                        <div class="progress-bar fw-semibold
                           {% if item.progreso == 100 %}bg-success
                           {% elif item.progreso >= 50 %}bg-primary
                           {% else %}bg-warning text-dark{% endif %}"
-                          role="progressbar"
-                          style="width:{{ item.progreso }}%"
-                          aria-valuenow="{{ item.progreso }}"
-                          aria-valuemin="0" aria-valuemax="100">
+                          style="width:{{ item.progreso }}%; font-size:0.72rem;">
                           {% if item.progreso > 10 %}{{ item.progreso }}%{% endif %}
                         </div>
                       </div>
-                      <span class="text-muted fw-semibold" style="font-size:0.75rem; min-width:32px;">
-                        {{ item.progreso }}%
-                      </span>
+                      <span class="text-muted fw-semibold" style="font-size:0.75rem; min-width:32px;">{{ item.progreso }}%</span>
                     </div>
                   </td>
                   <td class="px-2 py-2 text-center" style="font-size:0.82rem;">
@@ -139,114 +148,144 @@
                     {% endif %}
                   </td>
                   <td class="px-2 py-2 text-center">
-                    <span class="badge estado-badge-{{ item.proyecto.estado_proyecto }}" style="font-size:0.70rem;">
-                      {% if item.proyecto.estado_proyecto == 'pendiente' %}Pendiente
-                      {% elif item.proyecto.estado_proyecto == 'en_progreso' %}En progreso
-                      {% else %}Completado{% endif %}
-                    </span>
+                    {% if item.proyecto.estado_proyecto == 'completado' %}
+                      <span class="badge bg-success small">Completado</span>
+                    {% elif item.proyecto.estado_proyecto == 'en_progreso' %}
+                      <span class="badge bg-primary small">En Progreso</span>
+                    {% else %}
+                      <span class="badge bg-warning text-dark small">Pendiente</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr>
+                  <td colspan="4" class="text-center text-muted py-3 small">
+                    No se encontraron proyectos con los filtros seleccionados.
                   </td>
                 </tr>
                 {% endfor %}
               </tbody>
             </table>
           </div>
-          {% else %}
-          <div class="text-center text-muted py-4">
-            <i class="bi bi-folder2 fs-3 d-block mb-2"></i>No hay proyectos activos.
-          </div>
-          {% endif %}
         </div>
       </div>
     </div>
 
-    <!-- ── Avance por Instalador / Técnico ─────────────────────────────── -->
+    <!-- Productividad del Equipo -->
     <div class="col-12 col-xl-5">
       <div class="card border-0 shadow-sm mb-3">
-        <div class="card-header bg-light d-flex align-items-center justify-content-between py-2 px-3"
-             style="border-left:4px solid #20c997;">
-          <span class="fw-semibold" style="color:#20c997;">
-            <i class="bi bi-person-gear me-2"></i>Avance de Instaladores y Técnicos
-          </span>
-          <span class="badge bg-secondary">{{ empleados_avance|length }}</span>
-        </div>
-        <div class="card-body p-0">
-          {% if empleados_avance %}
-          <ul class="list-group list-group-flush">
-            {% for item in empleados_avance %}
-            <li class="list-group-item px-3 py-3 row-hover">
-              <div class="d-flex align-items-start gap-3">
-                <div class="avatar-initials mt-1">
-                  {{ item.empleado.nombre|first|upper }}{{ item.empleado.apellido_paterno|first|upper }}
-                </div>
-                <div class="flex-grow-1 min-w-0">
-                  <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-                    <div>
-                      <a href="{% url 'employee_detail' item.empleado.id %}"
-                         class="fw-semibold text-decoration-none text-dark" style="font-size:0.85rem;">
-                        {{ item.empleado.nombre }} {{ item.empleado.apellido_paterno }}
-                      </a>
-                      <span class="badge ms-1
-                        {% if item.empleado.cargo == 'instalador' %}bg-primary{% else %}bg-info text-dark{% endif %}"
-                        style="font-size:0.65rem;">
-                        {{ item.empleado.get_cargo_display }}
-                      </span>
-                    </div>
-                    <span class="fw-bold {% if item.porcentaje == 100 %}text-success{% elif item.porcentaje >= 50 %}text-primary{% else %}text-warning{% endif %}"
-                          style="font-size:0.85rem;">
-                      {{ item.porcentaje }}%
-                    </span>
-                  </div>
-
-                  <!-- Barra promedio de sus proyectos -->
-                  <div class="progress progress-md mt-2">
-                    <div class="progress-bar
-                      {% if item.porcentaje == 100 %}bg-success
-                      {% elif item.porcentaje >= 50 %}bg-primary
-                      {% else %}bg-warning text-dark{% endif %}"
-                      role="progressbar"
-                      style="width:{{ item.porcentaje }}%"
-                      aria-valuenow="{{ item.porcentaje }}"
-                      aria-valuemin="0" aria-valuemax="100">
-                    </div>
-                  </div>
-                  <small class="text-muted">Avance promedio de sus proyectos asignados</small>
-
-                  <!-- Detalle por proyecto -->
-                  <div class="mt-2 d-flex flex-column gap-1">
-                    {% for dp in item.detalle_proyectos %}
-                    <div class="d-flex align-items-center gap-2">
-                      <span class="text-muted text-truncate" style="font-size:0.72rem; min-width:0; flex:1;">
-                        <i class="bi bi-folder2 me-1"></i>{{ dp.proyecto.nombre|truncatechars:28 }}
-                      </span>
-                      <div class="progress flex-shrink-0" style="width:70px; height:8px;">
-                        <div class="progress-bar
-                          {% if dp.progreso == 100 %}bg-success
-                          {% elif dp.progreso >= 50 %}bg-primary
-                          {% else %}bg-warning{% endif %}"
-                          style="width:{{ dp.progreso }}%">
-                        </div>
-                      </div>
-                      <span class="text-muted fw-semibold" style="font-size:0.72rem; min-width:30px; text-align:right;">
-                        {{ dp.progreso }}%
-                      </span>
-                    </div>
-                    {% endfor %}
-                  </div>
-                </div>
-              </div>
-            </li>
-            {% endfor %}
-          </ul>
-          {% else %}
-          <div class="text-center text-muted py-4">
-            <i class="bi bi-people fs-3 d-block mb-2"></i>
-            No hay instaladores ni técnicos con contrato activo.
+        <div class="card-header bg-light py-2 px-3">
+          <div class="d-flex justify-content-between align-items-center">
+            <span class="fw-semibold small">
+              <i class="bi bi-bar-chart-line me-1"></i>Productividad del Equipo
+            </span>
+            <span class="text-muted" style="font-size:0.7rem;">
+              Semana: {{ week_start|date:"d/m" }} – {{ today|date:"d/m/Y" }}
+            </span>
           </div>
-          {% endif %}
         </div>
+
+        {% if empleados_avance %}
+        <div class="table-responsive">
+          <table class="table table-sm table-hover align-middle small mb-0">
+            <thead class="table-light" style="font-size:0.7rem;">
+              <tr>
+                <th class="px-3 py-2">#</th>
+                <th class="py-2">Empleado</th>
+                <th class="text-center py-2" title="Tareas completadas esta semana ({{ week_start|date:'d/m' }} – hoy)">
+                  Esta sem.
+                </th>
+                <th class="text-center py-2" title="Tareas completadas semana pasada ({{ last_week_start|date:'d/m' }} – {{ week_start|date:'d/m' }})">
+                  Sem. ant.
+                </th>
+                <th class="text-center py-2" title="Tareas completadas este mes (desde {{ month_start|date:'d/m' }})">
+                  Mes
+                </th>
+                <th class="text-center py-2" title="Proyectos en progreso">
+                  Proy.
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for item in empleados_avance %}
+              <tr>
+                <!-- Ranking -->
+                <td class="px-3 text-muted fw-semibold" style="font-size:0.75rem;">
+                  {% if forloop.counter == 1 and not filter_empleado %}⭐
+                  {% else %}{{ forloop.counter }}{% endif %}
+                </td>
+
+                <!-- Nombre -->
+                <td class="py-2">
+                  <a href="{% url 'employee_detail' item.empleado.id %}"
+                     class="fw-semibold text-decoration-none text-dark d-block" style="font-size:0.82rem;">
+                    {{ item.empleado.nombre }} {{ item.empleado.apellido_paterno }}
+                  </a>
+                  <span class="{% if item.empleado.cargo == 'instalador' %}text-primary{% else %}text-secondary{% endif %}"
+                        style="font-size:0.68rem;">
+                    {{ item.empleado.get_cargo_display }}
+                  </span>
+                </td>
+
+                <!-- Esta semana + tendencia -->
+                <td class="text-center py-2">
+                  <span class="fw-bold {% if item.t_semana > 0 %}text-success{% else %}text-muted{% endif %}"
+                        style="font-size:0.9rem;">
+                    {{ item.t_semana }}
+                  </span>
+                  {% if item.tendencia == 1 %}
+                    <i class="bi bi-arrow-up-short text-success" style="font-size:0.85rem;" title="Subió vs semana pasada"></i>
+                  {% elif item.tendencia == -1 %}
+                    <i class="bi bi-arrow-down-short text-danger" style="font-size:0.85rem;" title="Bajó vs semana pasada"></i>
+                  {% else %}
+                    <i class="bi bi-dash text-muted" style="font-size:0.75rem;"></i>
+                  {% endif %}
+                </td>
+
+                <!-- Semana anterior -->
+                <td class="text-center py-2 text-muted" style="font-size:0.82rem;">
+                  {{ item.t_sem_ant }}
+                </td>
+
+                <!-- Este mes -->
+                <td class="text-center py-2 fw-semibold" style="font-size:0.82rem;">
+                  {{ item.t_mes }}
+                </td>
+
+                <!-- Proyectos activos + barra avance -->
+                <td class="text-center py-2">
+                  <span class="badge {% if item.proy_activos > 0 %}bg-primary{% else %}bg-light text-muted border{% endif %}"
+                        style="font-size:0.68rem;">
+                    {{ item.proy_activos }}
+                  </span>
+                  {% if item.detalle_proyectos %}
+                  <div class="progress mt-1 mx-auto" style="height:4px;width:40px;border-radius:4px;">
+                    <div class="progress-bar {% if item.porcentaje >= 75 %}bg-success{% elif item.porcentaje >= 40 %}bg-primary{% else %}bg-warning{% endif %}"
+                         style="width:{{ item.porcentaje }}%"></div>
+                  </div>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Leyenda -->
+        <div class="px-3 py-2 border-top" style="font-size:0.68rem; color:#888;">
+          <i class="bi bi-info-circle me-1"></i>
+          Tareas marcadas como completadas por cada empleado · barra = avance promedio en proyectos
+        </div>
+
+        {% else %}
+        <div class="text-center text-muted py-4 small">
+          <i class="bi bi-people fs-3 d-block mb-2"></i>
+          Sin instaladores ni técnicos{% if filter_empleado %} con ese filtro{% endif %}.
+        </div>
+        {% endif %}
       </div>
     </div>
 
-  </div><!-- /row -->
+  </div>
 </div>
 {% endblock %}

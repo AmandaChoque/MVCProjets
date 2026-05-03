@@ -137,7 +137,7 @@
       <td style="padding:0; width:6px; background-color:#D4B84A;"></td>
       <td style="padding:6px 12px; vertical-align:middle;">
         <div style="font-size:8px; color:#D4B84A; text-transform:uppercase; letter-spacing:0.1em; font-weight:bold; margin-bottom:1px;">SOBOTEC S.R.L. — Ficha de Empleado</div>
-        <div style="font-size:16px; font-weight:bold; color:#ffffff;">{{ employee.nombre }} {{ employee.apellido_paterno }} {{ employee.apellido_materno }}</div>
+        <div style="font-size:16px; font-weight:bold; color:#ffffff;">{{ employee.nombre }} {{ employee.apellido_paterno }}{% if employee.apellido_materno %} {{ employee.apellido_materno }}{% endif %}</div>
         <div style="font-size:9px; color:#a0b8d8;">{{ employee.get_cargo_display }} &nbsp;|&nbsp; CI: {{ employee.carnet_identidad }}</div>
       </td>
       <td style="padding:6px 14px; vertical-align:middle; text-align:right; white-space:nowrap; width:140px;">
@@ -177,15 +177,11 @@
           </tr>
           <tr>
             <td class="lbl">Correo</td>
-            <td>{{ employee.user.email|default:"—" }}</td>
+            <td>{{ employee.email|default:"—" }}</td>
           </tr>
           <tr>
-            <td class="lbl">Fecha contratación</td>
-            <td>{{ employee.fecha_contratacion|date:"d/m/Y"|default:"—" }}</td>
-          </tr>
-          <tr>
-            <td class="lbl">Salario base</td>
-            <td>Bs. {{ employee.salario|floatformat:2|default:"—" }}</td>
+            <td class="lbl">Usuario del sistema</td>
+            <td>{{ employee.username }}</td>
           </tr>
         </table>
       </td>
@@ -197,8 +193,8 @@
             <td class="fin-val">{{ contratos_con_pagos|length }}</td>
           </tr>
           <tr>
-            <td class="fin-lbl">Total acordado</td>
-            <td class="fin-val">Bs. {{ total_acordado_global|floatformat:2 }}</td>
+            <td class="fin-lbl">Total devengado</td>
+            <td class="fin-val">Bs. {{ total_ganado_global|floatformat:2 }}</td>
           </tr>
           <tr>
             <td class="fin-lbl">Total pagado</td>
@@ -215,27 +211,39 @@
 
   <!-- ══ CONTRATOS Y PAGOS ══ -->
   <div class="section">
-    <div class="section-title">Contratos y Pagos por Proyecto</div>
+    <div class="section-title">Contratos y Pagos</div>
 
     {% if contratos_con_pagos %}
       {% for item in contratos_con_pagos %}
       <div class="contrato-block">
         <div class="contrato-header">
-          Proyecto: {{ item.contrato.proyecto.nombre }} &nbsp;|&nbsp; {{ item.contrato.proyecto.codigo }}
-          &nbsp;|&nbsp; Estado: {{ item.contrato.proyecto.get_estado_proyecto_display }}
+          Contrato N° {{ forloop.counter }} &nbsp;|&nbsp;
+          Período: {{ item.contrato.fecha_inicio|date:"d/m/Y"|default:"—" }} — {{ item.contrato.fecha_fin|date:"d/m/Y"|default:"—" }}
+          &nbsp;|&nbsp; Monto acordado: Bs. {{ item.contrato.monto_acordado|floatformat:2 }}
         </div>
         <table class="data" style="margin-bottom:4px;">
           <tr>
-            <td class="lbl" style="width:22%;">Período contrato</td>
-            <td style="width:28%;">{{ item.contrato.fecha_inicio|date:"d/m/Y"|default:"—" }} — {{ item.contrato.fecha_fin|date:"d/m/Y"|default:"—" }}</td>
-            <td class="lbl" style="width:22%;">Monto acordado</td>
-            <td style="width:28%; text-align:right;">Bs. {{ item.contrato.monto_acordado|floatformat:2 }}</td>
+            <td class="lbl" style="width:22%;">Días laborales</td>
+            <td style="width:28%;">{{ item.contrato.dias_laborales }} días</td>
+            <td class="lbl" style="width:22%;">Monto diario</td>
+            <td style="width:28%; text-align:right;">Bs. {{ item.contrato.monto_diario|floatformat:2 }}</td>
+          </tr>
+          <tr>
+            <td class="lbl" style="width:22%;">Días aprobados</td>
+            <td style="width:28%;">
+              {{ item.total_dias }}
+              {% if item.jornadas_pendientes > 0 %}
+                <span class="badge badge-warn" style="margin-left:4px;">{{ item.jornadas_pendientes }} pend.</span>
+              {% endif %}
+            </td>
+            <td class="lbl" style="width:22%;">Total devengado</td>
+            <td style="width:28%; text-align:right;">Bs. {{ item.total_ganado|floatformat:2 }}</td>
           </tr>
           <tr>
             <td class="lbl" style="width:22%;">Total pagado</td>
             <td style="width:28%; text-align:right;">Bs. {{ item.total_pagado|floatformat:2 }}</td>
             <td class="lbl" style="width:22%;">Saldo pendiente</td>
-            <td style="width:28%; text-align:right;">Bs. {{ item.saldo|floatformat:2 }}</td>
+            <td style="width:28%; text-align:right;">Bs. {{ item.saldo_jornadas|floatformat:2 }}</td>
           </tr>
           {% if item.contrato.observaciones %}
           <tr>
@@ -259,7 +267,7 @@
             <tr>
               <td>{{ pago.fecha|date:"d/m/Y" }}</td>
               <td class="text-right">{{ pago.monto|floatformat:2 }}</td>
-              <td>{{ pago.concepto|default:"—" }}</td>
+              <td>{{ pago.get_concepto_display|default:"—" }}</td>
             </tr>
             {% endfor %}
           </tbody>

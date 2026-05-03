@@ -1,17 +1,13 @@
 {% extends 'base.html' %}
 {% block content %}
 <main class="container-fluid px-4 py-4">
-  <nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb mb-0">
-      {% if from_dashboard %}
-        <li class="breadcrumb-item"><a href="{% url 'instalador_dashboard' %}">Mi trabajo</a></li>
-      {% else %}
-        <li class="breadcrumb-item"><a href="{% url 'employees' %}">Empleados</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'contrato_empleado_detail' contrato.id %}">{{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }}</a></li>
-      {% endif %}
-      <li class="breadcrumb-item active" aria-current="page">Nueva jornada</li>
-    </ol>
-  </nav>
+  <div class="mb-3">
+    {% if from_dashboard %}
+      <a href="{% url 'instalador_dashboard' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+    {% else %}
+      <a href="{% url 'contrato_empleado_detail' contrato.id %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+    {% endif %}
+  </div>
 
   <div class="row g-4">
 
@@ -20,6 +16,18 @@
       <div class="card border-0 shadow-sm rounded-3">
         <div class="card-header bg-light fw-semibold small">Nueva Jornada</div>
         <div class="card-body p-4">
+
+          {% if contrato_vencido %}
+          <div class="alert alert-warning d-flex align-items-start gap-2 py-2 small mb-3">
+            <i class="bi bi-exclamation-triangle-fill mt-1 flex-shrink-0"></i>
+            <div>
+              <strong>Contrato vencido.</strong>
+              El contrato de <strong>{{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }}</strong>
+              venció el <strong>{{ contrato.fecha_fin|date:"d/m/Y" }}</strong>.
+              La jornada se registrará igualmente, pero el administrador verá un aviso al aprobarla.
+            </div>
+          </div>
+          {% endif %}
 
           <form method="POST">
             {% csrf_token %}
@@ -145,7 +153,10 @@
                     {% if j.estado == 'aprobada' %}
                       <span class="badge bg-success">Aprobada</span>
                     {% elif j.estado == 'rechazada' %}
-                      <span class="badge bg-danger" title="{{ j.motivo_rechazo }}">Rechazada</span>
+                      <span class="badge bg-danger">Rechazada</span>
+                      {% if j.motivo_rechazo %}
+                      <div class="text-danger small mt-1"><i class="bi bi-exclamation-circle me-1"></i>{{ j.motivo_rechazo }}</div>
+                      {% endif %}
                     {% else %}
                       <span class="badge bg-warning text-dark">Pendiente</span>
                     {% endif %}

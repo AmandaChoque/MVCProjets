@@ -6,10 +6,12 @@ urlpatterns = [
     path('empleados/', views.employees, name='employees'),
     path('empleados/nuevo/', views.create_employee, name='create_employee'),
     path('empleados/carga/', views.employee_workload, name='employee_workload'),
+    path('empleados/carga/aprobar-todas/', views.aprobar_todas_jornadas, name='aprobar_todas_jornadas'),
     path('empleados/reporte/', views.employee_report, name='employee_report'),
     path('empleados/<int:id_employee>/', views.employee_detail, name='employee_detail'),
     path('empleados/<int:id_employee>/ver/', views.employee_view, name='employee_view'),
     path('empleados/<int:id_employee>/desactivar/', views.deactivate_employee, name='employee_deactivate'),
+    path('empleados/<int:id_employee>/habilitar/', views.reactivate_employee, name='employee_reactivate'),
 
     # Contratos de empleado
     path('empleados/<int:id_employee>/contratos/nuevo/', views.create_contrato_from_employee, name='create_contrato_from_employee'),
@@ -33,4 +35,5 @@ urlpatterns = [
     path('contratos/empleado/<int:id_contrato>/pagos/nuevo/', views.create_pago_empleado, name='create_pago_empleado'),
     path('pagos-empleado/<int:id_pago>/', views.pago_empleado_detail, name='pago_empleado_detail'),
     path('pagos-empleado/<int:id_pago>/desactivar/', views.deactivate_pago_empleado, name='pago_empleado_deactivate'),
+    path('pagos-empleado/<int:id_pago>/confirmar/', views.confirmar_pago_empleado, name='confirmar_pago_empleado'),
 ]

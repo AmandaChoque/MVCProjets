@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+{% block extra_css %}
+<style>
+  .cal-grid         { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+  .cal-header       { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px;
+                      margin-bottom: 2px; }
+  .cal-header-cell  { text-align: center; font-size: .72rem; font-weight: 700;
+                      text-transform: uppercase; letter-spacing: .04em; padding: 6px 0;
+                      color: #6c757d; }
+  .cal-header-cell.finde { color: #adb5bd; }
+
+  .cal-day          { min-height: 100px; background: #fff; border: 1px solid #e9ecef;
+                      border-radius: 6px; padding: 6px; display: flex; flex-direction: column; }
+  .cal-day.finde    { background: #f8f9fa; }
+  .cal-day.hoy      { border: 2px solid #0d6efd; background: #f0f6ff; }
+  .cal-day.vacio    { background: #fcfcfc; border-color: #f0f0f0; min-height: 100px; }
+  .cal-day-num      { font-size: .8rem; font-weight: 700; color: #495057; line-height: 1;
+                      margin-bottom: 4px; }
+  .cal-day.hoy .cal-day-num { color: #0d6efd; }
+  .cal-day.finde .cal-day-num { color: #adb5bd; }
+
+  .cal-evento       { font-size: .68rem; border-radius: 4px; padding: 2px 5px; margin-bottom: 2px;
+                      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+                      color: #fff; font-weight: 500; }
+  .cal-evento.bg-warning  { color: #212529 !important; }
+  .cal-evento.bg-info     { color: #212529 !important; }
+  .cal-mas          { font-size: .65rem; color: #6c757d; margin-top: 2px; }
+
+  .bg-primary   { background: #0d6efd !important; }
+  .bg-success   { background: #198754 !important; }
+  .bg-info      { background: #0dcaf0 !important; }
+  .bg-warning   { background: #ffc107 !important; }
+  .bg-danger    { background: #dc3545 !important; }
+  .bg-secondary { background: #6c757d !important; }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="container-fluid px-4 py-4">
+
+  <!-- ENCABEZADO -->
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+      <h4 class="fw-semibold mb-0" style="color:#1B4D90">
+        <i class="bi bi-calendar3 me-2"></i>Calendario de Equipo
+      </h4>
+      <p class="text-muted small mb-0">
+        {% if es_admin_view %}Asignaciones de todos los empleados{% else %}Tus asignaciones planificadas{% endif %}
+      </p>
+    </div>
+    <div class="d-flex gap-2">
+      {% if es_admin_view %}
+      <a href="{% url 'planificacion_gantt' %}?mes={{ mes_str }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-bar-chart-steps me-1"></i>Ver Gantt
+      </a>
+      {% endif %}
+      <a href="{% url 'projects' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Volver
+      </a>
+    </div>
+  </div>
+
+  <!-- NAVEGACIÓN DE MES -->
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <a href="?mes={{ mes_anterior }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-chevron-left"></i>
+    </a>
+    <h5 class="mb-0 fw-semibold" style="min-width:180px; text-align:center;">{{ mes_nombre }}</h5>
+    <a href="?mes={{ mes_siguiente }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-chevron-right"></i>
+    </a>
+    <a href="?mes={{ today|date:'Y-m' }}" class="btn btn-light btn-sm">Hoy</a>
+  </div>
+
+  <!-- CABECERA DE DÍAS -->
+  <div class="cal-header">
+    <div class="cal-header-cell">Lun</div>
+    <div class="cal-header-cell">Mar</div>
+    <div class="cal-header-cell">Mié</div>
+    <div class="cal-header-cell">Jue</div>
+    <div class="cal-header-cell">Vie</div>
+    <div class="cal-header-cell finde">Sáb</div>
+    <div class="cal-header-cell finde">Dom</div>
+  </div>
+
+  <!-- GRID DEL MES -->
+  {% for semana in calendar_data %}
+  <div class="cal-grid mb-1">
+    {% for celda in semana %}
+      {% if celda.dia is None %}
+      <div class="cal-day vacio"></div>
+      {% else %}
+      <div class="cal-day {% if celda.es_hoy %}hoy{% elif celda.es_finde %}finde{% endif %}">
+        <div class="cal-day-num">{{ celda.num }}</div>
+
+        {% for ev in celda.eventos %}
+        <div class="cal-evento bg-{{ ev.color }}"
+             {% if ev.jornada_id %}onclick="location.href='{% url 'jornada_detail' ev.jornada_id %}'" style="cursor:pointer;"{% endif %}
+             title="{{ ev.proyecto.nombre }}{% if es_admin_view %} — {{ ev.empleado.nombre }} {{ ev.empleado.apellido_paterno }}{% endif %}{% if ev.jornada_id %} (ver jornada){% endif %}">
+          {% if es_admin_view %}
+            {{ ev.empleado.nombre|slice:":1" }}. {{ ev.empleado.apellido_paterno }} · {{ ev.proyecto.nombre|truncatechars:15 }}
+          {% else %}
+            {{ ev.proyecto.nombre|truncatechars:22 }}
+          {% endif %}
+        </div>
+        {% endfor %}
+
+        {% if celda.mas > 0 %}
+        <div class="cal-mas">+{{ celda.mas }} más</div>
+        {% endif %}
+      </div>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+  {% if not calendar_data %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-calendar-x" style="font-size:3rem;"></i>
+    <p class="mt-3">No hay asignaciones para <strong>{{ mes_nombre }}</strong>.</p>
+  </div>
+  {% endif %}
+
+</main>
+{% endblock %}

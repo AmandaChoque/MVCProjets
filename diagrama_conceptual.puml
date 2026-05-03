@@ -1,0 +1,81 @@
+@startuml diagrama_conceptual
+title DIAGRAMA CONCEPTUAL\nSistema SOBOTEC S.R.L.
+
+skinparam classBackgroundColor #FAFAFA
+skinparam classBorderColor #555555
+skinparam classArrowColor #333333
+skinparam packageBorderColor #777777
+skinparam packageBackgroundColor #FFFFFF
+skinparam packageFontStyle bold
+skinparam backgroundColor #FFFFFF
+skinparam classfontstyle bold
+skinparam nodesep 35
+skinparam ranksep 55
+
+hide members
+hide circle
+
+' ── MÓDULO PROYECTOS ──────────────────────────────────────
+package "Módulo Proyectos" #D6EAF8 {
+    class Cliente
+    class Proyecto
+    class AsignacionProyecto
+    class ContratoProyecto
+    class Sede
+    class PlantillaTarea
+    class TareaChecklist
+    class FotoSede
+    class PagoProyecto
+    class Garantia
+    class IncidenciaGarantia
+}
+
+' ── MÓDULO EMPLEADOS ──────────────────────────────────────
+package "Módulo Empleados" #D5F5E3 {
+    class Empleado
+    class ContratoEmpleado
+    class JornadaEmpleado
+    class PagoEmpleado
+}
+
+' ── MÓDULO INVENTARIO ─────────────────────────────────────
+package "Módulo Inventario" #FEF9E7 {
+    class Proveedor
+    class Insumo
+    class Compra
+    class Requiere
+    class RequiereLote
+}
+
+' ── RELACIONES INTERNAS: Proyectos ────────────────────────
+Cliente          "1" -- "N"    Proyecto             : contrata >
+Proyecto         "1" -- "1"    ContratoProyecto      : formaliza >
+Proyecto         "1" -- "N"    Sede                  : tiene >
+Proyecto         "1" -- "N"    PagoProyecto          : recibe >
+Sede             "N" -- "0..1" PlantillaTarea        : aplica <
+Sede             "1" -- "N"    TareaChecklist        : contiene >
+Sede             "1" -- "N"    FotoSede              : adjunta >
+ContratoProyecto "1" -- "0..1" Garantia              : genera >
+Garantia         "1" -- "N"    IncidenciaGarantia    : registra >
+
+' ── RELACIONES INTERNAS: Empleados ───────────────────────
+Empleado         "1" -- "N"    ContratoEmpleado      : tiene >
+ContratoEmpleado "1" -- "N"    JornadaEmpleado       : registra >
+ContratoEmpleado "1" -- "N"    PagoEmpleado          : genera >
+
+' ── RELACIONES INTERNAS: Inventario ──────────────────────
+Proveedor        "1" -- "N"    Compra                : vende >
+Insumo           "1" -- "N"    Compra                : adquirido en >
+Requiere         "1" -- "N"    RequiereLote          : desagrega en >
+Compra           "1" -- "N"    RequiereLote          : traza FIFO >
+
+' ── RELACIONES ENTRE MÓDULOS ──────────────────────────────
+Proyecto         "1" -- "N"    AsignacionProyecto    : asigna >
+AsignacionProyecto "N" -- "1"  Empleado              : a >
+
+JornadaEmpleado  "N" -- "1"    Proyecto              : asociada a >
+
+Proyecto         "1" -- "N"    Requiere              : necesita >
+Insumo           "1" -- "N"    Requiere              : requerido por <
+
+@enduml

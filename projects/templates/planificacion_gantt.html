@@ -1,0 +1,271 @@
+{% extends 'base.html' %}
+{% block extra_css %}
+<style>
+  .gantt-wrapper        { overflow-x: auto; border: 1px solid #dee2e6; border-radius: 8px; }
+  .gantt-table          { border-collapse: collapse; table-layout: fixed; }
+  .gantt-table th,
+  .gantt-table td       { border: 1px solid #e9ecef; padding: 0; vertical-align: middle; }
+  .gantt-label          { min-width: 240px; width: 240px; position: sticky; left: 0;
+                          background: #fff; z-index: 2; padding: 6px 10px; }
+  .gantt-label-head     { min-width: 240px; width: 240px; position: sticky; left: 0;
+                          background: #f8f9fa; z-index: 3; padding: 6px 10px; font-size: .7rem;
+                          text-transform: uppercase; letter-spacing: .04em; }
+  .gantt-day            { width: 30px; min-width: 30px; height: 34px; text-align: center; }
+  .gantt-day-head       { width: 30px; min-width: 30px; text-align: center; padding: 3px 0;
+                          font-size: .68rem; font-weight: 600; color: #495057; }
+  .gantt-day.finde      { background: #f8f9fa; }
+  .gantt-day.hoy-col    { background: rgba(13,110,253,.08); }
+  .gantt-day-head.finde { color: #adb5bd; }
+  .gantt-day-head.hoy-col { color: #0d6efd; font-weight: 700; }
+
+  /* Barras de colores */
+  .bar-primary   { background: #0d6efd; }
+  .bar-success   { background: #198754; }
+  .bar-info      { background: #0dcaf0; }
+  .bar-warning   { background: #ffc107; }
+  .bar-danger    { background: #dc3545; }
+  .bar-secondary { background: #6c757d; }
+
+  /* Marcador de vencimiento */
+  .vence         { border-top: 3px solid #dc3545 !important; position: relative; }
+  .vence::after  { content: '▼'; position: absolute; top: -2px; left: 50%;
+                   transform: translateX(-50%); font-size: .55rem; color: #dc3545; line-height: 1; }
+
+  /* Fila sin fechas */
+  tr.sin-fechas .gantt-label { background: #fffbf0; }
+
+  .gantt-project-name  { font-weight: 600; font-size: .8rem; color: #212529;
+                         white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 218px; }
+  .gantt-employee-name { font-size: .72rem; color: #6c757d; white-space: nowrap;
+                         overflow: hidden; text-overflow: ellipsis; max-width: 218px; }
+  .gantt-meta          { font-size: .65rem; }
+
+  .legend-dot { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+
+  /* Barra de progreso inline */
+  .gantt-progress       { height: 5px; border-radius: 3px; background: #e9ecef; overflow: hidden; margin-top: 3px; }
+  .gantt-progress-fill  { height: 100%; border-radius: 3px; transition: width .3s; }
+
+  /* Punto de tarea completada */
+  .gantt-day            { position: relative; }
+  .tarea-dot            { position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
+                          width: 6px; height: 6px; border-radius: 50%; background: #198754;
+                          pointer-events: none; }
+  .bar-primary .tarea-dot,
+  .bar-success .tarea-dot  { background: #fff; opacity: .85; }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="container-fluid px-4 py-4">
+
+  <!-- ENCABEZADO -->
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+      <h4 class="fw-semibold mb-0" style="color:#1B4D90">
+        <i class="bi bi-bar-chart-steps me-2"></i>Planificación de Equipos
+      </h4>
+      <p class="text-muted small mb-0">Vista Gantt — asignaciones planificadas por empleado</p>
+    </div>
+    <div class="d-flex gap-2">
+      <a href="{% url 'calendario_equipo' %}?mes={{ mes_str }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-calendar3 me-1"></i>Ver calendario
+      </a>
+      <a href="{% url 'projects' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Volver
+      </a>
+    </div>
+  </div>
+
+  <!-- FILTRO POR PROYECTO + NAVEGACIÓN DE MES -->
+  <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+
+    <!-- Navegación de mes -->
+    <a href="?mes={{ mes_anterior }}&filter_proyecto={{ filter_proyecto }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-chevron-left"></i>
+    </a>
+    <h5 class="mb-0 fw-semibold" style="min-width:180px; text-align:center;">{{ mes_nombre }}</h5>
+    <a href="?mes={{ mes_siguiente }}&filter_proyecto={{ filter_proyecto }}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-chevron-right"></i>
+    </a>
+    <a href="?mes={{ today|date:'Y-m' }}&filter_proyecto={{ filter_proyecto }}" class="btn btn-light btn-sm">Hoy</a>
+
+    <!-- Filtro proyecto -->
+    <form method="GET" class="d-flex align-items-center gap-2 ms-auto">
+      <input type="hidden" name="mes" value="{{ mes_str }}">
+      <select name="filter_proyecto" class="form-select form-select-sm" style="min-width:200px;" onchange="this.form.submit()">
+        <option value="">Todos los proyectos</option>
+        {% for p in proyectos_disponibles %}
+        <option value="{{ p.id }}" {% if filter_proyecto == p.id|stringformat:"s" %}selected{% endif %}>
+          {{ p.nombre }}
+        </option>
+        {% endfor %}
+      </select>
+      {% if filter_proyecto %}
+      <a href="?mes={{ mes_str }}" class="btn btn-outline-secondary btn-sm" title="Quitar filtro">
+        <i class="bi bi-x-lg"></i>
+      </a>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- LEYENDA -->
+  <div class="d-flex flex-wrap gap-3 mb-3 small">
+    <span class="d-flex align-items-center gap-1">
+      <span class="legend-dot" style="background:#dc3545; vertical-align:middle;"></span>
+      Vencimiento de contrato
+    </span>
+    <span class="badge bg-warning text-dark">Sin fechas</span>
+    <span class="d-flex align-items-center gap-1">
+      <span class="badge bg-danger rounded-pill">▲ Retrasado</span>
+    </span>
+    <span class="d-flex align-items-center gap-1">
+      <span class="badge bg-success rounded-pill">✓ Adelantado</span>
+    </span>
+    <span class="d-flex align-items-center gap-1">
+      <span style="width:8px;height:8px;border-radius:50%;background:#198754;display:inline-block;"></span>
+      Tarea completada ese día
+    </span>
+  </div>
+
+  {% if filas %}
+  <div class="gantt-wrapper">
+    <table class="gantt-table">
+      <!-- FILA CABECERA: días del mes -->
+      <thead>
+        <tr>
+          <th class="gantt-label-head">Empleado / Proyecto</th>
+          {% for dia in dias %}
+          <th class="gantt-day-head {% if dia.weekday >= 5 %}finde{% endif %} {% if dia == today %}hoy-col{% endif %}"
+              title="{{ dia|date:'l d/m/Y' }}">
+            <div>{{ dia.day }}</div>
+            <div style="font-size:.6rem; font-weight:400; color:inherit;">
+              {{ dia|date:"D"|slice:":2" }}
+            </div>
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+
+      <!-- FILAS DE ASIGNACIONES -->
+      <tbody>
+        {% for fila in filas %}
+        <tr {% if not fila.tiene_fechas %}class="sin-fechas"{% endif %}>
+
+          <!-- Celda etiqueta -->
+          <td class="gantt-label">
+            <div class="gantt-project-name" title="{{ fila.proyecto.nombre }}">
+              <span class="badge bg-{{ fila.color }} me-1" style="width:8px; height:8px; padding:0; border-radius:50%;"></span>
+              {{ fila.proyecto.nombre }}
+            </div>
+            <div class="gantt-employee-name">
+              <i class="bi bi-person me-1"></i>{{ fila.empleado.nombre }} {{ fila.empleado.apellido_paterno }}
+              <span class="text-muted">({{ fila.empleado.get_cargo_display }})</span>
+            </div>
+
+            <div class="gantt-meta d-flex gap-2 mt-1 flex-wrap align-items-center">
+              {% if fila.fecha_limite %}
+              <span class="text-danger"><i class="bi bi-flag-fill"></i> {{ fila.fecha_limite|date:"d/m" }}</span>
+              {% endif %}
+              {% if fila.dias_plan %}
+              <span class="text-muted"><i class="bi bi-calendar-week"></i> {{ fila.dias_plan|floatformat:0 }}d plan.</span>
+              {% endif %}
+              {% if not fila.tiene_fechas %}
+              <span class="badge bg-warning text-dark" style="font-size:.6rem;">Sin fechas</span>
+              {% endif %}
+
+              <!-- Badge retraso / adelanto -->
+              {% if fila.retraso > 0 %}
+              <span class="badge bg-danger" style="font-size:.6rem;">
+                <i class="bi bi-exclamation-circle me-1"></i>{{ fila.retraso }}d retraso
+              </span>
+              {% elif fila.eficiencia and fila.eficiencia >= 100 %}
+              <span class="badge bg-success" style="font-size:.6rem;">
+                <i class="bi bi-check-circle me-1"></i>Adelantado
+              </span>
+              {% endif %}
+            </div>
+
+            {% if fila.tiene_fechas %}
+            <div class="gantt-meta text-muted mt-1">
+              {{ fila.asignacion.fecha_inicio_plan|date:"d/m" }} → {{ fila.asignacion.fecha_fin_plan|date:"d/m" }}
+              <a href="{% url 'project_view' fila.proyecto.id %}#tab-planificacion"
+                 class="ms-1 text-primary" title="Editar cronograma">
+                <i class="bi bi-pencil-fill" style="font-size:.6rem;"></i>
+              </a>
+            </div>
+            {% endif %}
+
+            <!-- Barra de progreso real vs planificado -->
+            {% if fila.dias_plan %}
+            <div class="mt-1">
+              <div class="d-flex justify-content-between gantt-meta">
+                <span class="text-muted">{{ fila.dias_reales|floatformat:1 }} / {{ fila.dias_plan|floatformat:0 }}d reales</span>
+                {% if fila.eficiencia %}
+                <span class="{% if fila.eficiencia >= 100 %}text-success{% elif fila.retraso > 0 %}text-danger{% else %}text-muted{% endif %}">
+                  {{ fila.eficiencia }}%
+                </span>
+                {% endif %}
+              </div>
+              <div class="gantt-progress">
+                <div class="gantt-progress-fill
+                  {% if fila.retraso > 0 %}bg-danger
+                  {% elif fila.pct_progreso >= 100 %}bg-success
+                  {% else %}bg-primary{% endif %}"
+                  style="width:{{ fila.pct_progreso|default:0 }}%">
+                </div>
+              </div>
+            </div>
+            {% endif %}
+          </td>
+
+          <!-- Celdas de días -->
+          {% for celda in fila.celdas %}
+          <td class="gantt-day
+              {% if celda.en_rango %}bar-{{ fila.color }}{% elif celda.es_finde %}finde{% endif %}
+              {% if celda.es_hoy %}hoy-col{% endif %}
+              {% if celda.es_limite %}vence{% endif %}"
+              {% if celda.jornada_id %}
+              onclick="location.href='{% url 'jornada_detail' celda.jornada_id %}'"
+              style="cursor:pointer;"
+              title="{% if celda.tiene_tarea %}✓ Tareas completadas — {% endif %}Ver jornada de {{ fila.empleado.nombre }} {{ fila.empleado.apellido_paterno }}"
+              {% elif celda.es_limite %}
+              title="Vence: {{ fila.fecha_limite|date:'d/m/Y' }}"
+              {% elif celda.en_rango %}
+              title="{{ fila.empleado.nombre }} — {{ fila.proyecto.nombre }}"
+              {% endif %}>
+            {% if celda.tiene_tarea %}<span class="tarea-dot"></span>{% endif %}
+          </td>
+          {% endfor %}
+
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- LEYENDA DE PROYECTOS -->
+  <div class="mt-3 d-flex flex-wrap gap-3">
+    {% for fila in filas %}
+    {% if forloop.first or fila.proyecto.id != filas|dictsort:"proyecto.id" %}
+    <span class="d-flex align-items-center gap-1 small">
+      <span class="legend-dot bar-{{ fila.color }}"></span>
+      {{ fila.proyecto.nombre }}
+    </span>
+    {% endif %}
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <i class="bi bi-bar-chart-steps" style="font-size:3rem;"></i>
+    <p class="mt-3">No hay asignaciones planificadas para <strong>{{ mes_nombre }}</strong>
+      {% if filter_proyecto %} con el filtro seleccionado{% endif %}.
+    </p>
+    <p class="small">Asigna empleados a proyectos y configura sus fechas de planificación desde el detalle del proyecto.</p>
+    <a href="{% url 'projects' %}" class="btn btn-primary btn-sm">Ir a proyectos</a>
+  </div>
+  {% endif %}
+
+</main>
+{% endblock %}

@@ -19,12 +19,9 @@
 
 {% block content %}
 <main class="container-fluid px-4 py-4">
-  <nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb mb-0">
-      <li class="breadcrumb-item"><a href="{% url 'payments' %}">Pagos</a></li>
-      <li class="breadcrumb-item active" aria-current="page">Editar pago</li>
-    </ol>
-  </nav>
+  <div class="mb-3">
+    <a href="{% url 'payments' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+  </div>
 
   <!-- TARJETA -->
   <div class="card border-0 shadow-sm rounded-3">
@@ -43,6 +40,24 @@
             <div class="mb-3">
               <label class="form-label text-muted small">Proyecto</label>
               <div class="form-control bg-light">{{ payment.proyecto.nombre }}</div>
+              {% if balance %}
+              <div class="mt-2 p-2 rounded border small" style="background:#f8f9fa;">
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted">{{ balance.tiene_contrato|yesno:"Monto acordado (contrato),Monto total proyecto" }}:</span>
+                  <span class="fw-semibold">Bs. {{ balance.monto_ref|floatformat:2 }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                  <span class="text-muted">Ya cubierto (pagos + descuentos):</span>
+                  <span class="text-success fw-semibold">Bs. {{ balance.cubierto|floatformat:2 }}</span>
+                </div>
+                <div class="d-flex justify-content-between border-top mt-1 pt-1">
+                  <span class="fw-semibold">Saldo pendiente:</span>
+                  <span class="fw-bold {% if balance.saldo > 0 %}text-danger{% else %}text-success{% endif %}">
+                    Bs. {{ balance.saldo|floatformat:2 }}
+                  </span>
+                </div>
+              </div>
+              {% endif %}
             </div>
 
             <div class="mb-3">

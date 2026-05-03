@@ -19,13 +19,9 @@
 
 {% block content %}
 <main class="container-fluid px-4 py-4">
-  <!-- BREADCRUMB -->
-  <nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb mb-0">
-      <li class="breadcrumb-item"><a href="{% url 'employees' %}">Empleados</a></li>
-      <li class="breadcrumb-item active" aria-current="page">Nuevo empleado</li>
-    </ol>
-  </nav>
+  <div class="mb-3">
+    <a href="{% url 'employees' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+  </div>
 
   <form action="/employees/create/" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
     {% csrf_token %}
@@ -161,6 +157,16 @@
               </div>
               {% endif %}
             </div>
+          </div>
+
+          <div class="col-12">
+              {{ form.is_active }}
+              <label class="form-check-label fw-semibold" for="{{ form.is_active.id_for_label }}">
+                Empleado activo
+              </label>
+              <div class="text-muted small mt-1">
+                Si está desmarcado, el empleado no podrá iniciar sesión en el sistema.
+              </div>
           </div>
         </div>
       </div>

@@ -1,0 +1,125 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<main class="container-fluid px-4 py-4">
+
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h4 class="fw-bold text-sobotec mb-0">Garantías Post-Instalación</h4>
+      <p class="text-muted small mb-0">Registro y seguimiento de garantías activas de proyectos completados</p>
+    </div>
+  </div>
+
+  <!-- Filtros -->
+  <div class="card border-0 shadow-sm rounded-3 mb-4">
+    <div class="card-body py-3">
+      <form method="GET" class="d-flex align-items-center gap-3 flex-wrap">
+        <span class="text-muted small fw-semibold">Filtrar por estado:</span>
+        <a href="{% url 'garantias_list' %}"
+           class="btn btn-sm {% if not filtro %}btn-primary{% else %}btn-outline-secondary{% endif %}">
+          Todas ({{ total }})
+        </a>
+        <a href="?estado=vigente"
+           class="btn btn-sm {% if filtro == 'vigente' %}btn-success{% else %}btn-outline-success{% endif %}">
+          <i class="bi bi-shield-check me-1"></i>Vigentes
+        </a>
+        <a href="?estado=por_vencer"
+           class="btn btn-sm {% if filtro == 'por_vencer' %}btn-warning{% else %}btn-outline-warning{% endif %}">
+          <i class="bi bi-clock-history me-1"></i>Por vencer
+        </a>
+        <a href="?estado=vencida"
+           class="btn btn-sm {% if filtro == 'vencida' %}btn-danger{% else %}btn-outline-danger{% endif %}">
+          <i class="bi bi-shield-x me-1"></i>Vencidas
+        </a>
+      </form>
+    </div>
+  </div>
+
+  <!-- Tabla -->
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-0">
+      {% if garantias %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th class="ps-4">Proyecto</th>
+              <th>Cliente</th>
+              <th>Tipo</th>
+              <th>Inicio</th>
+              <th>Vencimiento</th>
+              <th>Estado</th>
+              <th class="text-center">Incidencias</th>
+              <th class="text-end pe-4">Costo total</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for g in garantias %}
+            <tr>
+              <td class="ps-4 fw-semibold">
+                <a href="{% url 'garantia_detail' g.id %}" class="text-decoration-none text-dark">
+                  {{ g.contrato.proyecto.nombre }}
+                </a>
+              </td>
+              <td class="text-muted small">
+                {{ g.contrato.proyecto.cliente.nombre }} {{ g.contrato.proyecto.cliente.apellido_paterno }}
+              </td>
+              <td>
+                <span class="badge bg-secondary">{{ g.contrato.proyecto.get_tipo_proyecto_display }}</span>
+              </td>
+              <td class="small">{{ g.fecha_inicio|date:"d/m/Y" }}</td>
+              <td class="small">{{ g.fecha_vencimiento|date:"d/m/Y" }}</td>
+              <td>
+                {% if g.estado == 'vigente' %}
+                  <span class="badge bg-success"><i class="bi bi-shield-check me-1"></i>Vigente</span>
+                  <span class="text-muted small ms-1">{{ g.dias_restantes }} días</span>
+                {% elif g.estado == 'por_vencer' %}
+                  <span class="badge bg-warning text-dark"><i class="bi bi-clock-history me-1"></i>Por vencer</span>
+                  <span class="text-warning small ms-1 fw-semibold">{{ g.dias_restantes }} días</span>
+                {% else %}
+                  <span class="badge bg-danger"><i class="bi bi-shield-x me-1"></i>Vencida</span>
+                {% endif %}
+              </td>
+              <td class="text-center">
+                {% with total_inc=g.incidencias.count %}
+                {% if total_inc > 0 %}
+                  <span class="badge bg-danger rounded-pill">{{ total_inc }}</span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+                {% endwith %}
+              </td>
+              <td class="text-end pe-4 small">
+                {% if g.costo_total_incidencias %}
+                  <span class="text-danger fw-semibold">Bs. {{ g.costo_total_incidencias|floatformat:2 }}</span>
+                {% else %}
+                  <span class="text-muted">Bs. 0.00</span>
+                {% endif %}
+              </td>
+              <td class="pe-3">
+                <a href="{% url 'garantia_detail' g.id %}" class="btn btn-sm btn-outline-primary">
+                  <i class="bi bi-eye"></i>
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center py-5 text-muted">
+        <i class="bi bi-shield fs-1 d-block mb-2"></i>
+        {% if filtro %}
+          No hay garantías con estado <strong>{{ filtro }}</strong>.
+        {% else %}
+          No hay garantías registradas aún.<br>
+          <span class="small">Se crean automáticamente al completar un proyecto con contrato que incluye garantía.</span>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+</main>
+{% endblock %}

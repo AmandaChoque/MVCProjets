@@ -1,0 +1,92 @@
+@startuml uc_p1_clientes_proyectos
+title Casos de Uso — Parte 1: Clientes y Proyectos\nSistema SOBOTEC S.R.L.
+
+left to right direction
+
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam backgroundColor #FFFFFF
+skinparam usecaseBackgroundColor #DDEEFF
+skinparam usecaseBorderColor #336699
+skinparam usecaseFontSize 12
+skinparam actorFontSize 12
+skinparam packageBorderColor #777777
+skinparam packageBackgroundColor #F5F5F5
+skinparam packageFontStyle bold
+skinparam arrowColor #444444
+skinparam noteBackgroundColor #FFFFCC
+skinparam noteBorderColor #CCAA00
+
+' ── ACTORES ──────────────────────────────────────
+actor "Administrador\n/ Gerente" as ADM #4A90D9
+actor "Secretaria"               as SEC #27AE60
+actor "Sistema\n(automático)"    as SIS #C0392B
+
+' ── BOUNDARY ─────────────────────────────────────
+rectangle "Sistema SOBOTEC — Gestión de Clientes y Proyectos" {
+
+    package "Gestión de Clientes" {
+        usecase "Registrar cliente"     as UC_CL1
+        usecase "Editar cliente"        as UC_CL2
+        usecase "Desactivar cliente"    as UC_CL3
+        usecase "Consultar clientes"    as UC_CL4
+    }
+
+    package "Gestión de Proyectos" {
+        usecase "Crear proyecto"              as UC_PR1
+        usecase "Editar proyecto"             as UC_PR2
+        usecase "Completar proyecto"          as UC_PR3
+        usecase "Desactivar / Eliminar"       as UC_PR4
+        usecase "Ver listado / detalle"       as UC_PR5
+        usecase "Ver seguimiento de avance"   as UC_PR6     
+        usecase "Ver análisis financiero"     as UC_PR7
+        usecase "Generar reporte PDF / Excel" as UC_PR8
+    }
+
+    package "Automático" {
+        usecase "Registrar historial de\nestado / presupuesto" as SA3
+    }
+}
+
+' ── ASOCIACIONES: Administrador / Gerente ────────
+ADM --> UC_CL1
+ADM --> UC_CL2
+ADM --> UC_CL3
+ADM --> UC_CL4
+ADM --> UC_PR1
+ADM --> UC_PR2
+ADM --> UC_PR3
+ADM --> UC_PR4
+ADM --> UC_PR5
+ADM --> UC_PR6
+ADM --> UC_PR7
+ADM --> UC_PR8
+
+' ── ASOCIACIONES: Secretaria ─────────────────────
+SEC --> UC_CL1
+SEC --> UC_CL2
+SEC --> UC_CL4
+SEC --> UC_PR1
+SEC --> UC_PR5
+SEC --> UC_PR7
+SEC --> UC_PR8
+
+' ── ASOCIACIONES: Sistema ────────────────────────
+SIS --> SA3
+
+' ── INCLUDE / EXTEND ─────────────────────────────
+UC_PR3 .> SA3 : <<include>>
+UC_PR2 .> SA3 : <<extend>>
+
+note right of UC_CL3
+  Solo Administrador /
+  Gerente puede desactivar.
+end note
+
+note right of UC_PR6
+  Solo Administrador /
+  Gerente puede ver el
+  seguimiento de avance.
+end note
+
+@enduml

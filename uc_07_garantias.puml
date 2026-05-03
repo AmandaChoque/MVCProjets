@@ -1,0 +1,69 @@
+@startuml uc_07_garantias
+title Casos de Uso — Garantías Post-entrega\nSistema SOBOTEC S.R.L.
+
+left to right direction
+
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam backgroundColor #FFFFFF
+skinparam usecaseBackgroundColor #F5F5F5
+skinparam usecaseBorderColor #777777
+skinparam usecaseFontSize 12
+skinparam actorFontSize 12
+skinparam packageBorderColor #777777
+skinparam packageBackgroundColor #FFFFFF
+skinparam packageFontStyle bold
+skinparam arrowColor #444444
+skinparam noteBackgroundColor #FFFFCC
+skinparam noteBorderColor #CCAA00
+
+' ── ACTORES ──────────────────────────────────────
+actor "Administrador\n/ Gerente" as ADM #F5F5F5
+actor "Secretaria"               as SEC #F5F5F5
+actor "Sistema\n(automático)"    as SIS #F5F5F5
+
+' ── BOUNDARY ─────────────────────────────────────
+rectangle "Sistema SOBOTEC — Garantías Post-entrega" {
+
+    usecase "Ver listado de garantías"       as UC1
+    usecase "Ver detalle de garantía"        as UC2
+    usecase "Registrar incidencia"           as UC3
+    usecase "Editar estado de incidencia"    as UC4
+    usecase "Desactivar incidencia"          as UC5
+
+    usecase "Crear Garantía al\ncompletar proyecto" as SA1
+}
+
+' ── ASOCIACIONES: Administrador / Gerente ────────
+ADM --> UC1
+ADM --> UC2
+ADM --> UC3
+ADM --> UC4
+ADM --> UC5
+
+' ── ASOCIACIONES: Secretaria ─────────────────────
+SEC --> UC1
+SEC --> UC2
+SEC --> UC3
+SEC --> UC4
+SEC --> UC5
+
+' ── ASOCIACIONES: Sistema ────────────────────────
+SIS --> SA1
+
+note right of SA1
+  Se crea automáticamente cuando
+  el proyecto pasa a "completado"
+  y el contrato tiene garantia_meses > 0.
+  fecha_vencimiento = fecha_inicio
+  + garantia_meses.
+end note
+
+note right of UC4
+  Estados de incidencia:
+  pendiente / en_reparacion / resuelto.
+  El costo es absorbido por SOBOTEC
+  (no se cobra al cliente).
+end note
+
+@enduml

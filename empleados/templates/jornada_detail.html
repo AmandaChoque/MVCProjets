@@ -1,13 +1,9 @@
 {% extends 'base.html' %}
 {% block content %}
 <main class="container-fluid px-4 py-4">
-  <nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb mb-0">
-      <li class="breadcrumb-item"><a href="{% url 'employees' %}">Empleados</a></li>
-      <li class="breadcrumb-item"><a href="{% url 'contrato_empleado_detail' contrato.id %}">{{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }}</a></li>
-      <li class="breadcrumb-item active" aria-current="page">Editar jornada</li>
-    </ol>
-  </nav>
+  <div class="mb-3">
+    <a href="{% url 'employee_workload' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+  </div>
 
   <div class="row g-4">
 
@@ -15,7 +11,7 @@
     <div class="col-lg-5">
       <div class="card border-0 shadow-sm rounded-3">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <span class="fw-semibold small">Jornada — {{ jornada.fecha|date:"d/m/Y" }}</span>
+          <span class="fw-semibold small">Jornada — {{ jornada.fecha|date:"d/m/Y" }} · {{ jornada.proyecto.nombre }}</span>
           {% if jornada.estado == 'aprobada' %}
             <span class="badge bg-success">Aprobada</span>
           {% elif jornada.estado == 'rechazada' %}
@@ -70,6 +66,19 @@
         </div>
       </div>
 
+      <!-- Alerta de contrato vencido para admin -->
+      {% if es_admin and contrato_vencido %}
+      <div class="alert alert-danger d-flex align-items-start gap-2 mt-3 py-2 small">
+        <i class="bi bi-exclamation-triangle-fill mt-1 flex-shrink-0"></i>
+        <div>
+          <strong>Contrato vencido.</strong>
+          El contrato de <strong>{{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }}</strong>
+          venció el <strong>{{ contrato.fecha_fin|date:"d/m/Y" }}</strong>.
+          Verifica si se debe renovar antes de aprobar esta jornada.
+        </div>
+      </div>
+      {% endif %}
+
       <!-- Botones aprobar / rechazar (solo admin, solo si no aprobada) -->
       {% if es_admin and jornada.estado != 'aprobada' %}
       <div class="card border-0 shadow-sm mt-3">
@@ -95,7 +104,7 @@
       <div class="card border-0 shadow-sm">
         <div class="card-header bg-light fw-semibold small">
           <i class="bi bi-check2-square me-1"></i>
-          Tareas completadas ese día por {{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }}
+          Tareas completadas ese día en {{ jornada.proyecto.nombre }}
         </div>
         <div class="card-body p-0">
           {% if tareas_del_dia %}
@@ -105,6 +114,7 @@
                 <tr>
                   <th class="px-3">Sede</th>
                   <th>Tarea</th>
+                  <th>Completado por</th>
                 </tr>
               </thead>
               <tbody>
@@ -114,6 +124,11 @@
                   <td>
                     <i class="bi bi-check-circle-fill text-success me-1"></i>
                     {{ t.descripcion }}
+                  </td>
+                  <td class="text-muted">
+                    {% if t.completado_por %}
+                      {{ t.completado_por.nombre }} {{ t.completado_por.apellido_paterno }}
+                    {% else %}—{% endif %}
                   </td>
                 </tr>
                 {% endfor %}

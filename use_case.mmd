@@ -1,0 +1,19 @@
+```mermaid
+usecaseDiagram
+    actor Admin
+    actor Gerente
+    actor Instalador
+    actor Cliente as "Cliente Externo"
+
+    Admin --> (Gestionar Proyectos)
+    Gerente --> (Gestionar Proyectos)
+    Instalador --> (Gestionar Proyectos)
+    Cliente --> (Gestionar Proyectos)
+
+    Admin --> (Gestionar Proyectos)
+    Admin --> (Registrar Jornadas)
+    Admin --> (Gestionar Pagos)
+    Gerente --> (Controlar Inventario)
+    Instalador --> (Completar Checklists)
+    Cliente --> (Ver Estado Proyecto)
+```

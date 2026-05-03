@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Análisis de Costos - SOBOTEC S.R.L.</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Calibri', Arial, sans-serif;
+    background: #f0f0f0;
+    padding: 30px;
+    color: #222;
+  }
+
+  .slide {
+    background: #fff;
+    max-width: 1100px;
+    margin: 0 auto 40px;
+    padding: 40px 50px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    position: relative;
+    overflow: hidden;
+    page-break-after: always;
+  }
+
+  /* Decoración dorada esquina superior derecha */
+  .slide::before {
+    content: '';
+    position: absolute;
+    top: -30px; right: -30px;
+    width: 140px; height: 140px;
+    background: linear-gradient(135deg, #f5c518 50%, #c8a000 100%);
+    transform: rotate(45deg);
+    z-index: 0;
+  }
+  .slide::after {
+    content: '';
+    position: absolute;
+    top: 10px; right: 10px;
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, #e0ad00 50%, #a07800 100%);
+    transform: rotate(45deg);
+    z-index: 0;
+  }
+
+  .slide-title {
+    font-size: 2.6rem;
+    font-weight: 900;
+    text-align: center;
+    letter-spacing: 3px;
+    color: #111;
+    margin-bottom: 10px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .section-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #111;
+    margin: 18px 0 12px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── TABLAS ── */
+  .tables-row {
+    display: flex;
+    gap: 40px;
+    align-items: flex-start;
+    position: relative;
+    z-index: 1;
+  }
+
+  table {
+    border-collapse: collapse;
+    font-size: 0.92rem;
+  }
+
+  table th {
+    background: #1a4fa0;
+    color: #fff;
+    padding: 8px 18px;
+    text-align: center;
+    font-weight: 600;
+    border: 1px solid #1a4fa0;
+  }
+
+  table td {
+    padding: 7px 18px;
+    border: 1px solid #bbb;
+    background: #fff;
+  }
+
+  table tr:nth-child(even) td { background: #f7f7f7; }
+
+  .td-right { text-align: right; }
+  .td-center { text-align: center; }
+
+  .total-row td {
+    font-weight: 700;
+    background: #e8edf6 !important;
+    border-top: 2px solid #1a4fa0;
+  }
+
+  /* ── FÓRMULAS ── */
+  .formula-block {
+    margin: 16px 0 8px;
+    position: relative;
+    z-index: 1;
+  }
+
+  .formula-block p {
+    font-size: 0.97rem;
+    line-height: 1.7;
+    color: #333;
+  }
+
+  .formula-block p.indent { text-align: center; }
+
+  /* ── INDICADORES ── */
+  .indicators {
+    display: flex;
+    gap: 24px;
+    margin-top: 22px;
+    position: relative;
+    z-index: 1;
+    flex-wrap: wrap;
+  }
+
+  .indicator-box {
+    background: #f5f5f5;
+    border-left: 6px solid #1a4fa0;
+    padding: 10px 22px;
+    min-width: 160px;
+  }
+
+  .indicator-box .label {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #111;
+  }
+
+  .indicator-box .value {
+    font-size: 1.35rem;
+    font-weight: 900;
+    color: #1a4fa0;
+  }
+
+  /* ── SLIDE 2 — tablas completas ── */
+  .full-table { width: 100%; }
+  .full-table td:last-child { text-align: right; }
+
+  .chapter-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: #1a4fa0;
+    border-bottom: 3px solid #1a4fa0;
+    padding-bottom: 6px;
+    margin-bottom: 18px;
+  }
+
+  .subsection { font-size: 1.05rem; font-weight: 700; margin: 14px 0 6px; }
+  .body-text { font-size: 0.93rem; line-height: 1.65; color: #333; margin-bottom: 8px; }
+
+  .formula-inline {
+    background: #f0f4ff;
+    border-left: 4px solid #1a4fa0;
+    padding: 6px 14px;
+    margin: 6px 0 10px;
+    font-size: 0.95rem;
+    font-style: italic;
+  }
+
+  .highlight { color: #1a4fa0; font-weight: 700; }
+
+  .table-caption {
+    font-size: 0.85rem;
+    font-style: italic;
+    color: #555;
+    margin-bottom: 4px;
+  }
+
+  .result-positive {
+    background: #e6f4ea !important;
+    color: #1a6e35;
+    font-weight: 700;
+  }
+
+  @media print {
+    body { background: #fff; padding: 0; }
+    .slide { box-shadow: none; margin: 0; page-break-after: always; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════
+     SLIDE 1 — Resumen visual (al estilo de la imagen)
+     ═══════════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="slide-title">ANÁLISIS COSTOS</div>
+
+  <div class="section-title">COCOMO II</div>
+
+  <div class="tables-row">
+
+    <!-- Tabla izquierda: parámetros -->
+    <div>
+      <table>
+        <thead>
+          <tr><th>Concepto</th><th>Valor</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Número de programadores</td><td class="td-right">3</td></tr>
+          <tr><td>Salario de cada programador</td><td class="td-right">$550 por mes</td></tr>
+          <tr><td>Duración del desarrollo</td><td class="td-right">7 meses</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Tabla derecha: costos -->
+    <div>
+      <table>
+        <thead>
+          <tr><th>Descripción</th><th>Costo ($us)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Costo de desarrollo</td><td class="td-right">11,550</td></tr>
+          <tr><td>Costo de elaboración</td><td class="td-right">395</td></tr>
+          <tr><td>Costo de implementación</td><td class="td-right">0</td></tr>
+          <tr class="total-row"><td>Total</td><td class="td-right">11,945</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <div class="formula-block" style="margin-top:20px;">
+    <p>Costo desarrollo = Programadores × Salario programador × Duración</p>
+    <p class="indent">Costo desarrollo = 3 × 550 × 7</p>
+    <p class="indent">Costo desarrollo = <strong>$11,550</strong></p>
+  </div>
+
+  <div class="indicators">
+    <div class="indicator-box">
+      <div class="label">VAN</div>
+      <div class="value">$5,490.67</div>
+    </div>
+    <div class="indicator-box">
+      <div class="label">TIR</div>
+      <div class="value">24.81 %</div>
+    </div>
+    <div class="indicator-box">
+      <div class="label">C/B</div>
+      <div class="value">2.26</div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════
+     SLIDE 2 — Capítulo 5 completo
+     ═══════════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="chapter-title">CAPÍTULO 5 — ANÁLISIS ECONÓMICO</div>
+
+  <p class="body-text">
+    En este capítulo se presenta el análisis económico del sistema de gestión de proyectos para
+    SOBOTEC S.R.L., aplicando el modelo <strong>COCOMO II</strong> en su modalidad semi-acoplada.
+    Se determinan el esfuerzo de desarrollo, los costos del proyecto y los indicadores de
+    viabilidad financiera: VAN, TIR y relación Costo-Beneficio.
+  </p>
+
+  <!-- 5.2.1 Métricas reales -->
+  <div class="section-title">5.2.1 Métricas Reales del Sistema</div>
+  <p class="table-caption">Tabla 5.1 — Líneas de código fuente medidas del sistema</p>
+  <table class="full-table" style="margin-bottom:12px;">
+    <thead><tr><th style="text-align:left;">Módulo / Archivo</th><th>Líneas de Código</th></tr></thead>
+    <tbody>
+      <tr><td>projects/views.py</td><td class="td-right">2,287</td></tr>
+      <tr><td>empleados/views.py</td><td class="td-right">989</td></tr>
+      <tr><td>inventario/views.py</td><td class="td-right">658</td></tr>
+      <tr><td>projects/models.py</td><td class="td-right">637</td></tr>
+      <tr><td>empleados/models.py</td><td class="td-right">196</td></tr>
+      <tr><td>inventario/models.py</td><td class="td-right">309</td></tr>
+      <tr><td>Formularios (3 archivos)</td><td class="td-right">798</td></tr>
+      <tr><td>URLs y configuración</td><td class="td-right">308</td></tr>
+      <tr><td>Señales, decoradores y utilidades</td><td class="td-right">164</td></tr>
+      <tr class="total-row"><td>Total SLOC medido</td><td class="td-right">6,346</td></tr>
+    </tbody>
+  </table>
+
+  <!-- 5.2.2 LDC -->
+  <div class="section-title">5.2.2 Cálculo de Líneas de Código (LDC)</div>
+  <p class="body-text">
+    Sistema desarrollado en Python · Factor LDC/PF = 15 · PF = 374.22
+  </p>
+  <div class="formula-inline">
+    LDC = 374.22 × 15 = <strong>5,613.3</strong> &nbsp;→&nbsp; KLDC = <strong>5.61</strong>
+  </div>
+
+  <!-- 5.2.3 Esfuerzo -->
+  <div class="section-title">5.2.3 Cálculo del Esfuerzo (E)</div>
+  <p class="body-text">Coeficientes Semi-acoplado: a = 3, b = 1.12</p>
+  <div class="formula-inline">
+    E = 3 × (5.61)<sup>1.12</sup> = <strong>20.67 meses/persona</strong>
+  </div>
+
+  <!-- 5.2.4 Tiempo -->
+  <div class="section-title">5.2.4 Cálculo del Tiempo de Desarrollo (D)</div>
+  <p class="body-text">Coeficientes Semi-acoplado: c = 2.5, d = 0.35</p>
+  <div class="formula-inline">
+    D = 2.5 × (20.67)<sup>0.35</sup> = <strong>7.22 meses ≈ 7 meses</strong>
+  </div>
+
+  <!-- 5.2.5 Personal -->
+  <div class="section-title">5.2.5 Cálculo del Personal Requerido (P)</div>
+  <div class="formula-inline">
+    P = 20.67 / 7.22 = <strong>2.86 ≈ 3 personas</strong>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════════
+     SLIDE 3 — Costos y VAN/TIR/CB
+     ═══════════════════════════════════════════════════ -->
+<div class="slide">
+  <div class="chapter-title">5.3 – 5.6 &nbsp; COSTOS E INDICADORES FINANCIEROS</div>
+
+  <!-- Costo total -->
+  <div class="section-title">5.3.4 Costo Total del Proyecto</div>
+  <p class="table-caption">Tabla 5.3 — Costo total del proyecto</p>
+  <table style="width:340px; margin-bottom:16px;">
+    <thead><tr><th style="text-align:left;">Descripción</th><th>Costo ($us)</th></tr></thead>
+    <tbody>
+      <tr><td>Costo de desarrollo</td><td class="td-right">11,550</td></tr>
+      <tr><td>Costo de elaboración</td><td class="td-right">395</td></tr>
+      <tr><td>Costo de implementación</td><td class="td-right">0</td></tr>
+      <tr class="total-row"><td>Total</td><td class="td-right">11,945</td></tr>
+    </tbody>
+  </table>
+
+  <!-- Flujos de caja -->
+  <div class="section-title">5.4 VAN — Flujos de Caja Proyectados</div>
+  <p class="table-caption">Tabla 5.4 — Flujos de caja proyectados por año</p>
+  <table style="margin-bottom:16px;">
+    <thead>
+      <tr>
+        <th>Año</th>
+        <th>Gastos ($us)</th>
+        <th>Beneficios ($us)</th>
+        <th>Flujo de Caja ($us)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="td-center">1</td><td class="td-right">3,000</td><td class="td-right">6,500</td><td class="td-right">3,500</td></tr>
+      <tr><td class="td-center">2</td><td class="td-right">3,500</td><td class="td-right">7,500</td><td class="td-right">4,000</td></tr>
+      <tr><td class="td-center">3</td><td class="td-right">3,800</td><td class="td-right">8,000</td><td class="td-right">4,200</td></tr>
+      <tr><td class="td-center">4</td><td class="td-right">4,000</td><td class="td-right">9,500</td><td class="td-right">5,500</td></tr>
+      <tr><td class="td-center">5</td><td class="td-right">4,500</td><td class="td-right">11,000</td><td class="td-right">6,500</td></tr>
+      <tr class="total-row">
+        <td class="td-center">Total</td>
+        <td class="td-right">18,800</td>
+        <td class="td-right">42,500</td>
+        <td class="td-right">23,700</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Flujos descontados -->
+  <p class="table-caption">Tabla 5.5 — Cálculo de flujos de caja descontados (k = 10%)</p>
+  <table style="margin-bottom:16px;">
+    <thead>
+      <tr><th>Año</th><th>Flujo ($us)</th><th>(1+k)ⁿ</th><th>Flujo Descontado ($us)</th></tr>
+    </thead>
+    <tbody>
+      <tr><td class="td-center">1</td><td class="td-right">3,500</td><td class="td-right">1.1000</td><td class="td-right">3,181.82</td></tr>
+      <tr><td class="td-center">2</td><td class="td-right">4,000</td><td class="td-right">1.2100</td><td class="td-right">3,305.78</td></tr>
+      <tr><td class="td-center">3</td><td class="td-right">4,200</td><td class="td-right">1.3310</td><td class="td-right">3,155.52</td></tr>
+      <tr><td class="td-center">4</td><td class="td-right">5,500</td><td class="td-right">1.4641</td><td class="td-right">3,756.57</td></tr>
+      <tr><td class="td-center">5</td><td class="td-right">6,500</td><td class="td-right">1.6105</td><td class="td-right">4,035.98</td></tr>
+      <tr class="total-row">
+        <td class="td-center">Total</td>
+        <td class="td-right">23,700</td>
+        <td class="td-right">6.7156</td>
+        <td class="td-right">17,435.67</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="formula-inline">
+    VAN = 17,435.67 − 11,945 = <strong class="highlight">$5,490.67 &nbsp;→ VAN &gt; 0 ✔ Proyecto viable</strong>
+  </div>
+
+  <div class="formula-inline" style="margin-top:8px;">
+    TIR = <strong class="highlight">24.81%</strong> &nbsp;&gt;&nbsp; tasa descuento (10%) ✔ Proyecto rentable
+  </div>
+
+  <div class="formula-inline" style="margin-top:8px;">
+    C/B = 42,500 / 18,800 = <strong class="highlight">2.26</strong> &nbsp;&gt;&nbsp; 1 ✔ Genera ganancia
+  </div>
+
+  <!-- Tabla resumen final -->
+  <div class="section-title" style="margin-top:20px;">5.7 Resumen de Indicadores Financieros</div>
+  <p class="table-caption">Tabla 5.6 — Resumen de indicadores financieros del proyecto</p>
+  <table class="full-table">
+    <thead><tr><th style="text-align:left;">Indicador</th><th>Valor</th><th style="text-align:left;">Resultado</th></tr></thead>
+    <tbody>
+      <tr><td>Inversión inicial (I₀)</td><td class="td-right">$11,945</td><td>Costo total del proyecto</td></tr>
+      <tr><td>Esfuerzo (E)</td><td class="td-right">20.67 meses/persona</td><td>Calculado con COCOMO II</td></tr>
+      <tr><td>Tiempo de desarrollo (D)</td><td class="td-right">7 meses</td><td>Modo semi-acoplado</td></tr>
+      <tr><td>Personal requerido (P)</td><td class="td-right">3 personas</td><td>Desarrolladores</td></tr>
+      <tr class="result-positive"><td>VAN</td><td class="td-right">$5,490.67</td><td>&gt; 0 → Proyecto viable</td></tr>
+      <tr class="result-positive"><td>TIR</td><td class="td-right">24.81%</td><td>&gt; 10% → Proyecto rentable</td></tr>
+      <tr class="result-positive"><td>Costo-Beneficio</td><td class="td-right">2.26</td><td>&gt; 1 → Genera ganancia</td></tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>

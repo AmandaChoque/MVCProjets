@@ -51,7 +51,7 @@
   {% if total_alertas %}
   <div class="mb-4">
     <div class="d-flex align-items-center gap-2 mb-2">
-      <i class="bi bi-bell-fill text-danger"></i>
+      <i class="bi bi-exclamation-triangle-fill text-danger"></i>
       <span class="fw-semibold" style="font-size:0.9rem;">Alertas del Sistema</span>
       <span class="badge bg-danger rounded-pill">{{ total_alertas }}</span>
     </div>
@@ -279,7 +279,7 @@
           <button class="accordion-button collapsed py-2 small fw-semibold"
                   type="button" data-bs-toggle="collapse" data-bs-target="#collapseAlertasEmpleados">
             <i class="bi bi-person-exclamation text-warning me-2"></i>
-            Pagos a Empleados
+            Empleados
             <span class="badge bg-warning text-dark ms-2">{{ alertas_empleados|length }}</span>
           </button>
         </h2>
@@ -287,6 +287,32 @@
              data-bs-parent="#accordionAlertas">
           <div class="accordion-body py-2 px-3">
             {% for a in alertas_empleados %}
+            <div class="d-flex align-items-start gap-2 py-1 border-bottom border-light-subtle small">
+              <i class="bi {{ a.icono }} text-{{ a.tipo }} mt-1 flex-shrink-0"></i>
+              <span class="flex-grow-1">{{ a.msg }}</span>
+              <a href="{{ a.url }}" class="btn btn-sm btn-outline-secondary py-0 px-2 flex-shrink-0" style="font-size:0.72rem;">Ver</a>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Garantías -->
+      {% if alertas_garantias %}
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed py-2 small fw-semibold"
+                  type="button" data-bs-toggle="collapse" data-bs-target="#collapseAlertasGarantias">
+            <i class="bi bi-shield-exclamation text-danger me-2"></i>
+            Garantías
+            <span class="badge bg-danger ms-2">{{ alertas_garantias|length }}</span>
+          </button>
+        </h2>
+        <div id="collapseAlertasGarantias" class="accordion-collapse collapse"
+             data-bs-parent="#accordionAlertas">
+          <div class="accordion-body py-2 px-3">
+            {% for a in alertas_garantias %}
             <div class="d-flex align-items-start gap-2 py-1 border-bottom border-light-subtle small">
               <i class="bi {{ a.icono }} text-{{ a.tipo }} mt-1 flex-shrink-0"></i>
               <span class="flex-grow-1">{{ a.msg }}</span>
@@ -408,6 +434,26 @@
           <div class="card-body py-3 px-3">
             <div class="kpi-value text-danger">{{ cnt_vencidos }}</div>
             <div class="kpi-label">Plazo Vencido</div>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md">
+      <a href="{% url 'project_report' %}?filter_cumplimiento=vencido" class="text-decoration-none">
+        <div class="card kpi-card {% if cnt_con_multa %}red{% else %}green{% endif %} border-0 shadow-sm h-100">
+          <div class="card-body py-3 px-3">
+            <div class="kpi-value {% if cnt_con_multa %}text-danger{% else %}text-success{% endif %}">{{ cnt_con_multa }}</div>
+            <div class="kpi-label">Con Multa Activa</div>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md">
+      <a href="{% url 'employees' %}" class="text-decoration-none">
+        <div class="card kpi-card {% if jornadas_pendientes_count %}yellow{% else %}green{% endif %} border-0 shadow-sm h-100">
+          <div class="card-body py-3 px-3">
+            <div class="kpi-value {% if jornadas_pendientes_count %}text-warning{% else %}text-success{% endif %}">{{ jornadas_pendientes_count }}</div>
+            <div class="kpi-label">Jornadas por Aprobar</div>
           </div>
         </div>
       </a>

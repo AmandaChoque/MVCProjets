@@ -1,0 +1,95 @@
+@startuml uc_p2_sedes_instalacion
+title Casos de Uso — Parte 2: Sedes e Instalación\nSistema SOBOTEC S.R.L.
+
+left to right direction
+
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam backgroundColor #FFFFFF
+skinparam usecaseBackgroundColor #DDEEFF
+skinparam usecaseBorderColor #336699
+skinparam usecaseFontSize 12
+skinparam actorFontSize 12
+skinparam packageBorderColor #777777
+skinparam packageBackgroundColor #F5F5F5
+skinparam packageFontStyle bold
+skinparam arrowColor #444444
+skinparam noteBackgroundColor #FFFFCC
+skinparam noteBorderColor #CCAA00
+
+' ── ACTORES ──────────────────────────────────────
+actor "Administrador\n/ Gerente"         as ADM   #4A90D9
+actor "Instalador\n/ Técnico de Soporte" as CAMPO #E67E22
+actor "Sistema\n(automático)"            as SIS   #C0392B
+
+' ── BOUNDARY ─────────────────────────────────────
+rectangle "Sistema SOBOTEC — Sedes e Instalación" {
+
+    package "Gestión de Sedes" {
+        usecase "Crear sede"                     as UC_SE1
+        usecase "Editar / Desactivar sede"       as UC_SE2
+        usecase "Ver detalle de sede"            as UC_SE8
+    }
+
+    package "Checklist de Tareas" {
+        usecase "Aplicar plantilla de tareas"    as UC_SE3
+        usecase "Crear / Editar tarea checklist" as UC_SE4
+        usecase "Completar tarea"                as UC_SE5
+        usecase "Crear subtarea"                 as UC_SE6
+        usecase "Completar subtarea"             as UC_SE6B
+    }
+
+    package "Registro Fotográfico" {
+        usecase "Subir fotos de sede"    as UC_SE7
+        usecase "Eliminar foto de sede"  as UC_SE7B
+    }
+
+    package "Automático" {
+        usecase "Copiar plantilla\nal crear sede"          as SA5
+        usecase "Notificar admins al\ncompletar sede"      as SA4
+    }
+}
+
+' ── ASOCIACIONES: Administrador / Gerente ────────
+ADM --> UC_SE1
+ADM --> UC_SE2
+ADM --> UC_SE3
+ADM --> UC_SE4
+ADM --> UC_SE5
+ADM --> UC_SE6
+ADM --> UC_SE6B
+ADM --> UC_SE7
+ADM --> UC_SE7B
+ADM --> UC_SE8
+
+' ── ASOCIACIONES: Instalador / Técnico ───────────
+CAMPO --> UC_SE5
+CAMPO --> UC_SE6
+CAMPO --> UC_SE6B
+CAMPO --> UC_SE7
+CAMPO --> UC_SE8
+
+' ── ASOCIACIONES: Sistema ────────────────────────
+SIS --> SA4
+SIS --> SA5
+
+' ── INCLUDE / EXTEND ─────────────────────────────
+UC_SE1 .> SA5 : <<extend>>
+UC_SE5 .> SA4 : <<extend>>
+
+note right of UC_SE1
+  Solo Administrador / Gerente
+  puede crear y editar sedes.
+end note
+
+note right of SA5
+  Solo si se selecciona una
+  plantilla al crear la sede.
+end note
+
+note right of SA4
+  Se dispara cuando el porcentaje
+  del checklist llega al 100%.
+end note
+
+@enduml

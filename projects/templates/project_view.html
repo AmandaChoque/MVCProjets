@@ -5,10 +5,10 @@
   .nav-tabs .nav-link { font-size: 0.85rem; color: #6c757d; border: none; border-bottom: 2px solid transparent; border-radius: 0; }
   .nav-tabs .nav-link:hover { color: #264653; background: transparent; }
   .nav-tabs .nav-link.active { font-weight: 600; color: #0d6efd; border-bottom: 2px solid #0d6efd; background: transparent; }
-  #tab-insumos.nav-link.active,
-  button[data-bs-target="#tab-insumos"].active { color: #198754; border-bottom-color: #198754; }
-  button[data-bs-target="#tab-finanzas"].active { color: #fd7e14; border-bottom-color: #fd7e14; }
-  button[data-bs-target="#tab-sedes"].active { color: #6f42c1; border-bottom-color: #6f42c1; }
+  button[data-bs-target="#tab-planificacion"].active { color: #6f42c1; border-bottom-color: #6f42c1; }
+  button[data-bs-target="#tab-ejecucion"].active    { color: #198754; border-bottom-color: #198754; }
+  button[data-bs-target="#tab-monitoreo"].active    { color: #fd7e14; border-bottom-color: #fd7e14; }
+  button[data-bs-target="#tab-cierre"].active       { color: #20c997; border-bottom-color: #20c997; }
   .tab-content { padding-top: 1.25rem; }
   .info-label { min-width: 160px; font-weight: 600; color: #495057; flex-shrink: 0; }
   .info-row { display: flex; gap: 0.5rem; margin-bottom: 0.6rem; }
@@ -20,16 +20,16 @@
   .sede-progress { height: 5px; border-radius: 4px; }
   .sede-stats    { font-size: .72rem; color: #6c757d; }
   .sede-foto-thumb { width: 36px; height: 28px; object-fit: cover; border-radius: 3px; }
-  /* Utilidades tipográficas para sustituir estilos inline */
   .text-xs    { font-size: 0.70rem; }
   .text-xxs   { font-size: 0.68rem; }
   .badge-count { font-size: 0.70rem; }
-  .sede-link  { min-width: 120px; max-width: 180px; }
+  .sede-link  { min-width: 120px; max-width: 320px; }
   .sede-pct   { min-width: 36px; text-align: right; }
   .label-meta { font-size: 0.72rem; text-transform: uppercase; letter-spacing: .05em; }
   .progress-lg { height: 18px; border-radius: 8px; }
   .progress-md { height: 12px; border-radius: 8px; }
   .icon-lg    { font-size: 2rem; }
+  .fase-label { font-size: 0.62rem; text-transform: uppercase; letter-spacing: .07em; opacity: .65; display: block; line-height: 1; margin-bottom: 2px; }
 </style>
 {% endblock %}
 
@@ -83,16 +83,33 @@
     </div>
   </div>
 
-  <!-- TABS -->
+  <!-- TABS PMBoK -->
   <ul class="nav nav-tabs mb-0" id="projectTabs">
     <li class="nav-item">
-      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-general" type="button">
-        <i class="bi bi-info-circle me-1"></i>General
+      <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-inicio" type="button">
+        <span class="fase-label">Fase 1</span>
+        <i class="bi bi-flag me-1"></i>Inicio
       </button>
     </li>
     <li class="nav-item">
-      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-progreso" type="button">
-        <i class="bi bi-graph-up me-1"></i>Progreso
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-planificacion" type="button">
+        <span class="fase-label">Fase 2</span>
+        <i class="bi bi-calendar3 me-1"></i>Planificación
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-ejecucion" type="button">
+        <span class="fase-label">Fase 3</span>
+        <i class="bi bi-hammer me-1"></i>Ejecución
+        {% if sedes %}
+        <span class="badge bg-secondary ms-1 badge-count">{{ sedes|length }}</span>
+        {% endif %}
+      </button>
+    </li>
+    <li class="nav-item">
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-monitoreo" type="button">
+        <span class="fase-label">Fase 4</span>
+        <i class="bi bi-graph-up-arrow me-1"></i>Monitoreo y Control
         {% if progreso_sedes > 0 %}
         <span class="badge bg-secondary ms-1 badge-count">{{ progreso_sedes }}%</span>
         {% endif %}
@@ -100,31 +117,16 @@
     </li>
     {% if not es_instalador_tecnico %}
     <li class="nav-item">
-      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-contratos" type="button">
-        <i class="bi bi-file-earmark-text me-1"></i>Contratos
-      </button>
-    </li>
-    {% endif %}
-    <li class="nav-item">
-      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-sedes" type="button">
-        <i class="bi bi-geo-alt me-1"></i>Sedes
-        {% if sedes %}
-        <span class="badge bg-secondary ms-1 badge-count">{{ sedes|length }}</span>
+      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-cierre" type="button">
+        <span class="fase-label">Fase 5</span>
+        <i class="bi bi-flag-fill me-1"></i>Cierre
+        {% if garantia and garantia.estado == 'por_vencer' %}
+        <span class="badge bg-warning text-dark ms-1 badge-count">!</span>
+        {% elif garantia and garantia.estado == 'vencida' %}
+        <span class="badge bg-danger ms-1 badge-count">!</span>
+        {% elif saldo_cliente > 0 and project.estado_proyecto == 'completado' %}
+        <span class="badge bg-danger ms-1 badge-count">$</span>
         {% endif %}
-      </button>
-    </li>
-    <li class="nav-item">
-      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-insumos" type="button">
-        <i class="bi bi-box-seam me-1"></i>Insumos
-        {% if insumos_proyecto %}
-        <span class="badge bg-secondary ms-1 badge-count">{{ insumos_proyecto|length }}</span>
-        {% endif %}
-      </button>
-    </li>
-    {% if not es_instalador_tecnico %}
-    <li class="nav-item">
-      <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-finanzas" type="button">
-        <i class="bi bi-cash-stack me-1"></i>Finanzas
       </button>
     </li>
     {% endif %}
@@ -132,9 +134,9 @@
 
   <div class="tab-content" id="projectTabsContent">
 
-    <!-- ── TAB GENERAL ──────────────────────────────────────────────── -->
-    <div class="tab-pane fade show active" id="tab-general">
-      <div class="row g-4">
+    <!-- ── FASE 1: INICIO ─────────────────────────────────────────────── -->
+    <div class="tab-pane fade show active" id="tab-inicio">
+      <div class="row g-4 mb-4">
         <div class="col-md-6">
           <div class="card border-0 shadow-sm rounded-3 h-100">
             <div class="card-header bg-light"><h6 class="mb-0 fw-semibold">Información General</h6></div>
@@ -191,66 +193,9 @@
         </div>
         {% endif %}
       </div>
-    </div>
 
-    <!-- ── TAB PROGRESO ─────────────────────────────────────────────── -->
-    <div class="tab-pane fade" id="tab-progreso">
+      {% if not es_instalador_tecnico %}
       <div class="card border-0 shadow-sm rounded-3">
-        <div class="card-header bg-light">
-          <h6 class="mb-0 fw-semibold">Progreso del Proyecto</h6>
-        </div>
-        <div class="card-body">
-          {% if sedes %}
-          <div class="mb-4">
-            <div class="d-flex justify-content-between align-items-baseline mb-1">
-              <span class="fw-semibold small">Progreso general del proyecto</span>
-              <span class="fw-bold fs-5 {% if progreso_sedes == 100 %}text-success{% elif progreso_sedes >= 50 %}text-primary{% else %}text-warning{% endif %}">
-                {{ progreso_sedes }}%
-              </span>
-            </div>
-            <div class="progress mb-2 progress-lg">
-              <div class="progress-bar text-xs {% if progreso_sedes == 100 %}bg-success{% elif progreso_sedes >= 50 %}bg-primary{% else %}bg-warning{% endif %} fw-semibold"
-                   role="progressbar" style="width:{{ progreso_sedes }}%"
-                   aria-valuenow="{{ progreso_sedes }}" aria-valuemin="0" aria-valuemax="100">
-                {% if progreso_sedes > 10 %}{{ progreso_sedes }}%{% endif %}
-              </div>
-            </div>
-            <!-- Desglose por sede -->
-            <div class="d-flex flex-column gap-1 mt-2">
-              {% for sede in sedes %}
-              <div class="d-flex align-items-center gap-2 small">
-                <a href="{% url 'sede_view' sede.id %}" class="text-decoration-none text-truncate sede-link">
-                  <i class="bi bi-geo-alt-fill me-1 {% if sede.estado == 'completado' %}text-success{% elif sede.estado == 'en_progreso' %}text-primary{% else %}text-warning{% endif %}"></i>
-                  {{ sede.nombre }}
-                </a>
-                <div class="progress flex-grow-1" style="height:8px; border-radius:4px;">
-                  <div class="progress-bar {% if sede.estado == 'completado' %}bg-success{% elif sede.estado == 'en_progreso' %}bg-primary{% else %}bg-warning{% endif %}"
-                       style="width:{{ sede.porcentaje_checklist }}%"></div>
-                </div>
-                <span class="text-muted sede-pct">{{ sede.porcentaje_checklist }}%</span>
-                {% if sede.estado == 'completado' %}
-                <i class="bi bi-check-circle-fill text-success"></i>
-                {% endif %}
-              </div>
-              {% endfor %}
-            </div>
-            <div class="text-muted small mt-2">
-              <i class="bi bi-info-circle me-1"></i>{{ sedes_completadas }} de {{ sedes|length }} sede{{ sedes|length|pluralize:"s" }} completada{{ sedes|length|pluralize:"s" }}
-            </div>
-          </div>
-          {% else %}
-          <p class="text-muted small">Sin sedes registradas. El progreso se calcula automáticamente al completar tareas de checklist en cada sede.</p>
-          {% endif %}
-        </div>
-      </div>
-    </div>
-
-    <!-- ── TAB CONTRATOS ────────────────────────────────────────────── -->
-    {% if not es_instalador_tecnico %}
-    <div class="tab-pane fade" id="tab-contratos">
-
-      <!-- Contrato del Proyecto -->
-      <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h6 class="mb-0 fw-semibold">Contrato del Proyecto</h6>
           {% if not contrato_proyecto %}
@@ -300,9 +245,14 @@
           {% endif %}
         </div>
       </div>
+      {% endif %}
+    </div>
+
+    <!-- ── FASE 2: PLANIFICACIÓN ──────────────────────────────────────── -->
+    <div class="tab-pane fade" id="tab-planificacion">
 
       <!-- Equipo del Proyecto -->
-      <div class="card border-0 shadow-sm rounded-3">
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h6 class="mb-0 fw-semibold">Equipo del Proyecto</h6>
           {% if es_admin and empleados_disponibles %}
@@ -314,15 +264,34 @@
         {% if es_admin and empleados_disponibles %}
         <div class="collapse" id="panelAgregarMiembro">
           <div class="card-body border-bottom bg-light py-2">
-            <form method="POST" action="{% url 'equipo_add' project.id %}" class="d-flex gap-2 align-items-center flex-wrap">
+            <form method="POST" action="{% url 'equipo_add' project.id %}">
               {% csrf_token %}
-              <select name="empleado_id" class="form-select form-select-sm" style="max-width:280px" required>
-                <option value="">Seleccionar empleado</option>
-                {% for emp in empleados_disponibles %}
-                <option value="{{ emp.id }}">{{ emp.nombre }} {{ emp.apellido_paterno }} — {{ emp.get_cargo_display }}</option>
-                {% endfor %}
-              </select>
-              <button type="submit" class="btn btn-sm btn-primary">Agregar</button>
+              <div class="row g-2 align-items-end">
+                <div class="col-12 col-md-4">
+                  <label class="form-label form-label-sm mb-1 text-muted small">Empleado</label>
+                  <select name="empleado_id" class="form-select form-select-sm" required>
+                    <option value="">Seleccionar empleado</option>
+                    {% for emp in empleados_disponibles %}
+                    <option value="{{ emp.id }}">{{ emp.nombre }} {{ emp.apellido_paterno }} — {{ emp.get_cargo_display }}</option>
+                    {% endfor %}
+                  </select>
+                </div>
+                <div class="col-6 col-md-2">
+                  <label class="form-label form-label-sm mb-1 text-muted small">Inicio plan</label>
+                  <input type="date" name="fecha_inicio_plan" class="form-control form-control-sm">
+                </div>
+                <div class="col-6 col-md-2">
+                  <label class="form-label form-label-sm mb-1 text-muted small">Fin plan</label>
+                  <input type="date" name="fecha_fin_plan" class="form-control form-control-sm">
+                </div>
+                <div class="col-6 col-md-2">
+                  <label class="form-label form-label-sm mb-1 text-muted small">Días planif.</label>
+                  <input type="number" name="dias_planificados" class="form-control form-control-sm" min="1" placeholder="Ej: 12">
+                </div>
+                <div class="col-6 col-md-2 d-flex align-items-end">
+                  <button type="submit" class="btn btn-sm btn-primary w-100">Agregar</button>
+                </div>
+              </div>
             </form>
           </div>
         </div>
@@ -335,10 +304,14 @@
                 <tr>
                   <th scope="col" class="px-3">Empleado</th>
                   <th scope="col">Cargo</th>
-                  <th scope="col" class="text-center">Última jornada</th>
-                  <th scope="col" class="text-center">Días trab.</th>
-                  {% if not es_instalador_tecnico %}<th scope="col" class="text-end">Costo (Bs.)</th>{% endif %}
-                  <th scope="col" class="text-end px-3" style="width:100px;"></th>
+                  <th scope="col" class="text-center">Inicio plan</th>
+                  <th scope="col" class="text-center">Fin plan</th>
+                  <th scope="col" class="text-center">Días plan</th>
+                  <th scope="col" class="text-center">Días reales</th>
+                  <th scope="col" class="text-center">Eficiencia</th>
+                  <th scope="col" class="text-center">Días pend.</th>
+                  {% if not es_instalador_tecnico %}<th scope="col" class="text-end">Costo aprob. (Bs.)</th>{% endif %}
+                  <th scope="col" class="text-end px-3" style="width:120px;"></th>
                 </tr>
               </thead>
               <tbody>
@@ -354,13 +327,51 @@
                       <span class="text-muted">{{ item.empleado.get_cargo_display }}</span>
                     {% endif %}
                   </td>
-                  <td class="text-center text-muted">{{ item.ultima_fecha|date:"d/m/Y"|default:"—" }}</td>
-                  <td class="text-center">{{ item.total_dias }}</td>
+                  <td class="text-center text-muted">
+                    {% if item.asignacion.fecha_inicio_plan %}{{ item.asignacion.fecha_inicio_plan|date:"d/m/Y" }}{% else %}—{% endif %}
+                  </td>
+                  <td class="text-center text-muted">
+                    {% if item.asignacion.fecha_fin_plan %}
+                      {{ item.asignacion.fecha_fin_plan|date:"d/m/Y" }}
+                      {% if item.asignacion.dias_retraso > 0 %}
+                        <span class="badge bg-danger ms-1">+{{ item.asignacion.dias_retraso }}d</span>
+                      {% endif %}
+                    {% else %}—{% endif %}
+                  </td>
+                  <td class="text-center">
+                    {% if item.asignacion.dias_planificados %}
+                      <span class="fw-semibold">{{ item.asignacion.dias_planificados }}</span>
+                    {% else %}<span class="text-muted">—</span>{% endif %}
+                  </td>
+                  <td class="text-center fw-semibold">{{ item.dias_aprobados }}</td>
+                  <td class="text-center">
+                    {% if item.asignacion.eficiencia_pct is not None %}
+                      {% if item.asignacion.eficiencia_pct >= 100 %}
+                        <span class="badge bg-success">{{ item.asignacion.eficiencia_pct }}%</span>
+                      {% elif item.asignacion.eficiencia_pct >= 80 %}
+                        <span class="badge bg-warning text-dark">{{ item.asignacion.eficiencia_pct }}%</span>
+                      {% else %}
+                        <span class="badge bg-danger">{{ item.asignacion.eficiencia_pct }}%</span>
+                      {% endif %}
+                    {% else %}<span class="text-muted">—</span>{% endif %}
+                  </td>
+                  <td class="text-center">
+                    {% if item.dias_pendientes %}
+                      <span class="badge bg-warning text-dark">{{ item.dias_pendientes }} pend.</span>
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
                   {% if not es_instalador_tecnico %}<td class="text-end fw-semibold">{{ item.costo|floatformat:2 }}</td>{% endif %}
                   <td class="text-end px-3">
                     <div class="d-flex gap-1 justify-content-end">
                       <a href="{% url 'employee_view' item.empleado.id %}" class="btn btn-sm btn-light py-0">Ver</a>
                       {% if es_admin %}
+                      <button type="button" class="btn btn-sm btn-outline-secondary py-0"
+                        data-bs-toggle="modal" data-bs-target="#modalCronograma{{ item.empleado.id }}"
+                        title="Editar cronograma">
+                        <i class="bi bi-calendar3"></i>
+                      </button>
                       <form method="POST" action="{% url 'equipo_remove' project.id item.empleado.id %}" class="d-inline">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-sm btn-outline-danger py-0"
@@ -376,109 +387,52 @@
               </tbody>
             </table>
           </div>
+
+          {% if es_admin %}
+          {% for item in equipo_proyecto %}
+          <div class="modal fade" id="modalCronograma{{ item.empleado.id }}" tabindex="-1">
+            <div class="modal-dialog modal-sm">
+              <div class="modal-content">
+                <div class="modal-header py-2">
+                  <h6 class="modal-title small fw-semibold">Cronograma — {{ item.empleado.nombre }} {{ item.empleado.apellido_paterno }}</h6>
+                  <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="{% url 'asignacion_edit' project.id item.empleado.id %}">
+                  {% csrf_token %}
+                  <div class="modal-body py-2">
+                    <div class="mb-2">
+                      <label class="form-label form-label-sm mb-1 text-muted small">Inicio planificado</label>
+                      <input type="date" name="fecha_inicio_plan" class="form-control form-control-sm"
+                        value="{{ item.asignacion.fecha_inicio_plan|date:'Y-m-d'|default:'' }}">
+                    </div>
+                    <div class="mb-2">
+                      <label class="form-label form-label-sm mb-1 text-muted small">Fin planificado</label>
+                      <input type="date" name="fecha_fin_plan" class="form-control form-control-sm"
+                        value="{{ item.asignacion.fecha_fin_plan|date:'Y-m-d'|default:'' }}">
+                    </div>
+                    <div class="mb-2">
+                      <label class="form-label form-label-sm mb-1 text-muted small">Días planificados</label>
+                      <input type="number" name="dias_planificados" class="form-control form-control-sm" min="1"
+                        placeholder="Ej: 12" value="{{ item.asignacion.dias_planificados|default:'' }}">
+                    </div>
+                  </div>
+                  <div class="modal-footer py-2">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-sm btn-primary">Guardar</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+          {% endif %}
           {% else %}
           <p class="text-muted small mb-0 mt-2">Sin miembros asignados aún.</p>
           {% endif %}
         </div>
       </div>
-    </div>
-    {% endif %}
 
-    <!-- ── TAB SEDES ──────────────────────────────────────────────────── -->
-    <div class="tab-pane fade" id="tab-sedes">
-
-      <!-- Mapa general del proyecto -->
-      {% with sedes_con_coords=sedes %}
-      <div class="card border-0 shadow-sm rounded-3 mb-4">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0 fw-semibold"><i class="bi bi-map me-2"></i>Puntos de instalación</h6>
-          {% if es_admin %}
-          <a href="{% url 'sede_create' project.id %}" class="btn btn-sm btn-primary">
-            <i class="bi bi-plus-lg me-1"></i>Nueva sede
-          </a>
-          {% endif %}
-        </div>
-        <div class="card-body p-2">
-          <div id="map-project"></div>
-        </div>
-      </div>
-      {% endwith %}
-
-      <!-- Lista de sedes -->
-      {% if sedes %}
-      <div class="row g-3">
-        {% for sede in sedes %}
-        <div class="col-md-6">
-          <div class="card border-0 shadow-sm h-100 sede-card-{{ sede.estado }}">
-            <div class="card-body pb-2">
-              <div class="d-flex justify-content-between align-items-start mb-1">
-                <div>
-                  <a href="{% url 'sede_view' sede.id %}" class="fw-semibold text-decoration-none text-sobotec">
-                    {{ sede.nombre }}
-                  </a>
-                  <div class="text-muted small"><i class="bi bi-geo-alt me-1"></i>{{ sede.direccion|truncatechars:55 }}</div>
-                </div>
-                {% if sede.estado == 'completado' %}
-                  <span class="badge bg-success ms-2 flex-shrink-0">Completada</span>
-                {% elif sede.estado == 'en_progreso' %}
-                  <span class="badge bg-primary ms-2 flex-shrink-0">{{ sede.porcentaje_checklist }}%</span>
-                {% else %}
-                  <span class="badge bg-warning text-dark ms-2 flex-shrink-0">Pendiente</span>
-                {% endif %}
-              </div>
-
-              <!-- Mini barra de progreso checklist -->
-              {% with pct=sede.porcentaje_checklist total=sede.tareas.count %}
-              {% if total > 0 %}
-              <div class="progress my-2 sede-progress">
-                <div class="progress-bar {% if pct == 100 %}bg-success{% elif pct >= 50 %}bg-primary{% else %}bg-warning{% endif %}"
-                     style="width:{{ pct }}%"></div>
-              </div>
-              <div class="d-flex justify-content-between sede-stats">
-                <span>{{ total }} tarea{{ total|pluralize:"s" }}</span>
-                <span>{{ pct }}% completado</span>
-              </div>
-              {% else %}
-              <div class="text-muted sede-stats">Sin tareas en checklist</div>
-              {% endif %}
-              {% endwith %}
-
-              <!-- Fotos en miniatura -->
-              {% if sede.fotos.all %}
-              <div class="d-flex gap-1 mt-2 flex-wrap">
-                {% for foto in sede.fotos.all %}
-                {% if foto.activo %}
-                <a href="{% url 'sede_view' sede.id %}">
-                  <img src="{{ foto.foto.url }}" alt="Foto de {{ sede.nombre }}" class="sede-foto-thumb">
-                </a>
-                {% endif %}
-                {% endfor %}
-              </div>
-              {% endif %}
-
-              <div class="mt-2 pt-1 border-top">
-                <a href="{% url 'sede_view' sede.id %}" class="btn btn-sm btn-outline-secondary py-0">
-                  <i class="bi bi-eye me-1"></i>Ver detalle
-                </a>
-              </div>
-            </div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-      {% else %}
-      <div class="text-center text-muted py-4">
-        <i class="bi bi-geo-alt icon-lg"></i>
-        <p class="mt-2 mb-0">Sin sedes registradas.
-          {% if es_admin %}<a href="{% url 'sede_create' project.id %}">Agregar la primera</a>.{% endif %}
-        </p>
-      </div>
-      {% endif %}
-
-    </div>
-
-    <!-- ── TAB INSUMOS ──────────────────────────────────────────────── -->
-    <div class="tab-pane fade" id="tab-insumos">
+      <!-- Insumos del Proyecto -->
       <div class="card border-0 shadow-sm rounded-3">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h6 class="mb-0 fw-semibold">Insumos del Proyecto</h6>
@@ -539,17 +493,150 @@
             </table>
           </div>
           {% else %}
-          <p class="text-muted small mb-0 mt-2">Sin insumos asignados. <a href="{% url 'create_requiere' project.id %}">Agregar el primero</a>.</p>
+          <p class="text-muted small mb-0 mt-2">Sin insumos asignados.</p>
           {% endif %}
         </div>
       </div>
     </div>
 
-    <!-- ── TAB FINANZAS ─────────────────────────────────────────────── -->
-    {% if not es_instalador_tecnico %}
-    <div class="tab-pane fade" id="tab-finanzas">
+    <!-- ── FASE 3: EJECUCIÓN ──────────────────────────────────────────── -->
+    <div class="tab-pane fade" id="tab-ejecucion">
 
-      <!-- Rentabilidad -->
+      {% with sedes_con_coords=sedes %}
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-semibold"><i class="bi bi-map me-2"></i>Puntos de instalación</h6>
+          {% if es_admin %}
+          <a href="{% url 'sede_create' project.id %}" class="btn btn-sm btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Nueva sede
+          </a>
+          {% endif %}
+        </div>
+        <div class="card-body p-2">
+          <div id="map-project"></div>
+        </div>
+      </div>
+      {% endwith %}
+
+      {% if sedes %}
+      <div class="row g-3">
+        {% for sede in sedes %}
+        <div class="col-md-6">
+          <div class="card border-0 shadow-sm h-100 sede-card-{{ sede.estado }}">
+            <div class="card-body pb-2">
+              <div class="d-flex justify-content-between align-items-start mb-1">
+                <div>
+                  <a href="{% url 'sede_view' sede.id %}" class="fw-semibold text-decoration-none text-sobotec">
+                    <i class="bi bi-geo-alt me-1"></i>{{ sede.direccion }} {{ sede.nombre }}
+                  </a>
+                </div>
+                {% if sede.estado == 'completado' %}
+                  <span class="badge bg-success ms-2 flex-shrink-0">Completada</span>
+                {% elif sede.estado == 'en_progreso' %}
+                  <span class="badge bg-primary ms-2 flex-shrink-0">{{ sede.porcentaje_checklist }}%</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark ms-2 flex-shrink-0">Pendiente</span>
+                {% endif %}
+              </div>
+
+              {% with pct=sede.porcentaje_checklist total=sede.tareas.count %}
+              {% if total > 0 %}
+              <div class="progress my-2 sede-progress">
+                <div class="progress-bar {% if pct == 100 %}bg-success{% elif pct >= 50 %}bg-primary{% else %}bg-warning{% endif %}"
+                     style="width:{{ pct }}%"></div>
+              </div>
+              <div class="d-flex justify-content-between sede-stats">
+                <span>{{ total }} tarea{{ total|pluralize:"s" }}</span>
+                <span>{{ pct }}% completado</span>
+              </div>
+              {% else %}
+              <div class="text-muted sede-stats">Sin tareas en checklist</div>
+              {% endif %}
+              {% endwith %}
+
+              {% if sede.fotos.all %}
+              <div class="d-flex gap-1 mt-2 flex-wrap">
+                {% for foto in sede.fotos.all %}
+                {% if foto.activo %}
+                <a href="{% url 'sede_view' sede.id %}">
+                  <img src="{{ foto.foto.url }}" alt="Foto de {{ sede.direccion }}" class="sede-foto-thumb">
+                </a>
+                {% endif %}
+                {% endfor %}
+              </div>
+              {% endif %}
+
+              <div class="mt-2 pt-1 border-top">
+                <a href="{% url 'sede_view' sede.id %}" class="btn btn-sm btn-outline-secondary py-0">
+                  <i class="bi bi-eye me-1"></i>Ver detalle
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="text-center text-muted py-4">
+        <i class="bi bi-geo-alt icon-lg"></i>
+        <p class="mt-2 mb-0">Sin sedes registradas.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- ── FASE 4: MONITOREO Y CONTROL ───────────────────────────────── -->
+    <div class="tab-pane fade" id="tab-monitoreo">
+
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light">
+          <h6 class="mb-0 fw-semibold">Progreso del Proyecto</h6>
+        </div>
+        <div class="card-body">
+          {% if sedes %}
+          <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-baseline mb-1">
+              <span class="fw-semibold small">Progreso general del proyecto</span>
+              <span class="fw-bold fs-5 {% if progreso_sedes == 100 %}text-success{% elif progreso_sedes >= 50 %}text-primary{% else %}text-warning{% endif %}">
+                {{ progreso_sedes }}%
+              </span>
+            </div>
+            <div class="progress mb-2 progress-lg">
+              <div class="progress-bar text-xs {% if progreso_sedes == 100 %}bg-success{% elif progreso_sedes >= 50 %}bg-primary{% else %}bg-warning{% endif %} fw-semibold"
+                   role="progressbar" style="width:{{ progreso_sedes }}%"
+                   aria-valuenow="{{ progreso_sedes }}" aria-valuemin="0" aria-valuemax="100">
+                {% if progreso_sedes > 10 %}{{ progreso_sedes }}%{% endif %}
+              </div>
+            </div>
+            <div class="d-flex flex-column gap-1 mt-2">
+              {% for sede in sedes %}
+              <div class="d-flex align-items-center gap-2 small">
+                <a href="{% url 'sede_view' sede.id %}" class="text-decoration-none text-truncate sede-link">
+                  <i class="bi bi-geo-alt-fill me-1 {% if sede.estado == 'completado' %}text-success{% elif sede.estado == 'en_progreso' %}text-primary{% else %}text-warning{% endif %}"></i>
+                  {{ sede.direccion }} {{ sede.nombre }}
+                </a>
+                <div class="progress flex-grow-1" style="height:8px; border-radius:4px;">
+                  <div class="progress-bar {% if sede.estado == 'completado' %}bg-success{% elif sede.estado == 'en_progreso' %}bg-primary{% else %}bg-warning{% endif %}"
+                       style="width:{{ sede.porcentaje_checklist }}%"></div>
+                </div>
+                <span class="text-muted sede-pct">{{ sede.porcentaje_checklist }}%</span>
+                {% if sede.estado == 'completado' %}
+                <i class="bi bi-check-circle-fill text-success"></i>
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+            <div class="text-muted small mt-2">
+              <i class="bi bi-info-circle me-1"></i>{{ sedes_completadas }} de {{ sedes|length }} sede{{ sedes|length|pluralize:"s" }} completada{{ sedes|length|pluralize:"s" }}
+            </div>
+          </div>
+          {% else %}
+          <p class="text-muted small">Sin sedes registradas. El progreso se calcula automáticamente al completar tareas de checklist en cada sede.</p>
+          {% endif %}
+        </div>
+      </div>
+
+      {% if not es_instalador_tecnico %}
+
       <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-header bg-light"><h6 class="mb-0 fw-semibold">Análisis de Rentabilidad</h6></div>
         <div class="card-body">
@@ -569,6 +656,12 @@
                     <td class="text-muted ps-0"><i class="bi bi-dash-circle text-danger me-1"></i>Costo de personal</td>
                     <td class="text-end text-danger">Bs. {{ costo_personal|floatformat:2 }}</td>
                   </tr>
+                  {% if costo_garantia %}
+                  <tr>
+                    <td class="text-muted ps-0"><i class="bi bi-dash-circle text-danger me-1"></i>Costo garantía <span class="text-muted small">(incidencias SOBOTEC)</span></td>
+                    <td class="text-end text-danger">Bs. {{ costo_garantia|floatformat:2 }}</td>
+                  </tr>
+                  {% endif %}
                   <tr class="border-top">
                     <td class="fw-bold ps-0">Rentabilidad neta</td>
                     <td class="text-end fw-bold {% if rentabilidad >= 0 %}text-success{% else %}text-danger{% endif %}">
@@ -599,8 +692,6 @@
         </div>
       </div>
 
-
-      <!-- Pagos del Cliente -->
       <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h6 class="mb-0 fw-semibold">Pagos del Cliente</h6>
@@ -655,14 +746,13 @@
             </table>
           </div>
           {% else %}
-          <p class="text-muted small mb-0">Sin pagos registrados. <a href="{% url 'create_payment' %}?proyecto={{ project.id }}">Registrar el primero</a>.</p>
+          <p class="text-muted small mb-0">Sin pagos registrados.</p>
           {% endif %}
         </div>
       </div>
 
-      <!-- Historial de Cambios de Estado -->
       {% if historial_estado %}
-      <div class="card border-0 shadow-sm rounded-3">
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-header bg-light d-flex align-items-center gap-2">
           <i class="bi bi-arrow-left-right text-primary"></i>
           <h6 class="mb-0 fw-semibold">Historial de Cambios de Estado</h6>
@@ -704,7 +794,6 @@
       </div>
       {% endif %}
 
-      <!-- Historial de Cambios de Monto -->
       {% if historial_monto %}
       <div class="card border-0 shadow-sm rounded-3">
         <div class="card-header bg-light"><h6 class="mb-0 fw-semibold">Historial de Contrato</h6></div>
@@ -731,6 +820,187 @@
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% endif %}{# end not es_instalador_tecnico #}
+    </div>
+
+    <!-- ── FASE 5: CIERRE ─────────────────────────────────────────────── -->
+    {% if not es_instalador_tecnico %}
+    <div class="tab-pane fade" id="tab-cierre">
+
+      <div class="row g-4 mb-4">
+
+        <!-- Resumen de cierre -->
+        <div class="col-md-6">
+          <div class="card border-0 shadow-sm rounded-3 h-100">
+            <div class="card-header bg-light"><h6 class="mb-0 fw-semibold">Resumen de Cierre</h6></div>
+            <div class="card-body">
+              <div class="info-row">
+                <span class="info-label">Estado del proyecto:</span>
+                <span>
+                  {% if project.estado_proyecto == 'completado' %}<span class="badge bg-success">Completado</span>
+                  {% elif project.estado_proyecto == 'en_progreso' %}<span class="badge bg-primary">En Progreso</span>
+                  {% else %}<span class="badge bg-warning text-dark">Pendiente</span>{% endif %}
+                </span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Avance técnico:</span>
+                <span class="fw-semibold {% if progreso_sedes == 100 %}text-success{% elif progreso_sedes >= 50 %}text-primary{% else %}text-warning{% endif %}">
+                  {{ progreso_sedes }}% <span class="text-muted fw-normal small">({{ sedes_completadas }} de {{ sedes|length }} sede{{ sedes|length|pluralize:"s" }})</span>
+                </span>
+              </div>
+              <hr class="my-2">
+              <div class="info-row">
+                <span class="info-label">Estado de pago:</span>
+                <span>
+                  {% if project.estado_pago == 'pagado' %}<span class="badge bg-success">Pagado</span>
+                  {% elif project.estado_pago == 'parcial' %}<span class="badge bg-warning text-dark">Pago Parcial</span>
+                  {% else %}<span class="badge bg-danger">Sin pago</span>{% endif %}
+                </span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Monto acordado:</span>
+                <span class="fw-semibold">Bs. {{ project.monto_total|floatformat:2 }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Total pagado:</span>
+                <span class="fw-semibold text-success">Bs. {{ total_pagado_cliente|floatformat:2 }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Saldo pendiente:</span>
+                <span class="fw-bold {% if saldo_cliente > 0 %}text-danger{% else %}text-success{% endif %}">
+                  Bs. {{ saldo_cliente|floatformat:2 }}
+                  {% if saldo_cliente <= 0 %}<i class="bi bi-check-circle-fill ms-1"></i>{% endif %}
+                </span>
+              </div>
+              <div class="mt-3">
+                <a href="{% url 'create_payment' %}?proyecto={{ project.id }}" class="btn btn-sm btn-outline-primary">
+                  <i class="bi bi-cash me-1"></i>Ver / registrar pagos
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Entrega y reporte -->
+        <div class="col-md-6">
+          <div class="card border-0 shadow-sm rounded-3 h-100">
+            <div class="card-header bg-light"><h6 class="mb-0 fw-semibold">Entrega y Reporte</h6></div>
+            <div class="card-body d-flex flex-column gap-3">
+              <div>
+                <p class="text-muted small mb-2">Reporte de finalización con detalle de sedes, insumos y costos.</p>
+                <a href="{% url 'project_view' project.id %}?pdf" target="_blank" class="btn btn-outline-danger w-100">
+                  <i class="bi bi-file-earmark-pdf me-1"></i>Generar reporte de finalización (PDF)
+                </a>
+              </div>
+              {% if project.estado_proyecto == 'completado' %}
+              <hr class="my-0">
+              <div class="text-center py-2">
+                <i class="bi bi-check-circle-fill text-success fs-3 d-block mb-1"></i>
+                <span class="text-success fw-semibold">Proyecto formalmente cerrado</span>
+                {% if project.fecha_fin %}
+                <div class="text-muted small mt-1">Entregado el {{ project.fecha_fin|date:"d/m/Y" }}</div>
+                {% endif %}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Garantía post-cierre -->
+      {% if garantia %}
+      {% if garantia.estado == 'por_vencer' %}
+      <div class="alert alert-warning d-flex align-items-center gap-3 mb-3">
+        <i class="bi bi-clock-history fs-4"></i>
+        <div><strong>Garantía próxima a vencer</strong> — quedan <strong>{{ garantia.dias_restantes }} días</strong> ({{ garantia.fecha_vencimiento|date:"d/m/Y" }}).</div>
+      </div>
+      {% elif garantia.estado == 'vencida' %}
+      <div class="alert alert-danger d-flex align-items-center gap-3 mb-3">
+        <i class="bi bi-shield-x fs-4"></i>
+        <div><strong>Garantía vencida</strong> el {{ garantia.fecha_vencimiento|date:"d/m/Y" }}.</div>
+      </div>
+      {% endif %}
+      <div class="row g-4">
+        <div class="col-md-4">
+          <div class="card border-0 shadow-sm rounded-3 h-100">
+            <div class="card-body">
+              <h6 class="fw-semibold mb-3"><i class="bi bi-shield-check me-2 text-primary"></i>Garantía Post-entrega</h6>
+              <div class="mb-2 small"><span class="text-muted">Duración:</span> <strong>{{ contrato_proyecto.garantia_meses }} mes{{ contrato_proyecto.garantia_meses|pluralize:"es" }}</strong></div>
+              <div class="mb-2 small"><span class="text-muted">Inicio:</span> {{ garantia.fecha_inicio|date:"d/m/Y" }}</div>
+              <div class="mb-2 small"><span class="text-muted">Vencimiento:</span> <strong>{{ garantia.fecha_vencimiento|date:"d/m/Y" }}</strong></div>
+              <div class="mb-3 small"><span class="text-muted">Estado:</span>
+                {% if garantia.estado == 'vigente' %}<span class="badge bg-success">Vigente ({{ garantia.dias_restantes }} días)</span>
+                {% elif garantia.estado == 'por_vencer' %}<span class="badge bg-warning text-dark">Por vencer ({{ garantia.dias_restantes }} días)</span>
+                {% else %}<span class="badge bg-danger">Vencida</span>{% endif %}
+              </div>
+              <hr class="my-2">
+              <div class="small"><span class="text-muted">Costo absorbido (SOBOTEC):</span><br>
+                <strong class="{% if garantia.costo_total_incidencias %}text-danger{% else %}text-muted{% endif %}">
+                  Bs. {{ garantia.costo_total_incidencias|floatformat:2 }}
+                </strong>
+              </div>
+              <a href="{% url 'garantia_detail' garantia.id %}" class="btn btn-sm btn-outline-primary mt-3 w-100">
+                <i class="bi bi-arrow-right me-1"></i>Ver detalle completo
+              </a>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-8">
+          <div class="card border-0 shadow-sm rounded-3">
+            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+              <h6 class="mb-0 fw-semibold"><i class="bi bi-exclamation-triangle me-2"></i>Incidencias post-entrega</h6>
+              {% if garantia.estado != 'vencida' and es_admin_sec %}
+              <a href="{% url 'incidencia_garantia_create' garantia.id %}" class="btn btn-sm btn-danger">
+                <i class="bi bi-plus-lg me-1"></i>Registrar
+              </a>
+              {% endif %}
+            </div>
+            <div class="card-body p-0">
+              {% with incs=garantia.incidencias.all %}
+              {% if incs %}
+              <div class="table-responsive">
+                <table class="table table-sm table-hover mb-0">
+                  <thead class="table-light"><tr>
+                    <th class="ps-3">Descripción</th><th>Fecha</th><th>Estado</th><th class="text-end pe-3">Costo</th>
+                  </tr></thead>
+                  <tbody>
+                    {% for inc in incs %}{% if inc.activo %}
+                    <tr>
+                      <td class="ps-3 small"><a href="{% url 'incidencia_garantia_detail' inc.id %}" class="text-decoration-none text-dark">{{ inc.descripcion|truncatechars:55 }}</a></td>
+                      <td class="small">{{ inc.fecha_reporte|date:"d/m/Y" }}</td>
+                      <td>
+                        {% if inc.estado == 'pendiente' %}<span class="badge bg-warning text-dark">Pendiente</span>
+                        {% elif inc.estado == 'en_reparacion' %}<span class="badge bg-primary">En Reparación</span>
+                        {% else %}<span class="badge bg-success">Resuelto</span>{% endif %}
+                      </td>
+                      <td class="text-end pe-3 small">
+                        {% if inc.costo_reparacion %}<span class="text-danger">Bs. {{ inc.costo_reparacion|floatformat:2 }}</span>
+                        {% else %}<span class="text-muted">—</span>{% endif %}
+                      </td>
+                    </tr>
+                    {% endif %}{% endfor %}
+                  </tbody>
+                </table>
+              </div>
+              {% else %}
+              <div class="text-center py-4 text-muted small">
+                <i class="bi bi-check-circle text-success fs-4 d-block mb-1"></i>Sin incidencias registradas.
+              </div>
+              {% endif %}
+              {% endwith %}
+            </div>
+          </div>
+        </div>
+      </div>
+      {% elif project.estado_proyecto == 'completado' %}
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body text-center py-4 text-muted small">
+          <i class="bi bi-shield-slash fs-3 d-block mb-1"></i>
+          Este proyecto no tiene período de garantía configurado en el contrato.
         </div>
       </div>
       {% endif %}
@@ -768,7 +1038,6 @@
 
 {% block extra_js %}
 <script>
-  // Modal eliminar insumo
   const deleteInsumoModal = document.getElementById('deleteInsumoModal');
   if (deleteInsumoModal) {
     deleteInsumoModal.addEventListener('show.bs.modal', function (e) {
@@ -779,7 +1048,6 @@
     });
   }
 
-  // Barras de progreso
   ['progresoBar', 'progresoSedesBar', 'margenBar'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.width = el.dataset.width + '%';
@@ -788,9 +1056,8 @@
     el.style.width = (el.dataset.width || 0) + '%';
   });
 
-  // Persistir tab activo por proyecto (con soporte de hash en URL)
   const storageKey = 'pvTab_{{ project.id }}';
-  const hashTarget = window.location.hash ? window.location.hash : null; // ej: '#tab-sedes'
+  const hashTarget = window.location.hash ? window.location.hash : null;
   const saved = localStorage.getItem(storageKey);
   const targetTab = hashTarget || saved;
   if (targetTab) {
@@ -804,13 +1071,11 @@
     btn.addEventListener('shown.bs.tab', () => localStorage.setItem(storageKey, btn.getAttribute('data-bs-target')));
   });
 
-  // Barras de progreso de sedes
   document.querySelectorAll('.sede-progress .progress-bar').forEach(bar => {
     if (bar.dataset.width !== undefined) bar.style.width = bar.dataset.width + '%';
   });
 </script>
 
-<!-- Datos de sedes para el mapa (procesado server-side, leído por JS) -->
 <script type="application/json" id="sedes-geo-data">{{ sedes_geo_json|safe }}</script>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -821,13 +1086,11 @@
 
   function initMapProject() {
     if (mapProject) { mapProject.invalidateSize(); return; }
-
     mapProject = L.map('map-project', { scrollWheelZoom: false })
       .setView([-17.3935, -66.1570], 6);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '© OpenStreetMap contributors'
     }).addTo(mapProject);
-
     sedesData.forEach(function(s) {
       var color = iconColor[s.estado] || '#6c757d';
       var icon  = L.divIcon({
@@ -835,23 +1098,19 @@
         className: '', iconAnchor: [7, 7],
       });
       L.marker([s.lat, s.lng], { icon })
-        .bindPopup('<b>' + s.nombre + '</b><br><small>' + s.direccion + '</small><br><a href="' + s.url + '" class="btn btn-sm btn-primary mt-1 py-0">Ver sede</a>')
+        .bindPopup('<b>' + s.nombre + '</b><br><small>' + s.direccion + ' ' + s.nombre + '</small><br><a href="' + s.url + '" class="btn btn-sm btn-primary mt-1 py-0">Ver sede</a>')
         .addTo(mapProject);
     });
-
     if (sedesData.length > 0) {
       var bounds = sedesData.map(function(s) { return [s.lat, s.lng]; });
       mapProject.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
     }
   }
 
-  // Inicializar al mostrar el tab (el div ya es visible y tiene dimensiones)
-  document.querySelector('[data-bs-target="#tab-sedes"]').addEventListener('shown.bs.tab', initMapProject);
+  document.querySelector('[data-bs-target="#tab-ejecucion"]').addEventListener('shown.bs.tab', initMapProject);
 
-  // Si el tab de sedes ya está activo al cargar (guardado en localStorage),
-  // esperar a que el navegador termine de pintar antes de inicializar Leaflet
   window.addEventListener('load', function() {
-    if (document.getElementById('tab-sedes').classList.contains('active')) {
+    if (document.getElementById('tab-ejecucion').classList.contains('active')) {
       initMapProject();
     }
   });

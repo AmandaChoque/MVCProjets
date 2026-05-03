@@ -18,13 +18,9 @@
 
 {% block content %}
 <main class="container-fluid px-4 py-4">
-  <nav aria-label="breadcrumb" class="mb-3">
-    <ol class="breadcrumb mb-0">
-      <li class="breadcrumb-item"><a href="{% url 'pagos_empleados_list' %}">Pagos Empleados</a></li>
-      <li class="breadcrumb-item"><a href="{% url 'contrato_empleado_detail' contrato.id %}">{{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }}</a></li>
-      <li class="breadcrumb-item active" aria-current="page">Nuevo pago</li>
-    </ol>
-  </nav>
+  <div class="mb-3">
+    <a href="{% url 'contrato_empleado_detail' contrato.id %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+  </div>
 
   <!-- Resumen del contrato -->
   <div class="card border-0 shadow-sm rounded-3 mb-4">

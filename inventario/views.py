@@ -12,7 +12,7 @@ import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 from projects.models import Proyecto
-from projects.decorators import cargo_required, ROLES_CAMPO
+from projects.decorators import cargo_required, ROLES_ADMIN, ROLES_CAMPO, ROLES_INSTALADOR
 from .models import Proveedor, Insumo, Requiere, Compra, RequiereLote, calcular_costo_fifo
 from .forms import ProveedorForm, InsumoForm, RequerirForm, CompraForm
 
@@ -20,6 +20,7 @@ from .forms import ProveedorForm, InsumoForm, RequerirForm, CompraForm
 # ── Proveedores ───────────────────────────────────────────────────────────────
 
 @login_required
+@cargo_required(*ROLES_CAMPO)
 def proveedores(request):
     search_nombre = request.GET.get('search_nombre', '')
     page     = request.GET.get('page', 1)
@@ -52,6 +53,7 @@ def proveedores(request):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN)
 def create_proveedor(request):
     if request.method == 'GET':
         return render(request, 'create_proveedor.html', {'form': ProveedorForm()})
@@ -64,6 +66,7 @@ def create_proveedor(request):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN)
 def proveedor_detail(request, id_proveedor):
     proveedor = get_object_or_404(Proveedor, pk=id_proveedor)
     if request.method == 'GET':
@@ -80,6 +83,7 @@ def proveedor_detail(request, id_proveedor):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN)
 def deactivate_proveedor(request, id_proveedor):
     proveedor = get_object_or_404(Proveedor, pk=id_proveedor, activo=True)
     if request.method == 'POST':
@@ -140,6 +144,7 @@ def insumos(request):
 
 
 @login_required
+@cargo_required(*ROLES_CAMPO)
 def create_insumo(request):
     if request.method == 'GET':
         return render(request, 'create_insumo.html', {'form': InsumoForm()})
@@ -148,6 +153,7 @@ def create_insumo(request):
         insumo = form.save()
         messages.success(request, f'El insumo {insumo.nombre} fue registrado exitosamente.')
         return redirect('insumos')
+    messages.error(request, 'Por favor corrija los errores del formulario.')
     return render(request, 'create_insumo.html', {'form': form})
 
 
@@ -164,6 +170,7 @@ def insumo_detail(request, id_insumo):
         form.save()
         messages.success(request, f'El insumo {insumo.nombre} fue actualizado exitosamente.')
         return redirect('insumos')
+    messages.error(request, 'Por favor corrija los errores del formulario.')
     return render(request, 'insumo_detail.html', {'insumo': insumo, 'form': form})
 
 
@@ -191,6 +198,7 @@ def insumo_view(request, id_insumo):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN)
 def deactivate_insumo(request, id_insumo):
     insumo = get_object_or_404(Insumo, pk=id_insumo, activo=True)
     if request.method == 'POST':
@@ -235,11 +243,21 @@ def _lotes_fifo_json(insumos_activos, excluir_requiere_pk=None):
 
 
 @login_required
+@cargo_required(*ROLES_INSTALADOR)
 def create_requiere(request, id_project):
+    from projects.models import Garantia
     project = get_object_or_404(Proyecto, pk=id_project)
+
+    # Determinar si el proyecto está bajo período de garantía activa
+    garantia_activa = None
     if project.estado_proyecto == 'completado':
-        messages.error(request, 'No se pueden agregar insumos a un proyecto completado. Los precios quedan bloqueados.')
-        return redirect('project_view', id_project=project.id)
+        contrato_activo = project.contratos.filter(activo=True).first()
+        if contrato_activo and hasattr(contrato_activo, 'garantia') and contrato_activo.garantia.activo:
+            garantia_activa = contrato_activo.garantia
+        if not garantia_activa:
+            messages.error(request, 'No se pueden agregar insumos a un proyecto completado sin garantía activa.')
+            return redirect('project_view', id_project=project.id)
+
     insumos_activos = list(Insumo.objects.filter(activo=True))
     insumos_con_stock = {}
     for i in insumos_activos:
@@ -250,8 +268,9 @@ def create_requiere(request, id_project):
     ctx = {
         'form': RequerirForm(),
         'project': project,
-        'lotes_fifo':      _lotes_fifo_json(insumos_activos),
+        'lotes_fifo':        _lotes_fifo_json(insumos_activos),
         'insumos_con_stock': json.dumps(insumos_con_stock),
+        'garantia_activa':   garantia_activa,
     }
     if request.method == 'GET':
         return render(request, 'create_requiere.html', ctx)
@@ -276,6 +295,7 @@ def create_requiere(request, id_project):
 
         requiere = form.save(commit=False)
         requiere.proyecto = project
+        requiere.durante_garantia = garantia_activa is not None
         requiere.save()
 
         for lote_info in lotes_consumo:
@@ -285,12 +305,16 @@ def create_requiere(request, id_project):
                 cantidad=lote_info['cantidad'],
             )
 
-        messages.success(request, f'Insumo "{requiere.insumo.nombre}" agregado al proyecto (total: Bs. {costo_total}).')
+        if garantia_activa:
+            messages.success(request, f'Insumo "{requiere.insumo.nombre}" agregado bajo garantía (total: Bs. {costo_total}).')
+        else:
+            messages.success(request, f'Insumo "{requiere.insumo.nombre}" agregado al proyecto (total: Bs. {costo_total}).')
         return redirect('project_view', id_project=project.id)
     return render(request, 'create_requiere.html', ctx)
 
 
 @login_required
+@cargo_required(*ROLES_INSTALADOR)
 def requiere_detail(request, id_requiere):
     requiere = get_object_or_404(Requiere.objects.prefetch_related('lotes__compra'), pk=id_requiere)
     project = requiere.proyecto
@@ -347,6 +371,7 @@ def requiere_detail(request, id_requiere):
 
 
 @login_required
+@cargo_required(*ROLES_INSTALADOR)
 def deactivate_requiere(request, id_requiere):
     requiere = get_object_or_404(Requiere, pk=id_requiere)
     project = requiere.proyecto
@@ -401,6 +426,7 @@ def compras(request):
 
 
 @login_required
+@cargo_required(*ROLES_INSTALADOR)
 def create_compra(request):
     insumos_qs = Insumo.objects.filter(activo=True)
     insumos_unidades = json.dumps({str(i.id): i.unidad_abrev for i in insumos_qs})
@@ -418,6 +444,7 @@ def create_compra(request):
 
 
 @login_required
+@cargo_required(*ROLES_INSTALADOR)
 def compra_detail(request, id_compra):
     compra = get_object_or_404(Compra, pk=id_compra)
     insumos_qs = Insumo.objects.filter(activo=True)
@@ -437,9 +464,16 @@ def compra_detail(request, id_compra):
 
 
 @login_required
+@cargo_required(*ROLES_INSTALADOR)
 def deactivate_compra(request, id_compra):
     compra = get_object_or_404(Compra, pk=id_compra, activo=True)
     if request.method == 'POST':
+        if compra.lotes_asignados.filter(activo=True).exists():
+            messages.error(
+                request,
+                'No se puede inhabilitar esta compra: sus unidades ya están asignadas a uno o más proyectos.'
+            )
+            return redirect('compras')
         compra.activo = False
         compra.deleted_at = timezone.now()
         compra.deleted_by = request.user

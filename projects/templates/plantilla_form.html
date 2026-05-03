@@ -137,37 +137,57 @@
           </div>
 
           <!-- Sub-ítems de este ítem -->
+          {% if item.subitems.all %}
           <div class="ms-4 mt-1">
-            {% for sub in item.subitems.all %}
-            <div class="d-flex align-items-center gap-2 py-1 border-top" style="font-size:0.83rem;">
-              <i class="bi bi-arrow-return-right text-muted" style="font-size:0.75rem;"></i>
-              <span class="flex-grow-1 text-muted">{{ sub.descripcion }}</span>
-              <form method="POST" action="{% url 'subitem_plantilla_delete' sub.id %}"
-                    onsubmit="return confirm('¿Eliminar este sub-ítem?')" class="d-inline">
-                {% csrf_token %}
-                <button class="btn btn-sm btn-light text-danger py-0 px-1" style="font-size:0.7rem;">
-                  <i class="bi bi-x"></i>
-                </button>
-              </form>
-            </div>
-            {% endfor %}
-            <!-- Formulario agregar sub-ítem -->
-            <details class="mt-1">
-              <summary class="text-muted" style="font-size:0.75rem; cursor:pointer; list-style:none;">
-                <i class="bi bi-plus-circle me-1"></i>Agregar sub-paso a esta tarea
-              </summary>
-              <form method="POST" action="{% url 'subitem_plantilla_create' item.id %}"
-                    class="d-flex gap-1 mt-1">
-                {% csrf_token %}
-                <input type="text" name="descripcion" class="form-control form-control-sm"
-                       placeholder="Ej: Verificar voltaje en el punto…" maxlength="255" required
-                       style="font-size:0.82rem;">
-                <button type="submit" class="btn btn-sm btn-outline-primary py-0">
-                  <i class="bi bi-plus-lg"></i>
-                </button>
-              </form>
-            </details>
+            <ul class="list-unstyled mb-1 border rounded-2 overflow-hidden" id="lista-subitems-{{ item.id }}">
+              {% for sub in item.subitems.all %}
+              <li class="d-flex align-items-center gap-2 px-2 py-1 {% if not forloop.last %}border-bottom{% endif %}"
+                  style="font-size:0.85rem;">
+                <input type="checkbox" class="form-check-input" disabled
+                       style="width:1.1em; height:1.1em; flex-shrink:0; opacity:.35;">
+                <span class="flex-grow-1 text-muted">{{ sub.descripcion }}</span>
+                <form method="POST" action="{% url 'subitem_plantilla_delete' sub.id %}"
+                      onsubmit="return confirm('¿Eliminar este sub-ítem?')" class="d-inline">
+                  {% csrf_token %}
+                  <button class="btn btn-sm btn-light text-danger py-0 px-1" style="font-size:0.7rem; line-height:1;">
+                    <i class="bi bi-x"></i>
+                  </button>
+                </form>
+              </li>
+              {% endfor %}
+            </ul>
+            <form method="POST" action="{% url 'subitem_plantilla_create' item.id %}"
+                  class="d-flex gap-1 mt-1">
+              {% csrf_token %}
+              <input type="text" name="descripcion" class="form-control form-control-sm"
+                     placeholder="Nueva subtarea..." maxlength="255" required style="font-size:0.82rem;">
+              <button type="submit" class="btn btn-sm btn-outline-primary py-0">
+                <i class="bi bi-plus-lg"></i>
+              </button>
+            </form>
           </div>
+          {% else %}
+          <div class="ms-4 mt-1">
+            <form method="POST" action="{% url 'subitem_plantilla_create' item.id %}"
+                  class="form-nuevo-subitem d-none d-flex gap-1" id="form-subitem-{{ item.id }}">
+              {% csrf_token %}
+              <input type="text" name="descripcion" class="form-control form-control-sm"
+                     placeholder="Nueva subtarea..." maxlength="255" required style="font-size:0.82rem;">
+              <button type="submit" class="btn btn-sm btn-outline-primary py-0">
+                <i class="bi bi-plus-lg"></i>
+              </button>
+              <button type="button" class="btn btn-sm btn-light py-0 btn-cancel-subitem"
+                      data-item-id="{{ item.id }}">
+                <i class="bi bi-x"></i>
+              </button>
+            </form>
+            <button class="btn-add-subitem btn-add-subitem-{{ item.id }}" type="button"
+                    data-item-id="{{ item.id }}"
+                    style="font-size:0.78rem; color:#6c757d; background:none; border:none; padding:2px 0; cursor:pointer;">
+              <i class="bi bi-plus-circle me-1"></i>Agregar subtareas
+            </button>
+          </div>
+          {% endif %}
 
         </li>
         {% empty %}
@@ -251,6 +271,24 @@
   }
 
   document.querySelectorAll('#lista-items li[data-id]').forEach(bindEditar);
+
+  // ── Agregar / cancelar subtarea ───────────────────────────────────────────
+  document.querySelectorAll('.btn-add-subitem').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const id = this.dataset.itemId;
+      document.getElementById('form-subitem-' + id).classList.remove('d-none');
+      this.classList.add('d-none');
+    });
+  });
+  document.querySelectorAll('.btn-cancel-subitem').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const id = this.dataset.itemId;
+      const form = document.getElementById('form-subitem-' + id);
+      form.classList.add('d-none');
+      form.querySelector('input[name="descripcion"]').value = '';
+      document.querySelector('.btn-add-subitem-' + id).classList.remove('d-none');
+    });
+  });
 
   // ── Orden automático para nueva tarea ────────────────────────────────────
   function actualizarOrdenNuevo() {

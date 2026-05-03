@@ -2,239 +2,430 @@
 {% block content %}
 <div class="container-fluid px-4 py-4">
 
-  <!-- ======================= ENCABEZADO ======================= -->
-  <div class="d-flex justify-content-between align-items-center mb-3">
+  <!-- ENCABEZADO -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-      <h4 class="fw-bold text-sobotec mb-0">Mi Jornada</h4>
+      <h5 class="fw-bold mb-0" style="color:#1B4D90;">Mi Trabajo</h5>
       <span class="text-muted small">{{ request.user.nombre|default:request.user.username }} — {{ request.user.get_cargo_display }}</span>
     </div>
-    <div class="d-flex gap-2">
-      <a href="{% url 'notificaciones_list' %}" class="btn btn-outline-secondary btn-sm position-relative">
-        <i class="bi bi-bell"></i>
-        {% if no_leidas > 0 %}
-        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;">
-          {{ no_leidas }}
-        </span>
-        {% endif %}
-      </a>
-      <a href="{% url 'projects' %}" class="btn btn-outline-primary btn-sm">
-        <i class="bi bi-grid me-1"></i>Proyectos
-      </a>
+    {% if contrato_para_jornada %}
+    <a href="{% url 'create_jornada' contrato_para_jornada.id %}" class="btn {% if contrato_para_jornada_vencido %}btn-warning{% else %}btn-success{% endif %} btn-sm">
+      <i class="bi bi-plus-lg me-1"></i>Registrar jornada
+    </a>
+    {% endif %}
+  </div>
+
+  {% if not contrato_para_jornada %}
+  <div class="alert alert-danger d-flex align-items-start gap-3 mb-4" role="alert">
+    <i class="bi bi-exclamation-triangle-fill fs-4 mt-1"></i>
+    <div>
+      <strong>No tienes ningún contrato registrado.</strong><br>
+      <span class="small">Comunícate con tu administrador para regularizar tu situación.</span>
+    </div>
+  </div>
+  {% elif contrato_para_jornada_vencido %}
+  <div class="alert alert-warning d-flex align-items-start gap-3 mb-4" role="alert">
+    <i class="bi bi-exclamation-triangle-fill fs-4 mt-1"></i>
+    <div>
+      <strong>Tu contrato venció el {{ contrato_para_jornada.fecha_fin|date:"d/m/Y" }}.</strong><br>
+      <span class="small">Puedes seguir registrando jornadas, pero el administrador verá una alerta al revisarlas.
+      Comunícate con tu administrador para renovar tu contrato.</span>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- RESUMEN: Jornada de hoy · Balance · Contrato -->
+  <div class="row g-3 mb-4">
+
+    <!-- Jornada de hoy -->
+    <div class="col-md-5">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-light py-2 px-3">
+          <span class="text-muted small fw-semibold text-uppercase" style="letter-spacing:.05em;">
+            Jornada de hoy &nbsp;·&nbsp; {{ hoy|date:"d/m/Y" }}
+          </span>
+        </div>
+        <div class="card-body py-3 px-3">
+          {% if not contrato_para_jornada %}
+            <p class="text-muted small mb-0">Sin contrato registrado. Contacta al administrador.</p>
+          {% elif jornadas_hoy %}
+            {% for j in jornadas_hoy %}
+            <div class="d-flex align-items-center gap-2 {% if not forloop.last %}mb-2 pb-2 border-bottom{% endif %}">
+              <div class="flex-grow-1 fw-semibold small">{{ j.proyecto.nombre }}</div>
+              <span class="badge bg-secondary fw-normal">{% if j.dias == 1.0 %}Día completo{% else %}½ día{% endif %}</span>
+              {% if j.estado == 'aprobada' %}
+                <span class="badge bg-success">Aprobada</span>
+              {% elif j.estado == 'rechazada' %}
+                <span class="badge bg-danger" title="{{ j.motivo_rechazo }}">Rechazada</span>
+              {% else %}
+                <span class="badge bg-warning text-dark">Pendiente</span>
+              {% endif %}
+              {% if j.estado != 'aprobada' %}
+              <a href="{% url 'jornada_detail' j.id %}" class="btn btn-outline-secondary btn-sm py-0 px-2">
+                <i class="bi bi-pencil"></i>
+              </a>
+              {% endif %}
+            </div>
+            {% if j.estado == 'rechazada' and j.motivo_rechazo %}
+            <div class="text-danger small mt-1">
+              <i class="bi bi-exclamation-circle me-1"></i>{{ j.motivo_rechazo }}
+            </div>
+            {% endif %}
+            {% endfor %}
+          {% else %}
+            <p class="text-muted small mb-0">Aún no registraste tu jornada de hoy.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Balance -->
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-light py-2 px-3">
+          <span class="text-muted small fw-semibold text-uppercase" style="letter-spacing:.05em;">Mi Balance</span>
+        </div>
+        <div class="card-body py-3 px-3">
+          {% if resumen_pago %}
+          <!-- Días -->
+          <div class="d-flex justify-content-between align-items-end mb-1">
+            <span class="text-muted small">Días aprobados</span>
+            <span class="fw-semibold">{{ resumen_pago.total_dias }}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-end mb-1 ps-2">
+            <span class="text-muted small"><i class="bi bi-check2 me-1 text-success"></i>Ya pagados</span>
+            <span class="fw-semibold text-success">{{ resumen_pago.dias_pagados }}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-end mb-1 ps-2">
+            <span class="text-muted small"><i class="bi bi-hourglass-split me-1 text-warning"></i>Por cobrar</span>
+            <span class="fw-semibold {% if resumen_pago.dias_por_cobrar > 0 %}text-warning{% else %}text-muted{% endif %}">
+              {{ resumen_pago.dias_por_cobrar }}
+            </span>
+          </div>
+          {% if resumen_pago.dias_pend > 0 %}
+          <div class="d-flex justify-content-between align-items-end mb-1 ps-2">
+            <span class="text-muted small"><i class="bi bi-clock me-1 text-secondary"></i>En revisión</span>
+            <span class="fw-semibold text-secondary">{{ resumen_pago.dias_pend }}</span>
+          </div>
+          {% endif %}
+          <!-- Montos -->
+          <div class="d-flex justify-content-between align-items-end mt-2 pt-2 border-top">
+            <span class="text-muted small">Total ganado</span>
+            <span class="fw-semibold text-primary">Bs. {{ resumen_pago.total_ganado|floatformat:2 }}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-end mt-1">
+            <span class="text-muted small">Ya cobrado</span>
+            <span class="fw-semibold text-success">Bs. {{ resumen_pago.total_pagado|floatformat:2 }}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-end mt-1 pt-1 border-top">
+            <span class="text-muted small fw-semibold">Saldo</span>
+            <span class="fw-bold {% if resumen_pago.saldo > 0 %}text-danger{% else %}text-success{% endif %}">
+              Bs. {{ resumen_pago.saldo|floatformat:2 }}
+            </span>
+          </div>
+          <div class="text-muted small mt-2">
+            <i class="bi bi-cash-coin me-1"></i>Bs. {{ contrato_para_jornada.monto_diario|floatformat:2 }} / día
+          </div>
+          {% else %}
+          <div class="d-flex align-items-center">
+            {% if mis_tareas_pendientes %}
+              <i class="bi bi-list-check text-warning me-2 fs-5"></i>
+              <div>
+                <div class="fw-semibold small">{{ mis_tareas_pendientes|length }} tarea{{ mis_tareas_pendientes|length|pluralize:"s" }} pendiente{{ mis_tareas_pendientes|length|pluralize:"s" }}</div>
+                <div class="text-muted small">en tus proyectos activos</div>
+              </div>
+            {% else %}
+              <i class="bi bi-check-circle-fill text-success me-2 fs-5"></i>
+              <span class="fw-semibold small">¡Todo al día!</span>
+            {% endif %}
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Mi Contrato -->
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-light py-2 px-3">
+          <span class="text-muted small fw-semibold text-uppercase" style="letter-spacing:.05em;">Mi Contrato</span>
+        </div>
+        <div class="card-body py-3 px-3">
+          {% if contrato_para_jornada %}
+          <div class="d-flex justify-content-between align-items-end mb-1">
+            <span class="text-muted small">Inicio</span>
+            <span class="small fw-semibold">{{ contrato_para_jornada.fecha_inicio|date:"d/m/Y" }}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-end mb-2">
+            <span class="text-muted small">Fin</span>
+            <span class="small fw-semibold">{{ contrato_para_jornada.fecha_fin|date:"d/m/Y" }}</span>
+          </div>
+          <!-- barra de progreso del contrato -->
+          <div class="progress mb-2" style="height:6px;border-radius:4px;" title="{{ pct_tiempo_contrato }}% del plazo transcurrido">
+            <div class="progress-bar
+                {% if dias_restantes_contrato < 0 %}bg-danger
+                {% elif dias_restantes_contrato <= 7 %}bg-danger
+                {% elif dias_restantes_contrato <= 20 %}bg-warning
+                {% else %}bg-success{% endif %}"
+                 data-w="{{ pct_tiempo_contrato }}"></div>
+          </div>
+          <div class="text-center small mt-1">
+            {% if dias_restantes_contrato < 0 %}
+              <span class="text-danger fw-semibold">
+                <i class="bi bi-exclamation-triangle me-1"></i>Vencido hace {{ dias_restantes_contrato|cut:"-" }} día{{ dias_restantes_contrato|cut:"-"|add:"0"|pluralize:"s" }}
+              </span>
+            {% elif dias_restantes_contrato == 0 %}
+              <span class="text-danger fw-semibold">Vence hoy</span>
+            {% elif dias_restantes_contrato <= 7 %}
+              <span class="text-danger fw-semibold">
+                <i class="bi bi-clock-history me-1"></i>{{ dias_restantes_contrato }} día{{ dias_restantes_contrato|pluralize:"s" }} restante{{ dias_restantes_contrato|pluralize:"s" }}
+              </span>
+            {% elif dias_restantes_contrato <= 20 %}
+              <span class="text-warning fw-semibold">
+                <i class="bi bi-clock me-1"></i>{{ dias_restantes_contrato }} días restantes
+              </span>
+            {% else %}
+              <span class="text-success fw-semibold">
+                <i class="bi bi-check-circle me-1"></i>{{ dias_restantes_contrato }} días restantes
+              </span>
+            {% endif %}
+          </div>
+          <!-- Días trabajados vs días laborales -->
+          <div class="mt-3">
+            <div class="d-flex justify-content-between small mb-1">
+              <span class="text-muted">Jornadas registradas</span>
+              <span class="fw-semibold {% if pct_dias_trabajados >= 100 %}text-danger{% elif pct_dias_trabajados >= 85 %}text-warning{% else %}text-muted{% endif %}">
+                {{ resumen_pago.total_dias|default:"0" }} / {{ contrato_para_jornada.dias_laborales }} días
+              </span>
+            </div>
+            <div class="progress" style="height:5px; border-radius:3px;">
+              <div class="progress-bar
+                {% if pct_dias_trabajados >= 100 %}bg-danger
+                {% elif pct_dias_trabajados >= 85 %}bg-warning
+                {% else %}bg-success{% endif %}"
+                data-w="{{ pct_dias_trabajados }}">
+              </div>
+            </div>
+            {% if pct_dias_trabajados >= 100 %}
+            <div class="text-danger mt-1" style="font-size:.72rem;">
+              <i class="bi bi-exclamation-triangle me-1"></i>Superaste los días laborales acordados.
+            </div>
+            {% endif %}
+          </div>
+          {% else %}
+          <p class="text-muted small mb-0">Sin contrato registrado.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- MIS JORNADAS -->
+  {% if jornadas_recientes %}
+  <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+    <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing:.05em;">
+      Mis Jornadas — últimos 30 días
+    </div>
+    <div class="d-flex gap-1 flex-wrap">
+      {% if jr_rechazadas > 0 %}
+      <span class="badge bg-danger px-2 py-1">
+        <i class="bi bi-x-circle me-1"></i>{{ jr_rechazadas }} rechazada{{ jr_rechazadas|pluralize:"s" }}
+      </span>
+      {% endif %}
+      {% if jr_pendientes > 0 %}
+      <span class="badge bg-warning text-dark px-2 py-1">
+        <i class="bi bi-clock me-1"></i>{{ jr_pendientes }} pendiente{{ jr_pendientes|pluralize:"s" }}
+      </span>
+      {% endif %}
+      <span class="badge bg-success px-2 py-1">
+        <i class="bi bi-check-lg me-1"></i>{{ jr_aprobadas }} aprobada{{ jr_aprobadas|pluralize:"s" }}
+      </span>
     </div>
   </div>
 
-  <!-- ======================= RESUMEN TAREAS ======================= -->
-  <div class="card border-0 shadow-sm mb-3">
-    <div class="card-body py-2 px-3 d-flex align-items-center gap-3">
-      {% if mis_tareas_pendientes %}
-        <span class="badge bg-warning text-dark fs-6 fw-bold">{{ mis_tareas_pendientes|length }}</span>
-        <div>
-          <div class="fw-semibold small">tarea{{ mis_tareas_pendientes|length|pluralize:"s" }} pendiente{{ mis_tareas_pendientes|length|pluralize:"s" }}</div>
-          <div class="text-muted small">en tus proyectos activos</div>
-        </div>
-      {% else %}
-        <i class="bi bi-check-circle-fill text-success fs-5"></i>
-        <div>
-          <span class="fw-semibold small">¡Todo al día!</span>
-          <span class="text-muted small ms-1">No tienes tareas pendientes.</span>
-        </div>
-      {% endif %}
+  <div class="card border-0 shadow-sm mb-4">
+    <!-- Filtros — mismo estilo que revisión de jornadas por proyecto -->
+    <div class="card-header bg-light py-2 px-3">
+      <div class="btn-group btn-group-sm" role="group" id="filtro-jornadas"
+           data-inicial="{% if jr_rechazadas > 0 %}rechazada{% elif jr_pendientes > 0 %}pendiente{% else %}todas{% endif %}">
+        <button type="button" class="btn btn-outline-secondary" data-filtro="todas" data-color="secondary">Todas</button>
+        <button type="button" class="btn btn-outline-warning"   data-filtro="pendiente" data-color="warning">Pendientes</button>
+        <button type="button" class="btn btn-outline-danger"    data-filtro="rechazada" data-color="danger">Rechazadas</button>
+        <button type="button" class="btn btn-outline-success"   data-filtro="aprobada"  data-color="success">Aprobadas</button>
+      </div>
     </div>
-  </div>
 
-  <!-- ======================= JORNADA DE HOY ======================= -->
-  <div class="card border-0 shadow-sm mb-3">
-    <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center"
-         style="border-left:4px solid #198754;">
-      <span class="fw-semibold small">Jornada de hoy <span class="text-muted fw-normal ms-1">{{ hoy }}</span></span>
-      {% if contrato_activo %}
-        <a href="{% url 'create_jornada' contrato_activo.id %}" class="btn btn-success btn-sm">
-          <i class="bi bi-plus-lg me-1"></i>Registrar jornada
-        </a>
-      {% endif %}
-    </div>
+    <!-- Tabla -->
     <div class="card-body p-0">
-      {% if not contrato_activo %}
-        <p class="text-muted small mb-0 px-3 py-2">No tienes un contrato activo. Contacta al administrador.</p>
-      {% elif jornadas_hoy %}
-        <table class="table table-sm table-hover align-middle small mb-0">
-          <thead class="table-light small text-uppercase fw-semibold">
+      <div class="table-responsive">
+        <table class="table table-sm table-hover align-middle small mb-0" id="tabla-jornadas">
+          <thead class="table-light text-uppercase fw-semibold" style="font-size:0.72rem;">
             <tr>
-              <th class="px-3">Proyecto</th>
-              <th>Duración</th>
-              <th>Estado</th>
-              <th>Observación</th>
-              <th class="text-end px-3" style="width:60px;">Acción</th>
+              <th class="px-3">Fecha</th>
+              <th>Proyecto</th>
+              <th class="text-center">Días</th>
+              <th>Observación / Motivo de rechazo</th>
+              <th class="text-center">Estado</th>
+              <th class="text-center">Acción</th>
             </tr>
           </thead>
           <tbody>
-            {% for j in jornadas_hoy %}
-            <tr>
-              <td class="fw-semibold px-3">{{ j.proyecto.nombre }}</td>
-              <td>
+            {% for j in jornadas_recientes %}
+            <tr data-estado="{{ j.estado }}"
+                {% if j.estado == 'rechazada' %}class="table-danger"
+                {% elif j.estado == 'pendiente' %}class="table-warning"{% endif %}>
+              <td class="px-3 fw-semibold text-nowrap">{{ j.fecha|date:"d/m/Y" }}</td>
+              <td>{{ j.proyecto.nombre }}</td>
+              <td class="text-center">
                 {% if j.dias == 1.0 %}
-                  <span class="badge bg-secondary small">Día completo</span>
+                  <span class="badge bg-primary fw-normal">Día completo</span>
                 {% else %}
-                  <span class="badge bg-secondary small">Medio día</span>
+                  <span class="badge bg-secondary fw-normal">½ día</span>
                 {% endif %}
               </td>
-              <td>
-                {% if j.estado == 'aprobada' %}
-                  <span class="badge bg-success small">Aprobada</span>
-                {% elif j.estado == 'rechazada' %}
-                  <span class="badge bg-danger small" title="{{ j.motivo_rechazo }}">Rechazada</span>
-                {% else %}
-                  <span class="badge bg-warning text-dark small">Pendiente</span>
-                {% endif %}
-              </td>
-              <td class="text-muted">
-                {% if j.observacion %}{{ j.observacion }}{% else %}—{% endif %}
+              <td class="text-muted" style="max-width:220px;">
+                <span class="d-block">{{ j.observacion|default:"—"|truncatechars:50 }}</span>
                 {% if j.estado == 'rechazada' and j.motivo_rechazo %}
-                  <div class="text-danger small"><i class="bi bi-exclamation-circle me-1"></i>{{ j.motivo_rechazo }}</div>
+                <span class="text-danger small d-block mt-1">
+                  <i class="bi bi-exclamation-circle me-1"></i><strong>Rechazo:</strong> {{ j.motivo_rechazo }}
+                </span>
                 {% endif %}
               </td>
-              <td class="text-end px-3">
+              <td class="text-center text-nowrap">
+                {% if j.estado == 'aprobada' %}
+                  <span class="badge bg-success"><i class="bi bi-check-lg me-1"></i>Aprobada</span>
+                {% elif j.estado == 'rechazada' %}
+                  <span class="badge bg-danger"><i class="bi bi-x-lg me-1"></i>Rechazada</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark"><i class="bi bi-clock me-1"></i>Pendiente</span>
+                {% endif %}
+              </td>
+              <td class="text-center">
                 {% if j.estado != 'aprobada' %}
-                  <a href="{% url 'jornada_detail' j.id %}" class="btn btn-outline-secondary btn-sm py-0">
-                    <i class="bi bi-pencil"></i>
-                  </a>
+                <a href="{% url 'jornada_detail' j.id %}" class="btn btn-outline-secondary btn-sm py-0 px-2"
+                   title="Editar jornada">
+                  <i class="bi bi-pencil"></i>
+                </a>
+                {% else %}
+                <span class="text-muted">—</span>
                 {% endif %}
               </td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
-      {% else %}
-        <p class="text-muted small mb-0 px-3 py-2">Aún no registraste tu jornada de hoy.</p>
-      {% endif %}
-    </div>
-  </div>
-
-  <!-- ======================= MI BALANCE ======================= -->
-  {% if resumen_pago %}
-  <div class="card border-0 shadow-sm mb-3">
-    <div class="card-header bg-light py-2 px-3" style="border-left:4px solid #0d6efd;">
-      <span class="fw-semibold small">Mi balance</span>
-      <span class="text-muted small ms-2">Bs. {{ contrato_activo.monto_diario|floatformat:2 }} / día</span>
-    </div>
-    <div class="card-body py-2 px-3">
-      <div class="row g-2 text-center">
-        <div class="col-4">
-          <div class="text-muted small">Días trabajados</div>
-          <div class="fw-semibold">{{ resumen_pago.total_dias }}</div>
-        </div>
-        <div class="col-4">
-          <div class="text-muted small">Total ganado</div>
-          <div class="fw-semibold text-primary">Bs. {{ resumen_pago.total_ganado|floatformat:2 }}</div>
-        </div>
-        <div class="col-4">
-          <div class="text-muted small">Saldo pendiente</div>
-          <div class="fw-bold {% if resumen_pago.saldo > 0 %}text-danger{% else %}text-success{% endif %}">
-            Bs. {{ resumen_pago.saldo|floatformat:2 }}
-          </div>
-        </div>
+      </div>
+      <div id="jornadas-vacio" class="text-center text-muted py-4 d-none small">
+        <i class="bi bi-funnel me-1"></i>Sin jornadas para el filtro seleccionado.
       </div>
     </div>
   </div>
   {% endif %}
 
-  <!-- ======================= PROYECTOS CON SEDES ======================= -->
-  {% for item in proyectos_data %}
-  <div class="card border-0 shadow-sm mb-3">
-    <div class="card-header bg-light py-2 px-3 d-flex justify-content-between align-items-center"
-         style="border-left:4px solid #1B4D90;">
-      <div>
-        <span class="fw-semibold">{{ item.proyecto.nombre }}</span>
-        <span class="text-muted small ms-2">{{ item.proyecto.codigo }}</span>
-        <span class="badge bg-secondary small ms-1">{{ item.proyecto.get_tipo_proyecto_display }}</span>
-      </div>
-      <div class="d-flex align-items-center gap-2">
-        <div class="progress" style="width:80px;height:6px;border-radius:4px;">
-          <div class="progress-bar {% if item.pct_global == 100 %}bg-success{% else %}bg-primary{% endif %}"
-               style="width:{{ item.pct_global }}%;"></div>
-        </div>
-        {% if item.pct_global == 100 %}
-          <span class="badge bg-success small">100%</span>
-        {% else %}
-          <span class="badge bg-secondary small">{{ item.pct_global }}%</span>
-        {% endif %}
-      </div>
-    </div>
-    <div class="card-body py-2 px-3">
-
-      {% if item.sedes %}
-        {% for sede in item.sedes %}
-        <div class="border-start ps-3 mb-3
-          {% if sede.estado == 'completado' %}border-success
-          {% elif sede.estado == 'en_progreso' %}border-primary
-          {% else %}border-warning{% endif %}"
-          style="border-left-width:3px !important;">
-          <div class="d-flex justify-content-between align-items-start">
-            <div>
-              <a href="{% url 'sede_view' sede.id %}" class="fw-semibold small text-decoration-none">
-                {{ sede.nombre }}
-              </a>
-              <div class="text-muted small"><i class="bi bi-geo-alt me-1"></i>{{ sede.direccion|truncatechars:60 }}</div>
+  <!-- PROYECTOS -->
+  {% if proyectos_data %}
+  <div class="text-muted small fw-semibold text-uppercase mb-2" style="letter-spacing:.05em;">Mis Proyectos</div>
+  <div class="accordion" id="accordionProyectos">
+    {% for item in proyectos_data %}
+    <div class="accordion-item border-0 shadow-sm mb-2 rounded-3 overflow-hidden">
+      <h2 class="accordion-header">
+        <button class="accordion-button {% if not forloop.first %}collapsed{% endif %} py-3"
+                type="button" data-bs-toggle="collapse"
+                data-bs-target="#proyecto{{ item.proyecto.id }}">
+          <div class="d-flex align-items-center gap-3 w-100 me-3">
+            <span class="fw-semibold">{{ item.proyecto.nombre }}</span>
+            <div class="flex-grow-1">
+              <div class="progress" style="height:5px;border-radius:4px;">
+                <div class="progress-bar {% if item.pct_global == 100 %}bg-success{% else %}bg-primary{% endif %}"
+                     data-w="{{ item.pct_global }}"></div>
+              </div>
             </div>
-            <div class="ms-2 flex-shrink-0">
-              {% if sede.estado == 'completado' %}
-                <span class="badge bg-success small">Completada</span>
-              {% elif sede.estado == 'en_progreso' %}
-                <span class="badge bg-primary small">{{ sede.porcentaje_checklist }}%</span>
-              {% else %}
-                <span class="badge bg-warning text-dark small">Pendiente</span>
+            <span class="badge {% if item.pct_global == 100 %}bg-success{% else %}bg-secondary{% endif %} fw-normal">
+              {{ item.pct_global }}%
+            </span>
+          </div>
+        </button>
+      </h2>
+      <div id="proyecto{{ item.proyecto.id }}"
+           class="accordion-collapse collapse {% if forloop.first %}show{% endif %}">
+        <div class="accordion-body pt-2 pb-3 px-3">
+
+          {% if item.sedes %}
+            {% for sede in item.sedes %}
+            <div class="mb-3">
+              <!-- Sede header -->
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-geo-alt text-secondary small"></i>
+                <a href="{% url 'sede_view' sede.id %}" class="fw-semibold small text-decoration-none text-dark">
+                  {{ sede.direccion }}
+                </a>
+                {% if sede.estado == 'completado' %}
+                  <span class="badge bg-success fw-normal ms-auto">Completada</span>
+                {% elif sede.estado == 'en_progreso' %}
+                  <span class="badge bg-primary fw-normal ms-auto">{{ sede.porcentaje_checklist }}%</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark fw-normal ms-auto">Pendiente</span>
+                {% endif %}
+              </div>
+
+              <!-- Tareas -->
+              {% with tareas_sede=sede.tareas.all %}
+              {% if tareas_sede %}
+              <div class="ps-3">
+                {% for tarea in tareas_sede %}
+                {% if tarea.activo %}
+                <div class="d-flex align-items-center gap-2 py-1 {% if not forloop.last %}border-bottom{% endif %}">
+                  <button type="button"
+                          class="btn btn-sm p-0 tarea-pill border-0 bg-transparent"
+                          data-id="{{ tarea.id }}"
+                          title="{% if tarea.completado %}Marcar como pendiente{% else %}Completar tarea{% endif %}">
+                    <i class="bi {% if tarea.completado %}bi-check-circle-fill text-success{% else %}bi-circle text-muted{% endif %} fs-6"></i>
+                  </button>
+                  <span class="small {% if tarea.completado %}text-decoration-line-through text-muted{% endif %}">
+                    {{ tarea.descripcion }}
+                  </span>
+                </div>
+                {% endif %}
+                {% endfor %}
+              </div>
               {% endif %}
+              {% endwith %}
             </div>
-          </div>
-
-          {% with tareas_sede=sede.tareas.all %}
-          {% if tareas_sede %}
-          <div class="d-flex flex-wrap gap-1 mt-2">
-            {% for tarea in tareas_sede %}
-            {% if tarea.activo %}
-            <button type="button"
-                    class="btn btn-sm tarea-pill {% if tarea.completado %}btn-success{% else %}btn-outline-warning{% endif %}"
-                    style="font-size:0.75rem;padding:2px 10px;border-radius:50px;"
-                    data-id="{{ tarea.id }}"
-                    title="{{ tarea.descripcion }}">
-              <i class="bi {% if tarea.completado %}bi-check-lg{% else %}bi-circle{% endif %} me-1"></i>
-              {{ tarea.descripcion|truncatechars:35 }}
-            </button>
-            {% endif %}
+            {% if not forloop.last %}<hr class="my-2">{% endif %}
             {% endfor %}
-          </div>
+          {% else %}
+            <p class="text-muted small mb-2">Sin sedes registradas.</p>
           {% endif %}
-          {% endwith %}
-        </div>
-        {% endfor %}
-      {% else %}
-        <p class="text-muted small mb-0">Sin sedes registradas.</p>
-      {% endif %}
 
-      <div class="mt-2">
-        <a href="{% url 'project_view' item.proyecto.id %}" class="btn btn-sm btn-outline-secondary py-0">
-          <i class="bi bi-eye me-1"></i>Ver proyecto completo
-        </a>
+          <div class="mt-3">
+            <a href="{% url 'project_view' item.proyecto.id %}" class="btn btn-sm btn-outline-secondary py-0">
+              <i class="bi bi-eye me-1"></i>Ver proyecto completo
+            </a>
+          </div>
+        </div>
       </div>
     </div>
+    {% endfor %}
   </div>
-  {% empty %}
+
+  {% else %}
   <div class="card border-0 shadow-sm">
     <div class="card-body text-center text-muted py-5">
       <i class="bi bi-briefcase" style="font-size:2.5rem;"></i>
       <p class="mt-2 mb-0">No tienes proyectos activos asignados.</p>
     </div>
   </div>
-  {% endfor %}
+  {% endif %}
 
 </div>
 
-<!-- Modal participantes de tarea -->
-<div class="modal fade" id="modalParticipantes" tabindex="-1" aria-labelledby="modalParticipantesLabel" aria-hidden="true" data-bs-backdrop="static">
+<!-- Modal participantes -->
+<div class="modal fade" id="modalParticipantes" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header py-2">
-        <h6 class="modal-title fw-semibold" id="modalParticipantesLabel">
+        <h6 class="modal-title fw-semibold">
           <i class="bi bi-people me-2"></i>¿Quiénes trabajaron en esta tarea?
         </h6>
       </div>
@@ -257,12 +448,57 @@
 
 {% block extra_js %}
 <script>
+// ── Filtro de jornadas ────────────────────────────────────────────────────────
+(function () {
+  const group = document.getElementById('filtro-jornadas');
+  const tabla = document.getElementById('tabla-jornadas');
+  const vacio = document.getElementById('jornadas-vacio');
+  if (!group || !tabla) return;
+
+  function activarFiltro(btn) {
+    // Desactivar todos: quitar filled, poner outline
+    group.querySelectorAll('button').forEach(function(b) {
+      const c = b.dataset.color;
+      b.classList.remove('btn-' + c);
+      b.classList.add('btn-outline-' + c);
+    });
+    // Activar el seleccionado: quitar outline, poner filled
+    const color = btn.dataset.color;
+    btn.classList.remove('btn-outline-' + color);
+    btn.classList.add('btn-' + color);
+
+    // Filtrar filas
+    const filtro = btn.dataset.filtro;
+    let visible = 0;
+    tabla.querySelectorAll('tbody tr').forEach(function(row) {
+      const mostrar = filtro === 'todas' || row.dataset.estado === filtro;
+      row.style.display = mostrar ? '' : 'none';
+      if (mostrar) visible++;
+    });
+    tabla.classList.toggle('d-none', visible === 0);
+    vacio.classList.toggle('d-none', visible > 0);
+  }
+
+  group.querySelectorAll('button').forEach(function(btn) {
+    btn.addEventListener('click', function() { activarFiltro(this); });
+  });
+
+  // Arrancar con el filtro más urgente (rechazada > pendiente > todas)
+  const filtroInicial = group.dataset.inicial || 'todas';
+  const btnInicial = group.querySelector('[data-filtro="' + filtroInicial + '"]');
+  if (btnInicial) activarFiltro(btnInicial);
+})();
+
+// Aplicar ancho de barras de progreso definido en data-w (evita el linter CSS en style="")
+document.querySelectorAll('[data-w]').forEach(function(el) {
+  el.style.width = el.dataset.w + '%';
+});
+
+// ── Tareas / participantes ────────────────────────────────────────────────────
 const CSRF = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
 
-// ── Estado del modal ──────────────────────────────────────────────────────────
 let _modalTareaId   = null;
 let _modalUsuarioId = null;
-let _modalBtn       = null;
 const modalEl = document.getElementById('modalParticipantes');
 const bsModal = modalEl ? new bootstrap.Modal(modalEl) : null;
 
@@ -273,7 +509,7 @@ function guardarParticipantes(ids) {
     body: JSON.stringify({participantes: ids}),
   }).then(r => r.json()).then(res => {
     if (res.ok && res.jornadas_creadas && res.jornadas_creadas.length > 0) {
-      mostrarAlertaJornadas(res.jornadas_creadas);
+      mostrarAlerta(res.jornadas_creadas);
     }
   });
   if (bsModal) {
@@ -282,7 +518,7 @@ function guardarParticipantes(ids) {
   }
 }
 
-function mostrarAlertaJornadas(nombres) {
+function mostrarAlerta(nombres) {
   const div = document.createElement('div');
   div.className = 'alert alert-success alert-dismissible fade show position-fixed bottom-0 end-0 m-3 shadow-sm';
   div.style.zIndex = 9999;
@@ -324,51 +560,43 @@ if (modalEl) {
   });
 }
 
-// ── Toggle de tareas ──────────────────────────────────────────────────────────
-document.querySelectorAll('.tarea-pill').forEach(pill => {
-  pill.addEventListener('click', function() {
+document.querySelectorAll('.tarea-pill').forEach(btn => {
+  btn.addEventListener('click', function() {
     const id = this.dataset.id;
-    const btn = this;
-
-    // Actualización optimista
-    const eraCompletado = btn.classList.contains('btn-success');
+    const icon = this.querySelector('i');
+    const texto = this.nextElementSibling;
+    const eraCompletado = icon.classList.contains('bi-check-circle-fill');
     const ahoraCompletado = !eraCompletado;
-    btn.classList.toggle('btn-success', ahoraCompletado);
-    btn.classList.toggle('btn-outline-warning', !ahoraCompletado);
-    const icon = btn.querySelector('i');
-    if (icon) icon.className = ahoraCompletado ? 'bi bi-check-lg me-1' : 'bi bi-circle me-1';
+
+    icon.className = ahoraCompletado ? 'bi bi-check-circle-fill text-success fs-6' : 'bi bi-circle text-muted fs-6';
+    if (texto) texto.classList.toggle('text-decoration-line-through', ahoraCompletado);
+    if (texto) texto.classList.toggle('text-muted', ahoraCompletado);
 
     fetch(`/tareas/${id}/alternar/`, {
       method: 'POST',
       headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'},
     }).then(r => {
-      if (!r.ok) throw new Error('server_error');
+      if (!r.ok) throw new Error('error');
       return r.json();
     }).then(data => {
       if (!data.ok) {
-        btn.classList.toggle('btn-success', eraCompletado);
-        btn.classList.toggle('btn-outline-warning', !eraCompletado);
-        if (icon) icon.className = eraCompletado ? 'bi bi-check-lg me-1' : 'bi bi-circle me-1';
+        icon.className = eraCompletado ? 'bi bi-check-circle-fill text-success fs-6' : 'bi bi-circle text-muted fs-6';
+        if (texto) texto.classList.toggle('text-decoration-line-through', eraCompletado);
         return;
       }
-      if (data.completado) {
+      if (data.completado && data.equipo && data.equipo.length > 1) {
         _modalTareaId   = parseInt(id);
         _modalUsuarioId = data.usuario_id;
-        _modalBtn       = btn;
-        if (data.equipo && data.equipo.length > 1) {
-          abrirModalParticipantes(parseInt(id), data.usuario_id, data.equipo);
-        } else {
-          guardarParticipantes([data.usuario_id]);
-        }
+        abrirModalParticipantes(parseInt(id), data.usuario_id, data.equipo);
+      } else if (data.completado) {
+        guardarParticipantes([data.usuario_id]);
       }
     }).catch(() => {
-      btn.classList.toggle('btn-success', eraCompletado);
-      btn.classList.toggle('btn-outline-warning', !eraCompletado);
-      if (icon) icon.className = eraCompletado ? 'bi bi-check-lg me-1' : 'bi bi-circle me-1';
+      icon.className = eraCompletado ? 'bi bi-check-circle-fill text-success fs-6' : 'bi bi-circle text-muted fs-6';
+      if (texto) texto.classList.toggle('text-decoration-line-through', eraCompletado);
       const queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
       queue.push({url: `/tareas/${id}/alternar/`, method: 'POST'});
       localStorage.setItem('offlineQueue', JSON.stringify(queue));
-      btn.title = 'Guardado offline';
     });
   });
 });
@@ -378,10 +606,7 @@ window.addEventListener('online', function() {
   if (!queue.length) return;
   Promise.allSettled(queue.map(item =>
     fetch(item.url, {method: item.method, headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'}})
-  )).then(() => {
-    localStorage.removeItem('offlineQueue');
-    location.reload();
-  });
+  )).then(() => { localStorage.removeItem('offlineQueue'); location.reload(); });
 });
 
 window.addEventListener('offline', () => { document.title = '[OFFLINE] ' + document.title; });

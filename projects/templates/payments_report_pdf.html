@@ -168,9 +168,12 @@
         <th>Contratante</th>
         <th>Estado Proyecto</th>
         <th style="text-align:right;">Monto Total Proy. (Bs.)</th>
-        <th style="text-align:right;">Monto Pago (Bs.)</th>
+        <th style="text-align:right;">Monto (Bs.)</th>
+        <th style="text-align:right;">Descuento (Bs.)</th>
+        <th style="text-align:right;">Total cubierto (Bs.)</th>
         <th>Fecha</th>
         <th>Tipo Pago</th>
+        <th>Estado</th>
       </tr>
     </thead>
     <tbody>
@@ -185,6 +188,8 @@
         <td>{{ payment.proyecto.get_estado_proyecto_display }}</td>
         <td style="text-align:right;">{{ payment.proyecto.monto_total|floatformat:2 }}</td>
         <td style="text-align:right;"><strong>{{ payment.monto|floatformat:2 }}</strong></td>
+        <td style="text-align:right;">{% if payment.descuento %}{{ payment.descuento|floatformat:2 }}{% else %}—{% endif %}</td>
+        <td style="text-align:right;">{{ payment.monto_neto|floatformat:2 }}</td>
         <td>{{ payment.fecha|date:"d/m/Y" }}</td>
         <td>
           {% if payment.tipo_pago == 'transferencia' %}
@@ -193,10 +198,17 @@
             <span class="badge badge-efectivo">Efectivo</span>
           {% endif %}
         </td>
+        <td>
+          {% if payment.estado == 'pagado' %}
+            <span class="badge" style="background-color:#d4edda;color:#155724;">Pagado</span>
+          {% else %}
+            <span class="badge" style="background-color:#fff3cd;color:#856404;">Pendiente</span>
+          {% endif %}
+        </td>
       </tr>
       {% empty %}
       <tr>
-        <td colspan="7" style="text-align:center; color:#888; padding:12px;">
+        <td colspan="10" style="text-align:center; color:#888; padding:12px;">
           No se encontraron pagos con los filtros seleccionados.
         </td>
       </tr>
@@ -207,7 +219,7 @@
       <tr>
         <td colspan="4" class="text-right">TOTAL:</td>
         <td style="text-align:right;">{{ total_monto|floatformat:2 }}</td>
-        <td colspan="2"></td>
+        <td colspan="5"></td>
       </tr>
     </tfoot>
     {% endif %}

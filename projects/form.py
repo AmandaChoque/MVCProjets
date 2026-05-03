@@ -1,6 +1,6 @@
 from django.forms import ModelForm
 from django import forms
-from .models import Proyecto, Cliente, Sede, FotoSede, TareaChecklist, PagoProyecto, PlantillaTarea, ItemPlantilla, ContratoProyecto
+from .models import Proyecto, Cliente, Sede, FotoSede, TareaChecklist, PagoProyecto, PlantillaTarea, ItemPlantilla, ContratoProyecto, IncidenciaGarantia, AsignacionProyecto
 import re
 from decimal import Decimal, InvalidOperation
 
@@ -54,7 +54,7 @@ class ProjectForm(forms.ModelForm):
 class ClienteForm(forms.ModelForm):
     class Meta:
         model = Cliente
-        fields = ['rol_contacto', 'nit_ci', 'nombre', 'apellido_paterno', 'apellido_materno', 'telefono', 'correo', 'direccion', 'tipo_contratante', 'nombre_entidad', 'representante_legal']
+        fields = ['rol_contacto', 'nit_ci', 'nombre', 'apellido_paterno', 'apellido_materno', 'telefono', 'correo', 'direccion', 'tipo_contratante', 'nombre_entidad']
         widgets = {
             'rol_contacto':      forms.Select(attrs={'class': 'form-select'}),
             'nit_ci':            forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Escribe el NIT/CI (opcional)', 'inputmode': 'numeric', 'pattern': '[0-9]*', 'title': 'Ingrese solo números'}),
@@ -66,7 +66,6 @@ class ClienteForm(forms.ModelForm):
             'direccion':         forms.Textarea(attrs={'class': 'form-control', 'placeholder': 'Escribe la dirección', 'required': 'required', 'rows': 3}),
             'tipo_contratante':  forms.Select(attrs={'class': 'form-select', 'required': 'required'}),
             'nombre_entidad':    forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre de la institución'}),
-            'representante_legal': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nombre del representante legal'}),
         }
 
     def clean_nit_ci(self):
@@ -96,6 +95,14 @@ class ClienteForm(forms.ModelForm):
         if len(telefono) < 7:
             raise forms.ValidationError('El teléfono debe tener al menos 7 dígitos.')
         return telefono
+
+    def clean(self):
+        cleaned_data = super().clean()
+        tipo = cleaned_data.get('tipo_contratante')
+        if tipo == 'entidad_publica':
+            if not cleaned_data.get('nombre_entidad', '').strip():
+                self.add_error('nombre_entidad', 'Este campo es obligatorio para Entidad Pública.')
+        return cleaned_data
 
 
 
@@ -165,14 +172,27 @@ class ContratoProyectoForm(_ContratoBaseForm):
         }),
     )
 
+    garantia_meses = forms.IntegerField(
+        required=False,
+        initial=0,
+        min_value=0,
+        label="Meses de Garantía",
+        widget=forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'placeholder': 'Ej: 12 — 0 si no incluye garantía'}),
+    )
+
     class Meta(_ContratoBaseForm.Meta):
         fields = ['fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado',
                   'garantia_meses', 'porcentaje_multa_diaria', 'porcentaje_multa_maxima',
                   'observaciones', 'documento']
-        widgets = {
-            **_ContratoBaseForm.Meta.widgets,
-            'garantia_meses': forms.NumberInput(attrs={'class': 'form-control', 'min': 0, 'placeholder': 'Ej: 12'}),
-        }
+        widgets = {**_ContratoBaseForm.Meta.widgets}
+
+    def clean_garantia_meses(self):
+        valor = self.cleaned_data.get('garantia_meses')
+        if valor is None:
+            return 0
+        if valor < 0:
+            raise forms.ValidationError('Los meses de garantía no pueden ser negativos.')
+        return valor
 
     def clean_porcentaje_multa_diaria(self):
         valor = str(self.cleaned_data.get('porcentaje_multa_diaria', '') or '').strip()
@@ -195,6 +215,16 @@ class ContratoProyectoForm(_ContratoBaseForm):
         if resultado <= 0 or resultado > 100:
             raise forms.ValidationError('El porcentaje debe estar entre 0.01 y 100.')
         return resultado
+
+    def clean(self):
+        cleaned_data = super().clean()
+        diaria = cleaned_data.get('porcentaje_multa_diaria')
+        maxima = cleaned_data.get('porcentaje_multa_maxima')
+        if diaria is not None and maxima is not None and diaria > maxima:
+            raise forms.ValidationError(
+                'El porcentaje de multa diaria no puede superar el tope máximo.'
+            )
+        return cleaned_data
 
 
 class PaymentForm(forms.ModelForm):
@@ -227,7 +257,9 @@ class PaymentForm(forms.ModelForm):
 
     def __init__(self, *args, edit_mode=False, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fields['proyecto'].queryset = Proyecto.objects.filter(activo=True)
+        self.fields['proyecto'].queryset = Proyecto.objects.filter(activo=True).exclude(
+            estado_proyecto='completado', estado_pago='pagado'
+        )
         self.fields['motivo_descuento'].required = False
         if edit_mode:
             self.fields.pop('monto')
@@ -324,3 +356,80 @@ class TareaChecklistForm(forms.ModelForm):
 
 
 
+
+
+class IncidenciaGarantiaForm(forms.ModelForm):
+    costo_reparacion = forms.CharField(
+        required=False,
+        label="Costo de reparación (Bs.)",
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Ej: 500 o 500.50 — dejar vacío o 0 si sin costo',
+        }),
+    )
+
+    class Meta:
+        model = IncidenciaGarantia
+        fields = ['descripcion', 'fecha_reporte', 'fecha_reparacion', 'costo_reparacion', 'reparado_por', 'estado', 'evidencia']
+        widgets = {
+            'descripcion':      forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Describe el problema reportado...'}),
+            'fecha_reporte':    forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+            'fecha_reparacion': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+            'reparado_por':     forms.Select(attrs={'class': 'form-select'}),
+            'estado':           forms.Select(attrs={'class': 'form-select'}),
+            'evidencia':        forms.ClearableFileInput(attrs={'class': 'form-control'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        from empleados.models import Empleado
+        self.fields['reparado_por'].queryset = Empleado.objects.filter(
+            is_active=True, cargo__in=('instalador', 'tecnico_soporte')
+        ).order_by('apellido_paterno')
+        self.fields['reparado_por'].empty_label = 'Sin asignar'
+
+    def clean_costo_reparacion(self):
+        valor = str(self.cleaned_data.get('costo_reparacion') or '').strip()
+        if not valor:
+            return Decimal('0')
+        if not re.fullmatch(DECIMAL_REGEX, valor):
+            raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 500 o 500.50).')
+        resultado = Decimal(valor)
+        if resultado < 0:
+            raise forms.ValidationError('El costo no puede ser negativo.')
+        return resultado
+
+    def clean(self):
+        cleaned_data = super().clean()
+        estado = cleaned_data.get('estado')
+        fecha_reparacion = cleaned_data.get('fecha_reparacion')
+        if estado == 'resuelto' and not fecha_reparacion:
+            self.add_error('fecha_reparacion', 'La fecha de reparación es obligatoria cuando el estado es Resuelto.')
+        return cleaned_data
+
+
+class AsignacionProyectoForm(forms.ModelForm):
+    class Meta:
+        model = AsignacionProyecto
+        fields = ['fecha_inicio_plan', 'fecha_fin_plan', 'dias_planificados']
+        widgets = {
+            'fecha_inicio_plan': forms.DateInput(
+                attrs={'class': 'form-control form-control-sm', 'type': 'date'},
+                format='%Y-%m-%d',
+            ),
+            'fecha_fin_plan': forms.DateInput(
+                attrs={'class': 'form-control form-control-sm', 'type': 'date'},
+                format='%Y-%m-%d',
+            ),
+            'dias_planificados': forms.NumberInput(
+                attrs={'class': 'form-control form-control-sm', 'placeholder': 'Ej: 12', 'min': 1},
+            ),
+        }
+
+    def clean(self):
+        cd = super().clean()
+        fi = cd.get('fecha_inicio_plan')
+        ff = cd.get('fecha_fin_plan')
+        if fi and ff and ff < fi:
+            raise forms.ValidationError('La fecha de fin debe ser posterior a la de inicio.')
+        return cd

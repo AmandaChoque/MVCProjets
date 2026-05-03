@@ -3,9 +3,10 @@ from django.shortcuts import redirect
 from django.contrib import messages
 
 # Grupos de roles reutilizables
-ROLES_ADMIN     = ('administrador', 'gerente')
-ROLES_ADMIN_SEC = ('administrador', 'gerente', 'secretaria')
-ROLES_CAMPO     = ('administrador', 'gerente', 'instalador', 'tecnico_soporte')
+ROLES_ADMIN      = ('administrador', 'gerente')
+ROLES_ADMIN_SEC  = ('administrador', 'gerente', 'secretaria')
+ROLES_CAMPO      = ('administrador', 'gerente', 'instalador', 'tecnico_soporte')
+ROLES_INSTALADOR = ('administrador', 'gerente', 'instalador')
 
 
 def cargo_required(*cargos):

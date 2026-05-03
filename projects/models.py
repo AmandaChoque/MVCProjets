@@ -13,6 +13,7 @@ from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
 
 from django.db.models import Sum
+from dateutil.relativedelta import relativedelta
 # Create your models here.
 
 # Auditoria
@@ -66,7 +67,6 @@ class Cliente(AuditModel):
     tipo_contratante = models.CharField(max_length=20, choices=TIPO_CONTRATANTE_CHOICES, default='personal', verbose_name="Tipo Contratante")
     # Solo para tipo_contratante = 'entidad_publica'
     nombre_entidad = models.CharField(max_length=200, blank=True, null=True, verbose_name="Nombre de la Entidad")
-    representante_legal = models.CharField(max_length=200, blank=True, null=True, verbose_name="Representante Legal")
 
     # managers
     objects = ActiveClienteManager()           # default manager filters activo=True
@@ -158,25 +158,83 @@ class Proyecto(AuditModel):
 
     def _sync_estado_pago(self):
         """
-        Recalcula y persiste el campo estado_pago.
-        Considera tanto el dinero recibido (monto) como los descuentos/multas
-        aplicadas (descuento). El total cubierto = sum(monto) + sum(descuento).
-        Uso exclusivo de señales — no llamar desde vistas ni formularios.
+        Recalcula y persiste el campo estado_pago considerando solo pagos confirmados
+        (estado='pagado'). Usa .update() para no disparar señales post_save en Proyecto.
         """
-        totals = self.pagos.filter(activo=True).aggregate(
+        totals = self.pagos.filter(activo=True, estado='pagado').aggregate(
             total_monto=Sum('monto'),
             total_descuento=Sum('descuento'),
         )
         total_cubierto = (totals['total_monto'] or 0) + (totals['total_descuento'] or 0)
 
         if total_cubierto >= self.monto_total:
-            self.estado_pago = 'pagado'
+            nuevo_estado = 'pagado'
         elif total_cubierto > 0:
-            self.estado_pago = 'parcial'
+            nuevo_estado = 'parcial'
         else:
-            self.estado_pago = 'no_pagado'
+            nuevo_estado = 'no_pagado'
 
-        self.save()
+        self.estado_pago = nuevo_estado
+        Proyecto.objects.filter(pk=self.pk).update(estado_pago=nuevo_estado)
+
+# ── Cronograma planificado por empleado en el proyecto ───────────────────────
+
+class AsignacionProyecto(AuditModel):
+    """Cronograma planificado de un empleado en un proyecto (no reemplaza el M2M equipo)."""
+    proyecto          = models.ForeignKey('Proyecto', on_delete=models.CASCADE, related_name='asignaciones', verbose_name="Proyecto")
+    empleado          = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='asignaciones_proyecto', verbose_name="Empleado")
+    fecha_inicio_plan = models.DateField(null=True, blank=True, verbose_name="Inicio planificado")
+    fecha_fin_plan    = models.DateField(null=True, blank=True, verbose_name="Fin planificado")
+    dias_planificados = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Días planificados")
+
+    class Meta:
+        verbose_name        = 'Asignación de proyecto'
+        verbose_name_plural = 'Asignaciones de proyecto'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['proyecto', 'empleado'],
+                condition=Q(activo=True),
+                name='unique_asignacion_activa_por_proyecto_empleado',
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(fecha_fin_plan__isnull=True) |
+                    Q(fecha_inicio_plan__isnull=True) |
+                    Q(fecha_fin_plan__gte=models.F('fecha_inicio_plan'))
+                ),
+                name='asignacion_fecha_fin_gte_inicio',
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.empleado} en {self.proyecto}"
+
+    @property
+    def dias_reales(self):
+        from empleados.models import JornadaEmpleado
+        result = JornadaEmpleado.objects.filter(
+            proyecto=self.proyecto,
+            contrato__empleado=self.empleado,
+            estado='aprobada',
+            activo=True,
+        ).aggregate(total=Sum('dias'))['total']
+        return result or 0
+
+    @property
+    def eficiencia_pct(self):
+        """Días planificados / días reales × 100. >100% = terminó antes, <100% = se pasó."""
+        reales = self.dias_reales
+        if self.dias_planificados and reales:
+            return round((float(self.dias_planificados) / float(reales)) * 100, 1)
+        return None
+
+    @property
+    def dias_retraso(self):
+        if self.fecha_fin_plan:
+            hoy = date.today()
+            return max((hoy - self.fecha_fin_plan).days, 0)
+        return 0
+
 
 # Contrato entre la empresa y el cliente por proyecto
 class ContratoProyecto(AuditModel):
@@ -367,7 +425,7 @@ def sync_estado_pago_tras_cambio_monto(sender, instance, **kwargs):
     """
     if getattr(instance, '_recalcular_estado_pago', False):
         instance._recalcular_estado_pago = False
-        totals = instance.pagos.filter(activo=True).aggregate(
+        totals = instance.pagos.filter(activo=True, estado='pagado').aggregate(
             total_monto=Sum('monto'),
             total_descuento=Sum('descuento'),
         )
@@ -612,6 +670,11 @@ METODOS_PAGO = [
 
 
 class PagoProyecto(AuditModel):
+    ESTADO_CHOICES = [
+        ('pendiente', 'Pendiente'),
+        ('pagado',    'Pagado'),
+    ]
+
     monto             = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto recibido (Bs.)")
     descuento         = models.DecimalField(max_digits=12, decimal_places=2, default=0, verbose_name="Descuento / Multa aplicada (Bs.)")
     motivo_descuento  = models.CharField(max_length=300, blank=True, default='', verbose_name="Motivo del descuento")
@@ -619,6 +682,7 @@ class PagoProyecto(AuditModel):
     tipo_pago         = models.CharField(max_length=15, choices=METODOS_PAGO, default='efectivo', verbose_name="Método de Pago")
     numero_referencia = models.CharField(max_length=100, blank=True, default='', verbose_name="N° Referencia / Comprobante")
     proyecto          = models.ForeignKey(Proyecto, on_delete=models.PROTECT, related_name='pagos', verbose_name="Proyecto")
+    estado            = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='pagado', verbose_name="Estado")
 
     class Meta:
         verbose_name_plural = 'Pagos'
@@ -652,7 +716,163 @@ def update_project_payment_status(sender, instance, **kwargs):
     instance.proyecto._sync_estado_pago()
 
 
+def _saldo_pendiente_proyecto(proyecto):
+    """Retorna el saldo aún no cubierto por pagos confirmados (estado='pagado')."""
+    totals = proyecto.pagos.filter(activo=True, estado='pagado').aggregate(
+        t=Sum('monto'), td=Sum('descuento')
+    )
+    cubierto = (totals['t'] or Decimal('0')) + (totals['td'] or Decimal('0'))
+    return max(Decimal('0'), proyecto.monto_total - cubierto)
+
+
+def _aplicar_pago_pendiente_proyecto(proyecto, estado_nuevo):
+    """Crea o desactiva el PagoProyecto pendiente según el estado del proyecto."""
+    if estado_nuevo == 'completado':
+        if not proyecto.pagos.filter(activo=True, estado='pendiente').exists():
+            saldo = _saldo_pendiente_proyecto(proyecto)
+            if saldo > 0:
+                PagoProyecto.objects.create(
+                    proyecto=proyecto,
+                    monto=saldo,
+                    fecha=date.today(),
+                    tipo_pago='efectivo',
+                    estado='pendiente',
+                )
+    else:
+        proyecto.pagos.filter(activo=True, estado='pendiente').update(activo=False)
+
+
+@receiver(post_save, sender=Proyecto)
+def sync_pago_pendiente_proyecto(sender, instance, **kwargs):
+    _aplicar_pago_pendiente_proyecto(instance, instance.estado_proyecto)
+
+
 # ── Señal: notificaciones de sede ────────────────────────────────────────────
+
+# ── Garantía post-instalación ─────────────────────────────────────────────────
+
+class Garantia(AuditModel):
+    """
+    Registro de garantía asociada a un ContratoProyecto.
+    Se crea automáticamente cuando el proyecto pasa a 'completado'
+    y su contrato activo tiene garantia_meses > 0.
+    Los costos de reparación bajo garantía son absorbidos por SOBOTEC.
+    """
+    contrato          = models.OneToOneField(
+        ContratoProyecto, on_delete=models.CASCADE,
+        related_name='garantia', verbose_name="Contrato del proyecto"
+    )
+    fecha_inicio      = models.DateField(verbose_name="Inicio de garantía")
+    fecha_vencimiento = models.DateField(verbose_name="Vencimiento de garantía")
+
+    class Meta:
+        verbose_name        = 'Garantía'
+        verbose_name_plural = 'Garantías'
+        ordering            = ['fecha_vencimiento']
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(fecha_vencimiento__gt=models.F('fecha_inicio')),
+                name='garantia_vencimiento_posterior_inicio',
+            ),
+        ]
+
+    def __str__(self):
+        return f"Garantía — {self.contrato.proyecto.nombre} (vence {self.fecha_vencimiento:%d/%m/%Y})"
+
+    @property
+    def estado(self):
+        hoy = date.today()
+        if hoy > self.fecha_vencimiento:
+            return 'vencida'
+        if (self.fecha_vencimiento - hoy).days <= 30:
+            return 'por_vencer'
+        return 'vigente'
+
+    @property
+    def dias_restantes(self):
+        return max((self.fecha_vencimiento - date.today()).days, 0)
+
+    @property
+    def costo_total_incidencias(self):
+        return (
+            self.incidencias.filter(activo=True)
+            .aggregate(total=Sum('costo_reparacion'))['total'] or Decimal('0')
+        )
+
+
+class IncidenciaGarantia(AuditModel):
+    """
+    Fallo o avería reportada durante la vigencia de la garantía.
+    El costo_reparacion es absorbido por SOBOTEC (no se cobra al cliente).
+    """
+    ESTADO_CHOICES = [
+        ('pendiente',     'Pendiente'),
+        ('en_reparacion', 'En Reparación'),
+        ('resuelto',      'Resuelto'),
+    ]
+
+    garantia          = models.ForeignKey(
+        Garantia, on_delete=models.CASCADE,
+        related_name='incidencias', verbose_name="Garantía"
+    )
+    descripcion       = models.TextField(verbose_name="Descripción del problema")
+    fecha_reporte     = models.DateField(verbose_name="Fecha del reporte")
+    fecha_reparacion  = models.DateField(null=True, blank=True, verbose_name="Fecha de reparación")
+    costo_reparacion  = models.DecimalField(
+        max_digits=10, decimal_places=2, default=Decimal('0'),
+        verbose_name="Costo de reparación (Bs.)",
+        help_text="Costo absorbido por SOBOTEC — no se cobra al cliente.",
+    )
+    reparado_por      = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
+        null=True, blank=True, related_name='+', verbose_name="Atendido por"
+    )
+    estado            = models.CharField(
+        max_length=20, choices=ESTADO_CHOICES,
+        default='pendiente', db_index=True, verbose_name="Estado"
+    )
+    evidencia         = models.FileField(
+        upload_to='garantias/evidencias/',
+        null=True, blank=True,
+        verbose_name="Evidencia (foto o PDF)"
+    )
+
+    class Meta:
+        verbose_name        = 'Incidencia de Garantía'
+        verbose_name_plural = 'Incidencias de Garantía'
+        ordering            = ['-fecha_reporte']
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(costo_reparacion__gte=0),
+                name='incidencia_garantia_costo_no_negativo',
+            ),
+        ]
+
+    def __str__(self):
+        return f"Incidencia [{self.get_estado_display()}] — {self.garantia.contrato.proyecto.nombre} ({self.fecha_reporte})"
+
+
+@receiver(post_save, sender=Proyecto)
+def crear_garantia_al_completar(sender, instance, **kwargs):
+    """
+    Cuando un proyecto pasa a 'completado', si su contrato activo tiene
+    garantia_meses > 0 y aún no existe una Garantia, la crea automáticamente.
+    """
+    if instance.estado_proyecto != 'completado':
+        return
+    contrato = instance.contratos.filter(activo=True).first()
+    if not contrato or contrato.garantia_meses <= 0:
+        return
+    if hasattr(contrato, 'garantia'):
+        return
+    fecha_inicio      = instance.fecha_fin or date.today()
+    fecha_vencimiento = fecha_inicio + relativedelta(months=contrato.garantia_meses)
+    Garantia.objects.create(
+        contrato=contrato,
+        fecha_inicio=fecha_inicio,
+        fecha_vencimiento=fecha_vencimiento,
+    )
+
 
 @receiver(post_save, sender=TareaChecklist)
 def notificar_sede_completada(sender, instance, **kwargs):
@@ -689,6 +909,8 @@ def notificar_sede_completada(sender, instance, **kwargs):
             if nuevo_estado == 'completado' and not proyecto.fecha_fin:
                 update_fields['fecha_fin'] = hoy
             Proyecto.objects.filter(pk=proyecto.pk).update(**update_fields)
+            # .update() bypasses post_save; sincronizar pago pendiente manualmente
+            _aplicar_pago_pendiente_proyecto(proyecto, nuevo_estado)
 
     if sede.estado == 'completado':
         admins = list(get_user_model().objects.filter(
