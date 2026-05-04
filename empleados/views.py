@@ -16,7 +16,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 from .models import Empleado, PagoEmpleado, ContratoEmpleado, JornadaEmpleado
 from .forms import EmpleadoForm, ContratoEmpleadoForm, ContratoEmpleadoDesdeEmpleadoForm, JornadaEmpleadoForm, PagoEmpleadoForm
-from projects.models import Proyecto, TareaChecklist, ContratoProyecto, Notificacion
+from projects.models import Proyecto, TareaChecklist
 from projects.decorators import cargo_required, ROLES_ADMIN, ROLES_ADMIN_SEC, ROLES_CAMPO
 
 

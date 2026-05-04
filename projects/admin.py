@@ -1,7 +1,5 @@
 from django.contrib import admin
-from projects.models import (
-    Proyecto, HistorialPresupuesto, Cliente, PagoProyecto, ContratoProyecto,
-)
+from projects.models import Proyecto, Cliente, PagoProyecto
 from empleados.models import PagoEmpleado
 from inventario.models import Proveedor, Insumo, Compra
 
@@ -34,25 +32,6 @@ class PagoProyectoAdmin(admin.ModelAdmin):
     list_filter = ('activo', 'tipo_pago')
     search_fields = ('proyecto__nombre', 'proyecto__codigo')
     ordering = ('-fecha',)
-    list_per_page = 20
-
-
-
-@admin.register(ContratoProyecto)
-class ContratoProyectoAdmin(admin.ModelAdmin):
-    list_display = ('proyecto', 'monto_acordado', 'fecha_inicio', 'fecha_fin', 'activo')
-    list_filter = ('activo',)
-    search_fields = ('proyecto__nombre',)
-    ordering = ('-created',)
-    readonly_fields = ('created', 'updated_at', 'deleted_at', 'deleted_by')
-
-
-@admin.register(HistorialPresupuesto)
-class HistorialContratoAdmin(admin.ModelAdmin):
-    list_display = ('proyecto', 'monto_anterior', 'monto_actual', 'motivo_cambio', 'fecha_modificacion')
-    list_filter = ('proyecto',)
-    search_fields = ('proyecto__nombre', 'motivo_cambio')
-    ordering = ('-fecha_modificacion',)
     list_per_page = 20
 
 

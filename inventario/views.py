@@ -13,7 +13,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 from projects.models import Proyecto
 from projects.decorators import cargo_required, ROLES_ADMIN, ROLES_CAMPO, ROLES_INSTALADOR
-from .models import Proveedor, Insumo, Requiere, Compra, RequiereLote, calcular_costo_fifo
+from .models import Proveedor, Insumo, Requiere, Compra
 from .forms import ProveedorForm, InsumoForm, RequerirForm, CompraForm
 
 
@@ -212,51 +212,27 @@ def deactivate_insumo(request, id_insumo):
 
 # ── Requiere (insumos por proyecto) ──────────────────────────────────────────
 
-def _lotes_fifo_json(insumos_activos, excluir_requiere_pk=None):
-    """Construye el JSON de lotes FIFO por insumo para el cálculo client-side.
-    Usa 2 queries en lugar de O(N×M): una para consumidos agregados, otra para compras.
-    """
-    insumo_ids = [i.id for i in insumos_activos]
-    resultado = {str(i.id): [] for i in insumos_activos}
-    if not insumo_ids:
-        return json.dumps(resultado)
-
-    # 1 query: total consumido por compra para todos los insumos relevantes
-    consumed_qs = RequiereLote.objects.filter(
-        requiere__activo=True,
-        compra__insumo_id__in=insumo_ids,
-    )
-    if excluir_requiere_pk:
-        consumed_qs = consumed_qs.exclude(requiere_id=excluir_requiere_pk)
-    consumed_by_compra = dict(
-        consumed_qs.values('compra_id').annotate(t=Sum('cantidad')).values_list('compra_id', 't')
-    )
-
-    # 1 query: todas las compras activas de los insumos relevantes, ordenadas FIFO
-    for compra in Compra.objects.filter(insumo_id__in=insumo_ids, activo=True).order_by('insumo_id', 'fecha', 'created'):
-        consumido = consumed_by_compra.get(compra.id, 0)
-        disponible = max(0, compra.cantidad - consumido)
-        if disponible > 0:
-            resultado[str(compra.insumo_id)].append({'d': disponible, 'p': float(compra.costo_unitario)})
-
-    return json.dumps(resultado)
+def _precios_json(insumos_activos):
+    """Devuelve JSON con precio unitario actual por insumo para cálculo client-side."""
+    return json.dumps({
+        str(i.id): float(i.ultimo_precio_compra or 0)
+        for i in insumos_activos
+    })
 
 
 @login_required
 @cargo_required(*ROLES_INSTALADOR)
 def create_requiere(request, id_project):
-    from projects.models import Garantia
     project = get_object_or_404(Proyecto, pk=id_project)
 
-    # Determinar si el proyecto está bajo período de garantía activa
-    garantia_activa = None
-    if project.estado_proyecto == 'completado':
-        contrato_activo = project.contratos.filter(activo=True).first()
-        if contrato_activo and hasattr(contrato_activo, 'garantia') and contrato_activo.garantia.activo:
-            garantia_activa = contrato_activo.garantia
-        if not garantia_activa:
-            messages.error(request, 'No se pueden agregar insumos a un proyecto completado sin garantía activa.')
-            return redirect('project_view', id_project=project.id)
+    # Bajo garantía si el proyecto está completado y la garantía sigue vigente
+    bajo_garantia = (
+        project.estado_proyecto == 'completado'
+        and project.garantia_estado in ('vigente', 'por_vencer')
+    )
+    if project.estado_proyecto == 'completado' and not bajo_garantia:
+        messages.error(request, 'No se pueden agregar insumos a un proyecto completado sin garantía activa.')
+        return redirect('project_view', id_project=project.id)
 
     insumos_activos = list(Insumo.objects.filter(activo=True))
     insumos_con_stock = {}
@@ -268,9 +244,9 @@ def create_requiere(request, id_project):
     ctx = {
         'form': RequerirForm(),
         'project': project,
-        'lotes_fifo':        _lotes_fifo_json(insumos_activos),
+        'precios_json':      _precios_json(insumos_activos),
         'insumos_con_stock': json.dumps(insumos_con_stock),
-        'garantia_activa':   garantia_activa,
+        'bajo_garantia':     bajo_garantia,
     }
     if request.method == 'GET':
         return render(request, 'create_requiere.html', ctx)
@@ -285,27 +261,17 @@ def create_requiere(request, id_project):
             form.add_error('insumo', f'"{insumo.nombre}" ya está asignado a este proyecto.')
             return render(request, 'create_requiere.html', ctx)
 
-        try:
-            lotes_consumo = calcular_costo_fifo(insumo, cantidad)
-        except ValueError as e:
-            form.add_error('cantidad', str(e))
+        if insumo.stock < cantidad:
+            form.add_error('cantidad', f'Stock insuficiente. Disponible: {insumo.stock}.')
             return render(request, 'create_requiere.html', ctx)
-
-        costo_total = sum(l['cantidad'] * l['compra'].costo_unitario for l in lotes_consumo)
 
         requiere = form.save(commit=False)
         requiere.proyecto = project
-        requiere.durante_garantia = garantia_activa is not None
+        requiere.durante_garantia = bajo_garantia
         requiere.save()
 
-        for lote_info in lotes_consumo:
-            RequiereLote.objects.create(
-                requiere=requiere,
-                compra=lote_info['compra'],
-                cantidad=lote_info['cantidad'],
-            )
-
-        if garantia_activa:
+        costo_total = requiere.costo_total
+        if bajo_garantia:
             messages.success(request, f'Insumo "{requiere.insumo.nombre}" agregado bajo garantía (total: Bs. {costo_total}).')
         else:
             messages.success(request, f'Insumo "{requiere.insumo.nombre}" agregado al proyecto (total: Bs. {costo_total}).')
@@ -316,10 +282,10 @@ def create_requiere(request, id_project):
 @login_required
 @cargo_required(*ROLES_INSTALADOR)
 def requiere_detail(request, id_requiere):
-    requiere = get_object_or_404(Requiere.objects.prefetch_related('lotes__compra'), pk=id_requiere)
+    requiere = get_object_or_404(Requiere, pk=id_requiere)
     project = requiere.proyecto
     if project.estado_proyecto == 'completado':
-        messages.error(request, 'Los insumos de un proyecto completado no pueden modificarse. Los precios están bloqueados.')
+        messages.error(request, 'Los insumos de un proyecto completado no pueden modificarse.')
         return redirect('project_view', id_project=project.id)
     insumos_activos = list(Insumo.objects.filter(activo=True))
     insumos_con_stock = {}
@@ -331,7 +297,7 @@ def requiere_detail(request, id_requiere):
     ctx = {
         'requiere': requiere,
         'project': project,
-        'lotes_fifo':      _lotes_fifo_json(insumos_activos, excluir_requiere_pk=requiere.pk),
+        'precios_json':      _precios_json(insumos_activos),
         'insumos_con_stock': json.dumps(insumos_con_stock),
     }
     if request.method == 'GET':
@@ -343,28 +309,12 @@ def requiere_detail(request, id_requiere):
     if form.is_valid():
         insumo   = form.cleaned_data['insumo']
         cantidad = form.cleaned_data['cantidad']
-        try:
-            lotes_consumo = calcular_costo_fifo(insumo, cantidad, excluir_requiere_pk=requiere.pk)
-        except ValueError as e:
-            form.add_error('cantidad', str(e))
+        stock_disponible = insumo.stock + requiere.cantidad  # devolver el anterior al pool
+        if stock_disponible < cantidad:
+            form.add_error('cantidad', f'Stock insuficiente. Disponible: {stock_disponible}.')
             return render(request, 'requiere_detail.html', ctx)
 
-        costo_total = sum(l['cantidad'] * l['compra'].costo_unitario for l in lotes_consumo)
-
-        # Desactivar lotes anteriores (soft-delete) antes de crear los nuevos
-        RequiereLote.objects.filter(requiere=requiere).update(
-            activo=False, deleted_at=timezone.now(), deleted_by=request.user
-        )
-
-        updated = form.save()
-
-        for lote_info in lotes_consumo:
-            RequiereLote.objects.create(
-                requiere=updated,
-                compra=lote_info['compra'],
-                cantidad=lote_info['cantidad'],
-            )
-
+        form.save()
         messages.success(request, 'Insumo del proyecto actualizado correctamente.')
         return redirect('project_view', id_project=project.id)
     return render(request, 'requiere_detail.html', ctx)

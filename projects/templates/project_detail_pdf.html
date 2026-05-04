@@ -383,54 +383,52 @@
   </div>
 
   <!-- ══ CONTRATO CON CLIENTE ══ -->
-  {% if contrato_proyecto %}
+  {% if project.monto_acordado or project.fecha_fin_contrato %}
   <div class="section">
     <div class="section-title">Contrato con Cliente</div>
     <table class="data">
       <tr>
-        <td class="lbl">Fecha firma</td>
-        <td>{{ contrato_proyecto.fecha_firma|date:"d/m/Y"|default:"—" }}</td>
+        <td class="lbl">Fecha inicio</td>
+        <td>{{ project.fecha_inicio|date:"d/m/Y"|default:"—" }}</td>
         <td class="lbl">Monto acordado</td>
-        <td>Bs. {{ contrato_proyecto.monto_acordado|floatformat:2 }}</td>
+        <td>Bs. {{ project.monto_acordado|floatformat:2|default:"—" }}</td>
       </tr>
       <tr>
-        <td class="lbl">Fecha inicio</td>
-        <td>{{ contrato_proyecto.fecha_inicio|date:"d/m/Y"|default:"—" }}</td>
-        <td class="lbl">Fecha fin</td>
-        <td>{{ contrato_proyecto.fecha_fin|date:"d/m/Y"|default:"—" }}</td>
+        <td class="lbl">Fecha límite contrato</td>
+        <td>{{ project.fecha_fin_contrato|date:"d/m/Y"|default:"—" }}</td>
+        <td class="lbl">Garantía</td>
+        <td>{% if project.garantia_meses %}{{ project.garantia_meses }} mes{{ project.garantia_meses|pluralize:"es" }}{% else %}—{% endif %}</td>
       </tr>
+      {% if project.porcentaje_multa_diaria %}
       <tr>
         <td class="lbl">Multa diaria</td>
-        <td>{{ contrato_proyecto.porcentaje_multa_diaria }}%</td>
-        <td class="lbl">Multa máxima</td>
-        <td>{{ contrato_proyecto.porcentaje_multa_maxima }}%</td>
-      </tr>
-      <tr>
-        <td class="lbl">Garantía</td>
-        <td>{{ contrato_proyecto.garantia_meses }} mes{{ contrato_proyecto.garantia_meses|pluralize:"es" }}</td>
-        <td class="lbl">Estado multa</td>
-        <td>
-          {% if contrato_proyecto.estado_multa == 'critico' %}
-            <span class="badge badge-danger">Crítico</span>
-          {% elif contrato_proyecto.estado_multa == 'en_multa' %}
-            <span class="badge badge-warn">En Multa</span>
-          {% else %}
-            <span class="badge badge-ok">Normal</span>
-          {% endif %}
-        </td>
-      </tr>
-      {% if contrato_proyecto.estado_multa != 'normal' %}
-      <tr>
-        <td class="lbl">Días de retraso</td>
-        <td>{{ contrato_proyecto.dias_retraso }} día{{ contrato_proyecto.dias_retraso|pluralize }}s</td>
-        <td class="lbl">Multa acumulada</td>
-        <td>Bs. {{ contrato_proyecto.multa_acumulada|floatformat:2 }}</td>
+        <td>{{ project.porcentaje_multa_diaria }}%</td>
+        <td class="lbl">Multa máxima (tope)</td>
+        <td>{{ project.porcentaje_multa_maxima }}%</td>
       </tr>
       {% endif %}
-      {% if contrato_proyecto.observaciones %}
       <tr>
-        <td class="lbl">Observaciones</td>
-        <td colspan="3">{{ contrato_proyecto.observaciones }}</td>
+        <td class="lbl">Estado multa</td>
+        <td>
+          {% if project.estado_multa == 'critico' %}<span class="badge badge-danger">Crítico</span>
+          {% elif project.estado_multa == 'en_multa' %}<span class="badge badge-warn">En Multa</span>
+          {% else %}<span class="badge badge-ok">Normal</span>{% endif %}
+        </td>
+        <td class="lbl">Nivel de riesgo</td>
+        <td>{{ project.get_nivel_riesgo_display }}</td>
+      </tr>
+      {% if project.estado_multa != 'normal' %}
+      <tr>
+        <td class="lbl">Días de retraso</td>
+        <td>{{ project.dias_retraso }} día{{ project.dias_retraso|pluralize }}s</td>
+        <td class="lbl">Multa acumulada</td>
+        <td>Bs. {{ project.multa_acumulada|floatformat:2 }}</td>
+      </tr>
+      {% endif %}
+      {% if project.descripcion_riesgo %}
+      <tr>
+        <td class="lbl">Plan de mitigación</td>
+        <td colspan="3">{{ project.descripcion_riesgo }}</td>
       </tr>
       {% endif %}
     </table>
@@ -438,28 +436,23 @@
   {% endif %}
 
   <!-- ══ GARANTÍA POST-ENTREGA ══ -->
-  {% if garantia %}
+  {% if project.garantia_meses and project.estado_proyecto == 'completado' %}
   <div class="section">
     <div class="section-title">Garantía Post-Entrega</div>
     <table class="data">
       <tr>
         <td class="lbl">Inicio garantía</td>
-        <td>{{ garantia.fecha_inicio|date:"d/m/Y" }}</td>
+        <td>{{ project.fecha_fin|date:"d/m/Y"|default:"—" }}</td>
         <td class="lbl">Vencimiento</td>
-        <td>{{ garantia.fecha_vencimiento|date:"d/m/Y" }}</td>
+        <td>{{ project.garantia_fecha_vencimiento|date:"d/m/Y"|default:"—" }}</td>
       </tr>
       <tr>
         <td class="lbl">Estado</td>
-        <td>
-          {% if garantia.estado == 'vigente' %}<span class="badge badge-ok">Vigente</span>
-          {% elif garantia.estado == 'por_vencer' %}<span class="badge badge-warn">Por Vencer</span>
+        <td colspan="3">
+          {% if project.garantia_estado == 'vigente' %}<span class="badge badge-ok">Vigente</span>
+          {% elif project.garantia_estado == 'por_vencer' %}<span class="badge badge-warn">Por Vencer</span>
           {% else %}<span class="badge badge-muted">Vencida</span>{% endif %}
-          {% if garantia.estado != 'vencida' %}
-            &nbsp;({{ garantia.dias_restantes }} día{{ garantia.dias_restantes|pluralize }}s restantes)
-          {% endif %}
         </td>
-        <td class="lbl">Costo incidencias</td>
-        <td>Bs. {{ garantia.costo_total_incidencias|floatformat:2 }}</td>
       </tr>
     </table>
   </div>

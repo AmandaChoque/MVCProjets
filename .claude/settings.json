@@ -85,7 +85,21 @@
       "Bash(Get-ChildItem -Recurse -Directory -Name)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\DELL\\\\Desktop\\\\taller II v1\\\\MVCProjets\" -Recurse -Filter \"urls.py\")",
       "Bash(Select-Object FullName)",
-      "PowerShell([Environment]::CurrentDirectory)"
+      "PowerShell([Environment]::CurrentDirectory)",
+      "Bash(python manage.py shell -c \"from django.apps import apps; tables = [m._meta.db_table for m in apps.get_models\\(\\)]; [print\\(t\\) for t in sorted\\(tables\\)]\")",
+      "Bash(python manage.py shell -c \"from django.apps import apps; models = apps.get_models\\(\\); [print\\(m.__name__, '->', m._meta.db_table\\) for m in models if not m._meta.abstract]\")",
+      "Bash(python -c \"with open\\('projects/views.py'\\) as f: lines = f.readlines\\(\\); print\\(len\\(lines\\)\\)\")",
+      "Bash(findstr /n \"\" projects\\\\views.py)",
+      "Bash(findstr /n \"^def \\\\|^@\" projects\\\\views.py)",
+      "Bash(findstr /n \".\")",
+      "Bash(venv\\\\Scripts\\\\python.exe manage.py makemigrations --name=\"pmbok_riesgos_asignacion_campos\")",
+      "Bash(venv\\\\Scripts\\\\python.exe manage.py makemigrations projects --name=\"add_notificacion_model\")",
+      "PowerShell(cd \"c:\\\\Users\\\\DELL\\\\Desktop\\\\taller II v1\\\\MVCProjets\"; venv\\\\Scripts\\\\python.exe manage.py inspectdb 2>&1 | Select-String \"^class \" | ForEach-Object { $_.Line })",
+      "PowerShell($content = Get-Content \"c:\\\\Users\\\\DELL\\\\Desktop\\\\taller II v1\\\\MVCProjets\\\\projects\\\\views.py\" -Raw -Encoding UTF8; $lines = $content -split \"`n\"; Write-Host \"Total lines: $\\($lines.Count\\)\")",
+      "Bash(venv\\\\Scripts\\\\python.exe manage.py showmigrations projects inventario)",
+      "PowerShell(cd \"c:\\\\Users\\\\DELL\\\\Desktop\\\\taller II v1\\\\MVCProjets\"; $env:DJANGO_SETTINGS_MODULE = \"project_management.settings\"; venv\\\\Scripts\\\\python.exe -c \"import django; django.setup\\(\\); from django.db import connection; tables = [t for t in connection.introspection.table_names\\(\\) if not t.startswith\\('django_'\\) and not t.startswith\\('auth_'\\) and t != 'sqlite_sequence']; print\\(f'Total tablas del proyecto: {len\\(tables\\)}'\\); [print\\(' ', t\\) for t in sorted\\(tables\\)]\" 2>&1)",
+      "Bash(python -c ' *)",
+      "Bash(venv\\\\Scripts\\\\python -c \"import django; print\\(django.__version__\\)\")"
     ]
   }
 }

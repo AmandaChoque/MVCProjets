@@ -8,9 +8,7 @@
   #map-sede { height: 220px; border-radius: 8px; border: 1px solid #dee2e6; }
   .tarea-item { transition: background .15s; }
   .tarea-item.completada .tarea-desc { text-decoration: line-through; color: #adb5bd; }
-  .foto-thumb { width: 100px; height: 80px; object-fit: cover; border-radius: 6px; cursor: pointer; border: 2px solid transparent; transition: border-color .15s; }
-  .foto-thumb:hover { border-color: #1B4D90; }
-  .actividad-badge { font-size: 0.7rem; }
+.actividad-badge { font-size: 0.7rem; }
   .subtarea-item { border-top: 1px solid #f0f0f0; }
   .subtarea-item:first-child { border-top: none; }
   .subtarea-check-item { cursor: pointer; }
@@ -75,7 +73,7 @@
 
   <div class="row g-4">
 
-    <!-- COLUMNA IZQUIERDA: tareas + fotos -->
+    <!-- COLUMNA IZQUIERDA: tareas -->
     <div class="col-lg-7">
 
       <!-- CABECERA TAREAS -->
@@ -92,53 +90,12 @@
         {% if es_admin %}
         <div class="collapse" id="panelNuevaTareaGeneral">
           <div class="card-body border-bottom bg-light py-2">
-            <!-- Tabs -->
-            <ul class="nav nav-tabs nav-tabs-sm mb-2" id="tabsNuevaTarea" role="tablist" style="font-size:.85rem;">
-              <li class="nav-item" role="presentation">
-                <button class="nav-link active py-1 px-3" id="tab-manual" data-bs-toggle="tab"
-                        data-bs-target="#pane-manual" type="button" role="tab">
-                  <i class="bi bi-pencil me-1"></i>Manual
-                </button>
-              </li>
-              {% if plantillas %}
-              <li class="nav-item" role="presentation">
-                <button class="nav-link py-1 px-3" id="tab-plantilla" data-bs-toggle="tab"
-                        data-bs-target="#pane-plantilla" type="button" role="tab">
-                  <i class="bi bi-card-checklist me-1"></i>Desde plantilla
-                </button>
-              </li>
-              {% endif %}
-            </ul>
-            <div class="tab-content">
-              <!-- Tab manual -->
-              <div class="tab-pane fade show active" id="pane-manual" role="tabpanel">
-                <form id="form-nueva-tarea" class="d-flex gap-2">
+            <form id="form-nueva-tarea" class="d-flex gap-2">
                   {% csrf_token %}
                   <input type="text" name="descripcion" class="form-control form-control-sm"
                          placeholder="Nueva tarea..." required>
                   <button type="submit" class="btn btn-sm btn-primary">Agregar</button>
                 </form>
-              </div>
-              {% if plantillas %}
-              <!-- Tab plantilla -->
-              <div class="tab-pane fade" id="pane-plantilla" role="tabpanel">
-                <div class="d-flex gap-2">
-                  <select id="selectPlantilla" class="form-select form-select-sm">
-                    <option value="">— Elegir plantilla —</option>
-                    {% for p in plantillas %}
-                    <option value="{{ p.id }}">{{ p.nombre }} ({{ p.items.count }} tarea{{ p.items.count|pluralize }})</option>
-                    {% endfor %}
-                  </select>
-                  <button type="button" class="btn btn-sm btn-primary text-nowrap" id="btnAplicarPlantilla">
-                    <i class="bi bi-check2-all me-1"></i>Aplicar
-                  </button>
-                </div>
-                <div class="text-muted mt-1" style="font-size:.75rem;">
-                  <i class="bi bi-info-circle me-1"></i>Las tareas se agregan al checklist existente sin eliminar las actuales.
-                </div>
-              </div>
-              {% endif %}
-            </div>
           </div>
         </div>
         {% endif %}
@@ -263,49 +220,6 @@
         </div>
       </div>
 
-      <!-- FOTOS -->
-      <div class="card border-0 shadow-sm rounded-3">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0 fw-semibold"><i class="bi bi-camera me-2"></i>Fotos de instalación</h6>
-          <button class="btn btn-sm btn-primary py-0" data-bs-toggle="collapse" data-bs-target="#panelFoto">
-            <i class="bi bi-plus-lg"></i> Foto
-          </button>
-        </div>
-        <div class="collapse" id="panelFoto">
-          <div class="card-body border-bottom bg-light py-2">
-            <form method="POST" action="{% url 'foto_upload' sede.id %}" enctype="multipart/form-data" class="row g-2 align-items-end">
-              {% csrf_token %}
-              <div class="col-12 col-sm-7">{{ foto_form.foto }}</div>
-              <div class="col-12 col-sm-5">{{ foto_form.descripcion }}</div>
-              <div class="col-12">
-                <button type="submit" class="btn btn-sm btn-primary">Subir foto</button>
-              </div>
-            </form>
-          </div>
-        </div>
-        <div class="card-body">
-          {% if fotos %}
-          <div class="d-flex flex-wrap gap-2" id="galeria-fotos">
-            {% for foto in fotos %}
-            <div class="position-relative" id="foto-{{ foto.id }}">
-              <img src="{{ foto.foto.url }}" alt="{{ foto.descripcion|default:'Foto' }}"
-                   class="foto-thumb" data-bs-toggle="modal" data-bs-target="#modalFoto"
-                   data-src="{{ foto.foto.url }}" data-desc="{{ foto.descripcion }}">
-              {% if es_admin %}
-              <button class="btn btn-danger btn-sm position-absolute top-0 end-0 py-0 px-1 btn-delete-foto"
-                      data-id="{{ foto.id }}" style="font-size:.7rem; border-radius:0 6px 0 4px;">
-                <i class="bi bi-x"></i>
-              </button>
-              {% endif %}
-            </div>
-            {% endfor %}
-          </div>
-          {% else %}
-          <p class="text-muted small mb-0">Sin fotos aún. Sube la primera para documentar la instalación.</p>
-          {% endif %}
-        </div>
-      </div>
-
     </div><!-- /col izquierda -->
 
     <!-- COLUMNA DERECHA: actividad del día + insumos + mapa -->
@@ -399,17 +313,6 @@
   </div>
 </div>
 
-<!-- Modal foto ampliada -->
-<div class="modal fade" id="modalFoto" tabindex="-1">
-  <div class="modal-dialog modal-lg modal-dialog-centered">
-    <div class="modal-content">
-      <div class="modal-body p-2 text-center">
-        <img id="modalFotoImg" src="" class="img-fluid rounded" alt="">
-        <p class="text-muted small mt-2 mb-0" id="modalFotoDesc"></p>
-      </div>
-    </div>
-  </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -738,73 +641,6 @@ if (formNuevaTarea) {
       this.querySelector('[name=descripcion]').value = '';
       const panel = document.getElementById('panelNuevaTareaGeneral');
       if (panel) bootstrap.Collapse.getOrCreateInstance(panel).hide();
-    });
-  });
-}
-
-// ── Foto: eliminar ──────────────────────────────────────────────────────────
-document.querySelectorAll('.btn-delete-foto').forEach(btn => {
-  btn.addEventListener('click', function() {
-    if (!confirm('¿Eliminar esta foto?')) return;
-    const id = this.dataset.id;
-    fetch(`/fotos/${id}/eliminar/`, {
-      method: 'POST',
-      headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'},
-    }).then(r => r.json()).then(data => {
-      if (data.ok) document.getElementById(`foto-${id}`).remove();
-    });
-  });
-});
-
-// ── Modal foto ──────────────────────────────────────────────────────────────
-document.querySelectorAll('.foto-thumb').forEach(img => {
-  img.addEventListener('click', function() {
-    document.getElementById('modalFotoImg').src = this.dataset.src;
-    document.getElementById('modalFotoDesc').textContent = this.dataset.desc || '';
-  });
-});
-
-// ── Aplicar plantilla (agrega tareas desde el panel inline) ──────────────────
-const btnAplicar = document.getElementById('btnAplicarPlantilla');
-if (btnAplicar) {
-  btnAplicar.addEventListener('click', function() {
-    const id_plantilla = document.getElementById('selectPlantilla').value;
-    if (!id_plantilla) { alert('Selecciona una plantilla.'); return; }
-    fetch('{% url "aplicar_plantilla_sede" sede.id %}', {
-      method: 'POST',
-      headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
-      body: JSON.stringify({id_plantilla: parseInt(id_plantilla)}),
-    }).then(r => r.json()).then(data => {
-      if (!data.ok) { alert('Error al aplicar la plantilla.'); return; }
-      const panel = document.getElementById('panelNuevaTareaGeneral');
-      if (panel) bootstrap.Collapse.getOrCreateInstance(panel).hide();
-      const listaGeneral = document.getElementById('lista-tareas');
-      const emptyMsg = document.getElementById('empty-tareas');
-      if (emptyMsg) emptyMsg.remove();
-      data.tareas.forEach(t => {
-        const li = document.createElement('li');
-        li.className = 'list-group-item tarea-item';
-        li.id = `tarea-${t.id}`;
-        li.dataset.id = t.id;
-        li.innerHTML = `
-          <div class="d-flex align-items-center gap-3">
-            <i class="bi bi-grip-vertical text-muted drag-handle" style="cursor:grab;font-size:1.1rem;"></i>
-            <input type="checkbox" class="form-check-input fs-5 tarea-check" data-id="${t.id}" style="width:1.3em;height:1.3em;cursor:pointer;">
-            <div class="flex-grow-1">
-              <span class="tarea-desc">${t.descripcion}</span>
-              <div class="tarea-edit-form d-none d-flex gap-1 mt-1">
-                <input type="text" class="form-control form-control-sm tarea-edit-input" value="${t.descripcion}">
-                <button class="btn btn-sm btn-success py-0 btn-save-tarea" data-id="${t.id}"><i class="bi bi-check-lg"></i></button>
-                <button class="btn btn-sm btn-light py-0 btn-cancel-edit"><i class="bi bi-x-lg"></i></button>
-              </div>
-            </div>
-            <button class="btn btn-sm btn-light text-secondary py-0 btn-edit-tarea" data-id="${t.id}"><i class="bi bi-pencil"></i></button>
-            <button class="btn btn-sm btn-light text-danger py-0 btn-delete-tarea" data-id="${t.id}"><i class="bi bi-x"></i></button>
-          </div>`;
-        if (listaGeneral) listaGeneral.appendChild(li);
-        bindTareaEvents(li);
-      });
-      document.getElementById('selectPlantilla').value = '';
     });
   });
 }

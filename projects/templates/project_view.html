@@ -198,51 +198,56 @@
       <div class="card border-0 shadow-sm rounded-3">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h6 class="mb-0 fw-semibold">Contrato del Proyecto</h6>
-          {% if not contrato_proyecto %}
-          <a href="{% url 'create_contrato_proyecto' project.id %}" class="btn btn-sm btn-primary">+ Agregar</a>
+          {% if es_admin_sec %}
+          <a href="{% url 'project_detail' project.id %}" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-pencil me-1"></i>Editar
+          </a>
           {% endif %}
         </div>
         <div class="card-body">
-          {% if contrato_proyecto %}
-          {% with cp_estado=contrato_proyecto.estado_multa cp_dias=contrato_proyecto.dias_retraso cp_pct=contrato_proyecto.porcentaje_multa_sobre_contrato cp_multa=contrato_proyecto.multa_acumulada %}
-          {% if cp_estado != 'normal' %}
-          <div class="alert {% if cp_estado == 'critico' %}alert-danger{% else %}alert-warning{% endif %} py-2 px-3 mb-3 small d-flex align-items-center gap-2">
-            <i class="bi {% if cp_estado == 'critico' %}bi-exclamation-octagon-fill{% else %}bi-clock-history{% endif %}"></i>
+          {% if project.estado_multa != 'normal' %}
+          <div class="alert {% if project.estado_multa == 'critico' %}alert-danger{% else %}alert-warning{% endif %} py-2 px-3 mb-3 small d-flex align-items-center gap-2">
+            <i class="bi {% if project.estado_multa == 'critico' %}bi-exclamation-octagon-fill{% else %}bi-clock-history{% endif %}"></i>
             <span>
-              <strong>{{ cp_dias }} día{{ cp_dias|pluralize:"s" }} de retraso</strong> —
-              Multa acumulada: Bs. {{ cp_multa|floatformat:2 }} ({{ cp_pct|floatformat:2 }}% del contrato)
-              {% if cp_estado == 'critico' %}<strong class="text-danger"> — umbral 20% superado</strong>{% endif %}
+              <strong>{{ project.dias_retraso }} día{{ project.dias_retraso|pluralize:"s" }} de retraso</strong> —
+              Multa acumulada: Bs. {{ project.multa_acumulada|floatformat:2 }}
+              {% if project.multa_tope_alcanzado %}<strong class="text-danger"> — tope máximo alcanzado</strong>{% endif %}
             </span>
           </div>
           {% endif %}
-          {% endwith %}
           <div class="row g-3">
             <div class="col-md-6">
-              <div class="info-row"><span class="info-label">Fecha de Firma:</span><span>{{ contrato_proyecto.fecha_firma|date:"d/m/Y" }}</span></div>
-              <div class="info-row"><span class="info-label">Fecha de Inicio:</span><span>{{ contrato_proyecto.fecha_inicio|date:"d/m/Y" }}</span></div>
-              <div class="info-row"><span class="info-label">Fecha de Fin:</span><span>{{ contrato_proyecto.fecha_fin|date:"d/m/Y" }}</span></div>
+              {% if project.fecha_inicio %}<div class="info-row"><span class="info-label">Fecha de Inicio:</span><span>{{ project.fecha_inicio|date:"d/m/Y" }}</span></div>{% endif %}
+              {% if project.fecha_fin_contrato %}<div class="info-row"><span class="info-label">Fecha Límite Contrato:</span><span>{{ project.fecha_fin_contrato|date:"d/m/Y" }}</span></div>{% endif %}
+              {% if project.garantia_meses %}<div class="info-row"><span class="info-label">Garantía:</span><span>{{ project.garantia_meses }} mes{{ project.garantia_meses|pluralize:"es" }}</span></div>{% endif %}
             </div>
             <div class="col-md-6">
-              <div class="info-row"><span class="info-label">Monto Acordado (Bs.):</span><span class="fw-semibold">{{ contrato_proyecto.monto_acordado|floatformat:2 }}</span></div>
-              {% if contrato_proyecto.porcentaje_multa_diaria %}
-              <div class="info-row"><span class="info-label">% Multa Diaria:</span><span>{{ contrato_proyecto.porcentaje_multa_diaria }}%</span></div>
-              <div class="info-row"><span class="info-label">% Multa Máxima:</span><span>{{ contrato_proyecto.porcentaje_multa_maxima }}% <span class="text-muted small">(al alcanzarlo → inhabilitado)</span></span></div>
+              {% if project.monto_acordado %}<div class="info-row"><span class="info-label">Monto Acordado (Bs.):</span><span class="fw-semibold">{{ project.monto_acordado|floatformat:2 }}</span></div>{% endif %}
+              {% if project.porcentaje_multa_diaria %}
+              <div class="info-row"><span class="info-label">% Multa Diaria:</span><span>{{ project.porcentaje_multa_diaria }}%</span></div>
+              <div class="info-row"><span class="info-label">% Multa Máxima:</span><span>{{ project.porcentaje_multa_maxima }}% <span class="text-muted small">(tope)</span></span></div>
               {% endif %}
               <div class="info-row">
-                <span class="info-label">Documento:</span>
-                <span>{% if contrato_proyecto.documento %}<a href="{{ contrato_proyecto.documento.url }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0">Ver</a>{% else %}<span class="text-muted">—</span>{% endif %}</span>
+                <span class="info-label">Documento Contrato:</span>
+                <span>{% if project.documento_contrato %}<a href="{{ project.documento_contrato.url }}" target="_blank" class="btn btn-sm btn-outline-secondary py-0">Ver</a>{% else %}<span class="text-muted">—</span>{% endif %}</span>
               </div>
-              {% if contrato_proyecto.observaciones %}
-              <div class="info-row"><span class="info-label">Observaciones:</span><span class="text-muted">{{ contrato_proyecto.observaciones }}</span></div>
-              {% endif %}
             </div>
           </div>
-          <div class="mt-3">
-            <a href="{% url 'contrato_proyecto_detail' contrato_proyecto.id %}" class="btn btn-sm btn-outline-primary">Editar contrato</a>
+          <hr class="my-3">
+          <div class="row g-3 align-items-start">
+            <div class="col-md-3">
+              <span class="info-label d-block mb-1">Nivel de Riesgo (PMBOK §11)</span>
+              {% if project.nivel_riesgo == 'alto' %}<span class="badge bg-danger px-3 py-2">Alto</span>
+              {% elif project.nivel_riesgo == 'medio' %}<span class="badge bg-warning text-dark px-3 py-2">Medio</span>
+              {% else %}<span class="badge bg-success px-3 py-2">Bajo</span>{% endif %}
+            </div>
+            {% if project.descripcion_riesgo %}
+            <div class="col-md-9">
+              <span class="info-label d-block mb-1">Plan de Mitigación</span>
+              <p class="small text-muted mb-0">{{ project.descripcion_riesgo }}</p>
+            </div>
+            {% endif %}
           </div>
-          {% else %}
-          <p class="text-muted small mb-0">No hay contrato registrado. <a href="{% url 'create_contrato_proyecto' project.id %}">Registrar contrato</a>.</p>
-          {% endif %}
         </div>
       </div>
       {% endif %}
@@ -304,14 +309,10 @@
                 <tr>
                   <th scope="col" class="px-3">Empleado</th>
                   <th scope="col">Cargo</th>
-                  <th scope="col" class="text-center">Inicio plan</th>
-                  <th scope="col" class="text-center">Fin plan</th>
-                  <th scope="col" class="text-center">Días plan</th>
                   <th scope="col" class="text-center">Días reales</th>
-                  <th scope="col" class="text-center">Eficiencia</th>
                   <th scope="col" class="text-center">Días pend.</th>
                   {% if not es_instalador_tecnico %}<th scope="col" class="text-end">Costo aprob. (Bs.)</th>{% endif %}
-                  <th scope="col" class="text-end px-3" style="width:120px;"></th>
+                  <th scope="col" class="text-end px-3" style="width:80px;"></th>
                 </tr>
               </thead>
               <tbody>
@@ -327,34 +328,7 @@
                       <span class="text-muted">{{ item.empleado.get_cargo_display }}</span>
                     {% endif %}
                   </td>
-                  <td class="text-center text-muted">
-                    {% if item.asignacion.fecha_inicio_plan %}{{ item.asignacion.fecha_inicio_plan|date:"d/m/Y" }}{% else %}—{% endif %}
-                  </td>
-                  <td class="text-center text-muted">
-                    {% if item.asignacion.fecha_fin_plan %}
-                      {{ item.asignacion.fecha_fin_plan|date:"d/m/Y" }}
-                      {% if item.asignacion.dias_retraso > 0 %}
-                        <span class="badge bg-danger ms-1">+{{ item.asignacion.dias_retraso }}d</span>
-                      {% endif %}
-                    {% else %}—{% endif %}
-                  </td>
-                  <td class="text-center">
-                    {% if item.asignacion.dias_planificados %}
-                      <span class="fw-semibold">{{ item.asignacion.dias_planificados }}</span>
-                    {% else %}<span class="text-muted">—</span>{% endif %}
-                  </td>
                   <td class="text-center fw-semibold">{{ item.dias_aprobados }}</td>
-                  <td class="text-center">
-                    {% if item.asignacion.eficiencia_pct is not None %}
-                      {% if item.asignacion.eficiencia_pct >= 100 %}
-                        <span class="badge bg-success">{{ item.asignacion.eficiencia_pct }}%</span>
-                      {% elif item.asignacion.eficiencia_pct >= 80 %}
-                        <span class="badge bg-warning text-dark">{{ item.asignacion.eficiencia_pct }}%</span>
-                      {% else %}
-                        <span class="badge bg-danger">{{ item.asignacion.eficiencia_pct }}%</span>
-                      {% endif %}
-                    {% else %}<span class="text-muted">—</span>{% endif %}
-                  </td>
                   <td class="text-center">
                     {% if item.dias_pendientes %}
                       <span class="badge bg-warning text-dark">{{ item.dias_pendientes }} pend.</span>
@@ -367,11 +341,9 @@
                     <div class="d-flex gap-1 justify-content-end">
                       <a href="{% url 'employee_view' item.empleado.id %}" class="btn btn-sm btn-light py-0">Ver</a>
                       {% if es_admin %}
-                      <button type="button" class="btn btn-sm btn-outline-secondary py-0"
-                        data-bs-toggle="modal" data-bs-target="#modalCronograma{{ item.empleado.id }}"
-                        title="Editar cronograma">
-                        <i class="bi bi-calendar3"></i>
-                      </button>
+                      <a href="{% url 'asignacion_edit' project.id item.empleado.id %}" class="btn btn-sm btn-outline-primary py-0" title="Editar cronograma">
+                        <i class="bi bi-calendar-range"></i>
+                      </a>
                       <form method="POST" action="{% url 'equipo_remove' project.id item.empleado.id %}" class="d-inline">
                         {% csrf_token %}
                         <button type="submit" class="btn btn-sm btn-outline-danger py-0"
@@ -387,49 +359,63 @@
               </tbody>
             </table>
           </div>
-
-          {% if es_admin %}
-          {% for item in equipo_proyecto %}
-          <div class="modal fade" id="modalCronograma{{ item.empleado.id }}" tabindex="-1">
-            <div class="modal-dialog modal-sm">
-              <div class="modal-content">
-                <div class="modal-header py-2">
-                  <h6 class="modal-title small fw-semibold">Cronograma — {{ item.empleado.nombre }} {{ item.empleado.apellido_paterno }}</h6>
-                  <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
-                </div>
-                <form method="POST" action="{% url 'asignacion_edit' project.id item.empleado.id %}">
-                  {% csrf_token %}
-                  <div class="modal-body py-2">
-                    <div class="mb-2">
-                      <label class="form-label form-label-sm mb-1 text-muted small">Inicio planificado</label>
-                      <input type="date" name="fecha_inicio_plan" class="form-control form-control-sm"
-                        value="{{ item.asignacion.fecha_inicio_plan|date:'Y-m-d'|default:'' }}">
-                    </div>
-                    <div class="mb-2">
-                      <label class="form-label form-label-sm mb-1 text-muted small">Fin planificado</label>
-                      <input type="date" name="fecha_fin_plan" class="form-control form-control-sm"
-                        value="{{ item.asignacion.fecha_fin_plan|date:'Y-m-d'|default:'' }}">
-                    </div>
-                    <div class="mb-2">
-                      <label class="form-label form-label-sm mb-1 text-muted small">Días planificados</label>
-                      <input type="number" name="dias_planificados" class="form-control form-control-sm" min="1"
-                        placeholder="Ej: 12" value="{{ item.asignacion.dias_planificados|default:'' }}">
-                    </div>
-                  </div>
-                  <div class="modal-footer py-2">
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-sm btn-primary">Guardar</button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </div>
-          {% endfor %}
-          {% endif %}
           {% else %}
           <p class="text-muted small mb-0 mt-2">Sin miembros asignados aún.</p>
           {% endif %}
         </div>
+      </div>
+
+      <!-- Cronograma del Proyecto -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-semibold"><i class="bi bi-calendar-range me-2 text-primary"></i>Cronograma Planificado</h6>
+          <span class="text-muted small">PMBOK §6</span>
+        </div>
+        {% if asignaciones %}
+        <div class="card-body p-0">
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle small mb-0">
+              <thead class="table-light small text-uppercase fw-semibold">
+                <tr>
+                  <th class="px-3">Empleado</th>
+                  <th>Cargo</th>
+                  <th class="text-center">Inicio plan.</th>
+                  <th class="text-center">Fin plan.</th>
+                  <th class="text-center">Días plan.</th>
+                  <th class="text-center">Días reales</th>
+                  <th class="text-center">Días pend.</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for a in asignaciones %}
+                <tr>
+                  <td class="px-3 fw-semibold">{{ a.empleado.nombre }} {{ a.empleado.apellido_paterno }}</td>
+                  <td><span class="badge bg-secondary">{{ a.empleado.get_cargo_display }}</span></td>
+                  <td class="text-center text-muted">{{ a.fecha_inicio_plan|date:"d/m/Y"|default:"—" }}</td>
+                  <td class="text-center text-muted">{{ a.fecha_fin_plan|date:"d/m/Y"|default:"—" }}</td>
+                  <td class="text-center fw-semibold text-primary">{{ a.dias_planificados }}</td>
+                  <td class="text-center fw-semibold text-success">{{ a.dias_reales }}</td>
+                  <td class="text-center">
+                    {% if a.dias_pendientes > 0 %}
+                      <span class="badge bg-warning text-dark">{{ a.dias_pendientes }}</span>
+                    {% else %}
+                      <span class="text-muted">—</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% else %}
+        <div class="card-body">
+          <p class="text-muted small mb-1">Sin cronograma planificado aún.</p>
+          {% if es_admin %}
+          <p class="text-muted small">Use el botón <i class="bi bi-calendar-range"></i> en la tabla de equipo para asignar fechas y días planificados a cada miembro.</p>
+          {% endif %}
+        </div>
+        {% endif %}
       </div>
 
       <!-- Insumos del Proyecto -->
@@ -553,18 +539,6 @@
               <div class="text-muted sede-stats">Sin tareas en checklist</div>
               {% endif %}
               {% endwith %}
-
-              {% if sede.fotos.all %}
-              <div class="d-flex gap-1 mt-2 flex-wrap">
-                {% for foto in sede.fotos.all %}
-                {% if foto.activo %}
-                <a href="{% url 'sede_view' sede.id %}">
-                  <img src="{{ foto.foto.url }}" alt="Foto de {{ sede.direccion }}" class="sede-foto-thumb">
-                </a>
-                {% endif %}
-                {% endfor %}
-              </div>
-              {% endif %}
 
               <div class="mt-2 pt-1 border-top">
                 <a href="{% url 'sede_view' sede.id %}" class="btn btn-sm btn-outline-secondary py-0">
@@ -751,11 +725,11 @@
         </div>
       </div>
 
-      {% if historial_estado %}
-      <div class="card border-0 shadow-sm rounded-3 mb-4">
+      {% if historial %}
+      <div class="card border-0 shadow-sm rounded-3">
         <div class="card-header bg-light d-flex align-items-center gap-2">
-          <i class="bi bi-arrow-left-right text-primary"></i>
-          <h6 class="mb-0 fw-semibold">Historial de Cambios de Estado</h6>
+          <i class="bi bi-clock-history text-primary"></i>
+          <h6 class="mb-0 fw-semibold">Historial de Cambios</h6>
         </div>
         <div class="card-body p-0">
           <div class="table-responsive">
@@ -763,27 +737,39 @@
               <thead class="table-light small text-uppercase fw-semibold">
                 <tr>
                   <th class="px-3">Fecha</th>
-                  <th>Estado Anterior</th>
-                  <th>Estado Nuevo</th>
-                  <th>Cambiado por</th>
+                  <th>Tipo</th>
+                  <th>Detalle</th>
+                  <th>Registrado por</th>
                   <th>Motivo</th>
                 </tr>
               </thead>
               <tbody>
-                {% for h in historial_estado %}
+                {% for h in historial %}
                 <tr>
                   <td class="px-3 text-muted">{{ h.fecha|date:"d/m/Y H:i" }}</td>
                   <td>
-                    {% if h.estado_anterior == 'pendiente' %}<span class="badge bg-secondary">Pendiente</span>
-                    {% elif h.estado_anterior == 'en_progreso' %}<span class="badge bg-primary">En Progreso</span>
-                    {% else %}<span class="badge bg-success">Completado</span>{% endif %}
+                    {% if h.tipo == 'estado' %}
+                      <span class="badge bg-primary">Estado</span>
+                    {% else %}
+                      <span class="badge bg-warning text-dark">Presupuesto</span>
+                    {% endif %}
                   </td>
                   <td>
-                    {% if h.estado_nuevo == 'pendiente' %}<span class="badge bg-secondary">Pendiente</span>
-                    {% elif h.estado_nuevo == 'en_progreso' %}<span class="badge bg-primary">En Progreso</span>
-                    {% else %}<span class="badge bg-success">Completado</span>{% endif %}
+                    {% if h.tipo == 'estado' %}
+                      {% if h.estado_anterior == 'pendiente' %}<span class="badge bg-secondary">Pendiente</span>
+                      {% elif h.estado_anterior == 'en_progreso' %}<span class="badge bg-primary">En Progreso</span>
+                      {% else %}<span class="badge bg-success">Completado</span>{% endif %}
+                      <i class="bi bi-arrow-right mx-1"></i>
+                      {% if h.estado_nuevo == 'pendiente' %}<span class="badge bg-secondary">Pendiente</span>
+                      {% elif h.estado_nuevo == 'en_progreso' %}<span class="badge bg-primary">En Progreso</span>
+                      {% else %}<span class="badge bg-success">Completado</span>{% endif %}
+                    {% else %}
+                      <span class="text-danger">Bs. {{ h.monto_anterior|floatformat:2 }}</span>
+                      <i class="bi bi-arrow-right mx-1"></i>
+                      <span class="text-success fw-semibold">Bs. {{ h.monto_actual|floatformat:2 }}</span>
+                    {% endif %}
                   </td>
-                  <td class="text-muted">{{ h.cambiado_por.get_full_name|default:h.cambiado_por.username|default:"Sistema" }}</td>
+                  <td class="text-muted">{{ h.registrado_por.get_full_name|default:h.registrado_por.username|default:"Sistema" }}</td>
                   <td class="text-muted">{{ h.motivo|default:"—" }}</td>
                 </tr>
                 {% endfor %}
@@ -794,37 +780,85 @@
       </div>
       {% endif %}
 
-      {% if historial_monto %}
-      <div class="card border-0 shadow-sm rounded-3">
-        <div class="card-header bg-light"><h6 class="mb-0 fw-semibold">Historial de Contrato</h6></div>
+      {% endif %}{# end not es_instalador_tecnico #}
+
+      <!-- Registro de Riesgos (visible para todos) -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-semibold">
+            <i class="bi bi-exclamation-triangle-fill me-2 text-warning"></i>Registro de Riesgos
+          </h6>
+          <div class="d-flex align-items-center gap-2">
+            <span class="text-muted small">PMBOK §11</span>
+            {% if es_admin %}
+            <a href="{% url 'riesgo_create' project.id %}" class="btn btn-sm btn-warning py-0">
+              <i class="bi bi-plus-lg me-1"></i>Nuevo riesgo
+            </a>
+            {% endif %}
+          </div>
+        </div>
+        {% if riesgos %}
         <div class="card-body p-0">
           <div class="table-responsive">
-            <table class="table table-sm align-middle small mb-0">
+            <table class="table table-sm table-hover align-middle small mb-0">
               <thead class="table-light small text-uppercase fw-semibold">
                 <tr>
-                  <th scope="col" class="px-3">Fecha</th>
-                  <th scope="col" class="text-end">Anterior (Bs.)</th>
-                  <th scope="col" class="text-end">Actual (Bs.)</th>
-                  <th scope="col">Motivo</th>
+                  <th class="px-3">Descripción</th>
+                  <th>Categoría</th>
+                  <th class="text-center">Probabilidad</th>
+                  <th class="text-center">Impacto</th>
+                  <th class="text-center">Nivel</th>
+                  <th>Estado</th>
+                  <th>Responsable</th>
+                  <th class="text-end px-3" style="width:60px;"></th>
                 </tr>
               </thead>
               <tbody>
-                {% for h in historial_monto %}
+                {% for r in riesgos %}
                 <tr>
-                  <td class="px-3 text-muted">{{ h.fecha_modificacion|date:"d/m/Y H:i" }}</td>
-                  <td class="text-end text-danger">{{ h.monto_anterior|floatformat:2 }}</td>
-                  <td class="text-end text-success fw-semibold">{{ h.monto_actual|floatformat:2 }}</td>
-                  <td class="text-muted">{{ h.motivo_cambio }}</td>
+                  <td class="px-3" style="max-width:220px; white-space:normal;">{{ r.descripcion|truncatechars:80 }}</td>
+                  <td><span class="badge bg-secondary">{{ r.get_categoria_display }}</span></td>
+                  <td class="text-center">
+                    {% if r.probabilidad == 'alta' %}<span class="badge bg-danger">Alta</span>
+                    {% elif r.probabilidad == 'media' %}<span class="badge bg-warning text-dark">Media</span>
+                    {% else %}<span class="badge bg-success">Baja</span>{% endif %}
+                  </td>
+                  <td class="text-center">
+                    {% if r.impacto == 'alto' %}<span class="badge bg-danger">Alto</span>
+                    {% elif r.impacto == 'medio' %}<span class="badge bg-warning text-dark">Medio</span>
+                    {% else %}<span class="badge bg-success">Bajo</span>{% endif %}
+                  </td>
+                  <td class="text-center">
+                    {% if r.nivel_riesgo_label == 'alto' %}<span class="badge bg-danger">Alto</span>
+                    {% elif r.nivel_riesgo_label == 'medio' %}<span class="badge bg-warning text-dark">Medio</span>
+                    {% else %}<span class="badge bg-success">Bajo</span>{% endif %}
+                  </td>
+                  <td>
+                    {% if r.estado == 'cerrado' %}<span class="badge bg-success">Cerrado</span>
+                    {% elif r.estado == 'en_seguimiento' %}<span class="badge bg-primary">Seguimiento</span>
+                    {% else %}<span class="badge bg-secondary">Identificado</span>{% endif %}
+                  </td>
+                  <td class="text-muted">{{ r.responsable.get_full_name|default:"—" }}</td>
+                  <td class="text-end px-3">
+                    <a href="{% url 'riesgo_detail' r.id %}" class="btn btn-sm btn-light py-0">Ver</a>
+                  </td>
                 </tr>
                 {% endfor %}
               </tbody>
             </table>
           </div>
         </div>
+        {% else %}
+        <div class="card-body">
+          <p class="text-muted small mb-0">Sin riesgos registrados.
+            {% if es_admin %}
+            <a href="{% url 'riesgo_create' project.id %}">Registrar el primer riesgo.</a>
+            {% endif %}
+          </p>
+        </div>
+        {% endif %}
       </div>
-      {% endif %}
 
-      {% endif %}{# end not es_instalador_tecnico #}
     </div>
 
     <!-- ── FASE 5: CIERRE ─────────────────────────────────────────────── -->
@@ -912,86 +946,37 @@
       </div>
 
       <!-- Garantía post-cierre -->
-      {% if garantia %}
-      {% if garantia.estado == 'por_vencer' %}
+      {% if project.garantia_meses and project.estado_proyecto == 'completado' %}
+      {% if project.garantia_estado == 'por_vencer' %}
       <div class="alert alert-warning d-flex align-items-center gap-3 mb-3">
         <i class="bi bi-clock-history fs-4"></i>
-        <div><strong>Garantía próxima a vencer</strong> — quedan <strong>{{ garantia.dias_restantes }} días</strong> ({{ garantia.fecha_vencimiento|date:"d/m/Y" }}).</div>
+        <div><strong>Garantía próxima a vencer</strong> — {{ project.garantia_fecha_vencimiento|date:"d/m/Y" }}.</div>
       </div>
-      {% elif garantia.estado == 'vencida' %}
+      {% elif project.garantia_estado == 'vencida' %}
       <div class="alert alert-danger d-flex align-items-center gap-3 mb-3">
         <i class="bi bi-shield-x fs-4"></i>
-        <div><strong>Garantía vencida</strong> el {{ garantia.fecha_vencimiento|date:"d/m/Y" }}.</div>
+        <div><strong>Garantía vencida</strong> el {{ project.garantia_fecha_vencimiento|date:"d/m/Y" }}.</div>
       </div>
       {% endif %}
-      <div class="row g-4">
-        <div class="col-md-4">
-          <div class="card border-0 shadow-sm rounded-3 h-100">
-            <div class="card-body">
-              <h6 class="fw-semibold mb-3"><i class="bi bi-shield-check me-2 text-primary"></i>Garantía Post-entrega</h6>
-              <div class="mb-2 small"><span class="text-muted">Duración:</span> <strong>{{ contrato_proyecto.garantia_meses }} mes{{ contrato_proyecto.garantia_meses|pluralize:"es" }}</strong></div>
-              <div class="mb-2 small"><span class="text-muted">Inicio:</span> {{ garantia.fecha_inicio|date:"d/m/Y" }}</div>
-              <div class="mb-2 small"><span class="text-muted">Vencimiento:</span> <strong>{{ garantia.fecha_vencimiento|date:"d/m/Y" }}</strong></div>
-              <div class="mb-3 small"><span class="text-muted">Estado:</span>
-                {% if garantia.estado == 'vigente' %}<span class="badge bg-success">Vigente ({{ garantia.dias_restantes }} días)</span>
-                {% elif garantia.estado == 'por_vencer' %}<span class="badge bg-warning text-dark">Por vencer ({{ garantia.dias_restantes }} días)</span>
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body">
+          <h6 class="fw-semibold mb-3"><i class="bi bi-shield-check me-2 text-primary"></i>Garantía Post-entrega</h6>
+          <div class="row g-3 align-items-center">
+            <div class="col-md-4">
+              <div class="mb-2 small"><span class="text-muted">Duración:</span> <strong>{{ project.garantia_meses }} mes{{ project.garantia_meses|pluralize:"es" }}</strong></div>
+              {% if project.fecha_fin %}<div class="mb-2 small"><span class="text-muted">Inicio:</span> {{ project.fecha_fin|date:"d/m/Y" }}</div>{% endif %}
+              <div class="mb-2 small"><span class="text-muted">Vencimiento:</span> <strong>{{ project.garantia_fecha_vencimiento|date:"d/m/Y" }}</strong></div>
+              <div class="mb-0 small"><span class="text-muted">Estado:</span>
+                {% if project.garantia_estado == 'vigente' %}<span class="badge bg-success">Vigente</span>
+                {% elif project.garantia_estado == 'por_vencer' %}<span class="badge bg-warning text-dark">Por vencer</span>
                 {% else %}<span class="badge bg-danger">Vencida</span>{% endif %}
               </div>
-              <hr class="my-2">
-              <div class="small"><span class="text-muted">Costo absorbido (SOBOTEC):</span><br>
-                <strong class="{% if garantia.costo_total_incidencias %}text-danger{% else %}text-muted{% endif %}">
-                  Bs. {{ garantia.costo_total_incidencias|floatformat:2 }}
-                </strong>
-              </div>
-              <a href="{% url 'garantia_detail' garantia.id %}" class="btn btn-sm btn-outline-primary mt-3 w-100">
-                <i class="bi bi-arrow-right me-1"></i>Ver detalle completo
-              </a>
             </div>
-          </div>
-        </div>
-        <div class="col-md-8">
-          <div class="card border-0 shadow-sm rounded-3">
-            <div class="card-header bg-light d-flex justify-content-between align-items-center">
-              <h6 class="mb-0 fw-semibold"><i class="bi bi-exclamation-triangle me-2"></i>Incidencias post-entrega</h6>
-              {% if garantia.estado != 'vencida' and es_admin_sec %}
-              <a href="{% url 'incidencia_garantia_create' garantia.id %}" class="btn btn-sm btn-danger">
-                <i class="bi bi-plus-lg me-1"></i>Registrar
-              </a>
-              {% endif %}
-            </div>
-            <div class="card-body p-0">
-              {% with incs=garantia.incidencias.all %}
-              {% if incs %}
-              <div class="table-responsive">
-                <table class="table table-sm table-hover mb-0">
-                  <thead class="table-light"><tr>
-                    <th class="ps-3">Descripción</th><th>Fecha</th><th>Estado</th><th class="text-end pe-3">Costo</th>
-                  </tr></thead>
-                  <tbody>
-                    {% for inc in incs %}{% if inc.activo %}
-                    <tr>
-                      <td class="ps-3 small"><a href="{% url 'incidencia_garantia_detail' inc.id %}" class="text-decoration-none text-dark">{{ inc.descripcion|truncatechars:55 }}</a></td>
-                      <td class="small">{{ inc.fecha_reporte|date:"d/m/Y" }}</td>
-                      <td>
-                        {% if inc.estado == 'pendiente' %}<span class="badge bg-warning text-dark">Pendiente</span>
-                        {% elif inc.estado == 'en_reparacion' %}<span class="badge bg-primary">En Reparación</span>
-                        {% else %}<span class="badge bg-success">Resuelto</span>{% endif %}
-                      </td>
-                      <td class="text-end pe-3 small">
-                        {% if inc.costo_reparacion %}<span class="text-danger">Bs. {{ inc.costo_reparacion|floatformat:2 }}</span>
-                        {% else %}<span class="text-muted">—</span>{% endif %}
-                      </td>
-                    </tr>
-                    {% endif %}{% endfor %}
-                  </tbody>
-                </table>
+            <div class="col-md-8">
+              <div class="alert alert-light border small mb-0">
+                <i class="bi bi-info-circle me-1"></i>
+                La garantía cubre fallas del sistema instalado por SOBOTEC durante el período acordado. Los costos de reparación son absorbidos por la empresa sin cargo al cliente.
               </div>
-              {% else %}
-              <div class="text-center py-4 text-muted small">
-                <i class="bi bi-check-circle text-success fs-4 d-block mb-1"></i>Sin incidencias registradas.
-              </div>
-              {% endif %}
-              {% endwith %}
             </div>
           </div>
         </div>
@@ -1000,7 +985,7 @@
       <div class="card border-0 shadow-sm rounded-3">
         <div class="card-body text-center py-4 text-muted small">
           <i class="bi bi-shield-slash fs-3 d-block mb-1"></i>
-          Este proyecto no tiene período de garantía configurado en el contrato.
+          Este proyecto no tiene período de garantía configurado.
         </div>
       </div>
       {% endif %}

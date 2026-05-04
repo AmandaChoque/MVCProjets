@@ -2,12 +2,8 @@ from decimal import Decimal
 from datetime import date, timedelta
 
 from django.test import TestCase
-from django.utils import timezone
 
-from .models import (
-    Cliente, Proyecto, PagoProyecto, ContratoProyecto,
-    HistorialEstadoProyecto, HistorialPresupuesto,
-)
+from .models import Cliente, Proyecto, PagoProyecto
 from .form import PaymentForm
 from empleados.models import Empleado, ContratoEmpleado, JornadaEmpleado
 from inventario.forms import InsumoForm, CompraForm
@@ -41,7 +37,14 @@ def crear_cliente():
     )
 
 
-def crear_proyecto(empleado, monto_total='10000.00', estado='pendiente'):
+def crear_proyecto(empleado, monto_total='10000.00', estado='pendiente',
+                   dias_retraso=0, multa_diaria='0', multa_maxima='20'):
+    hoy = date.today()
+    if dias_retraso > 0:
+        fecha_fin_contrato = hoy - timedelta(days=dias_retraso)
+    else:
+        fecha_fin_contrato = hoy + timedelta(days=30)
+
     return Proyecto.objects.create(
         codigo='PRY-001',
         nombre='Instalacion SOBOTEC Test',
@@ -51,28 +54,10 @@ def crear_proyecto(empleado, monto_total='10000.00', estado='pendiente'):
         monto_total=Decimal(monto_total),
         creado_por=empleado,
         cliente=crear_cliente(),
-    )
-
-
-def crear_contrato_proyecto(proyecto, dias_retraso=0, multa_diaria='0.50', multa_maxima='10.00'):
-    hoy = date.today()
-    if dias_retraso > 0:
-        fecha_fin = hoy - timedelta(days=dias_retraso)
-        fecha_inicio = fecha_fin - timedelta(days=60)  # siempre antes que fecha_fin
-        fecha_firma = fecha_inicio - timedelta(days=5)
-    else:
-        fecha_fin = hoy + timedelta(days=30)
-        fecha_inicio = hoy - timedelta(days=30)
-        fecha_firma = hoy - timedelta(days=35)
-    return ContratoProyecto.objects.create(
-        proyecto=proyecto,
-        fecha_firma=fecha_firma,
-        fecha_inicio=fecha_inicio,
-        fecha_fin=fecha_fin,
-        monto_acordado=proyecto.monto_total,
+        fecha_fin_contrato=fecha_fin_contrato,
+        monto_acordado=Decimal(monto_total),
         porcentaje_multa_diaria=Decimal(multa_diaria),
         porcentaje_multa_maxima=Decimal(multa_maxima),
-        garantia_meses=6,
     )
 
 
@@ -221,119 +206,50 @@ class UpdatePaymentStatusTest(TestCase):
 
 
 # ===========================================================================
-# 3. ContratoProyecto — cálculo de multas
+# 3. Proyecto — cálculo de multas (campos absorbidos del contrato)
 # ===========================================================================
 
-class ContratoProyectoMultaTest(TestCase):
+class ProyectoMultaTest(TestCase):
     """Verifica el cálculo de días de retraso, multa acumulada y estado_multa."""
 
     def setUp(self):
         self.empleado = crear_empleado()
-        self.proyecto = crear_proyecto(self.empleado, monto_total='10000.00')
 
     def test_sin_retraso_estado_normal(self):
-        contrato = crear_contrato_proyecto(self.proyecto, dias_retraso=0)
-        self.assertEqual(contrato.estado_multa, 'normal')
-        self.assertEqual(contrato.dias_retraso, 0)
+        proyecto = crear_proyecto(self.empleado, dias_retraso=0)
+        self.assertEqual(proyecto.estado_multa, 'normal')
+        self.assertEqual(proyecto.dias_retraso, 0)
 
     def test_con_retraso_estado_en_multa(self):
-        contrato = crear_contrato_proyecto(self.proyecto, dias_retraso=5, multa_diaria='0.50', multa_maxima='10.00')
-        self.assertEqual(contrato.estado_multa, 'en_multa')
-        self.assertGreater(contrato.dias_retraso, 0)
+        proyecto = crear_proyecto(self.empleado, dias_retraso=5,
+                                   multa_diaria='0.50', multa_maxima='10.00')
+        self.assertEqual(proyecto.estado_multa, 'en_multa')
+        self.assertGreater(proyecto.dias_retraso, 0)
 
     def test_multa_acumulada_calculo(self):
         """Con 10 días de retraso y 0.5% diario sobre 10000, la multa es 500."""
-        contrato = crear_contrato_proyecto(self.proyecto, dias_retraso=10, multa_diaria='0.50', multa_maxima='20.00')
-        multa_esperada = Decimal('10000.00') * Decimal('0.50') / Decimal('100') * contrato.dias_retraso
-        self.assertEqual(contrato.multa_acumulada, multa_esperada)
+        proyecto = crear_proyecto(self.empleado, dias_retraso=10,
+                                   multa_diaria='0.50', multa_maxima='20.00')
+        multa_esperada = Decimal('10000.00') * Decimal('0.50') / Decimal('100') * proyecto.dias_retraso
+        self.assertEqual(proyecto.multa_acumulada, multa_esperada)
 
     def test_multa_no_supera_tope(self):
-        """La multa no puede superar el tope máximo (10% en este caso = 1000 Bs.)."""
-        contrato = crear_contrato_proyecto(self.proyecto, dias_retraso=100, multa_diaria='0.50', multa_maxima='10.00')
+        """La multa no puede superar el tope máximo (10% = 1000 Bs.)."""
+        proyecto = crear_proyecto(self.empleado, dias_retraso=100,
+                                   multa_diaria='0.50', multa_maxima='10.00')
         tope = Decimal('10000.00') * Decimal('10.00') / Decimal('100')
-        self.assertLessEqual(contrato.multa_acumulada, tope)
-        self.assertEqual(contrato.estado_multa, 'critico')
+        self.assertLessEqual(proyecto.multa_acumulada, tope)
+        self.assertEqual(proyecto.estado_multa, 'critico')
 
     def test_tope_alcanzado_es_critico(self):
-        contrato = crear_contrato_proyecto(self.proyecto, dias_retraso=200, multa_diaria='1.00', multa_maxima='5.00')
-        self.assertTrue(contrato.multa_tope_alcanzado)
-        self.assertEqual(contrato.estado_multa, 'critico')
+        proyecto = crear_proyecto(self.empleado, dias_retraso=200,
+                                   multa_diaria='1.00', multa_maxima='5.00')
+        self.assertTrue(proyecto.multa_tope_alcanzado)
+        self.assertEqual(proyecto.estado_multa, 'critico')
 
 
 # ===========================================================================
-# 4. HistorialEstadoProyecto — señal pre_save
-# ===========================================================================
-
-class HistorialEstadoProyectoTest(TestCase):
-    """Verifica que los cambios de estado del proyecto se registren correctamente."""
-
-    def setUp(self):
-        self.empleado = crear_empleado()
-        self.proyecto = crear_proyecto(self.empleado, estado='pendiente')
-
-    def test_cambio_estado_crea_historial(self):
-        self.proyecto._current_user = self.empleado
-        self.proyecto.estado_proyecto = 'en_progreso'
-        self.proyecto.save()
-        historial = HistorialEstadoProyecto.objects.filter(proyecto=self.proyecto)
-        self.assertEqual(historial.count(), 1)
-        self.assertEqual(historial.first().estado_anterior, 'pendiente')
-        self.assertEqual(historial.first().estado_nuevo, 'en_progreso')
-
-    def test_sin_cambio_no_crea_historial(self):
-        self.proyecto.nombre = 'Nuevo Nombre'
-        self.proyecto.save()
-        historial = HistorialEstadoProyecto.objects.filter(proyecto=self.proyecto)
-        self.assertEqual(historial.count(), 0)
-
-    def test_multiples_cambios_registran_todos(self):
-        self.proyecto._current_user = self.empleado
-        self.proyecto.estado_proyecto = 'en_progreso'
-        self.proyecto.save()
-        self.proyecto.refresh_from_db()
-        self.proyecto._current_user = self.empleado
-        self.proyecto.estado_proyecto = 'completado'
-        self.proyecto.save()
-        historial = HistorialEstadoProyecto.objects.filter(proyecto=self.proyecto)
-        self.assertEqual(historial.count(), 2)
-
-    def test_cambiado_por_se_registra(self):
-        self.proyecto._current_user = self.empleado
-        self.proyecto.estado_proyecto = 'en_progreso'
-        self.proyecto.save()
-        entrada = HistorialEstadoProyecto.objects.get(proyecto=self.proyecto)
-        self.assertEqual(entrada.cambiado_por, self.empleado)
-
-
-# ===========================================================================
-# 5. HistorialPresupuesto — señal pre_save
-# ===========================================================================
-
-class HistorialPresupuestoTest(TestCase):
-    """Verifica que los cambios de presupuesto se registren correctamente."""
-
-    def setUp(self):
-        self.empleado = crear_empleado()
-        self.proyecto = crear_proyecto(self.empleado, monto_total='10000.00')
-
-    def test_cambio_monto_crea_historial(self):
-        self.proyecto._current_user = self.empleado
-        self.proyecto.monto_total = Decimal('15000.00')
-        self.proyecto.save()
-        historial = HistorialPresupuesto.objects.filter(proyecto=self.proyecto)
-        self.assertEqual(historial.count(), 1)
-        self.assertEqual(historial.first().monto_anterior, Decimal('10000.00'))
-        self.assertEqual(historial.first().monto_actual, Decimal('15000.00'))
-
-    def test_sin_cambio_monto_no_crea_historial(self):
-        self.proyecto.nombre = 'Otro Nombre'
-        self.proyecto.save()
-        historial = HistorialPresupuesto.objects.filter(proyecto=self.proyecto)
-        self.assertEqual(historial.count(), 0)
-
-
-# ===========================================================================
-# 6. ContratoEmpleado — monto_diario
+# 4. ContratoEmpleado — monto_diario
 # ===========================================================================
 
 class ContratoEmpleadoMontoDiarioTest(TestCase):
@@ -375,7 +291,7 @@ class ContratoEmpleadoMontoDiarioTest(TestCase):
 
 
 # ===========================================================================
-# 7. InsumoForm — campos básicos
+# 5. InsumoForm — campos básicos
 # ===========================================================================
 
 class InsumoFormTest(TestCase):
@@ -409,7 +325,7 @@ class InsumoFormTest(TestCase):
 
 
 # ===========================================================================
-# 8. CompraForm — clean_costo_unitario
+# 6. CompraForm — clean_costo_unitario
 # ===========================================================================
 
 class CompraFormCleanCostoTest(TestCase):

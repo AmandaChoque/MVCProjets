@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+  .was-validated .form-control:valid,
+  .was-validated .form-select:valid { border-color: #dee2e6; background-image: none; }
+  .valid-feedback { display: none; }
+  .nivel-alto  { background: #f8d7da; color: #842029; border-radius: .3rem; padding: .2rem .5rem; }
+  .nivel-medio { background: #fff3cd; color: #664d03; border-radius: .3rem; padding: .2rem .5rem; }
+  .nivel-bajo  { background: #d1e7dd; color: #0a3622; border-radius: .3rem; padding: .2rem .5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<main class="container-fluid px-4 py-4">
+
+  <div class="mb-3">
+    <a href="{% url 'project_view' project.id %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Volver al Proyecto
+    </a>
+  </div>
+
+  <!-- Resumen del riesgo -->
+  <div class="alert alert-light border mb-4">
+    <div class="d-flex align-items-center gap-3 flex-wrap">
+      <i class="bi bi-exclamation-triangle-fill fs-4 text-warning"></i>
+      <div class="flex-grow-1">
+        <strong>{{ project.nombre }}</strong>
+        <span class="ms-2 text-muted small">/ Riesgo #{{ riesgo.id }}</span>
+      </div>
+      <span class="nivel-{{ riesgo.nivel_riesgo_label }} fw-semibold">
+        Nivel: {{ riesgo.nivel_riesgo_label|capfirst }}
+      </span>
+    </div>
+  </div>
+
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+      <h6 class="mb-0 fw-semibold">
+        <i class="bi bi-shield-exclamation me-2 text-warning"></i>
+        Editar Riesgo
+      </h6>
+      <span class="badge bg-{% if riesgo.estado == 'cerrado' %}success{% elif riesgo.estado == 'en_seguimiento' %}warning text-dark{% else %}secondary{% endif %}">
+        {{ riesgo.get_estado_display }}
+      </span>
+    </div>
+    <div class="card-body p-4">
+      <form method="POST" class="needs-validation" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {% for err in form.non_field_errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
+        </div>
+        {% endif %}
+
+        <div class="row g-4">
+          <div class="col-lg-7">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Descripción del riesgo <span class="text-danger">*</span></label>
+              {{ form.descripcion }}
+              {% if form.descripcion.errors %}
+              <div class="text-danger small mt-1">{% for e in form.descripcion.errors %}{{ e }}{% endfor %}</div>
+              {% endif %}
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Plan de Mitigación</label>
+              {{ form.plan_mitigacion }}
+              {% if form.plan_mitigacion.errors %}
+              <div class="text-danger small mt-1">{% for e in form.plan_mitigacion.errors %}{{ e }}{% endfor %}</div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="col-lg-5">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Categoría</label>
+              {{ form.categoria }}
+            </div>
+            <div class="row g-3 mb-3">
+              <div class="col-6">
+                <label class="form-label fw-semibold">Probabilidad</label>
+                {{ form.probabilidad }}
+              </div>
+              <div class="col-6">
+                <label class="form-label fw-semibold">Impacto</label>
+                {{ form.impacto }}
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Estado</label>
+              {{ form.estado }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Responsable</label>
+              {{ form.responsable }}
+            </div>
+            <div class="text-muted small">
+              Registrado: {{ riesgo.created|date:"d/m/Y" }}
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between mt-4">
+          <div class="d-flex gap-2">
+            <a href="{% url 'project_view' project.id %}" class="btn btn-outline-secondary">Cancelar</a>
+            {% if es_admin %}
+            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEliminar">
+              Eliminar
+            </button>
+            {% endif %}
+          </div>
+          <button class="btn btn-warning px-4" type="submit">
+            <i class="bi bi-floppy me-1"></i>Guardar cambios
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</main>
+
+{% if es_admin %}
+<div class="modal fade" id="modalEliminar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Confirmar eliminación</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">¿Eliminar este riesgo del registro?</div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <form method="POST" action="{% url 'riesgo_deactivate' riesgo.id %}">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger">Eliminar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll('.text-danger.small.mt-1').forEach(function(div) {
+    var prev = div.previousElementSibling;
+    if (prev && ['INPUT','TEXTAREA','SELECT'].includes(prev.tagName)) prev.classList.add('is-invalid');
+  });
+</script>
+{% endblock %}
+{% endblock %}

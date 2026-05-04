@@ -1,15 +1,4 @@
 def user_cargo_context(request):
-    """
-    Inyecta el cargo del usuario y variables booleanas de rol en todos los templates.
-
-    Variables disponibles en cualquier template:
-        {{ user_cargo }}          — string con el cargo ('administrador', 'gerente', etc.) o None
-        {% if es_admin %}         — solo administrador
-        {% if es_admin_o_gerente %}  — administrador o gerente
-        {% if es_admin_sec %}     — administrador, gerente o secretaria
-        {% if es_campo %}         — administrador, gerente, instalador o tecnico_soporte
-        {{ notif_no_leidas }}     — conteo de notificaciones no leídas del usuario
-    """
     if not request.user.is_authenticated:
         return {}
 
@@ -18,24 +7,11 @@ def user_cargo_context(request):
     else:
         cargo = getattr(request.user, 'cargo', None)
 
-    # Solo admin/gerente reciben notificaciones del sistema — evitar COUNT innecesario
-    # para el resto de roles en cada request.
-    notif_no_leidas = 0
-    if cargo in ('administrador', 'gerente'):
-        try:
-            from .models import Notificacion
-            notif_no_leidas = Notificacion.objects.filter(
-                destinatario=request.user, leida=False
-            ).count()
-        except Exception:
-            notif_no_leidas = 0
-
     return {
-        'user_cargo': cargo,
-        'es_admin':               cargo == 'administrador',
-        'es_admin_o_gerente':     cargo in ('administrador', 'gerente'),
-        'es_admin_sec':           cargo in ('administrador', 'gerente', 'secretaria'),
-        'es_campo':               cargo in ('administrador', 'gerente', 'instalador', 'tecnico_soporte'),
-        'es_instalador_tecnico':  cargo in ('instalador', 'tecnico_soporte'),
-        'notif_no_leidas':        notif_no_leidas,
+        'user_cargo':            cargo,
+        'es_admin':              cargo == 'administrador',
+        'es_admin_o_gerente':    cargo in ('administrador', 'gerente'),
+        'es_admin_sec':          cargo in ('administrador', 'gerente', 'secretaria'),
+        'es_campo':              cargo in ('administrador', 'gerente', 'instalador', 'tecnico_soporte'),
+        'es_instalador_tecnico': cargo in ('instalador', 'tecnico_soporte'),
     }

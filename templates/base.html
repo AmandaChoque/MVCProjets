@@ -4,7 +4,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta
+      http-equiv="Cache-Control"
+      content="no-cache, no-store, must-revalidate"
+    />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
     <title>SOBOTEC S.R.L. - Gestión de Proyectos</title>
@@ -23,12 +26,12 @@
     <style>
       /* ── Variables de marca SOBOTEC ─────────────────── */
       :root {
-        --sobotec-azul:       #1B4D90;
-        --sobotec-azul-dark:  #0F2D5A;
-        --sobotec-azul-mid:   #2563C4;
-        --sobotec-dorado:     #D4B84A;
-        --sobotec-dorado-luz: #F0D878;
-        --sobotec-bg:         #f1f3f6;
+        --sobotec-azul: #1b4d90;
+        --sobotec-azul-dark: #0f2d5a;
+        --sobotec-azul-mid: #2563c4;
+        --sobotec-dorado: #d4b84a;
+        --sobotec-dorado-luz: #f0d878;
+        --sobotec-bg: #f1f3f6;
       }
 
       body {
@@ -38,7 +41,11 @@
 
       /* Navbar */
       .navbar {
-        background: linear-gradient(90deg, var(--sobotec-azul-dark), var(--sobotec-azul));
+        background: linear-gradient(
+          90deg,
+          var(--sobotec-azul-dark),
+          var(--sobotec-azul)
+        );
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
         position: sticky;
         top: 0;
@@ -65,7 +72,11 @@
         top: 56px;
         left: 0;
         height: calc(100vh - 56px);
-        background: linear-gradient(to bottom, var(--sobotec-azul-dark), var(--sobotec-azul));
+        background: linear-gradient(
+          to bottom,
+          var(--sobotec-azul-dark),
+          var(--sobotec-azul)
+        );
         padding-top: 8px;
         overflow-y: auto;
         overflow-x: hidden;
@@ -121,17 +132,26 @@
       }
       /* Sección del sidebar */
       .sidebar-section {
-        font-size: 0.60rem;
+        font-size: 0.6rem;
         text-transform: uppercase;
-        letter-spacing: 0.10em;
+        letter-spacing: 0.1em;
         font-weight: 700;
         padding: 5px 10px 1px;
         margin-top: 0;
-        border-top: 1px solid rgba(255,255,255,0.12);
+        border-top: 1px solid rgba(255, 255, 255, 0.12);
       }
-      .sidebar-section.mod-proyectos { color: var(--sobotec-dorado); border-color: rgba(212,184,74,0.3); }
-      .sidebar-section.mod-empleados { color: #93c5fd; border-color: rgba(147,197,253,0.25); }
-      .sidebar-section.mod-inventario { color: #7bd9a5; border-color: rgba(123,217,165,0.25); }
+      .sidebar-section.mod-proyectos {
+        color: var(--sobotec-dorado);
+        border-color: rgba(212, 184, 74, 0.3);
+      }
+      .sidebar-section.mod-empleados {
+        color: #93c5fd;
+        border-color: rgba(147, 197, 253, 0.25);
+      }
+      .sidebar-section.mod-inventario {
+        color: #7bd9a5;
+        border-color: rgba(123, 217, 165, 0.25);
+      }
 
       /* Chevron indicator */
       .chevron {
@@ -149,7 +169,7 @@
         display: none;
         position: fixed;
         inset: 0;
-        background: rgba(0,0,0,0.4);
+        background: rgba(0, 0, 0, 0.4);
         z-index: 1020;
       }
       .sidebar-overlay.active {
@@ -175,19 +195,46 @@
         border-radius: 8px;
         transition: transform 0.15s;
       }
-      .kpi-card:hover { transform: translateY(-2px); }
-      .kpi-card.blue    { border-color: #1B4D90; }
-      .kpi-card.yellow  { border-color: #ffc107; }
-      .kpi-card.primary { border-color: #0dcaf0; }
-      .kpi-card.green   { border-color: #198754; }
-      .kpi-card.red     { border-color: #dc3545; }
-      .kpi-card.teal    { border-color: #20c997; }
-      .kpi-card.gray    { border-color: #6c757d; }
-      .kpi-value { font-size: 1.8rem; font-weight: 700; line-height: 1.1; }
-      .kpi-label { font-size: 0.78rem; color: #6c757d; text-transform: uppercase; letter-spacing: 0.05em; }
+      .kpi-card:hover {
+        transform: translateY(-2px);
+      }
+      .kpi-card.blue {
+        border-color: #1b4d90;
+      }
+      .kpi-card.yellow {
+        border-color: #ffc107;
+      }
+      .kpi-card.primary {
+        border-color: #0dcaf0;
+      }
+      .kpi-card.green {
+        border-color: #198754;
+      }
+      .kpi-card.red {
+        border-color: #dc3545;
+      }
+      .kpi-card.teal {
+        border-color: #20c997;
+      }
+      .kpi-card.gray {
+        border-color: #6c757d;
+      }
+      .kpi-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        line-height: 1.1;
+      }
+      .kpi-label {
+        font-size: 0.78rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
 
       /* Utilidad de color de marca */
-      .text-sobotec { color: #1B4D90; }
+      .text-sobotec {
+        color: #1b4d90;
+      }
 
       /* Responsive */
       @media (max-width: 992px) {
@@ -218,21 +265,32 @@
         >
           <span class="navbar-toggler-icon"></span>
         </button>
-        <a class="navbar-brand d-flex align-items-center gap-2" href="{% url 'dashboard' %}">
-          <img src="/static/common/logo.png" alt="Logo" style="height:34px; width:34px; border-radius:6px; object-fit:cover;">
+        <a
+          class="navbar-brand d-flex align-items-center gap-2"
+          href="{% url 'dashboard' %}"
+        >
+          <img
+            src="/static/common/logo.png"
+            alt="Logo"
+            style="
+              height: 34px;
+              width: 34px;
+              border-radius: 6px;
+              object-fit: cover;
+            "
+          />
           SOBOTEC S.R.L.
         </a>
 
         <div class="ms-auto d-none d-lg-flex align-items-center">
           {% if user.is_authenticated %}
-          <a href="{% url 'notificaciones_list' %}" class="btn btn-outline-light btn-sm me-2 position-relative" title="Notificaciones">
-            <i class="bi bi-bell"></i>
-            {% if notif_no_leidas > 0 %}
-            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.6rem;">{{ notif_no_leidas }}</span>
-            {% endif %}
-          </a>
+          
           <div class="dropdown me-2">
-            <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            <button
+              class="btn btn-outline-light btn-sm dropdown-toggle"
+              type="button"
+              data-bs-toggle="dropdown"
+            >
               {{ user.username }}
             </button>
             <ul class="dropdown-menu dropdown-menu-end">
@@ -241,7 +299,7 @@
                   <i class="bi bi-key me-1"></i> Cambiar contraseña
                 </a>
               </li>
-              <li><hr class="dropdown-divider"></li>
+              <li><hr class="dropdown-divider" /></li>
               <li>
                 <form method="POST" action="{% url 'signout' %}">
                   {% csrf_token %}
@@ -267,13 +325,12 @@
     <!-- Sidebar -->
     <div class="sidebar" id="sidebar">
       <ul class="nav flex-column px-2 pt-2" id="sidebarNav">
-        {% if user.is_authenticated %}
-
-
         {% if es_instalador_tecnico %}
         <li class="nav-item">
-          <a class="nav-link {% if request.path == '/mi-trabajo/' %}active-link{% endif %}"
-             href="{% url 'instalador_dashboard' %}">
+          <a
+            class="nav-link {% if request.path == '/mi-trabajo/' %}active-link{% endif %}"
+            href="{% url 'instalador_dashboard' %}"
+          >
             <i class="bi bi-calendar-check me-2"></i>Mi Jornada
           </a>
         </li>
@@ -286,111 +343,119 @@
 
         {% if es_admin_sec %}
         <li class="nav-item">
-          <a class="nav-link {% if '/clientes' in request.path %}active-link{% endif %}"
-             href="{% url 'clientes' %}">
+          <a
+            class="nav-link {% if '/clientes' in request.path %}active-link{% endif %}"
+            href="{% url 'clientes' %}"
+          >
             <i class="bi bi-person-lines-fill me-2"></i>Clientes
           </a>
         </li>
         {% endif %}
 
         <li class="nav-item">
-          <a class="nav-link" data-bs-toggle="collapse" href="#projectSubmenu"
-             aria-expanded="{% if '/projects' in request.path or '/proyectos' in request.path or '/progreso' in request.path or request.resolver_match.url_name in 'project_report project_analysis analisis_financiero seguimiento_avance planificacion_gantt calendario_equipo' %}true{% else %}false{% endif %}">
+          <a
+            class="nav-link"
+            data-bs-toggle="collapse"
+            href="#projectSubmenu"
+            aria-expanded="{% if '/projects' in request.path or '/proyectos' in request.path or '/progreso' in request.path or request.resolver_match.url_name in 'project_report project_analysis analisis_financiero seguimiento_avance planificacion_gantt calendario_equipo' %}true{% else %}false{% endif %}"
+          >
             <i class="bi bi-folder2-open me-2"></i>Proyectos
             <i class="bi bi-chevron-down chevron"></i>
           </a>
-          <div class="collapse submenu {% if '/projects' in request.path or '/proyectos' in request.path or '/progreso' in request.path or request.resolver_match.url_name in 'project_report project_analysis analisis_financiero seguimiento_avance planificacion_gantt calendario_equipo' %}show{% endif %}" id="projectSubmenu">
+          <div
+            class="collapse submenu {% if '/projects' in request.path or '/proyectos' in request.path or '/progreso' in request.path or request.resolver_match.url_name in 'project_report project_analysis analisis_financiero seguimiento_avance planificacion_gantt calendario_equipo' %}show{% endif %}"
+            id="projectSubmenu"
+          >
             <ul class="nav flex-column ms-2">
               <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'projects' %}active-link{% endif %}"
-                   href="{% url 'projects' %}">
+                <a
+                  class="nav-link {% if request.resolver_match.url_name == 'projects' %}active-link{% endif %}"
+                  href="{% url 'projects' %}"
+                >
                   <i class="bi bi-list-ul me-2"></i>Listar
                 </a>
               </li>
-              {% if not es_instalador_tecnico %}
-              {% if es_admin_o_gerente %}
+              
+              
               <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'planificacion_gantt' %}active-link{% endif %}"
-                   href="{% url 'planificacion_gantt' %}">
-                  <i class="bi bi-bar-chart-steps me-2"></i>Planificación
-                </a>
-              </li>
-              <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'seguimiento_avance' %}active-link{% endif %}"
-                   href="{% url 'seguimiento_avance' %}">
+                <a
+                  class="nav-link {% if request.resolver_match.url_name == 'seguimiento_avance' %}active-link{% endif %}"
+                  href="{% url 'seguimiento_avance' %}"
+                >
                   <i class="bi bi-graph-up-arrow me-2"></i>Seguimiento
                 </a>
               </li>
-              {% endif %}
               <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'project_analysis' %}active-link{% endif %}"
-                   href="{% url 'project_analysis' %}">
+                <a
+                  class="nav-link {% if request.resolver_match.url_name == 'project_analysis' %}active-link{% endif %}"
+                  href="{% url 'project_analysis' %}"
+                >
                   <i class="bi bi-graph-up me-2"></i>Estadísticas
                 </a>
               </li>
               <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'analisis_financiero' %}active-link{% endif %}"
-                   href="{% url 'analisis_financiero' %}">
+                <a
+                  class="nav-link {% if request.resolver_match.url_name == 'analisis_financiero' %}active-link{% endif %}"
+                  href="{% url 'analisis_financiero' %}"
+                >
                   <i class="bi bi-currency-dollar me-2"></i>Rentabilidad
                 </a>
               </li>
               <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'project_report' %}active-link{% endif %}"
-                   href="{% url 'project_report' %}">
+                <a
+                  class="nav-link {% if request.resolver_match.url_name == 'project_report' %}active-link{% endif %}"
+                  href="{% url 'project_report' %}"
+                >
                   <i class="bi bi-file-earmark-pdf me-2"></i>Reporte
                 </a>
               </li>
-              {% if es_admin_o_gerente %}
-              <li>
-                <a class="nav-link {% if '/plantillas' in request.path %}active-link{% endif %}"
-                   href="{% url 'plantillas_list' %}">
-                  <i class="bi bi-card-checklist me-2"></i>Plantillas de Tareas
-                </a>
-              </li>
-              {% endif %}
-              {% endif %}
+              
             </ul>
           </div>
         </li>
 
         {% if es_admin_sec %}
         <li class="nav-item">
-          <a class="nav-link" data-bs-toggle="collapse" href="#paymentSubmenu"
-             aria-expanded="{% if '/payments' in request.path or '/pagos' in request.path %}true{% else %}false{% endif %}">
+          <a
+            class="nav-link"
+            data-bs-toggle="collapse"
+            href="#paymentSubmenu"
+            aria-expanded="{% if '/payments' in request.path or '/pagos' in request.path %}true{% else %}false{% endif %}"
+          >
             <i class="bi bi-cash-coin me-2"></i>Pagos Proyectos
             <i class="bi bi-chevron-down chevron"></i>
           </a>
-          <div class="collapse submenu {% if '/payments' in request.path or '/pagos' in request.path %}show{% endif %}" id="paymentSubmenu">
+          <div
+            class="collapse submenu {% if '/payments' in request.path or '/pagos' in request.path %}show{% endif %}"
+            id="paymentSubmenu"
+          >
             <ul class="nav flex-column ms-2">
               <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'payments' %}active-link{% endif %}"
-                   href="{% url 'payments' %}">
+                <a
+                  class="nav-link {% if request.resolver_match.url_name == 'payments' %}active-link{% endif %}"
+                  href="{% url 'payments' %}"
+                >
                   <i class="bi bi-list-ul me-2"></i>Listar
                 </a>
               </li>
               <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'filter_payments_by_project_name' %}active-link{% endif %}"
-                   href="{% url 'filter_payments_by_project_name' %}">
+                <a
+                  class="nav-link {% if request.resolver_match.url_name == 'filter_payments_by_project_name' %}active-link{% endif %}"
+                  href="{% url 'filter_payments_by_project_name' %}"
+                >
                   <i class="bi bi-file-earmark-text me-2"></i>Reporte
                 </a>
               </li>
               <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'payment_analysis' %}active-link{% endif %}"
-                   href="{% url 'payment_analysis' %}">
+                <a
+                  class="nav-link {% if request.resolver_match.url_name == 'payment_analysis' %}active-link{% endif %}"
+                  href="{% url 'payment_analysis' %}"
+                >
                   <i class="bi bi-graph-up me-2"></i>Análisis
                 </a>
               </li>
             </ul>
           </div>
-        </li>
-        {% endif %}
-
-        {% if es_admin_sec %}
-        <li class="nav-item">
-          <a class="nav-link {% if '/garantias' in request.path %}active-link{% endif %}"
-             href="{% url 'garantias_list' %}">
-            <i class="bi bi-shield-check me-2"></i>Garantías
-          </a>
         </li>
         {% endif %}
 
@@ -401,28 +466,41 @@
         </li>
 
         <li class="nav-item">
-          <a class="nav-link" data-bs-toggle="collapse" href="#employeeSubmenu"
-             aria-expanded="{% if '/employees' in request.path or '/empleados' in request.path %}true{% else %}false{% endif %}">
+          <a
+            class="nav-link"
+            data-bs-toggle="collapse"
+            href="#employeeSubmenu"
+            aria-expanded="{% if '/employees' in request.path or '/empleados' in request.path %}true{% else %}false{% endif %}"
+          >
             <i class="bi bi-people-fill me-2"></i>Empleados
             <i class="bi bi-chevron-down chevron"></i>
           </a>
-          <div class="collapse submenu {% if '/employees' in request.path or '/empleados' in request.path %}show{% endif %}" id="employeeSubmenu">
+          <div
+            class="collapse submenu {% if '/employees' in request.path or '/empleados' in request.path %}show{% endif %}"
+            id="employeeSubmenu"
+          >
             <ul class="nav flex-column ms-2">
               <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'employees' %}active-link{% endif %}"
-                   href="{% url 'employees' %}">
+                <a
+                  class="nav-link {% if request.resolver_match.url_name == 'employees' %}active-link{% endif %}"
+                  href="{% url 'employees' %}"
+                >
                   <i class="bi bi-list-ul me-2"></i>Listar
                 </a>
               </li>
               <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'employee_workload' %}active-link{% endif %}"
-                   href="{% url 'employee_workload' %}">
+                <a
+                  class="nav-link {% if request.resolver_match.url_name == 'employee_workload' %}active-link{% endif %}"
+                  href="{% url 'employee_workload' %}"
+                >
                   <i class="bi bi-bar-chart-steps me-2"></i>Gestión de jornadas
                 </a>
               </li>
               <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'employee_report' %}active-link{% endif %}"
-                   href="{% url 'employee_report' %}">
+                <a
+                  class="nav-link {% if request.resolver_match.url_name == 'employee_report' %}active-link{% endif %}"
+                  href="{% url 'employee_report' %}"
+                >
                   <i class="bi bi-file-earmark-bar-graph me-2"></i>Reporte
                 </a>
               </li>
@@ -432,38 +510,49 @@
 
         {% if es_admin_sec %}
         <li class="nav-item">
-          <a class="nav-link {% if '/pagos-empleados' in request.path or '/pagos-empleado' in request.path %}active-link{% endif %}"
-             href="{% url 'pagos_empleados_list' %}">
+          <a
+            class="nav-link {% if '/pagos-empleados' in request.path or '/pagos-empleado' in request.path %}active-link{% endif %}"
+            href="{% url 'pagos_empleados_list' %}"
+          >
             <i class="bi bi-wallet2 me-2"></i>Pagos a Empleados
           </a>
         </li>
-        {% endif %}
-
-        {% endif %}
+        {% endif %} {% endif %}
 
         <!-- ── MÓDULO INVENTARIO ────────────────────────── -->
-        {% if es_campo %}
+        
         <li class="sidebar-section mod-inventario">
           <i class="bi bi-box-seam me-1"></i>Inventario
         </li>
 
         <li class="nav-item">
-          <a class="nav-link" data-bs-toggle="collapse" href="#insumoSubmenu"
-             aria-expanded="{% if '/insumos' in request.path or request.resolver_match.url_name == 'inventario_report' %}true{% else %}false{% endif %}">
+          <a
+            class="nav-link"
+            data-bs-toggle="collapse"
+            href="#insumoSubmenu"
+            aria-expanded="{% if '/insumos' in request.path or request.resolver_match.url_name == 'inventario_report' %}true{% else %}false{% endif %}"
+          >
             <i class="bi bi-box-seam me-2"></i>Insumos
             <i class="bi bi-chevron-down chevron"></i>
           </a>
-          <div class="collapse submenu {% if '/insumos' in request.path or request.resolver_match.url_name == 'inventario_report' %}show{% endif %}" id="insumoSubmenu">
+          <div
+            class="collapse submenu {% if '/insumos' in request.path or request.resolver_match.url_name == 'inventario_report' %}show{% endif %}"
+            id="insumoSubmenu"
+          >
             <ul class="nav flex-column ms-2">
               <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'insumos' %}active-link{% endif %}"
-                   href="{% url 'insumos' %}">
+                <a
+                  class="nav-link {% if request.resolver_match.url_name == 'insumos' %}active-link{% endif %}"
+                  href="{% url 'insumos' %}"
+                >
                   <i class="bi bi-list-ul me-2"></i>Lista
                 </a>
               </li>
               <li>
-                <a class="nav-link {% if request.resolver_match.url_name == 'inventario_report' %}active-link{% endif %}"
-                   href="{% url 'inventario_report' %}">
+                <a
+                  class="nav-link {% if request.resolver_match.url_name == 'inventario_report' %}active-link{% endif %}"
+                  href="{% url 'inventario_report' %}"
+                >
                   <i class="bi bi-file-earmark-bar-graph me-2"></i>Reporte
                 </a>
               </li>
@@ -471,31 +560,31 @@
           </div>
         </li>
 
-        {% if es_admin_o_gerente %}
+        
         <li class="nav-item">
-          <a class="nav-link {% if '/compras' in request.path %}active-link{% endif %}"
-             href="{% url 'compras' %}">
+          <a
+            class="nav-link {% if '/compras' in request.path %}active-link{% endif %}"
+            href="{% url 'compras' %}"
+          >
             <i class="bi bi-cart3 me-2"></i>Compras
           </a>
         </li>
 
         <li class="nav-item">
-          <a class="nav-link {% if '/proveedores' in request.path %}active-link{% endif %}"
-             href="{% url 'proveedores' %}">
+          <a
+            class="nav-link {% if '/proveedores' in request.path %}active-link{% endif %}"
+            href="{% url 'proveedores' %}"
+          >
             <i class="bi bi-truck me-2"></i>Proveedores
           </a>
         </li>
-        {% endif %}
-        {% endif %}
-
-
-        {% else %}
+        
         <li class="nav-item">
           <a class="nav-link" href="{% url 'signin' %}">
             <i class="bi bi-box-arrow-in-right me-2"></i>Iniciar Sesión
           </a>
         </li>
-        {% endif %}
+        
       </ul>
     </div>
 
@@ -504,28 +593,18 @@
       <!-- Mensajes del sistema (global) -->
       {% if messages %}
       <div class="px-2 pt-3">
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show d-flex align-items-center gap-2" role="alert">
-          {% if message.tags == 'success' %}<i class="bi bi-check-circle-fill flex-shrink-0"></i>
-          {% elif message.tags == 'danger' or message.tags == 'error' %}<i class="bi bi-x-circle-fill flex-shrink-0"></i>
-          {% elif message.tags == 'warning' %}<i class="bi bi-exclamation-triangle-fill flex-shrink-0"></i>
-          {% else %}<i class="bi bi-info-circle-fill flex-shrink-0"></i>{% endif %}
-          <span>{{ message }}</span>
-          <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-        </div>
-        {% endfor %}
+        
       </div>
-      {% endif %}
-      {% block content %}{% endblock %}
+      {% endif %} {% block content %}{% endblock %}
     </div>
 
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     {% block extra_js %}{% endblock %}
     <script>
-      const sidebar  = document.getElementById("sidebar");
-      const overlay  = document.getElementById("sidebarOverlay");
-      const toggler  = document.querySelector(".navbar-toggler");
+      const sidebar = document.getElementById("sidebar");
+      const overlay = document.getElementById("sidebarOverlay");
+      const toggler = document.querySelector(".navbar-toggler");
 
       function openSidebar() {
         sidebar.classList.remove("sidebar-hidden");
@@ -580,16 +659,23 @@
         });
 
         if (chevron) {
-          el.addEventListener("shown.bs.collapse",  () => chevron.style.transform = "rotate(180deg)");
-          el.addEventListener("hidden.bs.collapse", () => chevron.style.transform = "rotate(0deg)");
-          if (el.classList.contains("show")) chevron.style.transform = "rotate(180deg)";
+          el.addEventListener(
+            "shown.bs.collapse",
+            () => (chevron.style.transform = "rotate(180deg)"),
+          );
+          el.addEventListener(
+            "hidden.bs.collapse",
+            () => (chevron.style.transform = "rotate(0deg)"),
+          );
+          if (el.classList.contains("show"))
+            chevron.style.transform = "rotate(180deg)";
         }
       });
     </script>
 
     <script>
-      if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/static/sw.js');
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("/static/sw.js");
       }
     </script>
 
@@ -629,7 +715,8 @@
             method: "POST",
             credentials: "same-origin",
             headers: {
-              "X-CSRFToken": document.cookie.match(/csrftoken=([^;]+)/)?.[1] || "",
+              "X-CSRFToken":
+                document.cookie.match(/csrftoken=([^;]+)/)?.[1] || "",
             },
           }).then(() => {
             resetSessionTimer();
@@ -648,13 +735,13 @@
       }
 
       function doLogout() {
-        const csrfValue = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '/signout/';
-        const input = document.createElement('input');
-        input.type = 'hidden';
-        input.name = 'csrfmiddlewaretoken';
+        const csrfValue = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || "";
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = "/signout/";
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = "csrfmiddlewaretoken";
         input.value = csrfValue;
         form.appendChild(input);
         document.body.appendChild(form);

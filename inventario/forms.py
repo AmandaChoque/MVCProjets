@@ -2,7 +2,7 @@ from django import forms
 from decimal import Decimal, InvalidOperation
 import re
 
-from .models import Proveedor, Insumo, Requiere, Compra, calcular_costo_fifo
+from .models import Proveedor, Insumo, Requiere, Compra
 
 DECIMAL_REGEX = r'\d+(\.\d{1,2})?'
 
@@ -92,11 +92,10 @@ class RequerirForm(forms.ModelForm):
         insumo   = cleaned_data.get('insumo')
         cantidad = cleaned_data.get('cantidad')
         if insumo and cantidad:
-            excluir_pk = self.instance.pk if self.instance and self.instance.pk else None
-            try:
-                calcular_costo_fifo(insumo, cantidad, excluir_requiere_pk=excluir_pk)
-            except ValueError as e:
-                raise forms.ValidationError(str(e))
+            if insumo.stock < cantidad:
+                raise forms.ValidationError(
+                    f'Stock insuficiente. Disponible: {insumo.stock}.'
+                )
         return cleaned_data
 
 
