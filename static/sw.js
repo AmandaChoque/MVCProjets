@@ -3,12 +3,12 @@
  * Permite marcar tareas sin conexión; se sincronizan al reconectar.
  */
 
-const CACHE_NAME = 'sobotec-v1';
+const CACHE_NAME = 'sobotec-v2';
 
 // Rutas que se cachean para uso offline básico
 const URLS_TO_CACHE = [
   '/mi-trabajo/',
-  '/projects/',
+  '/proyectos/',
 ];
 
 // ── Instalación: pre-caché de rutas clave ──────────────────────────────────

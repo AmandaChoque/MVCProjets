@@ -85,7 +85,22 @@
       "Bash(Get-ChildItem -Recurse -Directory -Name)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\DELL\\\\Desktop\\\\taller II v1\\\\MVCProjets\" -Recurse -Filter \"urls.py\")",
       "Bash(Select-Object FullName)",
-      "PowerShell([Environment]::CurrentDirectory)"
+      "PowerShell([Environment]::CurrentDirectory)",
+      "Bash(Remove-Item db.sqlite3)",
+      "PowerShell(cd \"c:\\\\Users\\\\DELL\\\\Desktop\\\\taller II v1\\\\MVCProjets\"; python manage.py createsuperuser --noinput --username admin --email admin@sobotec.com 2>&1; echo \"exit: $LASTEXITCODE\")",
+      "Bash(python -c ' *)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\DELL\\\\Desktop\\\\taller II v1\\\\MVCProjets\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(venv/Scripts/python manage.py shell -c ' *)",
+      "Bash(venv/Scripts/python.exe manage.py shell -c \"from django.urls import reverse; print\\(reverse\\('project_finalizacion_pdf', args=[1]\\)\\)\")",
+      "Bash(venv\\\\Scripts\\\\python.exe -c \"import django; import os; os.environ.setdefault\\('DJANGO_SETTINGS_MODULE','project_management.settings'\\); django.setup\\(\\); from projects.views import garantia_detail, incidencia_garantia_detail; print\\('OK'\\)\")",
+      "Bash(venvScriptspython.exe manage.py shell -c ' *)",
+      "Bash(xargs grep -l \"context_processor\")",
+      "Bash(cd /c/Users/DELL/Desktop && find . -name \"context_processors.py\" | grep -v venv)",
+      "Read(//c/Users/DELL/Desktop/**)",
+      "Bash(venv\\\\Scripts\\\\python manage.py makemigrations empleados --name=\"add_feriado_nacional\")",
+      "Bash(venv\\\\Scripts\\\\python.exe manage.py makemigrations --name=\"add_cancelado_estado_proyecto\")",
+      "Bash(venv\\\\Scripts\\\\python.exe manage.py migrate projects 0020)"
     ]
   }
 }

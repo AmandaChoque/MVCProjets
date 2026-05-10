@@ -212,7 +212,7 @@
   deleteModal.addEventListener('show.bs.modal', function (event) {
     const button = event.relatedTarget;
     document.getElementById('insumoNombre').textContent = button.getAttribute('data-nombre');
-    document.getElementById('deleteForm').action = `/insumos/${button.getAttribute('data-id')}/deactivate/`;
+    document.getElementById('deleteForm').action = `/insumos/${button.getAttribute('data-id')}/desactivar/`;
   });
 </script>
 

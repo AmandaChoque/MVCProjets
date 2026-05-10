@@ -65,12 +65,14 @@
               <span class="badge bg-danger">Vencida</span>
             {% endif %}
           </div>
+          {% if not solo_campo %}
           <hr class="my-2">
           <div class="mb-0"><span class="text-muted small">Costo total incidencias (a cargo SOBOTEC)</span><br>
             <span class="fw-bold {% if garantia.costo_total_incidencias %}text-danger{% else %}text-muted{% endif %}">
               Bs. {{ garantia.costo_total_incidencias|floatformat:2 }}
             </span>
           </div>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -93,16 +95,16 @@
         </div>
         <div class="card-body p-0">
           {% if incidencias %}
-          <div class="table-responsive">
+          <div class="table-responsive" style="overflow: visible;">
             <table class="table table-hover align-middle mb-0">
               <thead class="table-light">
                 <tr>
                   <th class="ps-4">Descripción</th>
                   <th>Reportado</th>
                   <th>Estado</th>
-                  <th>Reparado por</th>
-                  <th class="text-end">Costo</th>
-                  <th class="pe-3"></th>
+                  {% if not solo_campo %}<th>Reparado por</th>{% endif %}
+                  {% if not solo_campo %}<th class="text-end">Costo</th>{% endif %}
+                  <th class="text-end pe-3" style="width:60px;">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -126,6 +128,7 @@
                       <span class="badge bg-success">Resuelto</span>
                     {% endif %}
                   </td>
+                  {% if not solo_campo %}
                   <td class="small text-muted">
                     {% if inc.reparado_por %}
                       {{ inc.reparado_por.nombre }} {{ inc.reparado_por.apellido_paterno }}
@@ -138,16 +141,45 @@
                       <span class="text-muted">Bs. 0.00</span>
                     {% endif %}
                   </td>
-                  <td class="pe-3">
+                  {% endif %}
+                  <td class="text-end pe-3">
                     {% if es_admin_sec %}
-                    <a href="{% url 'incidencia_garantia_detail' inc.id %}" class="btn btn-sm btn-outline-secondary">
-                      <i class="bi bi-pencil"></i>
+                    <div class="dropdown">
+                      <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
+                      <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                        <li>
+                          <a class="dropdown-item" href="{% url 'incidencia_garantia_detail' inc.id %}?ver=1">
+                            <i class="bi bi-eye me-2 text-muted"></i>Ver
+                          </a>
+                        </li>
+                        <li>
+                          <a class="dropdown-item" href="{% url 'incidencia_garantia_detail' inc.id %}">
+                            <i class="bi bi-pencil me-2 text-muted"></i>Editar
+                          </a>
+                        </li>
+                        {% if es_admin %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                          <button class="dropdown-item text-danger"
+                            data-bs-toggle="modal" data-bs-target="#modalEliminarInc"
+                            data-url="{% url 'incidencia_garantia_deactivate' inc.id %}"
+                            data-desc="{{ inc.descripcion|truncatechars:50 }}">
+                            <i class="bi bi-trash me-2"></i>Eliminar
+                          </button>
+                        </li>
+                        {% endif %}
+                      </ul>
+                    </div>
+                    {% elif solo_campo and inc.estado != 'resuelto' %}
+                    <a href="{% url 'incidencia_garantia_detail' inc.id %}" class="btn btn-sm btn-outline-primary">
+                      <i class="bi bi-pencil-square me-1"></i>Actualizar
                     </a>
                     {% endif %}
                   </td>
                 </tr>
                 {% endfor %}
               </tbody>
+              {% if not solo_campo %}
               <tfoot class="table-light">
                 <tr>
                   <td colspan="4" class="ps-4 fw-semibold text-end pe-2">Total a cargo de SOBOTEC:</td>
@@ -155,6 +187,7 @@
                   <td></td>
                 </tr>
               </tfoot>
+              {% endif %}
             </table>
           </div>
           {% else %}
@@ -174,4 +207,35 @@
 
   </div>
 </main>
+
+{% if es_admin %}
+<div class="modal fade" id="modalEliminarInc" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Eliminar incidencia</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body small">
+        ¿Eliminar la incidencia "<span id="incDescModal"></span>"?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <form id="formEliminarInc" method="POST">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.getElementById('modalEliminarInc').addEventListener('show.bs.modal', function(e) {
+    var btn = e.relatedTarget;
+    document.getElementById('formEliminarInc').action = btn.dataset.url;
+    document.getElementById('incDescModal').textContent = btn.dataset.desc;
+  });
+</script>
+{% endif %}
 {% endblock %}

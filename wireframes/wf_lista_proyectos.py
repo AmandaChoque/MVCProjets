@@ -63,8 +63,8 @@ col_x = [MX + cx for _, cx in col_defs]
 filas = [
     ('PR-001', 'Seg. Edificio Central', 'Juan Pérez',    'Instalación',  'En Progreso', 'Parcial',   '18,500.00'),
     ('PR-002', 'CCTV Almacén Norte',    'Ana Flores',    'Mantenimiento','Completado',  'Pagado',    ' 9,200.00'),
-    ('PR-003', 'Alarmas Oficina Sur',   'Carlos Mamani', 'Ampliación',   'Pendiente',   'No Pagado', '12,000.00'),
-    ('PR-004', 'DVR Sucursal Este',     'Luis Quispe',   'Emergencia',   'En Progreso', 'Parcial',   ' 7,800.00'),
+    ('PR-003', 'Alarmas Oficina Sur',   'Carlos Mamani', 'Instalación',  'Pendiente',   'No Pagado', '12,000.00'),
+    ('PR-004', 'DVR Sucursal Este',     'Luis Quispe',   'Instalación',  'En Progreso', 'Parcial',   ' 7,800.00'),
     ('PR-005', 'Cámaras IP Centro',     'María García',  'Instalación',  'Completado',  'Pagado',    '15,400.00'),
 ]
 estado_colors = {'En Progreso': '#0d6efd', 'Completado': '#198754', 'Pendiente': '#ffc107'}

@@ -2,6 +2,7 @@ from django import forms
 from django.db.models import Sum
 import re
 from decimal import Decimal
+from datetime import date
 
 from .models import Empleado, PagoEmpleado, ContratoEmpleado, JornadaEmpleado
 from projects.models import Proyecto
@@ -78,7 +79,7 @@ class EmpleadoForm(forms.ModelForm):
     def clean_carnet_identidad(self):
         ci = self.cleaned_data.get('carnet_identidad', '')
         if not ci:
-            return ci
+            raise forms.ValidationError('El carnet de identidad es obligatorio.')
         ci_digits = ci.replace(' ', '')
         if not ci_digits.isdigit():
             raise forms.ValidationError('El carnet debe contener solo números.')
@@ -155,14 +156,23 @@ class _ContratoEmpleadoBase(forms.ModelForm):
         return doc
 
     def clean(self):
-        cleaned_data = super().clean()
-        fecha_inicio = cleaned_data.get('fecha_inicio')
-        fecha_fin    = cleaned_data.get('fecha_fin')
-        fecha_firma  = cleaned_data.get('fecha_firma')
+        cleaned_data   = super().clean()
+        fecha_inicio   = cleaned_data.get('fecha_inicio')
+        fecha_fin      = cleaned_data.get('fecha_fin')
+        fecha_firma    = cleaned_data.get('fecha_firma')
+        dias_laborales = cleaned_data.get('dias_laborales')
         if fecha_inicio and fecha_fin and fecha_fin < fecha_inicio:
             self.add_error('fecha_fin', 'La fecha de fin no puede ser anterior a la fecha de inicio.')
         if fecha_firma and fecha_inicio and fecha_firma > fecha_inicio:
             self.add_error('fecha_firma', 'La fecha de firma no puede ser posterior a la fecha de inicio.')
+        if dias_laborales and fecha_inicio and fecha_fin and fecha_fin >= fecha_inicio:
+            total_dias = (fecha_fin - fecha_inicio).days + 1
+            if dias_laborales > total_dias:
+                self.add_error(
+                    'dias_laborales',
+                    f'El período del contrato tiene {total_dias} día(s) en total. '
+                    f'Los días laborales no pueden superar ese valor.'
+                )
         return cleaned_data
 
 
@@ -185,8 +195,9 @@ class ContratoEmpleadoForm(_ContratoEmpleadoBase):
             qs_activo = ContratoEmpleado.objects.filter(empleado=empleado, activo=True)
             if self.instance and self.instance.pk:
                 qs_activo = qs_activo.exclude(pk=self.instance.pk)
-            if qs_activo.exists():
-                self.add_error('empleado', f'{empleado.nombre} {empleado.apellido_paterno} ya tiene un contrato activo.')
+            existing = qs_activo.first()
+            if existing and existing.fecha_fin >= date.today():
+                self.add_error('empleado', f'{empleado.nombre} {empleado.apellido_paterno} ya tiene un contrato vigente.')
             if fecha_inicio and fecha_fin:
                 qs_overlap = ContratoEmpleado.objects.filter(
                     empleado=empleado, activo=True,
@@ -216,9 +227,10 @@ class ContratoEmpleadoDesdeEmpleadoForm(_ContratoEmpleadoBase):
             qs_activo = ContratoEmpleado.objects.filter(empleado=self._empleado, activo=True)
             if self.instance and self.instance.pk:
                 qs_activo = qs_activo.exclude(pk=self.instance.pk)
-            if qs_activo.exists():
+            existing = qs_activo.first()
+            if existing and existing.fecha_fin >= date.today():
                 raise forms.ValidationError(
-                    f'{self._empleado.nombre} {self._empleado.apellido_paterno} ya tiene un contrato activo.')
+                    f'{self._empleado.nombre} {self._empleado.apellido_paterno} ya tiene un contrato vigente.')
             fecha_inicio = cleaned_data.get('fecha_inicio')
             fecha_fin    = cleaned_data.get('fecha_fin')
             if fecha_inicio and fecha_fin:

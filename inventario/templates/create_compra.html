@@ -36,14 +36,24 @@
           <div class="col-lg-6">
             <div class="mb-3">
               <label class="form-label">Proveedor <span class="text-danger">*</span></label>
-              {{ form.proveedor }}
+              <div class="input-group">
+                {{ form.proveedor }}
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalNuevoProveedor" title="Crear nuevo proveedor">
+                  <i class="bi bi-plus-lg"></i>
+                </button>
+              </div>
               {% if form.proveedor.errors %}
               <div class="text-danger small mt-1">{% for err in form.proveedor.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
             </div>
             <div class="mb-3">
               <label class="form-label">Insumo <span class="text-danger">*</span></label>
-              {{ form.insumo }}
+              <div class="input-group">
+                {{ form.insumo }}
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalNuevoInsumo" title="Crear nuevo insumo">
+                  <i class="bi bi-plus-lg"></i>
+                </button>
+              </div>
               {% if form.insumo.errors %}
               <div class="text-danger small mt-1">{% for err in form.insumo.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
@@ -102,6 +112,135 @@
     </div>
   </div>
 </main>
+
+<!-- ── Modal: Nuevo Proveedor Rápido ───────────────────────────────────────── -->
+<div class="modal fade" id="modalNuevoProveedor" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title fw-semibold"><i class="bi bi-building-add me-2"></i>Nuevo proveedor</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="proveedorAjaxErrors" class="alert alert-danger small py-2 d-none"></div>
+        <form id="formNuevoProveedor" novalidate>
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label form-label-sm">Nombre <span class="text-danger">*</span></label>
+              <input type="text" name="nombre" class="form-control form-control-sm" placeholder="Ej: DIGIPORT S.R.L." required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Rubro <span class="text-danger">*</span></label>
+              <select name="rubro" class="form-select form-select-sm" required>
+                <option value="">Seleccionar…</option>
+                <option value="camaras_seguridad">Cámaras de seguridad</option>
+                <option value="cables_conectores">Cables y conectores</option>
+                <option value="equipos_red">Equipos de red</option>
+                <option value="alarmas_perifoneo">Alarmas y perifoneo</option>
+                <option value="sensores">Sensores</option>
+                <option value="computo">Cómputo</option>
+                <option value="distribuidor">Distribuidor general</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Teléfono <span class="text-danger">*</span></label>
+              <input type="text" name="telefono" class="form-control form-control-sm" placeholder="Solo números" inputmode="numeric" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">NIT</label>
+              <input type="text" name="nit" class="form-control form-control-sm" placeholder="Solo números" inputmode="numeric">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Correo</label>
+              <input type="email" name="correo" class="form-control form-control-sm" placeholder="correo@empresa.com">
+            </div>
+            <div class="col-12">
+              <label class="form-label form-label-sm">Dirección</label>
+              <input type="text" name="direccion" class="form-control form-control-sm" placeholder="Dirección de la empresa">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btnGuardarProveedor">
+          <i class="bi bi-check-lg me-1"></i>Guardar proveedor
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Nuevo Insumo Rápido ──────────────────────────────────────────── -->
+<div class="modal fade" id="modalNuevoInsumo" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title fw-semibold"><i class="bi bi-box-seam me-2"></i>Nuevo insumo</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div id="insumoAjaxErrors" class="alert alert-danger small py-2 d-none"></div>
+        <form id="formNuevoInsumo" novalidate>
+          <div class="row g-3">
+            <div class="col-12">
+              <label class="form-label form-label-sm">Nombre <span class="text-danger">*</span></label>
+              <input type="text" name="nombre" class="form-control form-control-sm" placeholder="Ej: Cámara Dahua 4MP" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Categoría <span class="text-danger">*</span></label>
+              <select name="categoria" class="form-select form-select-sm" required>
+                <option value="">Seleccionar…</option>
+                <option value="camara_ip">Cámara IP</option>
+                <option value="camara_analogica">Cámara Analógica</option>
+                <option value="nvr_dvr">NVR / DVR</option>
+                <option value="alarma_sonora">Alarma Sonora</option>
+                <option value="alarma_gsm">Alarma GSM</option>
+                <option value="perifoneo">Sistema de Perifoneo</option>
+                <option value="sensor">Sensor</option>
+                <option value="cable">Cable</option>
+                <option value="fuente">Fuente de Alimentación</option>
+                <option value="bateria">Batería</option>
+                <option value="pantalla">Pantalla / Display</option>
+                <option value="red">Equipo de Red</option>
+                <option value="instalacion">Material de Instalación</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Unidad de medida <span class="text-danger">*</span></label>
+              <select name="unidad_medida" class="form-select form-select-sm" required>
+                <option value="unidad" selected>Unidad</option>
+                <option value="metro">Metro</option>
+                <option value="rollo">Rollo</option>
+                <option value="caja">Caja</option>
+                <option value="par">Par</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Marca <span class="text-danger">*</span></label>
+              <input type="text" name="marca" class="form-control form-control-sm" placeholder="Ej: Dahua" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Modelo</label>
+              <input type="text" name="modelo" class="form-control form-control-sm" placeholder="Ej: IPC-HDW2831T">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Stock mínimo</label>
+              <input type="number" name="stock_minimo" class="form-control form-control-sm" placeholder="0" min="0" value="0">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btnGuardarInsumo">
+          <i class="bi bi-check-lg me-1"></i>Guardar insumo
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -135,6 +274,114 @@
 
   updateUnit();
   updateTotal();
+
+  // ── Modal nuevo proveedor ───────────────────────────────────────────────────
+  (function () {
+    const CSRF = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+    const modal  = document.getElementById('modalNuevoProveedor');
+    const form   = document.getElementById('formNuevoProveedor');
+    const errBox = document.getElementById('proveedorAjaxErrors');
+    const btnOk  = document.getElementById('btnGuardarProveedor');
+    const selectProveedor = document.getElementById('id_proveedor');
+
+    modal.addEventListener('hidden.bs.modal', function () {
+      form.reset();
+      errBox.classList.add('d-none');
+      errBox.innerHTML = '';
+      btnOk.disabled = false;
+      btnOk.innerHTML = '<i class="bi bi-check-lg me-1"></i>Guardar proveedor';
+    });
+
+    btnOk.addEventListener('click', function () {
+      errBox.classList.add('d-none');
+      errBox.innerHTML = '';
+      btnOk.disabled = true;
+      btnOk.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando…';
+
+      fetch('{% url "create_proveedor_ajax" %}', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF },
+        body: new FormData(form),
+      })
+      .then(r => r.json())
+      .then(res => {
+        if (res.ok) {
+          const opt = new Option(res.label, res.id, true, true);
+          selectProveedor.add(opt);
+          selectProveedor.value = res.id;
+          bootstrap.Modal.getInstance(modal).hide();
+        } else {
+          const msgs = Object.values(res.errors || {}).flat();
+          errBox.innerHTML = msgs.map(m => `<div>${m}</div>`).join('');
+          errBox.classList.remove('d-none');
+          btnOk.disabled = false;
+          btnOk.innerHTML = '<i class="bi bi-check-lg me-1"></i>Guardar proveedor';
+        }
+      })
+      .catch(() => {
+        errBox.innerHTML = '<div>Error de conexión. Intente de nuevo.</div>';
+        errBox.classList.remove('d-none');
+        btnOk.disabled = false;
+        btnOk.innerHTML = '<i class="bi bi-check-lg me-1"></i>Guardar proveedor';
+      });
+    });
+  })();
+
+  // ── Modal nuevo insumo ──────────────────────────────────────────────────────
+  (function () {
+    const CSRF = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+    const modal = document.getElementById('modalNuevoInsumo');
+    const form  = document.getElementById('formNuevoInsumo');
+    const errBox = document.getElementById('insumoAjaxErrors');
+    const btnOk  = document.getElementById('btnGuardarInsumo');
+
+    modal.addEventListener('hidden.bs.modal', function () {
+      form.reset();
+      errBox.classList.add('d-none');
+      errBox.innerHTML = '';
+      btnOk.disabled = false;
+      btnOk.innerHTML = '<i class="bi bi-check-lg me-1"></i>Guardar insumo';
+    });
+
+    btnOk.addEventListener('click', function () {
+      errBox.classList.add('d-none');
+      errBox.innerHTML = '';
+      btnOk.disabled = true;
+      btnOk.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando…';
+
+      fetch('{% url "create_insumo_ajax" %}', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': CSRF },
+        body: new FormData(form),
+      })
+      .then(r => r.json())
+      .then(res => {
+        if (res.ok) {
+          // Agregar al select y seleccionar
+          const opt = new Option(res.label, res.id, true, true);
+          insumoSelect.add(opt);
+          insumoSelect.value = res.id;
+          // Actualizar los mapas de unidades para que updateUnit() funcione
+          insumoUnidades[res.id] = res.unidad;
+          insumoUnidadesDisplay[res.id] = res.unidad_display;
+          updateUnit();
+          bootstrap.Modal.getInstance(modal).hide();
+        } else {
+          const msgs = Object.values(res.errors || {}).flat();
+          errBox.innerHTML = msgs.map(m => `<div>${m}</div>`).join('');
+          errBox.classList.remove('d-none');
+          btnOk.disabled = false;
+          btnOk.innerHTML = '<i class="bi bi-check-lg me-1"></i>Guardar insumo';
+        }
+      })
+      .catch(() => {
+        errBox.innerHTML = '<div>Error de conexión. Intente de nuevo.</div>';
+        errBox.classList.remove('d-none');
+        btnOk.disabled = false;
+        btnOk.innerHTML = '<i class="bi bi-check-lg me-1"></i>Guardar insumo';
+      });
+    });
+  })();
 
   document.querySelectorAll('.text-danger.small.mt-1').forEach(function (errorDiv) {
     var prev = errorDiv.previousElementSibling;

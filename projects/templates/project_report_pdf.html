@@ -245,6 +245,11 @@
           {% else %}
             <span class="badge" style="background:#e9e9e9;color:#888;">Sin fecha</span>
           {% endif %}
+          {% if project.estado_multa_val == 'critico' %}
+            <br><span class="badge" style="background:#f8d7da;color:#721c24;">Multa crítica — Bs. {{ project.multa_val|floatformat:2 }}</span>
+          {% elif project.estado_multa_val == 'en_multa' %}
+            <br><span class="badge" style="background:#fff3cd;color:#856404;">En multa — Bs. {{ project.multa_val|floatformat:2 }}</span>
+          {% endif %}
         </td>
       </tr>
       {% empty %}

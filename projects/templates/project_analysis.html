@@ -166,16 +166,8 @@
                 <td class="text-center fw-semibold">{{ instalacion_count }}</td>
               </tr>
               <tr>
-                <td><span class="badge" style="background:#2a9d8f;">Ampliación</span></td>
-                <td class="text-center fw-semibold">{{ ampliacion_count }}</td>
-              </tr>
-              <tr>
                 <td><span class="badge" style="background:#f4a261;color:#333;">Mant. Externo</span></td>
                 <td class="text-center fw-semibold">{{ mantenimiento_externo_count }}</td>
-              </tr>
-              <tr>
-                <td><span class="badge" style="background:#e76f51;">Emergencia</span></td>
-                <td class="text-center fw-semibold">{{ emergencia_count }}</td>
               </tr>
             </tbody>
           </table>
@@ -269,10 +261,10 @@
   new Chart(document.getElementById('chartTipo'), {
     type: 'doughnut',
     data: {
-      labels: ['Instalación Nueva', 'Ampliación', 'Mant. Externo', 'Emergencia'],
+      labels: ['Instalación Nueva', 'Mant. Externo'],
       datasets: [{
-        data: [{{ instalacion_count }}, {{ ampliacion_count }}, {{ mantenimiento_externo_count }}, {{ emergencia_count }}],
-        backgroundColor: ['#264653', '#2a9d8f', '#f4a261', '#e76f51'],
+        data: [{{ instalacion_count }}, {{ mantenimiento_externo_count }}],
+        backgroundColor: ['#264653', '#f4a261'],
         borderWidth: 2, borderColor: '#fff',
       }]
     },

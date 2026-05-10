@@ -1,0 +1,119 @@
+@startuml SOBOTEC_ContentModel_Parte2
+title Modelo de Contenido UWE — Parte 2: Empleados e Inventario (SOBOTEC S.R.L.)
+
+!theme plain
+left to right direction
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 10
+skinparam classFontName Arial
+skinparam classHeaderFontSize 11
+skinparam classHeaderFontStyle bold
+skinparam classBackgroundColor #FEFEFE
+skinparam classBorderColor #555555
+skinparam arrowColor #333333
+skinparam arrowFontSize 9
+skinparam nodesep 25
+skinparam ranksep 35
+skinparam padding 4
+skinparam defaultTextAlignment left
+
+' ─── EMPLEADO ───
+class Empleado {
+  nombre : String
+  apellido_paterno : String
+  cargo : String
+  carnet_identidad : String
+  numero_celular : String
+  email : Email
+}
+
+' ─── CONTRATO EMPLEADO ───
+class ContratoEmpleado {
+  tipo_contrato : String
+  dias_laborales : Integer
+  fecha_inicio : Date
+  fecha_fin : Date
+  monto_acordado : Decimal
+}
+
+' ─── PAGO EMPLEADO ───
+class PagoEmpleado {
+  monto : Decimal
+  fecha : Date
+  tipo_pago : String
+  concepto : String
+}
+
+' ─── JORNADA ───
+class JornadaEmpleado {
+  fecha : Date
+  dias : Decimal
+  estado : String
+  observacion : Text
+}
+
+' ─── PROYECTO (referencia) ───
+class Proyecto <<ref>> {
+  codigo : String
+  nombre : String
+  estado_proyecto : String
+}
+
+' ─── PROVEEDOR ───
+class Proveedor {
+  nombre : String
+  rubro : String
+  nit : String
+  telefono : String
+  encargado_nombre : String
+}
+
+' ─── INSUMO ───
+class Insumo {
+  nombre : String
+  marca : String
+  categoria : String
+  unidad_medida : String
+  stock : Integer
+  stock_minimo : Integer
+  ultimo_precio_compra : Decimal
+}
+
+' ─── COMPRA ───
+class Compra {
+  cantidad : Integer
+  costo_unitario : Decimal
+  fecha : Date
+  numero_factura : String
+}
+
+' ─── REQUIERE ───
+class Requiere {
+  cantidad : Integer
+  durante_garantia : Boolean
+}
+
+' ─── REQUIERE LOTE ───
+class RequiereLote {
+  cantidad : Integer
+}
+
+' ═══════ RELACIONES — Empleados ═══════
+Empleado        "1"    *--> "0..*" ContratoEmpleado : tiene
+ContratoEmpleado "1"   *--> "0..*" JornadaEmpleado  : registra
+ContratoEmpleado "1"   *--> "0..*" PagoEmpleado     : genera
+
+JornadaEmpleado "0..*"  --> "1"    Proyecto          : trabaja en
+JornadaEmpleado "0..*"  --> "0..1" PagoEmpleado      : incluida en
+JornadaEmpleado "0..*"  --> "1"    Empleado          : registrado por
+
+' ═══════ RELACIONES — Inventario ═══════
+Proveedor "1"   *--> "0..*" Compra      : suministra
+Insumo    "1"   *--> "0..*" Compra      : comprado como
+Insumo    "1"   *--> "0..*" Requiere    : requerido en
+Proyecto  "1"   *--> "0..*" Requiere    : consume
+Requiere  "1"   *--> "0..*" RequiereLote : trazado FIFO
+Compra    "1"   *--> "0..*" RequiereLote : lote de
+
+@enduml

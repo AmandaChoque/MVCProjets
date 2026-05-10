@@ -78,18 +78,17 @@
           <select name="project_type" class="form-select form-select-sm">
             <option value="">Todos</option>
             <option value="instalacion_nueva"     {% if project_type == 'instalacion_nueva' %}selected{% endif %}>Instalación Nueva</option>
-            <option value="ampliacion"            {% if project_type == 'ampliacion' %}selected{% endif %}>Ampliación</option>
             <option value="mantenimiento_externo" {% if project_type == 'mantenimiento_externo' %}selected{% endif %}>Mant. Externo</option>
-            <option value="emergencia"            {% if project_type == 'emergencia' %}selected{% endif %}>Emergencia</option>
           </select>
         </div>
         <div class="col-md-2">
           <label class="form-label form-label-sm text-muted mb-1 label-xs">Estado</label>
           <select name="project_status" class="form-select form-select-sm">
             <option value="">Todos</option>
-            <option value="pendiente"   {% if project_status == 'pendiente' %}selected{% endif %}>Pendiente</option>
+            <option value="pendiente"   {% if project_status == 'pendiente'   %}selected{% endif %}>Pendiente</option>
             <option value="en_progreso" {% if project_status == 'en_progreso' %}selected{% endif %}>En Progreso</option>
-            <option value="completado"  {% if project_status == 'completado' %}selected{% endif %}>Completado</option>
+            <option value="completado"  {% if project_status == 'completado'  %}selected{% endif %}>Completado</option>
+            <option value="cancelado"   {% if project_status == 'cancelado'   %}selected{% endif %}>Cancelado</option>
           </select>
         </div>
         <div class="col-md-2">
@@ -229,12 +228,8 @@
             <td>
               {% if project.tipo_proyecto == 'instalacion_nueva' %}
                 <span class="badge bg-primary fw-normal">Instalación</span>
-              {% elif project.tipo_proyecto == 'ampliacion' %}
-                <span class="badge bg-info text-dark fw-normal">Ampliación</span>
               {% elif project.tipo_proyecto == 'mantenimiento_externo' %}
                 <span class="badge bg-secondary fw-normal">Mant. Externo</span>
-              {% else %}
-                <span class="badge bg-warning text-dark fw-normal">Emergencia</span>
               {% endif %}
             </td>
             <td>
@@ -242,6 +237,8 @@
                 <span class="badge bg-success">Completado</span>
               {% elif project.estado_proyecto == 'en_progreso' %}
                 <span class="badge bg-primary">En Progreso</span>
+              {% elif project.estado_proyecto == 'cancelado' %}
+                <span class="badge bg-secondary">Cancelado</span>
               {% else %}
                 <span class="badge bg-warning text-dark">Pendiente</span>
               {% endif %}
@@ -251,6 +248,11 @@
                 <div class="text-xxs text-muted mt-1">{{ project.dias_info }}d restantes</div>
               {% elif project.cumplimiento == 'sin_fecha' %}
                 <div class="text-xxs text-muted mt-1">Sin fecha fin</div>
+              {% endif %}
+              {% if project.estado_multa_val == 'critico' %}
+                <div class="mt-1"><span class="badge bg-danger" style="font-size:.6rem;" title="{{ project.dias_retraso_val }}d de retraso — tope alcanzado"><i class="bi bi-exclamation-octagon-fill me-1"></i>Multa crítica</span></div>
+              {% elif project.estado_multa_val == 'en_multa' %}
+                <div class="mt-1"><span class="badge bg-warning text-dark" style="font-size:.6rem;" title="{{ project.dias_retraso_val }}d de retraso"><i class="bi bi-clock-history me-1"></i>En multa</span></div>
               {% endif %}
             </td>
             <td>

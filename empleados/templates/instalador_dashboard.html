@@ -508,8 +508,13 @@ function guardarParticipantes(ids) {
     headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
     body: JSON.stringify({participantes: ids}),
   }).then(r => r.json()).then(res => {
-    if (res.ok && res.jornadas_creadas && res.jornadas_creadas.length > 0) {
-      mostrarAlerta(res.jornadas_creadas);
+    if (res.ok) {
+      if (res.jornadas_creadas && res.jornadas_creadas.length > 0) {
+        mostrarAlerta(res.jornadas_creadas);
+      }
+      if (res.sin_contrato && res.sin_contrato.length > 0) {
+        mostrarAlertaSinContrato(res.sin_contrato);
+      }
     }
   });
   if (bsModal) {
@@ -531,6 +536,22 @@ function mostrarAlerta(nombres) {
   `;
   document.body.appendChild(div);
   setTimeout(() => div.remove(), 5000);
+}
+
+function mostrarAlertaSinContrato(nombres) {
+  const div = document.createElement('div');
+  div.className = 'alert alert-danger alert-dismissible fade show position-fixed bottom-0 end-0 m-3 shadow-sm';
+  div.style.zIndex = 9999;
+  div.style.maxWidth = '420px';
+  div.innerHTML = `
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    <strong>Jornada NO registrada</strong> para:<br>
+    <span class="small">${nombres.join(', ')}</span><br>
+    <span class="small">No tienen ningún contrato registrado.<br>
+    <strong>Avisa al administrador</strong> para que registre la jornada manualmente.</span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  document.body.appendChild(div);
 }
 
 function abrirModalParticipantes(tareaId, usuarioId, equipo) {

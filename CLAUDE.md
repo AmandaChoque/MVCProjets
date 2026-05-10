@@ -92,6 +92,10 @@ python manage.py test projects.tests.InsumoFormTest
 python manage.py test projects.tests.CompraFormCleanCostoTest
 ```
 
+## Diagrams
+
+`docs/` contiene diagramas UWE en PlantUML (`.puml`): `diagrama_uwe.puml` (vista completa), `uwe_parte1_proyectos.puml`, `uwe_parte2_empleados_inventario.puml`. No se generan automáticamente; requieren PlantUML instalado.
+
 ## Architecture — Four Django Apps
 
 `project_management/urls.py` es el root; hace `include()` de `empleados.urls` e `inventario.urls`. Las URLs de proyectos, clientes, sedes, pagos, plantillas y notificaciones se definen directamente en el root.
@@ -179,6 +183,8 @@ python manage.py test projects.tests.CompraFormCleanCostoTest
 
 **METODOS_PAGO**: `[('efectivo', ...), ('transferencia', ...)]` está definida por duplicado: una vez en `empleados/models.py` (usada por `PagoEmpleado`) y otra vez en `projects/models.py` (usada por `PagoProyecto`). No hay una constante compartida; son copias independientes.
 
+**AJAX inline creation**: Los endpoints `.../ajax/nuevo/` (clientes, proveedores, insumos) permiten crear objetos desde un modal dentro de otro formulario, retornando JSON `{id, nombre}` al éxito. No requieren recarga de página. Usan `@login_required` + `@cargo_required` igual que sus contrapartes normales.
+
 ## URL Structure
 
 Las URLs están en español. Las URLs de proyectos, clientes, sedes, pagos, plantillas y notificaciones van en el root `urls.py`; empleados e inventario tienen sus propios `urls.py`.
@@ -201,9 +207,9 @@ Las URLs están en español. Las URLs de proyectos, clientes, sedes, pagos, plan
 /proyectos/reporte/
 /proyectos/<id>/
 /proyectos/<id>/ver/
-/proyectos/<id>/completar/
 /proyectos/<id>/eliminar/                        → hard delete
 /proyectos/<id>/desactivar/
+/proyectos/<id>/garantia/crear/                  → garantia_crear_manual (creación manual de garantía)
 
 # Sedes de instalación
 /proyectos/<id>/sedes/nueva/
@@ -235,6 +241,7 @@ Las URLs están en español. Las URLs de proyectos, clientes, sedes, pagos, plan
 
 # Clientes
 /clientes/, /clientes/nuevo/, /clientes/<id>/, /clientes/<id>/ver/, /clientes/<id>/desactivar/
+/clientes/ajax/nuevo/                            → create_cliente_ajax (creación inline via AJAX)
 
 # Plantillas de tareas
 /plantillas/, /plantillas/nueva/, /plantillas/<id>/, /plantillas/<id>/desactivar/
@@ -258,8 +265,9 @@ Las URLs están en español. Las URLs de proyectos, clientes, sedes, pagos, plan
 
 # Empleados (empleados/urls.py)
 /empleados/, /empleados/nuevo/, /empleados/carga/, /empleados/reporte/
-/empleados/<id>/, /empleados/<id>/ver/, /empleados/<id>/desactivar/
-/mi-trabajo/                                     → dashboard instalador
+/empleados/<id>/, /empleados/<id>/ver/, /empleados/<id>/desactivar/, /empleados/<id>/habilitar/
+/empleados/carga/aprobar-todas/                  → aprobar_todas_jornadas (bulk approve)
+/mi-trabajo/                                     → instalador_dashboard (dashboard instalador/técnico)
 
 # Contratos de empleado
 /empleados/<id>/contratos/nuevo/
@@ -284,7 +292,9 @@ Las URLs están en español. Las URLs de proyectos, clientes, sedes, pagos, plan
 
 # Inventario (inventario/urls.py)
 /proveedores/, /proveedores/nuevo/, /proveedores/<id>/, /proveedores/<id>/desactivar/
+/proveedores/ajax/nuevo/                         → create_proveedor_ajax (inline via AJAX)
 /insumos/, /insumos/nuevo/, /insumos/<id>/, /insumos/<id>/ver/, /insumos/<id>/desactivar/
+/insumos/ajax/nuevo/                             → create_insumo_ajax (inline via AJAX)
 /proyectos/<id>/insumos/nuevo/
 /insumos-proyecto/<id>/
 /insumos-proyecto/<id>/eliminar/
@@ -301,11 +311,14 @@ Las URLs están en español. Las URLs de proyectos, clientes, sedes, pagos, plan
 /garantias/<id>/incidencias/nueva/
 /garantias/incidencias/<id>/
 /garantias/incidencias/<id>/desactivar/
+/mis-reparaciones/                               → mis_reparaciones (instalador/técnico: solo lectura)
 ```
 
 ## Settings Notes
 - `AUTH_USER_MODEL = 'empleados.Empleado'`
 - `LOGIN_URL = '/signin'`, `LOGIN_REDIRECT_URL = '/dashboard/'`
+- `LANGUAGE_CODE = 'es'`, `TIME_ZONE = 'America/La_Paz'`
 - Session timeout: 1800s, `SESSION_SAVE_EVERY_REQUEST = True`, `SESSION_EXPIRE_AT_BROWSER_CLOSE = True`
+- `CSRF_FAILURE_VIEW = 'projects.views.csrf_failure'` — redirige al login con mensaje de sesión expirada en lugar de mostrar la página de error 403
 - `MEDIA_URL/MEDIA_ROOT` para documentos de contratos y fotos de sedes
 - Templates dirs: `BASE_DIR / 'templates'` (base.html), `BASE_DIR / 'projects' / 'templates'`, `BASE_DIR / 'empleados' / 'templates'`; además `APP_DIRS = True` para el resto

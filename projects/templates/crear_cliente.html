@@ -38,14 +38,17 @@
           <!-- COLUMNA IZQUIERDA -->
           <div class="col-lg-6">
             <div class="mb-3">
-              <label class="form-label">Rol de Contacto</label>
+              <label class="form-label">Tipo de contratante <span class="text-danger">*</span></label>
+              {{ form.tipo_contratante }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">Rol de Contacto <span class="text-danger">*</span></label>
               {{ form.rol_contacto }}
             </div>
 
             <div class="mb-3">
-              <label class="form-label"
-                >NIT / CI</label
-              >
+              <label class="form-label" id="label_nit_ci">NIT / CI <small class="text-muted">(opcional)</small></label>
               {{ form.nit_ci }}
               {% if form.nit_ci.errors %}
               <div class="text-danger small mt-1">
@@ -55,13 +58,6 @@
               <div class="invalid-feedback">
                 El NIT/CI debe contener solo números y al menos 6 dígitos.
               </div>
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label"
-                >Tipo de contratante <span class="text-danger">*</span></label
-              >
-              {{ form.tipo_contratante }}
             </div>
 
             <!-- Datos de entidad pública (solo visible cuando tipo = entidad_publica) -->
@@ -80,9 +76,7 @@
             </div>
 
             <div class="mb-3">
-              <label class="form-label"
-                >Celular / Teléfono <span class="text-danger">*</span></label
-              >
+              <label class="form-label">Celular / Teléfono <span class="text-danger">*</span></label>
               {{ form.telefono }}
               {% if form.telefono.errors %}
               <div class="text-danger small mt-1">
@@ -176,18 +170,38 @@
     }, false)
   })()
 
-  // Toggle campos entidad pública
   const tipoSelect    = document.getElementById('id_tipo_contratante');
+  const rolSelect     = document.getElementById('id_rol_contacto');
   const divEntidad    = document.getElementById('div_entidad_publica');
   const nombreEntidad = document.getElementById('id_nombre_entidad');
 
-  function toggleEntidad() {
-    const esEntidad = tipoSelect.value === 'entidad_publica';
+  const ROLES_POR_TIPO = {
+    'personal':       ['propietario', 'encargado'],
+    'entidad_publica': ['gerente', 'representante'],
+  };
+
+  function toggleTipo() {
+    const tipo = tipoSelect.value;
+    const permitidos = ROLES_POR_TIPO[tipo] || [];
+
+    // Filtrar opciones de rol
+    Array.from(rolSelect.options).forEach(opt => {
+      if (!opt.value) return;
+      opt.hidden   = !permitidos.includes(opt.value);
+      opt.disabled = !permitidos.includes(opt.value);
+    });
+    // Si el rol actual no es válido para este tipo, resetear al primero permitido
+    if (permitidos.length && !permitidos.includes(rolSelect.value)) {
+      rolSelect.value = permitidos[0];
+    }
+
+    // Mostrar nombre_entidad solo para entidad_publica
+    const esEntidad = tipo === 'entidad_publica';
     divEntidad.classList.toggle('d-none', !esEntidad);
     nombreEntidad.required = esEntidad;
   }
 
-  tipoSelect.addEventListener('change', toggleEntidad);
-  toggleEntidad();
+  tipoSelect.addEventListener('change', toggleTipo);
+  toggleTipo();
 </script>
 {% endblock %}

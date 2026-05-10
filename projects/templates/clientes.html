@@ -81,14 +81,9 @@
           <select class="form-select form-select-sm" name="filter_tipo">
             <option value="">Tipo</option>
 
-            <option value="empresa"
-              {% if filter_tipo == "empresa" %}selected{% endif %}>
-              Empresa
-            </option>
-
             <option value="personal"
               {% if filter_tipo == "personal" %}selected{% endif %}>
-              Personal
+              Personal / Negocio
             </option>
 
             <option value="entidad_publica"
@@ -151,12 +146,10 @@
           <td class="small">{{ cliente.get_rol_contacto_display }}</td>
 
           <td>
-            {% if cliente.tipo_contratante == 'empresa' %}
-              <span class="badge bg-primary small">{{ cliente.get_tipo_contratante_display }}</span>
-            {% elif cliente.tipo_contratante == 'personal' %}
-              <span class="badge bg-success small">{{ cliente.get_tipo_contratante_display }}</span>
-            {% else %}
+            {% if cliente.tipo_contratante == 'entidad_publica' %}
               <span class="badge bg-warning text-dark small">{{ cliente.get_tipo_contratante_display }}</span>
+            {% else %}
+              <span class="badge bg-success small">{{ cliente.get_tipo_contratante_display }}</span>
             {% endif %}
           </td>
 

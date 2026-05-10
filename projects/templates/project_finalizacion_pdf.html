@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Acta de Entrega — {{ project.codigo }}</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 20px 24px;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 9px;
+      color: #222;
+      background: #fff;
+    }
+
+    .section-title {
+      background-color: #1B4D90;
+      color: #D4B84A;
+      font-size: 9px;
+      font-weight: bold;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      padding: 4px 8px;
+      margin-bottom: 6px;
+    }
+
+    table.data { width: 100%; border-collapse: collapse; }
+    table.data td {
+      padding: 4px 7px;
+      border: 1px solid #dde2ed;
+      font-size: 9px;
+      vertical-align: top;
+    }
+    table.data td.lbl {
+      font-weight: bold;
+      color: #0F2D5A;
+      background-color: #f1f3f6;
+      width: 28%;
+      white-space: nowrap;
+    }
+    table.data tr:nth-child(even) td.lbl { background-color: #eaecf2; }
+
+    table.sedes {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 6px;
+    }
+    table.sedes thead tr { background-color: #0F2D5A; }
+    table.sedes th {
+      padding: 5px 7px;
+      font-size: 8px;
+      font-weight: bold;
+      color: #D4B84A;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      text-align: left;
+    }
+    table.sedes th.center { text-align: center; }
+    table.sedes td {
+      padding: 6px 7px;
+      border-bottom: 1px solid #dde2ed;
+      font-size: 9px;
+      vertical-align: middle;
+    }
+    table.sedes td.center { text-align: center; }
+    table.sedes tr:nth-child(even) td { background-color: #f5f6fa; }
+    table.sedes tfoot td {
+      font-weight: bold;
+      background-color: #e8edf5;
+      color: #0F2D5A;
+      border-top: 2px solid #0F2D5A;
+      padding: 5px 7px;
+      font-size: 9px;
+    }
+
+    .num-badge {
+      display: inline-block;
+      background-color: #0F2D5A;
+      color: #D4B84A;
+      font-weight: bold;
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 2px;
+    }
+
+    .infobar {
+      background-color: #f1f3f6;
+      border: 1px solid #dde2ed;
+      padding: 4px 10px;
+      font-size: 8px;
+      color: #555;
+      margin-bottom: 10px;
+    }
+
+    .intro-box {
+      border: 1px solid #c8d8f0;
+      background-color: #f0f5fc;
+      padding: 9px 12px;
+      font-size: 9px;
+      color: #222;
+      margin-bottom: 12px;
+      line-height: 1.6;
+    }
+
+    table.firmas { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    table.firmas td {
+      padding: 10px 16px;
+      vertical-align: bottom;
+      width: 50%;
+    }
+    .firma-linea {
+      border-top: 1px solid #333;
+      margin-top: 36px;
+      padding-top: 4px;
+      font-size: 8.5px;
+      text-align: center;
+    }
+    .firma-titulo {
+      font-size: 8px;
+      color: #555;
+      text-align: center;
+      margin-top: 2px;
+    }
+
+    .sin-foto {
+      color: #aaa;
+      font-style: italic;
+      font-size: 8px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ══ ENCABEZADO ══ -->
+  <table width="100%" style="border-collapse:collapse; margin-bottom:8px; background-color:#0F2D5A;">
+    <tr>
+      <td style="padding:0; width:6px; background-color:#D4B84A;"></td>
+      <td style="padding:8px 14px; vertical-align:middle;">
+        <div style="font-size:8px; color:#D4B84A; text-transform:uppercase; letter-spacing:0.12em; font-weight:bold; margin-bottom:2px;">SOBOTEC S.R.L.</div>
+        <div style="font-size:15px; font-weight:bold; color:#ffffff;">ACTA DE ENTREGA Y REPORTE DE FINALIZACIÓN</div>
+        <div style="font-size:9px; color:#a0b8d8; margin-top:1px;">
+          {{ project.nombre }} &nbsp;|&nbsp; {{ project.codigo }} &nbsp;|&nbsp; {{ project.get_tipo_proyecto_display }}
+        </div>
+      </td>
+      <td style="padding:8px 16px; vertical-align:middle; text-align:right; white-space:nowrap; width:140px;">
+        <div style="font-size:8px; color:#D4B84A; text-transform:uppercase; letter-spacing:0.06em;">Generado el</div>
+        <div style="font-size:11px; font-weight:bold; color:#ffffff;">{{ now|date:"d/m/Y" }}</div>
+        <div style="font-size:9px; color:#a0b8d8;">{{ now|date:"H:i" }} hrs</div>
+      </td>
+    </tr>
+  </table>
+
+  <!-- ══ BARRA INFO ══ -->
+  <div class="infobar">
+    <b style="color:#0F2D5A;">Generado por:</b> {{ generado_por }}
+    &nbsp;&nbsp;|&nbsp;&nbsp;
+    <b style="color:#0F2D5A;">Estado:</b>
+    {% if project.estado_proyecto == 'completado' %}
+      <span style="color:#155724; font-weight:bold;">COMPLETADO</span>
+    {% elif project.estado_proyecto == 'en_progreso' %}
+      <span style="color:#0F2D5A; font-weight:bold;">EN PROGRESO</span>
+    {% else %}
+      <span style="color:#856404; font-weight:bold;">PENDIENTE</span>
+    {% endif %}
+    &nbsp;&nbsp;|&nbsp;&nbsp;
+    <b style="color:#0F2D5A;">Puntos de instalación:</b> {{ total_sedes }}
+  </div>
+
+  <!-- ══ DOS COLUMNAS: PROYECTO + CLIENTE ══ -->
+  <table width="100%" style="border-collapse:collapse; margin-bottom:12px;">
+    <tr>
+      <td style="width:50%; vertical-align:top; padding-right:6px;">
+        <div class="section-title">Datos del Proyecto</div>
+        <table class="data">
+          <tr><td class="lbl">Código</td><td>{{ project.codigo }}</td></tr>
+          <tr><td class="lbl">Nombre</td><td>{{ project.nombre }}</td></tr>
+          <tr><td class="lbl">Tipo</td><td>{{ project.get_tipo_proyecto_display }}</td></tr>
+          <tr><td class="lbl">Fecha inicio</td><td>{{ project.fecha_inicio|date:"d/m/Y"|default:"—" }}</td></tr>
+          <tr><td class="lbl">Fecha entrega</td><td>{{ project.fecha_fin|date:"d/m/Y"|default:"—" }}</td></tr>
+          {% if contrato_proyecto %}
+          <tr><td class="lbl">Monto acordado</td><td><b>Bs. {{ contrato_proyecto.monto_acordado|floatformat:2 }}</b></td></tr>
+          <tr>
+            <td class="lbl">Garantía</td>
+            <td>{{ contrato_proyecto.garantia_meses }} mes{% if contrato_proyecto.garantia_meses != 1 %}es{% endif %}</td>
+          </tr>
+          {% endif %}
+        </table>
+      </td>
+      <td style="width:50%; vertical-align:top;">
+        <div class="section-title">Datos del Cliente</div>
+        {% if project.cliente %}
+        <table class="data">
+          <tr>
+            <td class="lbl">Nombre</td>
+            <td>{{ project.cliente.nombre }} {{ project.cliente.apellido_paterno }} {{ project.cliente.apellido_materno }}</td>
+          </tr>
+          <tr><td class="lbl">NIT / CI</td><td>{{ project.cliente.nit_ci|default:"—" }}</td></tr>
+          <tr><td class="lbl">Tipo</td><td>{{ project.cliente.get_tipo_contratante_display }}</td></tr>
+          {% if project.cliente.nombre_entidad %}
+          <tr><td class="lbl">Entidad</td><td>{{ project.cliente.nombre_entidad }}</td></tr>
+          {% endif %}
+          <tr><td class="lbl">Teléfono</td><td>{{ project.cliente.telefono|default:"—" }}</td></tr>
+          <tr><td class="lbl">Dirección</td><td>{{ project.cliente.direccion|default:"—" }}</td></tr>
+        </table>
+        {% else %}
+        <p style="color:#888; font-style:italic; padding:6px;">Sin cliente asociado.</p>
+        {% endif %}
+      </td>
+    </tr>
+  </table>
+
+  <!-- ══ PÁRRAFO INTRODUCTORIO ══ -->
+  <div class="intro-box">
+    Por medio del presente documento, <b>SOBOTEC S.R.L.</b> certifica que los trabajos de
+    <b>{{ project.get_tipo_proyecto_display|lower }}</b> correspondientes al proyecto
+    <b>{{ project.nombre }}</b> ({{ project.codigo }}) han sido ejecutados satisfactoriamente.
+    El proyecto comprende <b>{{ total_sedes }} punto{% if total_sedes != 1 %}s{% endif %} de instalación</b>
+    distribuido{% if total_sedes != 1 %}s{% endif %} según se detalla a continuación.
+    {% if contrato_proyecto and contrato_proyecto.garantia_meses %}
+    Los equipos instalados cuentan con una garantía de
+    <b>{{ contrato_proyecto.garantia_meses }} mes{% if contrato_proyecto.garantia_meses != 1 %}es{% endif %}</b>
+    a partir de la fecha de entrega.
+    {% endif %}
+  </div>
+
+  <!-- ══ TABLA DE SEDES ══ -->
+  <div class="section-title">Puntos de Instalación</div>
+  {% if sedes_data %}
+  <table class="sedes">
+    <thead>
+      <tr>
+        <th class="center" style="width:5%;">N°</th>
+        <th style="width:55%;">Sede / Dirección</th>
+        <th class="center" style="width:20%;">Estado</th>
+        <th class="center" style="width:20%;">Última evidencia</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in sedes_data %}
+      <tr>
+        <td class="center">
+          <span class="num-badge">{{ forloop.counter }}</span>
+        </td>
+        <td>
+          <b>{{ item.sede.nombre }}</b>
+          {% if item.sede.direccion %}
+          <div style="font-size:8px; color:#555; margin-top:2px;">{{ item.sede.direccion }}</div>
+          {% endif %}
+        </td>
+        <td class="center">
+          {% if item.sede.estado == 'completado' %}
+            <span class="badge badge-ok">Completado</span>
+          {% elif item.sede.estado == 'en_progreso' %}
+            <span class="badge badge-info">En Progreso</span>
+          {% else %}
+            <span class="badge badge-warn">Pendiente</span>
+          {% endif %}
+        </td>
+        <td class="center">
+          {% if item.ultima_foto %}
+            <img src="{{ item.ultima_foto }}" style="max-width:110px; max-height:75px; border:1px solid #c8d0e0;">
+          {% else %}
+            <span class="sin-foto">Sin foto</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2">Total de puntos de instalación</td>
+        <td colspan="2" class="center">{{ total_sedes }}</td>
+      </tr>
+    </tfoot>
+  </table>
+  {% else %}
+  <p style="color:#888; font-style:italic; padding:6px 8px;">No hay sedes registradas para este proyecto.</p>
+  {% endif %}
+
+  <!-- ══ EQUIPOS E INSUMOS INSTALADOS ══ -->
+  <div style="margin-top:12px;">
+    <div class="section-title">Equipos e Insumos Instalados</div>
+    {% if insumos_proyecto %}
+    <table class="sedes">
+      <thead>
+        <tr>
+          <th class="center" style="width:5%;">N°</th>
+          <th style="width:35%;">Insumo / Equipo</th>
+          <th style="width:20%;">Marca / Modelo</th>
+          <th style="width:22%;">Categoría</th>
+          <th class="center" style="width:10%;">Cantidad</th>
+          <th style="width:8%;">Unidad</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in insumos_proyecto %}
+        <tr>
+          <td class="center">{{ forloop.counter }}</td>
+          <td><b>{{ r.insumo.nombre }}</b></td>
+          <td>
+            {% if r.insumo.marca %}{{ r.insumo.marca }}{% endif %}
+            {% if r.insumo.modelo %} {{ r.insumo.modelo }}{% endif %}
+            {% if not r.insumo.marca and not r.insumo.modelo %}—{% endif %}
+          </td>
+          <td>{{ r.insumo.get_categoria_display }}</td>
+          <td class="center"><b>{{ r.cantidad }}</b></td>
+          <td>{{ r.insumo.get_unidad_medida_display }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="4">Total de ítems</td>
+          <td colspan="2" class="center">{{ insumos_proyecto|length }}</td>
+        </tr>
+      </tfoot>
+    </table>
+    {% else %}
+    <p style="color:#888; font-style:italic; padding:6px 8px;">No hay insumos registrados para este proyecto.</p>
+    {% endif %}
+  </div>
+
+  <!-- ══ OBSERVACIONES ══ -->
+  {% if project.observacion %}
+  <div style="margin-top:12px;">
+    <div class="section-title">Observaciones</div>
+    <div style="padding:6px 10px; font-size:9px; border:1px solid #dde2ed; background:#fafbfd;">
+      {{ project.observacion }}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ══ CONFORMIDAD DE ENTREGA ══ -->
+  <div style="margin-top:20px; page-break-inside:avoid;">
+    <div class="section-title">Conformidad de Entrega</div>
+    <div style="padding:8px 12px; border:1px solid #dde2ed; background:#fafbfd; font-size:8.5px; color:#333; margin-bottom:12px; line-height:1.6;">
+      Las partes suscritas declaran su conformidad con los trabajos realizados, dando por concluido
+      el proyecto <b>{{ project.nombre }}</b> en los términos acordados en el contrato suscrito entre
+      el cliente y SOBOTEC S.R.L.
+    </div>
+    <table class="firmas">
+      <tr>
+        <td>
+          <div class="firma-linea">
+            {{ project.cliente.nombre|default:"" }} {{ project.cliente.apellido_paterno|default:"" }}
+          </div>
+          <div class="firma-titulo">
+            Firma y sello del Cliente<br>
+            {{ project.cliente.get_tipo_contratante_display|default:"" }}
+          </div>
+        </td>
+        <td>
+          <div class="firma-linea">
+            SOBOTEC S.R.L.
+          </div>
+          <div class="firma-titulo">
+            Representante de SOBOTEC S.R.L.<br>
+            Responsable del Proyecto
+          </div>
+        </td>
+      </tr>
+    </table>
+    <div style="margin-top:14px; text-align:center; font-size:7.5px; color:#888;">
+      La Paz, Bolivia — {{ now|date:"d \d\e F \d\e Y" }}
+    </div>
+  </div>
+
+</body>
+</html>

@@ -13,8 +13,6 @@
     </a>
   </div>
 
- 
-
   <!-- FILTROS -->
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">
@@ -33,6 +31,7 @@
             <option value="pendiente"   {% if filter_estado == "pendiente"   %}selected{% endif %}>Pendiente</option>
             <option value="en_progreso" {% if filter_estado == "en_progreso" %}selected{% endif %}>En Progreso</option>
             <option value="completado"  {% if filter_estado == "completado"  %}selected{% endif %}>Completado</option>
+            <option value="cancelado"   {% if filter_estado == "cancelado"   %}selected{% endif %}>Cancelado</option>
           </select>
         </div>
 
@@ -58,13 +57,14 @@
       </form>
     </div>
   </div>
-   <!-- KPIs -->
+
+  <!-- KPIs (reactivos a los filtros) -->
   <div class="row g-3 mb-3">
     <div class="col-6 col-md-3">
       <div class="card border-0 shadow-sm">
         <div class="card-body py-3 px-3">
           <div class="fw-bold fs-4 text-sobotec">{{ total_proyectos }}</div>
-          <div class="text-muted small">Total proyectos</div>
+          <div class="text-muted small">{% if filter_estado or search_nombre or filter_empleado %}Proyectos filtrados{% else %}Total proyectos{% endif %}</div>
         </div>
       </div>
     </div>
@@ -88,16 +88,17 @@
       <div class="card border-0 shadow-sm">
         <div class="card-body py-3 px-3">
           <div class="fw-bold fs-4 text-primary">{{ promedio_avance }}%</div>
-          <div class="text-muted small">Avance promedio</div>
+          <div class="text-muted small">Avance promedio (tareas)</div>
         </div>
       </div>
     </div>
-  </div>  
+  </div>
+
   <!-- CONTENIDO -->
   <div class="row g-3">
 
     <!-- Avance por Proyecto -->
-    <div class="col-12 col-xl-7">
+    <div class="col-12 col-xl-8">
       <div class="card border-0 shadow-sm mb-3">
         <div class="card-body p-0">
           <div class="table-responsive">
@@ -105,8 +106,9 @@
               <thead class="table-light small text-uppercase fw-semibold">
                 <tr>
                   <th class="px-3 py-2">Proyecto</th>
-                  <th class="px-3 py-2" style="min-width:160px;">Progreso tareas</th>
+                  <th class="px-3 py-2" style="min-width:140px;">Progreso tareas</th>
                   <th class="px-2 py-2 text-center">Sedes</th>
+                  <th class="px-2 py-2">Vence / Retraso</th>
                   <th class="px-2 py-2 text-center">Estado</th>
                 </tr>
               </thead>
@@ -125,20 +127,26 @@
                       {% endif %}
                     </div>
                   </td>
+
                   <td class="px-3 py-2">
-                    <div class="d-flex align-items-center gap-2">
-                      <div class="progress flex-grow-1" style="height:14px; border-radius:4px;">
-                        <div class="progress-bar fw-semibold
-                          {% if item.progreso == 100 %}bg-success
-                          {% elif item.progreso >= 50 %}bg-primary
-                          {% else %}bg-warning text-dark{% endif %}"
-                          style="width:{{ item.progreso }}%; font-size:0.72rem;">
-                          {% if item.progreso > 10 %}{{ item.progreso }}%{% endif %}
+                    {% if item.tiene_sedes %}
+                      <div class="d-flex align-items-center gap-2">
+                        <div class="progress flex-grow-1" style="height:14px; border-radius:4px;">
+                          <div class="progress-bar fw-semibold
+                            {% if item.progreso == 100 %}bg-success
+                            {% elif item.progreso >= 50 %}bg-primary
+                            {% else %}bg-warning text-dark{% endif %}"
+                            style="width:{{ item.progreso }}%; font-size:0.72rem;">
+                            {% if item.progreso > 10 %}{{ item.progreso }}%{% endif %}
+                          </div>
                         </div>
+                        <span class="text-muted fw-semibold" style="font-size:0.75rem; min-width:32px;">{{ item.progreso }}%</span>
                       </div>
-                      <span class="text-muted fw-semibold" style="font-size:0.75rem; min-width:32px;">{{ item.progreso }}%</span>
-                    </div>
+                    {% else %}
+                      <span class="text-muted" style="font-size:0.75rem;">Sin sedes registradas</span>
+                    {% endif %}
                   </td>
+
                   <td class="px-2 py-2 text-center" style="font-size:0.82rem;">
                     {% if item.total_sedes > 0 %}
                       <span class="text-success fw-semibold">{{ item.sedes_completadas }}</span>
@@ -147,11 +155,30 @@
                       <span class="text-muted">—</span>
                     {% endif %}
                   </td>
+
+                  <td class="px-2 py-2" style="font-size:0.78rem;">
+                    {% if item.contrato %}
+                      {% if item.contrato.dias_retraso > 0 and item.proyecto.estado_proyecto != 'completado' %}
+                        <span class="text-danger fw-semibold">
+                          <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ item.contrato.dias_retraso }} día{{ item.contrato.dias_retraso|pluralize:"s" }} de retraso
+                        </span>
+                      {% else %}
+                        <span class="text-muted">
+                          <i class="bi bi-calendar3 me-1"></i>{{ item.contrato.fecha_fin|date:"d/m/Y" }}
+                        </span>
+                      {% endif %}
+                    {% else %}
+                      <span class="text-muted">Sin contrato</span>
+                    {% endif %}
+                  </td>
+
                   <td class="px-2 py-2 text-center">
                     {% if item.proyecto.estado_proyecto == 'completado' %}
                       <span class="badge bg-success small">Completado</span>
                     {% elif item.proyecto.estado_proyecto == 'en_progreso' %}
                       <span class="badge bg-primary small">En Progreso</span>
+                    {% elif item.proyecto.estado_proyecto == 'cancelado' %}
+                      <span class="badge bg-secondary small">Cancelado</span>
                     {% else %}
                       <span class="badge bg-warning text-dark small">Pendiente</span>
                     {% endif %}
@@ -159,7 +186,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                  <td colspan="4" class="text-center text-muted py-3 small">
+                  <td colspan="5" class="text-center text-muted py-3 small">
                     No se encontraron proyectos con los filtros seleccionados.
                   </td>
                 </tr>
@@ -172,7 +199,7 @@
     </div>
 
     <!-- Productividad del Equipo -->
-    <div class="col-12 col-xl-5">
+    <div class="col-12 col-xl-4">
       <div class="card border-0 shadow-sm mb-3">
         <div class="card-header bg-light py-2 px-3">
           <div class="d-flex justify-content-between align-items-center">
@@ -180,7 +207,7 @@
               <i class="bi bi-bar-chart-line me-1"></i>Productividad del Equipo
             </span>
             <span class="text-muted" style="font-size:0.7rem;">
-              Semana: {{ week_start|date:"d/m" }} – {{ today|date:"d/m/Y" }}
+              Sem: {{ week_start|date:"d/m" }} – {{ today|date:"d/m" }}
             </span>
           </div>
         </div>
@@ -192,30 +219,18 @@
               <tr>
                 <th class="px-3 py-2">#</th>
                 <th class="py-2">Empleado</th>
-                <th class="text-center py-2" title="Tareas completadas esta semana ({{ week_start|date:'d/m' }} – hoy)">
-                  Esta sem.
-                </th>
-                <th class="text-center py-2" title="Tareas completadas semana pasada ({{ last_week_start|date:'d/m' }} – {{ week_start|date:'d/m' }})">
-                  Sem. ant.
-                </th>
-                <th class="text-center py-2" title="Tareas completadas este mes (desde {{ month_start|date:'d/m' }})">
-                  Mes
-                </th>
-                <th class="text-center py-2" title="Proyectos en progreso">
-                  Proy.
-                </th>
+                <th class="text-center py-2" title="Tareas completadas esta semana">Esta sem.</th>
+                <th class="text-center py-2" title="Tareas completadas semana pasada">Ant.</th>
+                <th class="text-center py-2" title="Tareas completadas este mes">Mes</th>
               </tr>
             </thead>
             <tbody>
               {% for item in empleados_avance %}
               <tr>
-                <!-- Ranking -->
                 <td class="px-3 text-muted fw-semibold" style="font-size:0.75rem;">
                   {% if forloop.counter == 1 and not filter_empleado %}⭐
                   {% else %}{{ forloop.counter }}{% endif %}
                 </td>
-
-                <!-- Nombre -->
                 <td class="py-2">
                   <a href="{% url 'employee_detail' item.empleado.id %}"
                      class="fw-semibold text-decoration-none text-dark d-block" style="font-size:0.82rem;">
@@ -224,57 +239,32 @@
                   <span class="{% if item.empleado.cargo == 'instalador' %}text-primary{% else %}text-secondary{% endif %}"
                         style="font-size:0.68rem;">
                     {{ item.empleado.get_cargo_display }}
+                    {% if item.proy_activos > 0 %}
+                      · <span class="text-primary">{{ item.proy_activos }} proy.</span>
+                    {% endif %}
                   </span>
                 </td>
-
-                <!-- Esta semana + tendencia -->
                 <td class="text-center py-2">
                   <span class="fw-bold {% if item.t_semana > 0 %}text-success{% else %}text-muted{% endif %}"
-                        style="font-size:0.9rem;">
-                    {{ item.t_semana }}
-                  </span>
+                        style="font-size:0.9rem;">{{ item.t_semana }}</span>
                   {% if item.tendencia == 1 %}
-                    <i class="bi bi-arrow-up-short text-success" style="font-size:0.85rem;" title="Subió vs semana pasada"></i>
+                    <i class="bi bi-arrow-up-short text-success" style="font-size:0.85rem;"></i>
                   {% elif item.tendencia == -1 %}
-                    <i class="bi bi-arrow-down-short text-danger" style="font-size:0.85rem;" title="Bajó vs semana pasada"></i>
+                    <i class="bi bi-arrow-down-short text-danger" style="font-size:0.85rem;"></i>
                   {% else %}
                     <i class="bi bi-dash text-muted" style="font-size:0.75rem;"></i>
                   {% endif %}
                 </td>
-
-                <!-- Semana anterior -->
-                <td class="text-center py-2 text-muted" style="font-size:0.82rem;">
-                  {{ item.t_sem_ant }}
-                </td>
-
-                <!-- Este mes -->
-                <td class="text-center py-2 fw-semibold" style="font-size:0.82rem;">
-                  {{ item.t_mes }}
-                </td>
-
-                <!-- Proyectos activos + barra avance -->
-                <td class="text-center py-2">
-                  <span class="badge {% if item.proy_activos > 0 %}bg-primary{% else %}bg-light text-muted border{% endif %}"
-                        style="font-size:0.68rem;">
-                    {{ item.proy_activos }}
-                  </span>
-                  {% if item.detalle_proyectos %}
-                  <div class="progress mt-1 mx-auto" style="height:4px;width:40px;border-radius:4px;">
-                    <div class="progress-bar {% if item.porcentaje >= 75 %}bg-success{% elif item.porcentaje >= 40 %}bg-primary{% else %}bg-warning{% endif %}"
-                         style="width:{{ item.porcentaje }}%"></div>
-                  </div>
-                  {% endif %}
-                </td>
+                <td class="text-center py-2 text-muted" style="font-size:0.82rem;">{{ item.t_sem_ant }}</td>
+                <td class="text-center py-2 fw-semibold" style="font-size:0.82rem;">{{ item.t_mes }}</td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
-
-        <!-- Leyenda -->
         <div class="px-3 py-2 border-top" style="font-size:0.68rem; color:#888;">
           <i class="bi bi-info-circle me-1"></i>
-          Tareas marcadas como completadas por cada empleado · barra = avance promedio en proyectos
+          Tareas del checklist marcadas como completadas por cada empleado
         </div>
 
         {% else %}

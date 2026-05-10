@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.utils import timezone
 from django.db.models import Q, F, Sum
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.template.loader import get_template
 from xhtml2pdf import pisa
 import openpyxl
@@ -63,6 +63,18 @@ def create_proveedor(request):
         messages.success(request, f'El proveedor {proveedor.nombre} fue registrado exitosamente.')
         return redirect('proveedores')
     return render(request, 'create_proveedor.html', {'form': form})
+
+
+@login_required
+def create_proveedor_ajax(request):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+    form = ProveedorForm(request.POST)
+    if form.is_valid():
+        proveedor = form.save()
+        return JsonResponse({'ok': True, 'id': proveedor.id, 'label': proveedor.nombre})
+    errors = {field: [str(e) for e in errs] for field, errs in form.errors.items()}
+    return JsonResponse({'ok': False, 'errors': errors}, status=400)
 
 
 @login_required
@@ -155,6 +167,24 @@ def create_insumo(request):
         return redirect('insumos')
     messages.error(request, 'Por favor corrija los errores del formulario.')
     return render(request, 'create_insumo.html', {'form': form})
+
+
+@login_required
+def create_insumo_ajax(request):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido'}, status=405)
+    form = InsumoForm(request.POST)
+    if form.is_valid():
+        insumo = form.save()
+        return JsonResponse({
+            'ok': True,
+            'id': insumo.id,
+            'label': insumo.nombre,
+            'unidad': insumo.unidad_medida,
+            'unidad_display': insumo.get_unidad_medida_display(),
+        })
+    errors = {field: [str(e) for e in errs] for field, errs in form.errors.items()}
+    return JsonResponse({'ok': False, 'errors': errors}, status=400)
 
 
 @login_required

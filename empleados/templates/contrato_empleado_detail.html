@@ -25,21 +25,31 @@
     <span class="badge bg-secondary fw-normal">{{ contrato.dias_laborales }} días laborales</span>
     <span class="badge bg-primary fw-normal">Bs. {{ contrato.monto_diario|floatformat:2 }}/día</span>
     <span class="badge bg-dark fw-normal">Monto acordado: Bs. {{ contrato.monto_acordado|floatformat:2 }}</span>
-    {% if contrato.activo %}
-      <span class="badge bg-success fw-normal">Activo</span>
+    {% if contrato.estado_contrato == 'vigente' %}
+      <span class="badge bg-success fw-normal">Vigente</span>
+    {% elif contrato.estado_contrato == 'vencido' %}
+      <span class="badge bg-warning text-dark fw-normal"><i class="bi bi-clock me-1"></i>Vencido — {{ contrato.fecha_fin|date:"d/m/Y" }}</span>
     {% else %}
-      <span class="badge bg-danger fw-normal">Contrato vencido</span>
+      <span class="badge bg-secondary fw-normal">Inhabilitado</span>
     {% endif %}
   </div>
 
-  {% if not contrato.activo %}
+  {% if contrato.estado_contrato == 'vencido' %}
+  <div class="alert alert-warning d-flex align-items-start gap-2 mb-4 py-2">
+    <i class="bi bi-clock-history fs-5 mt-1 flex-shrink-0"></i>
+    <div>
+      <strong>Este contrato venció el {{ contrato.fecha_fin|date:"d/m/Y" }}.</strong>
+      Las jornadas ya registradas siguen siendo válidas y pueden aprobarse.
+      Para registrar nuevas jornadas puedes extender la fecha de fin o crear un nuevo contrato.
+    </div>
+  </div>
+  {% elif contrato.estado_contrato == 'inhabilitado' %}
   <div class="alert alert-danger d-flex align-items-start gap-2 mb-4 py-2">
     <i class="bi bi-exclamation-triangle-fill fs-5 mt-1 flex-shrink-0"></i>
     <div>
-      <strong>Este contrato está vencido.</strong>
-      Las jornadas registradas bajo este contrato siguen siendo válidas y pueden aprobarse normalmente.
-      Para registrar nuevas jornadas, el empleado necesita un contrato vigente o
-      puedes crearlas manualmente desde aquí.
+      <strong>Este contrato está inhabilitado.</strong>
+      Las jornadas registradas siguen siendo válidas y pueden aprobarse normalmente.
+      Para registrar nuevas jornadas el empleado necesita un contrato vigente.
     </div>
   </div>
   {% endif %}
@@ -67,6 +77,9 @@
         <div class="card-body py-3 px-3">
           <div class="kpi-value text-info" style="font-size:1.35rem;">Bs. {{ total_pagado|floatformat:2 }}</div>
           <div class="kpi-label">Total pagado</div>
+          {% if total_por_confirmar > 0 %}
+          <div class="text-warning small mt-1" style="font-size:0.7rem;"><i class="bi bi-clock me-1"></i>+ Bs. {{ total_por_confirmar|floatformat:2 }} por confirmar</div>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -130,7 +143,11 @@
             <div class="mb-3">
               <label class="form-label">Días laborales acordados <span class="text-danger">*</span></label>
               {{ form.dias_laborales }}
-              <div class="form-text text-muted">Para contrato por día: días del período (ej: 28). Monto diario = Monto acordado ÷ días laborales.</div>
+              {% if form.dias_laborales.errors %}<div class="text-danger small mt-1">{% for err in form.dias_laborales.errors %}{{ err }}{% endfor %}</div>{% endif %}
+              <div class="form-text text-muted">
+                Se calcula automáticamente al cambiar las fechas (lunes–sábado). Puedes ajustarlo manualmente.
+                Monto diario = Monto acordado ÷ días laborales.
+              </div>
             </div>
             <div class="mb-3">
               <label class="form-label">Monto Acordado (Bs.) <span class="text-danger">*</span></label>
@@ -267,6 +284,7 @@
               <th class="px-3">Fecha</th>
               <th>Concepto</th>
               <th>Método</th>
+              <th>Estado</th>
               <th class="text-end px-3">Monto (Bs.)</th>
               {% if es_admin %}<th></th>{% endif %}
             </tr>
@@ -289,6 +307,13 @@
                 {% endif %}
               </td>
               <td><span class="badge bg-secondary fw-normal">{{ pago.get_tipo_pago_display }}</span></td>
+              <td>
+                {% if pago.estado == 'pagado' %}
+                  <span class="badge bg-success fw-normal">Pagado</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark fw-normal">Por confirmar</span>
+                {% endif %}
+              </td>
               <td class="text-end fw-semibold px-3">{{ pago.monto|floatformat:2 }}</td>
               {% if es_admin %}
               <td class="text-center">
@@ -300,7 +325,7 @@
           </tbody>
           <tfoot class="table-light fw-semibold small">
             <tr>
-              <td colspan="3" class="px-3">Total pagado</td>
+              <td colspan="4" class="px-3">Total confirmado</td>
               <td class="text-end px-3">Bs. {{ total_pagado|floatformat:2 }}</td>
               {% if es_admin %}<td></td>{% endif %}
             </tr>
@@ -332,7 +357,7 @@
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
         <form method="POST" action="{% url 'contrato_empleado_deactivate' contrato.id %}">
           {% csrf_token %}
-          <button type="submit" class="btn btn-danger">Eliminar</button>
+          <button type="submit" class="btn btn-danger">Inhabilitar</button>
         </form>
       </div>
     </div>
@@ -342,6 +367,33 @@
 
 {% block extra_js %}
 <script>
+(function () {
+  const inicio  = document.getElementById('id_fecha_inicio');
+  const fin     = document.getElementById('id_fecha_fin');
+  const diasInp = document.getElementById('id_dias_laborales');
+
+  function diasLaborables(desde, hasta) {
+    let count = 0;
+    const d   = new Date(desde + 'T00:00:00');
+    const end = new Date(hasta  + 'T00:00:00');
+    while (d <= end) {
+      if (d.getDay() !== 0) count++;
+      d.setDate(d.getDate() + 1);
+    }
+    return count;
+  }
+
+  function actualizar() {
+    if (!inicio.value || !fin.value || fin.value < inicio.value) return;
+    diasInp.value = diasLaborables(inicio.value, fin.value);
+  }
+
+  if (inicio && fin && diasInp) {
+    inicio.addEventListener('change', actualizar);
+    fin.addEventListener('change', actualizar);
+  }
+})();
+
   document.querySelectorAll('.text-danger.small.mt-1').forEach(function (errorDiv) {
     var prev = errorDiv.previousElementSibling;
     if (prev && (prev.tagName === 'INPUT' || prev.tagName === 'TEXTAREA' || prev.tagName === 'SELECT')) {

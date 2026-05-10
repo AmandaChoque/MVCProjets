@@ -67,12 +67,12 @@
     }
 
     /* ── Firmas ── */
-    .firmas-table { width: 100%; border-collapse: collapse; margin-top: 30px; }
-    .firmas-table td { width: 50%; vertical-align: bottom; padding: 0 20px; text-align: center; }
+    .firmas-table { width: 80%; border-collapse: collapse; margin-top: 30px; margin-left: auto; margin-right: auto; }
+    .firmas-table td { width: 50%; vertical-align: bottom; padding: 0 10px; text-align: center; }
     .firma-linea {
       border-top: 1.5px solid #333;
       margin-bottom: 4px;
-      margin-top: 40px;
+      margin-top: 35px;
     }
     .firma-nombre { font-weight: bold; font-size: 10px; }
     .firma-cargo  { font-size: 9px; color: #555; }
@@ -221,19 +221,20 @@
   </div>
 
   <!-- ══ FIRMAS ══ -->
-  <table class="firmas-table">
+  <table class="firmas-table" >
     <tr>
       <td>
-        <div class="firma-linea"></div>
+        <div class="firma-linea" ></div>
         <div class="firma-nombre">{{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }}</div>
-        <div class="firma-cargo">CI: {{ contrato.empleado.carnet_identidad }}</div>
-        <div class="firma-cargo">{{ contrato.empleado.get_cargo_display }}</div>
+        <div class="firma-cargo" style="margin-top:2px">CI: {{ contrato.empleado.carnet_identidad|default:"—" }}</div>
+        <div class="firma-cargo" style="margin-top:2px">{{ contrato.empleado.get_cargo_display }}</div>
         <div class="firma-cargo" style="margin-top:2px; color:#888;">EL TRABAJADOR</div>
       </td>
       <td>
         <div class="firma-linea"></div>
-        <div class="firma-nombre">Gerente General</div>
-        <div class="firma-cargo">SOBOTEC S.R.L.</div>
+        <div class="firma-nombre">{% if gerente %}{{ gerente.nombre }} {{ gerente.apellido_paterno }}{% else %}Gerente General{% endif %}</div>
+        <div class="firma-cargo" style="margin-top:2px">CI: {% if gerente %}{{ gerente.carnet_identidad|default:"—" }}{% else %}—{% endif %}</div>
+        <div class="firma-cargo" style="margin-top:2px">SOBOTEC S.R.L.</div>
         <div class="firma-cargo" style="margin-top:2px; color:#888;">POR LA EMPRESA</div>
       </td>
     </tr>

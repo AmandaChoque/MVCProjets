@@ -76,21 +76,6 @@
           <!-- COLUMNA DERECHA -->
           <div class="col-lg-6">
             <div class="mb-3">
-              <label class="form-label">Fecha de Contratación</label>
-              {{ form.fecha_contratacion }}
-            </div>
-
-            <div class="mb-3">
-              <label class="form-label">Salario (Bs.)</label>
-              {{ form.salario }}
-              {% if form.salario.errors %}
-              <div class="text-danger small mt-1">
-                {% for err in form.salario.errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
-              </div>
-              {% endif %}
-            </div>
-
-            <div class="mb-3">
               <label class="form-label">Cargo <span class="text-danger">*</span></label>
               {{ form.cargo }}
               {% if form.cargo.errors %}

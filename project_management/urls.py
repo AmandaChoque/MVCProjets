@@ -42,6 +42,7 @@ urlpatterns = [
     path('proyectos/calendario/', views.calendario_equipo, name='calendario_equipo'),
     path('proyectos/<int:id_project>/', views.project_detail, name='project_detail'),
     path('proyectos/<int:id_project>/ver/', views.project_view, name='project_view'),
+    path('proyectos/<int:id_project>/acta-entrega/', views.project_finalizacion_pdf, name='project_finalizacion_pdf'),
 path('proyectos/<int:id_project>/eliminar/', views.project_delete, name='project_delete'),
     path('proyectos/<int:id_project>/desactivar/', views.deactivate_project, name='project_deactivate'),
 
@@ -88,6 +89,7 @@ path('proyectos/<int:id_project>/eliminar/', views.project_delete, name='project
     # Clientes
     path('clientes/', views.clientes, name='clientes'),
     path('clientes/nuevo/', views.create_cliente, name='create_cliente'),
+    path('clientes/ajax/nuevo/', views.create_cliente_ajax, name='create_cliente_ajax'),
     path('clientes/<int:id_cliente>/', views.cliente_detail, name='cliente_detail'),
     path('clientes/<int:id_cliente>/ver/', views.cliente_view, name='cliente_view'),
     path('clientes/<int:id_cliente>/desactivar/', views.deactivate_cliente, name='cliente_deactivate'),
@@ -111,11 +113,13 @@ path('proyectos/<int:id_project>/eliminar/', views.project_delete, name='project
     path('', include('inventario.urls')),
 
     # Garantías post-instalación
+    path('proyectos/<int:id_project>/garantia/crear/', views.garantia_crear_manual, name='garantia_crear_manual'),
     path('garantias/', views.garantias_list, name='garantias_list'),
     path('garantias/<int:id_garantia>/', views.garantia_detail, name='garantia_detail'),
     path('garantias/<int:id_garantia>/incidencias/nueva/', views.incidencia_garantia_create, name='incidencia_garantia_create'),
     path('garantias/incidencias/<int:id_incidencia>/', views.incidencia_garantia_detail, name='incidencia_garantia_detail'),
     path('garantias/incidencias/<int:id_incidencia>/desactivar/', views.incidencia_garantia_deactivate, name='incidencia_garantia_deactivate'),
+    path('mis-reparaciones/', views.mis_reparaciones, name='mis_reparaciones'),
 
     # Pagos del cliente al proyecto
     path('pagos/', views.payment_list, name='payments'),

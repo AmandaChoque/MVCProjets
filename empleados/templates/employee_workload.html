@@ -42,7 +42,7 @@
               <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Empleado</label>
               <select name="filter_empleado" class="form-select form-select-sm">
                 <option value="">Todos los empleados</option>
-                {% for emp in empleados_pendientes %}
+                {% for emp in empleados_activos %}
                 <option value="{{ emp.id }}"
                   {% if filter_empleado|stringformat:"s" == emp.id|stringformat:"s" %}selected{% endif %}>
                   {{ emp.nombre }} {{ emp.apellido_paterno }} — {{ emp.get_cargo_display }}
@@ -125,28 +125,28 @@
                       <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
                       <ul class="dropdown-menu dropdown-menu-end shadow-sm">
                         <li>
-                          <a class="dropdown-item small" href="{% url 'jornada_detail' j.id %}">
-                            <i class="bi bi-eye me-2"></i>Ver / Editar
+                          <a class="dropdown-item" href="{% url 'jornada_detail' j.id %}">
+                            <i class="bi bi-eye me-2 text-muted"></i>Ver / Editar
                           </a>
                         </li>
-                        <li><hr class="dropdown-divider my-1"></li>
+                        <li><hr class="dropdown-divider"></li>
                         <li>
                           <form method="POST" action="{% url 'aprobar_jornada' j.id %}">
                             {% csrf_token %}
                             <input type="hidden" name="next"
                               value="{% url 'employee_workload' %}{% if filter_empleado %}?filter_empleado={{ filter_empleado }}{% endif %}">
-                            <button type="submit" class="dropdown-item small text-success">
-                              <i class="bi bi-check-lg me-2"></i>Aprobar
+                            <button type="submit" class="dropdown-item text-success">
+                              <i class="bi bi-check-lg me-2 text-muted"></i>Aprobar
                             </button>
                           </form>
                         </li>
                         <li>
-                          <button class="dropdown-item small text-danger"
+                          <button class="dropdown-item text-danger"
                                   data-bs-toggle="modal" data-bs-target="#modalRechazar"
                                   data-id="{{ j.id }}"
                                   data-nombre="{{ j.contrato.empleado.nombre }} {{ j.contrato.empleado.apellido_paterno }}"
                                   data-fecha="{{ j.fecha|date:'d/m/Y' }}">
-                            <i class="bi bi-x-lg me-2"></i>Rechazar
+                            <i class="bi bi-x-lg me-2 text-muted"></i>Rechazar
                           </button>
                         </li>
                       </ul>
@@ -175,12 +175,24 @@
         <span class="badge fw-normal" style="background:#198754; font-size:0.72rem;">Aprobada</span>
         <span class="badge bg-warning text-dark fw-normal" style="font-size:0.72rem;">Pendiente</span>
         <span class="badge bg-danger fw-normal" style="font-size:0.72rem;">Rechazada</span>
-        <!-- Toggle Mes / Semana -->
+        {% if contrato_cal %}
+        <span class="text-muted small ms-2" style="font-size:0.72rem;">
+          <span style="display:inline-block;width:10px;height:10px;background:#198754;border-radius:2px;"></span>
+          Inicio contrato {{ contrato_cal.fecha_inicio|date:"d/m/Y" }}
+        </span>
+        <span class="text-muted small" style="font-size:0.72rem;">
+          <span style="display:inline-block;width:10px;height:10px;background:#dc3545;border-radius:2px;"></span>
+          Fin {{ contrato_cal.fecha_fin|date:"d/m/Y" }}
+        </span>
+        {% endif %}
+        <!-- Toggle Mes / Semana / Año -->
         <div class="btn-group btn-group-sm ms-2">
           <a href="?cal_vista=mes&filter_empleado={{ filter_empleado }}"
              class="btn {% if cal_vista == 'mes' %}btn-dark{% else %}btn-outline-secondary{% endif %}">Mes</a>
           <a href="?cal_vista=semana&filter_empleado={{ filter_empleado }}"
              class="btn {% if cal_vista == 'semana' %}btn-dark{% else %}btn-outline-secondary{% endif %}">Semana</a>
+          <a href="?cal_vista=anio&filter_empleado={{ filter_empleado }}"
+             class="btn {% if cal_vista == 'anio' %}btn-dark{% else %}btn-outline-secondary{% endif %}">Año</a>
         </div>
       </div>
     </div>
@@ -203,7 +215,67 @@
         <div style="width:130px;"></div>
       </div>
 
-      {% if cal_vista == 'mes' %}
+      {% if cal_vista == 'anio' %}
+      <!-- ── VISTA ANUAL ── -->
+      <div class="row g-3">
+        {% for mes_data in cal_anio_meses %}
+        <div class="col-6 col-md-4 col-lg-3">
+          <div class="border rounded p-2">
+            <div class="fw-semibold text-center mb-2 small">{{ mes_data.nombre }}</div>
+            <table class="w-100" style="border-collapse:collapse;">
+              <thead>
+                <tr>
+                  {% for d in "LMXJVSD" %}
+                  <th class="text-center text-muted" style="font-size:0.6rem; padding:1px; width:14.28%;">{{ d }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for week in mes_data.weeks %}
+                <tr>
+                  {% for day in week %}
+                  <td class="text-center p-0" style="height:20px;">
+                    {% if day.num %}
+                      {% if contrato_cal and day.date and day.date < contrato_cal.fecha_inicio %}
+                        <span class="cal-a cal-a-fuera">{{ day.num }}</span>
+                      {% elif contrato_cal and day.date and day.date > contrato_cal.fecha_fin %}
+                        <span class="cal-a cal-a-fuera">{{ day.num }}</span>
+                      {% elif day.jornada %}
+                        <span class="cal-a {% if day.jornada.estado == 'aprobada' %}cal-a-aprobada{% elif day.jornada.estado == 'pendiente' %}cal-a-pendiente{% else %}cal-a-rechazada{% endif %}"
+                              title="{{ day.date|date:'d/m/Y' }} — {{ day.jornada.proyecto.nombre }}">{{ day.num }}</span>
+                      {% elif day.tareas %}
+                        <span class="cal-a cal-a-tareas" title="{{ day.date|date:'d/m/Y' }} — {{ day.tareas|length }} tarea(s)">{{ day.num }}</span>
+                      {% elif contrato_cal and day.date and day.date == contrato_cal.fecha_inicio %}
+                        <span class="cal-a cal-a-contrato" title="Inicio contrato">{{ day.num }}</span>
+                      {% elif contrato_cal and day.date and day.date == contrato_cal.fecha_fin %}
+                        <span class="cal-a cal-a-contrato" title="Fin contrato">{{ day.num }}</span>
+                      {% elif day.is_today %}
+                        <span class="cal-a cal-a-hoy">{{ day.num }}</span>
+                      {% else %}
+                        <span class="cal-a cal-a-normal">{{ day.num }}</span>
+                      {% endif %}
+                    {% endif %}
+                  </td>
+                  {% endfor %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      <!-- Leyenda anual -->
+      <div class="d-flex flex-wrap gap-3 mt-3 small text-muted">
+        <span><span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background:#198754;vertical-align:middle;"></span>Aprobada</span>
+        <span><span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background:#ffc107;vertical-align:middle;"></span>Pendiente</span>
+        <span><span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background:#dc3545;vertical-align:middle;"></span>Rechazada</span>
+        <span><span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background:#0dcaf0;vertical-align:middle;"></span>Solo tareas</span>
+        <span><span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background:#6f42c1;vertical-align:middle;"></span>Inicio/Fin contrato</span>
+        <span><span class="d-inline-block me-1" style="width:12px;height:12px;background:#f8f9fa;border:1px solid #dee2e6;vertical-align:middle;"></span>Fuera de contrato</span>
+      </div>
+
+      {% elif cal_vista == 'mes' %}
       <!-- ── VISTA MENSUAL ── -->
       <div class="table-responsive">
         <table class="table table-bordered mb-0" style="table-layout:fixed;">
@@ -218,11 +290,20 @@
             {% for week in cal_weeks %}
             <tr>
               {% for day in week %}
-              <td class="p-1 align-top cal-day{% if not day.num %} cal-empty{% elif day.is_today %} cal-today{% endif %}"
+              <td class="p-1 align-top cal-day{% if not day.num %} cal-empty{% elif day.is_today %} cal-today{% elif contrato_cal and day.date %}{% if day.date < contrato_cal.fecha_inicio or day.date > contrato_cal.fecha_fin %} cal-fuera-contrato{% elif day.date == contrato_cal.fecha_inicio and day.date == contrato_cal.fecha_fin %} cal-contrato-inicio cal-contrato-fin{% elif day.date == contrato_cal.fecha_inicio %} cal-contrato-inicio{% elif day.date == contrato_cal.fecha_fin %} cal-contrato-fin{% endif %}{% endif %}"
                   style="height:72px;">
                 {% if day.num %}
-                  <div class="text-end mb-1" style="font-size:0.78rem;">
-                    <span class="{% if day.is_today %}fw-bold text-primary{% else %}text-muted{% endif %}">{{ day.num }}</span>
+                  <div class="d-flex justify-content-between align-items-start mb-1">
+                    {% if contrato_cal and day.date == contrato_cal.fecha_inicio and day.date == contrato_cal.fecha_fin %}
+                      <span style="font-size:0.58rem; background:#6f42c1; color:#fff; border-radius:3px; padding:0 3px; line-height:1.4;">Inicio/Fin</span>
+                    {% elif contrato_cal and day.date == contrato_cal.fecha_inicio %}
+                      <span style="font-size:0.58rem; background:#198754; color:#fff; border-radius:3px; padding:0 3px; line-height:1.4;">Inicio</span>
+                    {% elif contrato_cal and day.date == contrato_cal.fecha_fin %}
+                      <span style="font-size:0.58rem; background:#dc3545; color:#fff; border-radius:3px; padding:0 3px; line-height:1.4;">Fin</span>
+                    {% else %}
+                      <span></span>
+                    {% endif %}
+                    <span class="{% if day.is_today %}fw-bold text-primary{% else %}text-muted{% endif %}" style="font-size:0.78rem;">{{ day.num }}</span>
                   </div>
                   {% if day.jornada %}
                     {% with j=day.jornada %}
@@ -243,6 +324,13 @@
                     </a>
                     {% endwith %}
                   {% endif %}
+                  {% if day.tareas %}
+                  <div class="mt-1 text-center" title="{% for t in day.tareas %}{{ t.descripcion }} ({{ t.sede.proyecto.nombre }})&#10;{% endfor %}">
+                    <span class="badge bg-light text-dark border" style="font-size:0.62rem; cursor:default;">
+                      <i class="bi bi-check2-square"></i> {{ day.tareas|length }}
+                    </span>
+                  </div>
+                  {% endif %}
                 {% endif %}
               </td>
               {% endfor %}
@@ -262,10 +350,18 @@
           {% endif %}
           <div class="border rounded p-2 h-100 cal-semana-day
                {% if day.is_today %}cal-semana-hoy{% endif %}
-               {% if day.jornada %}cal-semana-clickable{% endif %}">
+               {% if day.jornada %}cal-semana-clickable{% endif %}
+               {% if contrato_cal %}{% if day.date < contrato_cal.fecha_inicio or day.date > contrato_cal.fecha_fin %}cal-fuera-contrato{% elif day.date == contrato_cal.fecha_inicio and day.date == contrato_cal.fecha_fin %}cal-contrato-inicio cal-contrato-fin{% elif day.date == contrato_cal.fecha_inicio %}cal-contrato-inicio{% elif day.date == contrato_cal.fecha_fin %}cal-contrato-fin{% endif %}{% endif %}">
             <div class="text-center mb-2">
               <div class="small text-muted text-uppercase fw-semibold" style="font-size:0.7rem;">{{ day.dia_nombre }}</div>
               <div class="fw-bold {% if day.is_today %}text-primary{% endif %}" style="font-size:1.2rem;">{{ day.num }}</div>
+              {% if contrato_cal and day.date == contrato_cal.fecha_inicio and day.date == contrato_cal.fecha_fin %}
+                <span style="font-size:0.62rem; background:#6f42c1; color:#fff; border-radius:3px; padding:0 4px;">Inicio/Fin contrato</span>
+              {% elif contrato_cal and day.date == contrato_cal.fecha_inicio %}
+                <span style="font-size:0.62rem; background:#198754; color:#fff; border-radius:3px; padding:0 4px;">Inicio contrato</span>
+              {% elif contrato_cal and day.date == contrato_cal.fecha_fin %}
+                <span style="font-size:0.62rem; background:#dc3545; color:#fff; border-radius:3px; padding:0 4px;">Fin contrato</span>
+              {% endif %}
             </div>
             {% if day.jornada %}
               {% with j=day.jornada %}
@@ -293,6 +389,18 @@
               {% endwith %}
             {% else %}
               <div class="text-center text-muted" style="font-size:0.72rem; margin-top:0.5rem;">—</div>
+            {% endif %}
+            {% if day.tareas %}
+            <div class="mt-2 border-top pt-2">
+              <div class="text-muted mb-1" style="font-size:0.65rem; text-transform:uppercase; font-weight:600;">
+                <i class="bi bi-check2-square me-1"></i>Tareas ({{ day.tareas|length }})
+              </div>
+              {% for t in day.tareas %}
+              <div class="text-truncate" style="font-size:0.68rem;" title="{{ t.descripcion }} — {{ t.sede.proyecto.nombre }}">
+                <i class="bi bi-check-circle-fill text-success me-1" style="font-size:0.6rem;"></i>{{ t.descripcion }}
+              </div>
+              {% endfor %}
+            </div>
             {% endif %}
           </div>
           {% if day.jornada %}</a>{% endif %}
@@ -348,9 +456,23 @@
 
 {% block extra_css %}
 <style>
-  .cal-empty  { background: #f8f9fa; }
-  .cal-today  { background: #eef2ff; }
-  .cal-semana-day       { background: #fff; transition: box-shadow .15s; min-height: 130px; }
+  .cal-empty           { background: #f8f9fa; }
+  .cal-today           { background: #eef2ff; }
+  .cal-fuera-contrato  { background: #f8f9fa; opacity: .55; }
+  .cal-contrato-inicio           { border-top: 3px solid #198754 !important; }
+  .cal-contrato-fin              { border-top: 3px solid #dc3545 !important; }
+  .cal-contrato-inicio.cal-contrato-fin { border-top: 3px solid #6f42c1 !important; }
+  /* celdas año */
+  .cal-a { display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;font-size:0.58rem;border-radius:50%; }
+  .cal-a-aprobada  { color:#fff; background:#198754; }
+  .cal-a-pendiente { color:#000; background:#ffc107; }
+  .cal-a-rechazada { color:#fff; background:#dc3545; }
+  .cal-a-tareas    { color:#fff; background:#0dcaf0; }
+  .cal-a-contrato  { color:#fff; background:#6f42c1; }
+  .cal-a-hoy       { color:#0d6efd; font-weight:700; border:1px solid #0d6efd; }
+  .cal-a-fuera     { color:#adb5bd; background:#f8f9fa; border-radius:50%; }
+  .cal-a-normal    { color:#495057; }
+  .cal-semana-day       { background: #fff; transition: box-shadow .15s; min-height: 150px; }
   .cal-semana-hoy       { background: #eef2ff; border-color: #6ea8fe !important; }
   .cal-semana-clickable { cursor: pointer; }
   .cal-semana-clickable:hover { box-shadow: 0 2px 8px rgba(0,0,0,.12); }

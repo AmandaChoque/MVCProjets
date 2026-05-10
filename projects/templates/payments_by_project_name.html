@@ -161,9 +161,7 @@
             </td>
             <td class="text-muted">
               {% if payment.proyecto.tipo_proyecto == 'instalacion_nueva' %}Instalación
-              {% elif payment.proyecto.tipo_proyecto == 'ampliacion' %}Ampliación
-              {% elif payment.proyecto.tipo_proyecto == 'mantenimiento_externo' %}Mant. Externo
-              {% else %}Emergencia{% endif %}
+              {% else %}Mant. Externo{% endif %}
             </td>
             <td>
               {% if payment.proyecto.estado_proyecto == 'completado' %}

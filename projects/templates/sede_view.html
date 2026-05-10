@@ -375,7 +375,7 @@
 </main>
 
 <!-- Modal participantes de tarea -->
-<div class="modal fade" id="modalParticipantes" tabindex="-1" aria-labelledby="modalParticipantesLabel" aria-hidden="true" data-bs-backdrop="static">
+<div class="modal fade" id="modalParticipantes" tabindex="-1" aria-labelledby="modalParticipantesLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header py-2">
@@ -563,14 +563,24 @@ function mostrarAlertaSinContrato(nombres) {
   document.body.appendChild(div);
 }
 
+let _guardandoParticipantes = false;
 if (modalEl) {
   document.getElementById('btn-guardar-participantes').addEventListener('click', () => {
     const ids = [...document.querySelectorAll('#participantes-checkboxes input:checked')].map(i => parseInt(i.value));
     if (!ids.includes(_modalUsuarioId)) ids.push(_modalUsuarioId);
+    _guardandoParticipantes = true;
     guardarParticipantes(ids);
   });
   document.getElementById('btn-solo-yo').addEventListener('click', () => {
+    _guardandoParticipantes = true;
     guardarParticipantes([_modalUsuarioId]);
+  });
+  // Fallback: si el modal se cierra sin haber guardado, crear jornada solo para el usuario actual
+  modalEl.addEventListener('hide.bs.modal', () => {
+    if (!_guardandoParticipantes && _modalTareaId && _modalUsuarioId) {
+      guardarParticipantes([_modalUsuarioId]);
+    }
+    _guardandoParticipantes = false;
   });
 }
 

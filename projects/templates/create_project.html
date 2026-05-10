@@ -66,7 +66,12 @@
             </div>
             <div class="mb-3">
               <label class="form-label" for="{{ form.cliente.id_for_label }}">Cliente / Contratante <span class="text-danger">*</span></label>
-              {{ form.cliente }}
+              <div class="input-group">
+                {{ form.cliente }}
+                <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalNuevoCliente" title="Crear nuevo cliente">
+                  <i class="bi bi-person-plus"></i>
+                </button>
+              </div>
               {% if form.cliente.errors %}
               <div class="text-danger small mt-1">{% for err in form.cliente.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
@@ -92,7 +97,6 @@
     <div class="card border-0 shadow-sm rounded-3 mb-4" id="card-contrato">
       <div class="card-header bg-light d-flex justify-content-between align-items-center">
         <h6 class="mb-0 fw-semibold" id="contrato-titulo">Contrato del Proyecto <span class="text-danger" id="contrato-asterisco">*</span></h6>
-        <span class="badge bg-warning text-dark d-none" id="badge-emergencia">Opcional para emergencias — se puede agregar después</span>
       </div>
 
       <div class="card-body p-4" id="contrato-body">
@@ -201,32 +205,18 @@
   var fechaFin     = document.getElementById('{{ contrato_form.fecha_fin.id_for_label }}');
   var garantiaMes  = document.getElementById('{{ contrato_form.garantia_meses.id_for_label }}');
   var garantiaWarn = document.getElementById('garantia-warning');
-  var contratoBadge  = document.getElementById('badge-emergencia');
-  var contratoAster  = document.getElementById('contrato-asterisco');
-  var contratoReqs   = document.querySelectorAll('.contrato-req');
-
-  /* Tipos que normalmente NO llevan garantía */
-  var SIN_GARANTIA = ['mantenimiento_externo', 'emergencia'];
-  /* Tipos que normalmente SÍ llevan garantía (sugerimos 12 meses) */
-  var CON_GARANTIA = ['instalacion_nueva', 'ampliacion'];
 
   function actualizarSegunTipo() {
     var tipo = tipoProy.value;
-    var esEmergencia = tipo === 'emergencia';
-
-    /* --- Sección contrato: opcional para emergencia --- */
-    contratoBadge.classList.toggle('d-none', !esEmergencia);
-    contratoAster.classList.toggle('d-none', esEmergencia);
-    contratoReqs.forEach(function (el) { el.classList.toggle('d-none', esEmergencia); });
 
     /* --- Sugerir garantia_meses según tipo --- */
-    if (CON_GARANTIA.indexOf(tipo) !== -1 && (garantiaMes.value === '' || garantiaMes.value === '0')) {
+    if (tipo === 'instalacion_nueva' && (garantiaMes.value === '' || garantiaMes.value === '0')) {
       garantiaMes.value = '12';
-    } else if (SIN_GARANTIA.indexOf(tipo) !== -1 && garantiaMes.value === '12') {
+    } else if (tipo === 'mantenimiento_externo' && garantiaMes.value === '12') {
       garantiaMes.value = '0';
     }
 
-    /* --- Warning de garantía para tipos sin garantía --- */
+    /* --- Warning de garantía para mantenimiento externo --- */
     actualizarWarningGarantia();
 
     /* --- Sugerir fecha_fin = fecha_inicio + 1 año para mantenimiento externo --- */
@@ -240,7 +230,7 @@
   function actualizarWarningGarantia() {
     var tipo = tipoProy.value;
     var meses = parseInt(garantiaMes.value, 10) || 0;
-    var mostrar = SIN_GARANTIA.indexOf(tipo) !== -1 && meses > 0;
+    var mostrar = tipo === 'mantenimiento_externo' && meses > 0;
     garantiaWarn.classList.toggle('d-none', !mostrar);
   }
 
@@ -277,5 +267,168 @@
     });
   });
 })();
+
+// ── Modal Nuevo Cliente (AJAX) ────────────────────────────────────────────────
+(function () {
+  const CSRF   = document.querySelector('[name=csrfmiddlewaretoken]').value;
+  const form   = document.getElementById('formNuevoCliente');
+  const btnOk  = document.getElementById('btnGuardarCliente');
+  const errBox = document.getElementById('clienteAjaxErrors');
+  const selectCliente = document.getElementById('{{ form.cliente.id_for_label }}');
+  const entidadRow    = document.getElementById('rowNombreEntidad');
+  const tipoSelect    = document.getElementById('mc_tipo_contratante');
+  const rolSelect     = document.getElementById('mc_rol_contacto');
+
+  const MC_ROLES_POR_TIPO = {
+    'personal':        ['propietario', 'encargado'],
+    'entidad_publica': ['gerente', 'representante'],
+  };
+
+  function toggleEntidad() {
+    const tipo = tipoSelect.value;
+    const permitidos = MC_ROLES_POR_TIPO[tipo] || [];
+
+    Array.from(rolSelect.options).forEach(opt => {
+      if (!opt.value) return;
+      opt.hidden   = !permitidos.includes(opt.value);
+      opt.disabled = !permitidos.includes(opt.value);
+    });
+    if (permitidos.length && !permitidos.includes(rolSelect.value)) {
+      rolSelect.value = '';
+    }
+
+    entidadRow.classList.toggle('d-none', tipo !== 'entidad_publica');
+  }
+  tipoSelect.addEventListener('change', toggleEntidad);
+  toggleEntidad();
+
+  // Limpiar modal al cerrar
+  document.getElementById('modalNuevoCliente').addEventListener('hidden.bs.modal', function () {
+    form.reset();
+    errBox.classList.add('d-none');
+    errBox.innerHTML = '';
+    entidadRow.classList.add('d-none');
+    btnOk.disabled = false;
+    btnOk.innerHTML = 'Guardar cliente';
+  });
+
+  btnOk.addEventListener('click', function () {
+    errBox.classList.add('d-none');
+    errBox.innerHTML = '';
+    btnOk.disabled = true;
+    btnOk.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Guardando…';
+
+    const data = new FormData(form);
+    fetch('{% url "create_cliente_ajax" %}', {
+      method: 'POST',
+      headers: {'X-CSRFToken': CSRF},
+      body: data,
+    })
+    .then(r => r.json())
+    .then(res => {
+      if (res.ok) {
+        // Agregar opción al select y seleccionarla
+        const opt = new Option(res.label, res.id, true, true);
+        selectCliente.add(opt);
+        selectCliente.value = res.id;
+        // Cerrar modal
+        bootstrap.Modal.getInstance(document.getElementById('modalNuevoCliente')).hide();
+      } else {
+        // Mostrar errores
+        const msgs = Object.values(res.errors || {}).flat();
+        errBox.innerHTML = msgs.map(m => `<div>${m}</div>`).join('');
+        errBox.classList.remove('d-none');
+        btnOk.disabled = false;
+        btnOk.innerHTML = 'Guardar cliente';
+      }
+    })
+    .catch(() => {
+      errBox.innerHTML = '<div>Error de conexión. Intente de nuevo.</div>';
+      errBox.classList.remove('d-none');
+      btnOk.disabled = false;
+      btnOk.innerHTML = 'Guardar cliente';
+    });
+  });
+})();
 </script>
+
+<!-- ── Modal: Nuevo Cliente Rápido ─────────────────────────────────────────── -->
+<div class="modal fade" id="modalNuevoCliente" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+
+      <div class="modal-header py-2">
+        <h6 class="modal-title fw-semibold"><i class="bi bi-person-plus me-2"></i>Nuevo cliente / contratante</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div id="clienteAjaxErrors" class="alert alert-danger small py-2 d-none"></div>
+
+        <form id="formNuevoCliente" novalidate>
+          <div class="row g-3">
+
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Nombres <span class="text-danger">*</span></label>
+              <input type="text" name="nombre" class="form-control form-control-sm" placeholder="Nombres" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Apellido Paterno <span class="text-danger">*</span></label>
+              <input type="text" name="apellido_paterno" class="form-control form-control-sm" placeholder="Apellido paterno" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Apellido Materno</label>
+              <input type="text" name="apellido_materno" class="form-control form-control-sm" placeholder="Apellido materno">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">NIT / CI</label>
+              <input type="text" name="nit_ci" class="form-control form-control-sm" placeholder="Solo números" inputmode="numeric">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Tipo de contratante <span class="text-danger">*</span></label>
+              <select name="tipo_contratante" id="mc_tipo_contratante" class="form-select form-select-sm" required>
+                <option value="">Seleccionar…</option>
+                <option value="personal">Personal / Negocio</option>
+                <option value="entidad_publica">Entidad Pública</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Rol de contacto <span class="text-danger">*</span></label>
+              <select name="rol_contacto" id="mc_rol_contacto" class="form-select form-select-sm" required>
+                <option value="">Seleccionar…</option>
+                <option value="propietario">Propietario</option>
+                <option value="encargado">Encargado</option>
+                <option value="gerente" hidden disabled>Gerente</option>
+                <option value="representante" hidden disabled>Representante</option>
+              </select>
+            </div>
+            <div class="col-md-6 d-none" id="rowNombreEntidad">
+              <label class="form-label form-label-sm">Nombre de la entidad</label>
+              <input type="text" name="nombre_entidad" class="form-control form-control-sm" placeholder="Nombre de la institución">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Teléfono <span class="text-danger">*</span></label>
+              <input type="text" name="telefono" class="form-control form-control-sm" placeholder="Solo números" inputmode="numeric" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Correo</label>
+              <input type="email" name="correo" class="form-control form-control-sm" placeholder="ejemplo@correo.com">
+            </div>
+            <div class="col-12">
+              <label class="form-label form-label-sm">Dirección <span class="text-danger">*</span></label>
+              <textarea name="direccion" class="form-control form-control-sm" rows="2" placeholder="Dirección del cliente" required></textarea>
+            </div>
+
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btnGuardarCliente">Guardar cliente</button>
+      </div>
+
+    </div>
+  </div>
+</div>
 {% endblock %}

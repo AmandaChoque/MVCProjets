@@ -59,9 +59,10 @@
           <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Estado</label>
           <select class="form-select form-select-sm" name="filter_estado">
             <option value="">Todos</option>
-            <option value="pendiente" {% if filter_estado == "pendiente" %}selected{% endif %}>Pendiente</option>
+            <option value="pendiente"   {% if filter_estado == "pendiente"   %}selected{% endif %}>Pendiente</option>
             <option value="en_progreso" {% if filter_estado == "en_progreso" %}selected{% endif %}>En Progreso</option>
-            <option value="completado" {% if filter_estado == "completado" %}selected{% endif %}>Completado</option>
+            <option value="completado"  {% if filter_estado == "completado"  %}selected{% endif %}>Completado</option>
+            <option value="cancelado"   {% if filter_estado == "cancelado"   %}selected{% endif %}>Cancelado</option>
           </select>
         </div>
 
@@ -70,9 +71,7 @@
           <select class="form-select form-select-sm" name="filter_tipo">
             <option value="">Todos</option>
             <option value="instalacion_nueva"      {% if filter_tipo == "instalacion_nueva" %}selected{% endif %}>Instalación Nueva</option>
-            <option value="ampliacion"             {% if filter_tipo == "ampliacion" %}selected{% endif %}>Ampliación</option>
             <option value="mantenimiento_externo"  {% if filter_tipo == "mantenimiento_externo" %}selected{% endif %}>Mant. Externo</option>
-            <option value="emergencia"             {% if filter_tipo == "emergencia" %}selected{% endif %}>Emergencia</option>
           </select>
         </div>
 
@@ -173,6 +172,8 @@
               <span class="badge bg-success small">Completado</span>
             {% elif project.estado_proyecto == 'en_progreso' %}
               <span class="badge bg-primary small">En Progreso</span>
+            {% elif project.estado_proyecto == 'cancelado' %}
+              <span class="badge bg-secondary small">Cancelado</span>
             {% else %}
               <span class="badge bg-warning text-dark small">Pendiente</span>
             {% endif %}

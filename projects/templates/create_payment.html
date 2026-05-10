@@ -170,6 +170,7 @@
   const inputDescuento  = document.getElementById('id_descuento');
   const inputMonto      = document.querySelector('[name="monto"]');
   const montoNetoBox    = document.getElementById('monto-neto-preview');
+  let currentSaldoBase  = 0;
 
   function updateMontoNeto() {
     const monto     = parseFloat(inputMonto ? inputMonto.value : 0) || 0;
@@ -180,12 +181,19 @@
     } else {
       montoNetoBox.style.display = 'none';
     }
+    const cubierto   = (currentSaldoBase > 0 ? proyectosData[selectProyecto.value]?.cubierto || 0 : 0);
+    const saldoNuevo = currentSaldoBase - monto - descuento;
+    document.getElementById('info-cubierto').textContent = (cubierto + monto + descuento).toFixed(2);
+    document.getElementById('info-saldo').textContent = saldoNuevo.toFixed(2);
+    const saldoWrap = document.getElementById('info-saldo-wrap');
+    saldoWrap.className = 'fw-bold ' + (saldoNuevo > 0 ? 'text-danger' : 'text-success');
   }
 
   function updateProyectoInfo() {
     const val = selectProyecto.value;
     if (val && proyectosData[val]) {
       const d = proyectosData[val];
+      currentSaldoBase = d.saldo;
       document.getElementById('info-total-label').textContent = d.tiene_contrato
         ? 'Monto acordado (contrato):'
         : 'Monto total proyecto:';

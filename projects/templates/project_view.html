@@ -46,6 +46,8 @@
           <span class="badge bg-success">Completado</span>
         {% elif project.estado_proyecto == 'en_progreso' %}
           <span class="badge bg-primary">En Progreso</span>
+        {% elif project.estado_proyecto == 'cancelado' %}
+          <span class="badge bg-secondary">Cancelado</span>
         {% else %}
           <span class="badge bg-warning text-dark">Pendiente</span>
         {% endif %}
@@ -204,18 +206,6 @@
         </div>
         <div class="card-body">
           {% if contrato_proyecto %}
-          {% with cp_estado=contrato_proyecto.estado_multa cp_dias=contrato_proyecto.dias_retraso cp_pct=contrato_proyecto.porcentaje_multa_sobre_contrato cp_multa=contrato_proyecto.multa_acumulada %}
-          {% if cp_estado != 'normal' %}
-          <div class="alert {% if cp_estado == 'critico' %}alert-danger{% else %}alert-warning{% endif %} py-2 px-3 mb-3 small d-flex align-items-center gap-2">
-            <i class="bi {% if cp_estado == 'critico' %}bi-exclamation-octagon-fill{% else %}bi-clock-history{% endif %}"></i>
-            <span>
-              <strong>{{ cp_dias }} día{{ cp_dias|pluralize:"s" }} de retraso</strong> —
-              Multa acumulada: Bs. {{ cp_multa|floatformat:2 }} ({{ cp_pct|floatformat:2 }}% del contrato)
-              {% if cp_estado == 'critico' %}<strong class="text-danger"> — umbral 20% superado</strong>{% endif %}
-            </span>
-          </div>
-          {% endif %}
-          {% endwith %}
           <div class="row g-3">
             <div class="col-md-6">
               <div class="info-row"><span class="info-label">Fecha de Firma:</span><span>{{ contrato_proyecto.fecha_firma|date:"d/m/Y" }}</span></div>
@@ -432,6 +422,21 @@
         </div>
       </div>
 
+      <!-- Puntos de instalación (Planificación: definir dónde se trabaja) -->
+      <div class="card border-0 shadow-sm rounded-3 mb-4">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+          <h6 class="mb-0 fw-semibold"><i class="bi bi-map me-2"></i>Puntos de instalación</h6>
+          {% if es_admin %}
+          <a href="{% url 'sede_create' project.id %}" class="btn btn-sm btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Nueva sede
+          </a>
+          {% endif %}
+        </div>
+        <div class="card-body p-2">
+          <div id="map-project"></div>
+        </div>
+      </div>
+
       <!-- Insumos del Proyecto -->
       <div class="card border-0 shadow-sm rounded-3">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
@@ -502,22 +507,6 @@
     <!-- ── FASE 3: EJECUCIÓN ──────────────────────────────────────────── -->
     <div class="tab-pane fade" id="tab-ejecucion">
 
-      {% with sedes_con_coords=sedes %}
-      <div class="card border-0 shadow-sm rounded-3 mb-4">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
-          <h6 class="mb-0 fw-semibold"><i class="bi bi-map me-2"></i>Puntos de instalación</h6>
-          {% if es_admin %}
-          <a href="{% url 'sede_create' project.id %}" class="btn btn-sm btn-primary">
-            <i class="bi bi-plus-lg me-1"></i>Nueva sede
-          </a>
-          {% endif %}
-        </div>
-        <div class="card-body p-2">
-          <div id="map-project"></div>
-        </div>
-      </div>
-      {% endwith %}
-
       {% if sedes %}
       <div class="row g-3">
         {% for sede in sedes %}
@@ -579,7 +568,8 @@
       {% else %}
       <div class="text-center text-muted py-4">
         <i class="bi bi-geo-alt icon-lg"></i>
-        <p class="mt-2 mb-0">Sin sedes registradas.</p>
+        <p class="mt-2 mb-1">Sin sedes en ejecución.</p>
+        <small>Para agregar puntos de instalación, ve a la pestaña <strong>Planificación</strong>.</small>
       </div>
       {% endif %}
     </div>
@@ -640,6 +630,16 @@
       <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-header bg-light"><h6 class="mb-0 fw-semibold">Análisis de Rentabilidad</h6></div>
         <div class="card-body">
+          {% if estado_multa_contrato != 'normal' %}
+          <div class="alert {% if estado_multa_contrato == 'critico' %}alert-danger{% else %}alert-warning{% endif %} py-2 px-3 mb-3 small d-flex align-items-center gap-2">
+            <i class="bi {% if estado_multa_contrato == 'critico' %}bi-exclamation-octagon-fill{% else %}bi-clock-history{% endif %}"></i>
+            <span>
+              <strong>{{ dias_retraso_contrato }} día{{ dias_retraso_contrato|pluralize:"s" }} de retraso</strong> —
+              Multa acumulada: <strong>Bs. {{ multa_contrato|floatformat:2 }}</strong> que se descuenta de la rentabilidad.
+              {% if estado_multa_contrato == 'critico' %}<strong class="text-danger"> — tope máximo alcanzado.</strong>{% endif %}
+            </span>
+          </div>
+          {% endif %}
           <div class="row g-3">
             <div class="col-md-7">
               <table class="table table-sm mb-0">
@@ -663,29 +663,50 @@
                   </tr>
                   {% endif %}
                   <tr class="border-top">
-                    <td class="fw-bold ps-0">Rentabilidad neta</td>
-                    <td class="text-end fw-bold {% if rentabilidad >= 0 %}text-success{% else %}text-danger{% endif %}">
+                    <td class="{% if multa_contrato %}text-muted{% else %}fw-bold{% endif %} ps-0">
+                      {% if multa_contrato %}Rent. bruta{% else %}Rentabilidad neta{% endif %}
+                    </td>
+                    <td class="text-end {% if multa_contrato %}text-muted{% else %}fw-bold {% if rentabilidad >= 0 %}text-success{% else %}text-danger{% endif %}{% endif %}">
                       Bs. {{ rentabilidad|floatformat:2 }}
                     </td>
                   </tr>
+                  {% if multa_contrato %}
+                  <tr>
+                    <td class="text-muted ps-0">
+                      <i class="bi bi-dash-circle text-danger me-1"></i>
+                      Multa por retraso
+                      <span class="badge {% if estado_multa_contrato == 'critico' %}bg-danger{% else %}bg-warning text-dark{% endif %} ms-1" style="font-size:.65rem;">{{ dias_retraso_contrato }}d</span>
+                    </td>
+                    <td class="text-end text-danger">Bs. {{ multa_contrato|floatformat:2 }}</td>
+                  </tr>
+                  <tr class="border-top">
+                    <td class="fw-bold ps-0">Rentabilidad neta</td>
+                    <td class="text-end fw-bold {% if rentabilidad_neta >= 0 %}text-success{% else %}text-danger{% endif %}">
+                      Bs. {{ rentabilidad_neta|floatformat:2 }}
+                    </td>
+                  </tr>
+                  {% endif %}
                 </tbody>
               </table>
             </div>
             <div class="col-md-5 d-flex flex-column align-items-center justify-content-center">
-              <span class="d-block fw-semibold text-muted small text-center">Margen de ganancia</span>
-              <span class="display-6 fw-bold {% if margen >= 30 %}text-success{% elif margen >= 10 %}text-warning{% else %}text-danger{% endif %}">
-                {{ margen }}%
+              <span class="d-block fw-semibold text-muted small text-center">Margen neto</span>
+              <span class="display-6 fw-bold {% if margen_neto >= 30 %}text-success{% elif margen_neto >= 10 %}text-warning{% else %}text-danger{% endif %}">
+                {{ margen_neto }}%
               </span>
               <div class="progress w-100 mt-2 progress-md">
-                <div class="progress-bar {% if margen >= 30 %}bg-success{% elif margen >= 10 %}bg-warning{% else %}bg-danger{% endif %}"
-                     style="width:{{ margen_clamped }}%"></div>
+                <div class="progress-bar {% if margen_neto >= 30 %}bg-success{% elif margen_neto >= 10 %}bg-warning{% else %}bg-danger{% endif %}"
+                     style="width:{{ margen_neto_clamped }}%"></div>
               </div>
               <small class="text-muted mt-2">
-                {% if margen >= 30 %}<i class="bi bi-check-circle-fill text-success me-1"></i>Rentabilidad saludable
-                {% elif margen >= 10 %}<i class="bi bi-exclamation-circle-fill text-warning me-1"></i>Margen ajustado
-                {% elif margen >= 0 %}<i class="bi bi-x-circle-fill text-danger me-1"></i>Margen muy bajo
+                {% if margen_neto >= 30 %}<i class="bi bi-check-circle-fill text-success me-1"></i>Rentabilidad saludable
+                {% elif margen_neto >= 10 %}<i class="bi bi-exclamation-circle-fill text-warning me-1"></i>Margen ajustado
+                {% elif margen_neto >= 0 %}<i class="bi bi-x-circle-fill text-danger me-1"></i>Margen muy bajo
                 {% else %}<i class="bi bi-x-circle-fill text-danger me-1"></i>Proyecto en pérdida{% endif %}
               </small>
+              {% if multa_contrato %}
+              <small class="text-muted fst-italic mt-1">Margen bruto: {{ margen }}%</small>
+              {% endif %}
               {% if ingresos == 0 %}<small class="text-muted fst-italic mt-1">Sin monto definido aún.</small>{% endif %}
             </div>
           </div>
@@ -707,6 +728,7 @@
                   <th scope="col" class="text-end">Monto (Bs.)</th>
                   <th scope="col" class="text-end">Descuento (Bs.)</th>
                   <th scope="col" class="text-end">Total cubierto (Bs.)</th>
+                  <th scope="col">Estado</th>
                   <th scope="col">Método</th>
                   <th scope="col">Referencia</th>
                   <th scope="col" class="px-3"></th>
@@ -720,7 +742,16 @@
                   <td class="text-end {% if pago.descuento %}text-warning{% else %}text-muted{% endif %}">
                     {% if pago.descuento %}{{ pago.descuento|floatformat:2 }}{% else %}—{% endif %}
                   </td>
-                  <td class="text-end fw-semibold text-success">{{ pago.monto_neto|floatformat:2 }}</td>
+                  <td class="text-end fw-semibold {% if pago.estado == 'pagado' %}text-success{% else %}text-warning{% endif %}">
+                    {{ pago.monto_neto|floatformat:2 }}
+                  </td>
+                  <td>
+                    {% if pago.estado == 'pagado' %}
+                      <span class="badge bg-success">Pagado</span>
+                    {% else %}
+                      <span class="badge bg-warning text-dark">Pendiente</span>
+                    {% endif %}
+                  </td>
                   <td>
                     {% if pago.tipo_pago == 'efectivo' %}
                       <span class="badge bg-success">Efectivo</span>
@@ -774,13 +805,15 @@
                 <tr>
                   <td class="px-3 text-muted">{{ h.fecha|date:"d/m/Y H:i" }}</td>
                   <td>
-                    {% if h.estado_anterior == 'pendiente' %}<span class="badge bg-secondary">Pendiente</span>
+                    {% if h.estado_anterior == 'pendiente' %}<span class="badge bg-warning text-dark">Pendiente</span>
                     {% elif h.estado_anterior == 'en_progreso' %}<span class="badge bg-primary">En Progreso</span>
+                    {% elif h.estado_anterior == 'cancelado' %}<span class="badge bg-secondary">Cancelado</span>
                     {% else %}<span class="badge bg-success">Completado</span>{% endif %}
                   </td>
                   <td>
-                    {% if h.estado_nuevo == 'pendiente' %}<span class="badge bg-secondary">Pendiente</span>
+                    {% if h.estado_nuevo == 'pendiente' %}<span class="badge bg-warning text-dark">Pendiente</span>
                     {% elif h.estado_nuevo == 'en_progreso' %}<span class="badge bg-primary">En Progreso</span>
+                    {% elif h.estado_nuevo == 'cancelado' %}<span class="badge bg-secondary">Cancelado</span>
                     {% else %}<span class="badge bg-success">Completado</span>{% endif %}
                   </td>
                   <td class="text-muted">{{ h.cambiado_por.get_full_name|default:h.cambiado_por.username|default:"Sistema" }}</td>
@@ -843,6 +876,7 @@
                 <span>
                   {% if project.estado_proyecto == 'completado' %}<span class="badge bg-success">Completado</span>
                   {% elif project.estado_proyecto == 'en_progreso' %}<span class="badge bg-primary">En Progreso</span>
+                  {% elif project.estado_proyecto == 'cancelado' %}<span class="badge bg-secondary">Cancelado</span>
                   {% else %}<span class="badge bg-warning text-dark">Pendiente</span>{% endif %}
                 </span>
               </div>
@@ -867,7 +901,7 @@
               </div>
               <div class="info-row">
                 <span class="info-label">Total pagado:</span>
-                <span class="fw-semibold text-success">Bs. {{ total_pagado_cliente|floatformat:2 }}</span>
+                <span class="fw-semibold {% if total_pagado_cliente > 0 %}text-success{% else %}text-muted{% endif %}">Bs. {{ total_pagado_cliente|floatformat:2 }}</span>
               </div>
               <div class="info-row">
                 <span class="info-label">Saldo pendiente:</span>
@@ -891,9 +925,15 @@
             <div class="card-header bg-light"><h6 class="mb-0 fw-semibold">Entrega y Reporte</h6></div>
             <div class="card-body d-flex flex-column gap-3">
               <div>
-                <p class="text-muted small mb-2">Reporte de finalización con detalle de sedes, insumos y costos.</p>
-                <a href="{% url 'project_view' project.id %}?pdf" target="_blank" class="btn btn-outline-danger w-100">
-                  <i class="bi bi-file-earmark-pdf me-1"></i>Generar reporte de finalización (PDF)
+                <p class="text-muted small mb-2">Acta formal de entrega con detalle de sedes, tareas completadas y fotos de evidencia.</p>
+                <a href="{% url 'project_finalizacion_pdf' project.id %}" target="_blank" class="btn btn-danger w-100">
+                  <i class="bi bi-file-earmark-check me-1"></i>Acta de Entrega (PDF)
+                </a>
+              </div>
+              <div>
+                <p class="text-muted small mb-2">Ficha interna con resumen financiero, equipo, insumos y contrato.</p>
+                <a href="{% url 'project_view' project.id %}?pdf" target="_blank" class="btn btn-outline-secondary w-100">
+                  <i class="bi bi-file-earmark-pdf me-1"></i>Ficha PDF (resumen interno)
                 </a>
               </div>
               {% if project.estado_proyecto == 'completado' %}
@@ -999,8 +1039,24 @@
       {% elif project.estado_proyecto == 'completado' %}
       <div class="card border-0 shadow-sm rounded-3">
         <div class="card-body text-center py-4 text-muted small">
+          {% if contrato_proyecto and contrato_proyecto.garantia_meses > 0 %}
+            {% if es_admin %}
+            <i class="bi bi-shield-exclamation fs-3 d-block mb-2 text-warning"></i>
+            <p class="mb-2">El contrato incluye <strong>{{ contrato_proyecto.garantia_meses }} mes{{ contrato_proyecto.garantia_meses|pluralize:"es" }} de garantía</strong> pero no se generó automáticamente.</p>
+            <form method="POST" action="{% url 'garantia_crear_manual' project.id %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-warning">
+                <i class="bi bi-shield-plus me-1"></i>Generar garantía ahora
+              </button>
+            </form>
+            {% else %}
+            <i class="bi bi-shield-slash fs-3 d-block mb-1"></i>
+            La garantía de este proyecto aún no ha sido generada.
+            {% endif %}
+          {% else %}
           <i class="bi bi-shield-slash fs-3 d-block mb-1"></i>
           Este proyecto no tiene período de garantía configurado en el contrato.
+          {% endif %}
         </div>
       </div>
       {% endif %}
@@ -1107,10 +1163,10 @@
     }
   }
 
-  document.querySelector('[data-bs-target="#tab-ejecucion"]').addEventListener('shown.bs.tab', initMapProject);
+  document.querySelector('[data-bs-target="#tab-planificacion"]').addEventListener('shown.bs.tab', initMapProject);
 
   window.addEventListener('load', function() {
-    if (document.getElementById('tab-ejecucion').classList.contains('active')) {
+    if (document.getElementById('tab-planificacion').classList.contains('active')) {
       initMapProject();
     }
   });

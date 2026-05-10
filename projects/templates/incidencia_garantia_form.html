@@ -7,6 +7,9 @@
   .was-validated .form-control:valid:focus,
   .was-validated .form-select:valid:focus { border-color: #dee2e6; box-shadow: 0 0 0 0.25rem rgba(39,128,227,.25); }
   .valid-feedback { display: none; }
+  {% if solo_ver %}
+  .form-control, .form-select { pointer-events: none; background-color: #f8f9fa !important; }
+  {% endif %}
 </style>
 {% endblock %}
 
@@ -40,7 +43,7 @@
       </h6>
     </div>
     <div class="card-body p-4">
-      <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+      <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate {% if solo_ver %}onsubmit="return false;"{% endif %}>
         {% csrf_token %}
         {% if form.non_field_errors %}
         <div class="alert alert-danger">
@@ -48,6 +51,51 @@
         </div>
         {% endif %}
 
+        {% if solo_campo %}
+        <!-- Vista reducida para instalador/técnico -->
+        <div class="row g-4">
+          <div class="col-lg-12">
+            <div class="mb-3">
+              <label class="form-label text-muted small">Descripción del problema</label>
+              <p class="mb-0 border rounded p-2 bg-light small">{{ incidencia.descripcion }}</p>
+            </div>
+          </div>
+          <div class="col-lg-5">
+            <div class="mb-3">
+              <label class="form-label">Estado <span class="text-danger">*</span></label>
+              {{ form.estado }}
+              {% if form.estado.errors %}
+              <div class="text-danger small mt-1">{% for e in form.estado.errors %}{{ e }}{% endfor %}</div>
+              {% endif %}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Fecha de reparación</label>
+              {{ form.fecha_reparacion }}
+              {% if form.fecha_reparacion.errors %}
+              <div class="text-danger small mt-1">{% for e in form.fecha_reparacion.errors %}{{ e }}{% endfor %}</div>
+              {% endif %}
+              <div class="form-text text-muted">Requerida si el estado es "Resuelto".</div>
+            </div>
+          </div>
+          <div class="col-lg-7">
+            <div class="mb-3">
+              <label class="form-label">Evidencia <span class="text-muted small">(foto o PDF, opcional)</span></label>
+              {% if incidencia and incidencia.evidencia %}
+              <div class="mb-2">
+                <a href="{{ incidencia.evidencia.url }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                  <i class="bi bi-paperclip me-1"></i>Ver evidencia actual
+                </a>
+              </div>
+              {% endif %}
+              {{ form.evidencia }}
+              {% if form.evidencia.errors %}
+              <div class="text-danger small mt-1">{% for e in form.evidencia.errors %}{{ e }}{% endfor %}</div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <!-- Vista completa para admin/secretaria -->
         <div class="row g-4">
           <!-- Columna izquierda -->
           <div class="col-lg-7">
@@ -122,21 +170,26 @@
             </div>
           </div>
         </div>
+        {% endif %}
 
         <div class="text-muted small mb-3"><span class="text-danger">*</span> Campos obligatorios</div>
 
         <div class="d-flex justify-content-between mt-4">
           <div class="d-flex gap-2">
-            <a href="{% url 'garantia_detail' garantia.id %}" class="btn btn-outline-secondary">Cancelar</a>
-            {% if incidencia and es_admin %}
+            <a href="{% url 'garantia_detail' garantia.id %}" class="btn btn-outline-secondary">
+              {% if solo_ver %}Volver{% else %}Cancelar{% endif %}
+            </a>
+            {% if incidencia and es_admin and not solo_ver %}
             <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEliminar">
               Eliminar
             </button>
             {% endif %}
           </div>
+          {% if not solo_ver %}
           <button class="btn btn-danger px-4" type="submit">
             <i class="bi bi-floppy me-1"></i>{{ accion }} incidencia
           </button>
+          {% endif %}
         </div>
       </form>
     </div>

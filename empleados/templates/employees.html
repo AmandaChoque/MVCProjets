@@ -111,6 +111,19 @@
             {% if not employee.is_active %}
               <span class="badge bg-secondary fw-normal ms-1" style="font-size:0.65rem;">Inhabilitado</span>
             {% endif %}
+            {% if employee.is_active %}
+              {% if not employee.contrato_activo %}
+                <span class="badge bg-warning text-dark fw-normal ms-1" style="font-size:0.65rem;"
+                      title="No tiene contrato activo — no se pueden registrar jornadas">
+                  <i class="bi bi-exclamation-triangle me-1"></i>Sin contrato
+                </span>
+              {% elif employee.contrato_activo.estado_contrato == 'vencido' %}
+                <span class="badge bg-warning text-dark fw-normal ms-1" style="font-size:0.65rem;"
+                      title="Contrato vencido el {{ employee.contrato_activo.fecha_fin|date:'d/m/Y' }}">
+                  <i class="bi bi-clock me-1"></i>Contrato vencido
+                </span>
+              {% endif %}
+            {% endif %}
           </td>
 
           <td>
@@ -119,7 +132,7 @@
             {% elif employee.cargo == 'gerente' %}
               <span class="badge bg-primary small">Gerente</span>
             {% elif employee.cargo == 'instalador' %}
-              <span class="badge bg-info text-dark small">Supervisor</span>
+              <span class="badge bg-info text-dark small">Instalador</span>
             {% elif employee.cargo == 'tecnico_soporte' %}
               <span class="badge bg-warning text-dark small">Técnico</span>
             {% elif employee.cargo == 'secretaria' %}
@@ -287,7 +300,7 @@
     const empleadoId = button.getAttribute('data-id');
     const empleadoNombre = button.getAttribute('data-nombre');
     document.getElementById('empleadoNombre').textContent = empleadoNombre;
-    document.getElementById('deleteForm').action = `/employees/${empleadoId}/deactivate/`;
+    document.getElementById('deleteForm').action = `/empleados/${empleadoId}/desactivar/`;
   });
 
   const reactivateModal = document.getElementById('reactivateModal');

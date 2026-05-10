@@ -33,7 +33,11 @@
             <div class="mb-3">
               <label class="form-label">Días laborales acordados <span class="text-danger">*</span></label>
               {{ form.dias_laborales }}
-              <div class="form-text text-muted">Para contrato por día: días del período (ej: 28). Monto diario = Monto ÷ días laborales.</div>
+              {% if form.dias_laborales.errors %}<div class="text-danger small mt-1">{% for e in form.dias_laborales.errors %}{{ e }}{% endfor %}</div>{% endif %}
+              <div class="form-text text-muted">
+                Se calcula automáticamente al ingresar las fechas (lunes–sábado). Puedes ajustarlo manualmente.
+                Monto diario = Monto ÷ días laborales.
+              </div>
             </div>
             <div class="mb-3">
               <label class="form-label">Monto Acordado (Bs.) <span class="text-danger">*</span></label>
@@ -92,9 +96,39 @@
     </div>
 
     <div class="d-flex justify-content-between mt-2">
-      <a href="{% url 'employee_view' employee.id %}" class="btn btn-outline-secondary">Cancelar</a>
+      <a href="{% url 'employee_view' employee.id %}" class="btn btn-outline-secondary">Saltar por ahora</a>
       <button type="submit" class="btn btn-primary px-4">Guardar contrato</button>
     </div>
   </form>
 </main>
+{% endblock %}
+{% block extra_js %}
+<script>
+(function () {
+  const inicio  = document.getElementById('id_fecha_inicio');
+  const fin     = document.getElementById('id_fecha_fin');
+  const diasInp = document.getElementById('id_dias_laborales');
+
+  function diasLaborables(desde, hasta) {
+    let count = 0;
+    const d   = new Date(desde + 'T00:00:00');
+    const end = new Date(hasta  + 'T00:00:00');
+    while (d <= end) {
+      if (d.getDay() !== 0) count++;   // excluye domingos
+      d.setDate(d.getDate() + 1);
+    }
+    return count;
+  }
+
+  function actualizar() {
+    if (!inicio.value || !fin.value || fin.value < inicio.value) return;
+    diasInp.value = diasLaborables(inicio.value, fin.value);
+  }
+
+  if (inicio && fin && diasInp) {
+    inicio.addEventListener('change', actualizar);
+    fin.addEventListener('change', actualizar);
+  }
+})();
+</script>
 {% endblock %}

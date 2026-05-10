@@ -105,10 +105,12 @@
                   </td>
                   <td class="text-end fw-semibold">{{ item.contrato.monto_acordado|floatformat:2 }}</td>
                   <td class="text-center">
-                    {% if item.contrato.activo %}
-                      <span class="badge bg-success fw-normal">Activo</span>
+                    {% if item.contrato.estado_contrato == 'vigente' %}
+                      <span class="badge bg-success fw-normal">Vigente</span>
+                    {% elif item.contrato.estado_contrato == 'vencido' %}
+                      <span class="badge bg-warning text-dark fw-normal" title="Venció el {{ item.contrato.fecha_fin|date:'d/m/Y' }}"><i class="bi bi-clock me-1"></i>Vencido</span>
                     {% else %}
-                      <span class="badge bg-danger fw-normal">Vencido</span>
+                      <span class="badge bg-secondary fw-normal">Inhabilitado</span>
                     {% endif %}
                     {% if item.jornadas_pendientes > 0 %}
                       <br><span class="badge bg-warning text-dark fw-normal mt-1" title="Jornadas pendientes de aprobar">

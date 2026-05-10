@@ -5,20 +5,25 @@
   .gantt-table          { border-collapse: collapse; table-layout: fixed; }
   .gantt-table th,
   .gantt-table td       { border: 1px solid #e9ecef; padding: 0; vertical-align: middle; }
-  .gantt-label          { min-width: 240px; width: 240px; position: sticky; left: 0;
+
+  /* Columna label sticky */
+  .gantt-label          { min-width: 260px; width: 260px; position: sticky; left: 0;
                           background: #fff; z-index: 2; padding: 6px 10px; }
-  .gantt-label-head     { min-width: 240px; width: 240px; position: sticky; left: 0;
-                          background: #f8f9fa; z-index: 3; padding: 6px 10px; font-size: .7rem;
-                          text-transform: uppercase; letter-spacing: .04em; }
-  .gantt-day            { width: 30px; min-width: 30px; height: 34px; text-align: center; }
+  .gantt-label-head     { min-width: 260px; width: 260px; position: sticky; left: 0;
+                          background: #f8f9fa; z-index: 3; padding: 6px 10px; font-size:.7rem;
+                          text-transform: uppercase; letter-spacing:.04em; }
+
+  /* Columnas de días */
+  .gantt-day            { width: 30px; min-width: 30px; height: 34px; text-align: center;
+                          position: relative; }
   .gantt-day-head       { width: 30px; min-width: 30px; text-align: center; padding: 3px 0;
-                          font-size: .68rem; font-weight: 600; color: #495057; }
+                          font-size:.68rem; font-weight:600; color:#495057; }
   .gantt-day.finde      { background: #f8f9fa; }
   .gantt-day.hoy-col    { background: rgba(13,110,253,.08); }
   .gantt-day-head.finde { color: #adb5bd; }
-  .gantt-day-head.hoy-col { color: #0d6efd; font-weight: 700; }
+  .gantt-day-head.hoy-col { color:#0d6efd; font-weight:700; }
 
-  /* Barras de colores */
+  /* Colores de barras */
   .bar-primary   { background: #0d6efd; }
   .bar-success   { background: #198754; }
   .bar-info      { background: #0dcaf0; }
@@ -26,33 +31,47 @@
   .bar-danger    { background: #dc3545; }
   .bar-secondary { background: #6c757d; }
 
+  /* Barra de contrato: versión translúcida */
+  .bar-primary-light   { background: rgba(13,110,253,.18); }
+  .bar-success-light   { background: rgba(25,135,84,.18); }
+  .bar-info-light      { background: rgba(13,202,240,.18); }
+  .bar-warning-light   { background: rgba(255,193,7,.18); }
+  .bar-danger-light    { background: rgba(220,53,69,.18); }
+  .bar-secondary-light { background: rgba(108,117,125,.18); }
+
   /* Marcador de vencimiento */
-  .vence         { border-top: 3px solid #dc3545 !important; position: relative; }
-  .vence::after  { content: '▼'; position: absolute; top: -2px; left: 50%;
-                   transform: translateX(-50%); font-size: .55rem; color: #dc3545; line-height: 1; }
+  .vence         { border-top: 3px solid #dc3545 !important; }
+  .vence::after  { content:'▼'; position:absolute; top:-2px; left:50%;
+                   transform:translateX(-50%); font-size:.55rem; color:#dc3545; line-height:1; }
 
-  /* Fila sin fechas */
-  tr.sin-fechas .gantt-label { background: #fffbf0; }
+  /* Fila de proyecto (cabecera del grupo) */
+  .fila-proyecto .gantt-label { background: #f0f4ff; border-left: 4px solid #dee2e6; }
+  .fila-proyecto td            { border-top: 2px solid #d0d7e8; }
 
-  .gantt-project-name  { font-weight: 600; font-size: .8rem; color: #212529;
-                         white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 218px; }
-  .gantt-employee-name { font-size: .72rem; color: #6c757d; white-space: nowrap;
-                         overflow: hidden; text-overflow: ellipsis; max-width: 218px; }
-  .gantt-meta          { font-size: .65rem; }
+  /* Fila de empleado (sub-fila) */
+  .fila-empleado .gantt-label { background: #fff; padding-left: 24px; }
+  tr.sin-fechas .gantt-label  { background: #fffbf0; }
 
-  .legend-dot { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+  .gantt-project-name  { font-weight:700; font-size:.82rem; color:#1B4D90;
+                         white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:230px; }
+  .gantt-employee-name { font-size:.73rem; color:#495057; white-space:nowrap;
+                         overflow:hidden; text-overflow:ellipsis; max-width:224px; }
+  .gantt-meta          { font-size:.65rem; }
 
-  /* Barra de progreso inline */
-  .gantt-progress       { height: 5px; border-radius: 3px; background: #e9ecef; overflow: hidden; margin-top: 3px; }
-  .gantt-progress-fill  { height: 100%; border-radius: 3px; transition: width .3s; }
+  .legend-dot  { width:12px; height:12px; border-radius:2px; display:inline-block; }
 
-  /* Punto de tarea completada */
-  .gantt-day            { position: relative; }
-  .tarea-dot            { position: absolute; bottom: 3px; left: 50%; transform: translateX(-50%);
-                          width: 6px; height: 6px; border-radius: 50%; background: #198754;
-                          pointer-events: none; }
-  .bar-primary .tarea-dot,
-  .bar-success .tarea-dot  { background: #fff; opacity: .85; }
+  /* Progreso inline */
+  .gantt-progress      { height:4px; border-radius:3px; background:#e9ecef; overflow:hidden; margin-top:3px; }
+  .gantt-progress-fill { height:100%; border-radius:3px; }
+
+  /* Puntos especiales */
+  .tarea-dot   { position:absolute; bottom:3px; left:50%; transform:translateX(-50%);
+                 width:6px; height:6px; border-radius:50%; background:#198754; pointer-events:none; }
+  .garantia-dot { position:absolute; top:2px; right:2px; font-size:.6rem;
+                  color:#fd7e14; line-height:1; pointer-events:none; }
+
+  /* Fila vacía de proyecto */
+  .fila-vacia td { background: #fafafa; }
 </style>
 {% endblock %}
 
@@ -63,9 +82,9 @@
   <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <div>
       <h4 class="fw-semibold mb-0" style="color:#1B4D90">
-        <i class="bi bi-bar-chart-steps me-2"></i>Planificación de Equipos
+        <i class="bi bi-bar-chart-steps me-2"></i>Planificación de Proyectos
       </h4>
-      <p class="text-muted small mb-0">Vista Gantt — asignaciones planificadas por empleado</p>
+      <p class="text-muted small mb-0">Vista Gantt — todos los proyectos activos con su equipo planificado</p>
     </div>
     <div class="d-flex gap-2">
       <a href="{% url 'calendario_equipo' %}?mes={{ mes_str }}" class="btn btn-outline-primary btn-sm">
@@ -77,195 +96,375 @@
     </div>
   </div>
 
-  <!-- FILTRO POR PROYECTO + NAVEGACIÓN DE MES -->
+  <!-- FILTROS + NAVEGACIÓN -->
   <div class="d-flex align-items-center gap-3 mb-3 flex-wrap">
+    <a href="?mes={{ mes_anterior }}&filter_proyecto={{ filter_proyecto }}{% if mostrar_completados %}&completados=1{% endif %}"
+       class="btn btn-outline-secondary btn-sm"><i class="bi bi-chevron-left"></i></a>
+    <h5 class="mb-0 fw-semibold" style="min-width:180px;text-align:center;">{{ mes_nombre }}</h5>
+    <a href="?mes={{ mes_siguiente }}&filter_proyecto={{ filter_proyecto }}{% if mostrar_completados %}&completados=1{% endif %}"
+       class="btn btn-outline-secondary btn-sm"><i class="bi bi-chevron-right"></i></a>
+    <a href="?mes={{ today|date:'Y-m' }}&filter_proyecto={{ filter_proyecto }}{% if mostrar_completados %}&completados=1{% endif %}"
+       class="btn btn-light btn-sm">Hoy</a>
 
-    <!-- Navegación de mes -->
-    <a href="?mes={{ mes_anterior }}&filter_proyecto={{ filter_proyecto }}" class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-chevron-left"></i>
-    </a>
-    <h5 class="mb-0 fw-semibold" style="min-width:180px; text-align:center;">{{ mes_nombre }}</h5>
-    <a href="?mes={{ mes_siguiente }}&filter_proyecto={{ filter_proyecto }}" class="btn btn-outline-secondary btn-sm">
-      <i class="bi bi-chevron-right"></i>
-    </a>
-    <a href="?mes={{ today|date:'Y-m' }}&filter_proyecto={{ filter_proyecto }}" class="btn btn-light btn-sm">Hoy</a>
-
-    <!-- Filtro proyecto -->
-    <form method="GET" class="d-flex align-items-center gap-2 ms-auto">
+    <form method="GET" class="d-flex align-items-center gap-2 ms-auto flex-wrap">
       <input type="hidden" name="mes" value="{{ mes_str }}">
+      {% if mostrar_completados %}<input type="hidden" name="completados" value="1">{% endif %}
       <select name="filter_proyecto" class="form-select form-select-sm" style="min-width:200px;" onchange="this.form.submit()">
         <option value="">Todos los proyectos</option>
         {% for p in proyectos_disponibles %}
-        <option value="{{ p.id }}" {% if filter_proyecto == p.id|stringformat:"s" %}selected{% endif %}>
-          {{ p.nombre }}
-        </option>
+        <option value="{{ p.id }}" {% if filter_proyecto == p.id|stringformat:"s" %}selected{% endif %}>{{ p.nombre }}</option>
         {% endfor %}
       </select>
       {% if filter_proyecto %}
-      <a href="?mes={{ mes_str }}" class="btn btn-outline-secondary btn-sm" title="Quitar filtro">
-        <i class="bi bi-x-lg"></i>
-      </a>
+      <a href="?mes={{ mes_str }}{% if mostrar_completados %}&completados=1{% endif %}"
+         class="btn btn-outline-secondary btn-sm" title="Quitar filtro"><i class="bi bi-x-lg"></i></a>
       {% endif %}
     </form>
+
+    <!-- Toggle completados -->
+    {% if mostrar_completados %}
+    <a href="?mes={{ mes_str }}&filter_proyecto={{ filter_proyecto }}" class="btn btn-sm btn-warning">
+      <i class="bi bi-eye-slash me-1"></i>Ocultar completados
+    </a>
+    {% else %}
+    <a href="?mes={{ mes_str }}&filter_proyecto={{ filter_proyecto }}&completados=1" class="btn btn-sm btn-outline-secondary">
+      <i class="bi bi-eye me-1"></i>Ver completados
+    </a>
+    {% endif %}
   </div>
 
   <!-- LEYENDA -->
   <div class="d-flex flex-wrap gap-3 mb-3 small">
     <span class="d-flex align-items-center gap-1">
-      <span class="legend-dot" style="background:#dc3545; vertical-align:middle;"></span>
-      Vencimiento de contrato
+      <span class="legend-dot" style="background:rgba(13,110,253,.35);border:1px solid #0d6efd;"></span>
+      Rango del contrato
+    </span>
+    <span class="d-flex align-items-center gap-1">
+      <span class="legend-dot" style="background:#0d6efd;"></span>
+      Plan del empleado
+    </span>
+    <span class="d-flex align-items-center gap-1">
+      <span class="legend-dot" style="background:#dc3545;vertical-align:middle;"></span>
+      Vencimiento contrato
     </span>
     <span class="badge bg-warning text-dark">Sin fechas</span>
     <span class="d-flex align-items-center gap-1">
-      <span class="badge bg-danger rounded-pill">▲ Retrasado</span>
-    </span>
-    <span class="d-flex align-items-center gap-1">
-      <span class="badge bg-success rounded-pill">✓ Adelantado</span>
-    </span>
-    <span class="d-flex align-items-center gap-1">
       <span style="width:8px;height:8px;border-radius:50%;background:#198754;display:inline-block;"></span>
-      Tarea completada ese día
+      Tarea completada
+    </span>
+    <span class="d-flex align-items-center gap-1">
+      <i class="bi bi-shield-exclamation text-warning"></i>
+      Garantía en reparación
     </span>
   </div>
 
-  {% if filas %}
+  {% if grupos %}
   <div class="gantt-wrapper">
     <table class="gantt-table">
-      <!-- FILA CABECERA: días del mes -->
       <thead>
         <tr>
-          <th class="gantt-label-head">Empleado / Proyecto</th>
+          <th class="gantt-label-head">Proyecto / Empleado</th>
           {% for dia in dias %}
           <th class="gantt-day-head {% if dia.weekday >= 5 %}finde{% endif %} {% if dia == today %}hoy-col{% endif %}"
               title="{{ dia|date:'l d/m/Y' }}">
             <div>{{ dia.day }}</div>
-            <div style="font-size:.6rem; font-weight:400; color:inherit;">
-              {{ dia|date:"D"|slice:":2" }}
-            </div>
+            <div style="font-size:.6rem;font-weight:400;color:inherit;">{{ dia|date:"D"|slice:":2" }}</div>
           </th>
           {% endfor %}
         </tr>
       </thead>
 
-      <!-- FILAS DE ASIGNACIONES -->
       <tbody>
-        {% for fila in filas %}
-        <tr {% if not fila.tiene_fechas %}class="sin-fechas"{% endif %}>
+        {% for grupo in grupos %}
 
-          <!-- Celda etiqueta -->
-          <td class="gantt-label">
-            <div class="gantt-project-name" title="{{ fila.proyecto.nombre }}">
-              <span class="badge bg-{{ fila.color }} me-1" style="width:8px; height:8px; padding:0; border-radius:50%;"></span>
-              {{ fila.proyecto.nombre }}
+        <!-- ── FILA DE PROYECTO ─────────────────────────────── -->
+        <tr class="fila-proyecto">
+          <td class="gantt-label" style="border-left:4px solid var(--bs-{{ grupo.color }}, #0d6efd);">
+            <div class="d-flex align-items-center justify-content-between gap-1">
+              <div class="gantt-project-name" title="{{ grupo.proyecto.nombre }}">
+                <span class="badge bg-{{ grupo.color }} me-1"
+                      style="width:8px;height:8px;padding:0;border-radius:50%;"></span>
+                {{ grupo.proyecto.nombre }}
+              </div>
+              {% if es_admin %}
+              <button class="btn btn-sm btn-primary py-0 px-1 flex-shrink-0"
+                      style="font-size:.68rem;"
+                      data-bs-toggle="modal" data-bs-target="#modalAsignar"
+                      data-proy-id="{{ grupo.proyecto.id }}"
+                      data-proy-nombre="{{ grupo.proyecto.nombre }}"
+                      data-disponibles='[{% for e in grupo.disponibles %}{"id":{{ e.id }},"nombre":"{{ e.nombre }} {{ e.apellido_paterno }} ({{ e.get_cargo_display }})"}{% if not forloop.last %},{% endif %}{% endfor %}]'>
+                <i class="bi bi-person-plus-fill me-1"></i>Asignar
+              </button>
+              {% endif %}
             </div>
-            <div class="gantt-employee-name">
-              <i class="bi bi-person me-1"></i>{{ fila.empleado.nombre }} {{ fila.empleado.apellido_paterno }}
+
+            <div class="gantt-meta d-flex gap-2 mt-1 flex-wrap">
+              <span class="badge
+                {% if grupo.proyecto.estado_proyecto == 'completado' %}bg-success
+                {% elif grupo.proyecto.estado_proyecto == 'en_progreso' %}bg-primary
+                {% else %}bg-secondary{% endif %} fw-normal">
+                {{ grupo.proyecto.get_estado_proyecto_display }}
+              </span>
+              {% if grupo.contrato %}
+              <span class="text-muted">
+                <i class="bi bi-flag-fill text-danger me-1"></i>{{ grupo.contrato.fecha_fin|date:"d/m/Y" }}
+              </span>
+              {% endif %}
+              {% if not grupo.filas %}
+              <span class="badge bg-warning text-dark" style="font-size:.6rem;">Sin equipo</span>
+              {% endif %}
+            </div>
+          </td>
+
+          <!-- Celdas del proyecto (barra translúcida del contrato) -->
+          {% for celda in grupo.celdas_proyecto %}
+          <td class="gantt-day
+              {% if celda.en_rango %}bar-{{ grupo.color }}-light{% elif celda.es_finde %}finde{% endif %}
+              {% if celda.es_hoy %}hoy-col{% endif %}
+              {% if celda.es_limite %}vence{% endif %}"
+              {% if celda.es_limite and grupo.contrato %}title="Vence: {{ grupo.contrato.fecha_fin|date:'d/m/Y' }}"{% endif %}>
+          </td>
+          {% endfor %}
+        </tr>
+
+        <!-- ── SUB-FILAS DE EMPLEADOS ──────────────────────── -->
+        {% for fila in grupo.filas %}
+        <tr class="fila-empleado {% if not fila.tiene_fechas %}sin-fechas{% endif %}">
+          <td class="gantt-label">
+            <div class="gantt-employee-name" title="{{ fila.empleado.nombre }} {{ fila.empleado.apellido_paterno }}">
+              <i class="bi bi-person me-1 text-muted"></i>
+              {{ fila.empleado.nombre }} {{ fila.empleado.apellido_paterno }}
               <span class="text-muted">({{ fila.empleado.get_cargo_display }})</span>
             </div>
 
             <div class="gantt-meta d-flex gap-2 mt-1 flex-wrap align-items-center">
-              {% if fila.fecha_limite %}
-              <span class="text-danger"><i class="bi bi-flag-fill"></i> {{ fila.fecha_limite|date:"d/m" }}</span>
-              {% endif %}
-              {% if fila.dias_plan %}
-              <span class="text-muted"><i class="bi bi-calendar-week"></i> {{ fila.dias_plan|floatformat:0 }}d plan.</span>
-              {% endif %}
               {% if not fila.tiene_fechas %}
               <span class="badge bg-warning text-dark" style="font-size:.6rem;">Sin fechas</span>
+              {% else %}
+              <span class="text-muted">
+                {{ fila.asignacion.fecha_inicio_plan|date:"d/m" }} → {{ fila.asignacion.fecha_fin_plan|date:"d/m" }}
+              </span>
               {% endif %}
 
-              <!-- Badge retraso / adelanto -->
               {% if fila.retraso > 0 %}
-              <span class="badge bg-danger" style="font-size:.6rem;">
-                <i class="bi bi-exclamation-circle me-1"></i>{{ fila.retraso }}d retraso
-              </span>
+              <span class="badge bg-danger" style="font-size:.6rem;">{{ fila.retraso }}d retraso</span>
               {% elif fila.eficiencia and fila.eficiencia >= 100 %}
-              <span class="badge bg-success" style="font-size:.6rem;">
-                <i class="bi bi-check-circle me-1"></i>Adelantado
-              </span>
+              <span class="badge bg-success" style="font-size:.6rem;">Adelantado</span>
+              {% endif %}
+
+              {% if es_admin %}
+              <button class="btn btn-outline-secondary py-0 px-1 ms-auto flex-shrink-0"
+                      style="font-size:.6rem;"
+                      data-bs-toggle="modal" data-bs-target="#modalPlanificar"
+                      data-proy-id="{{ grupo.proyecto.id }}"
+                      data-emp-id="{{ fila.empleado.id }}"
+                      data-emp-nombre="{{ fila.empleado.nombre }} {{ fila.empleado.apellido_paterno }}"
+                      data-proy-nombre="{{ grupo.proyecto.nombre }}"
+                      data-fecha-ini="{{ fila.asignacion.fecha_inicio_plan|date:'Y-m-d'|default:'' }}"
+                      data-fecha-fin="{{ fila.asignacion.fecha_fin_plan|date:'Y-m-d'|default:'' }}"
+                      data-dias="{{ fila.asignacion.dias_planificados|default:'' }}">
+                <i class="bi bi-pencil-fill"></i> Planificar
+              </button>
               {% endif %}
             </div>
 
-            {% if fila.tiene_fechas %}
-            <div class="gantt-meta text-muted mt-1">
-              {{ fila.asignacion.fecha_inicio_plan|date:"d/m" }} → {{ fila.asignacion.fecha_fin_plan|date:"d/m" }}
-              <a href="{% url 'project_view' fila.proyecto.id %}#tab-planificacion"
-                 class="ms-1 text-primary" title="Editar cronograma">
-                <i class="bi bi-pencil-fill" style="font-size:.6rem;"></i>
-              </a>
-            </div>
-            {% endif %}
-
-            <!-- Barra de progreso real vs planificado -->
             {% if fila.dias_plan %}
             <div class="mt-1">
               <div class="d-flex justify-content-between gantt-meta">
-                <span class="text-muted">{{ fila.dias_reales|floatformat:1 }} / {{ fila.dias_plan|floatformat:0 }}d reales</span>
+                <span class="text-muted">{{ fila.dias_reales|floatformat:1 }}/{{ fila.dias_plan|floatformat:0 }}d</span>
                 {% if fila.eficiencia %}
-                <span class="{% if fila.eficiencia >= 100 %}text-success{% elif fila.retraso > 0 %}text-danger{% else %}text-muted{% endif %}">
+                <span class="{% if fila.retraso > 0 %}text-danger{% elif fila.pct_progreso >= 100 %}text-success{% else %}text-muted{% endif %}">
                   {{ fila.eficiencia }}%
                 </span>
                 {% endif %}
               </div>
               <div class="gantt-progress">
                 <div class="gantt-progress-fill
-                  {% if fila.retraso > 0 %}bg-danger
-                  {% elif fila.pct_progreso >= 100 %}bg-success
-                  {% else %}bg-primary{% endif %}"
-                  style="width:{{ fila.pct_progreso|default:0 }}%">
-                </div>
+                  {% if fila.retraso > 0 %}bg-danger{% elif fila.pct_progreso >= 100 %}bg-success{% else %}bg-primary{% endif %}"
+                  style="width:{{ fila.pct_progreso|default:0 }}%"></div>
               </div>
             </div>
             {% endif %}
           </td>
 
-          <!-- Celdas de días -->
+          <!-- Celdas del empleado -->
           {% for celda in fila.celdas %}
           <td class="gantt-day
-              {% if celda.en_rango %}bar-{{ fila.color }}{% elif celda.es_finde %}finde{% endif %}
-              {% if celda.es_hoy %}hoy-col{% endif %}
-              {% if celda.es_limite %}vence{% endif %}"
+              {% if celda.en_rango %}bar-{{ grupo.color }}{% elif celda.es_finde %}finde{% endif %}
+              {% if celda.es_hoy %}hoy-col{% endif %}"
               {% if celda.jornada_id %}
               onclick="location.href='{% url 'jornada_detail' celda.jornada_id %}'"
               style="cursor:pointer;"
-              title="{% if celda.tiene_tarea %}✓ Tareas completadas — {% endif %}Ver jornada de {{ fila.empleado.nombre }} {{ fila.empleado.apellido_paterno }}"
-              {% elif celda.es_limite %}
-              title="Vence: {{ fila.fecha_limite|date:'d/m/Y' }}"
+              title="{% if celda.tiene_tarea %}✓ Tarea — {% endif %}Ver jornada de {{ fila.empleado.nombre }}"
               {% elif celda.en_rango %}
-              title="{{ fila.empleado.nombre }} — {{ fila.proyecto.nombre }}"
+              title="{{ fila.empleado.nombre }} — {{ grupo.proyecto.nombre }}"
               {% endif %}>
             {% if celda.tiene_tarea %}<span class="tarea-dot"></span>{% endif %}
+            {% if celda.garantia_info %}
+            <a href="{% url 'garantia_detail' celda.garantia_info.garantia_id %}"
+               class="garantia-dot"
+               title="Garantía: {{ celda.garantia_info.nombre }}"
+               onclick="event.stopPropagation();">
+              <i class="bi bi-shield-exclamation"></i>
+            </a>
+            {% endif %}
           </td>
           {% endfor %}
-
         </tr>
+        {% endfor %}
+
+        <!-- Si el proyecto no tiene equipo -->
+        {% if not grupo.filas %}
+        <tr class="fila-vacia">
+          <td class="gantt-label ps-5 text-muted" style="font-size:.72rem;font-style:italic;">
+            Sin empleados asignados
+          </td>
+          {% for dia in dias %}<td class="gantt-day {% if dia.weekday >= 5 %}finde{% endif %} {% if dia == today %}hoy-col{% endif %}"></td>{% endfor %}
+        </tr>
+        {% endif %}
+
         {% endfor %}
       </tbody>
     </table>
   </div>
 
-  <!-- LEYENDA DE PROYECTOS -->
-  <div class="mt-3 d-flex flex-wrap gap-3">
-    {% for fila in filas %}
-    {% if forloop.first or fila.proyecto.id != filas|dictsort:"proyecto.id" %}
-    <span class="d-flex align-items-center gap-1 small">
-      <span class="legend-dot bar-{{ fila.color }}"></span>
-      {{ fila.proyecto.nombre }}
-    </span>
-    {% endif %}
-    {% endfor %}
-  </div>
-
   {% else %}
   <div class="text-center py-5 text-muted">
     <i class="bi bi-bar-chart-steps" style="font-size:3rem;"></i>
-    <p class="mt-3">No hay asignaciones planificadas para <strong>{{ mes_nombre }}</strong>
-      {% if filter_proyecto %} con el filtro seleccionado{% endif %}.
-    </p>
-    <p class="small">Asigna empleados a proyectos y configura sus fechas de planificación desde el detalle del proyecto.</p>
+    <p class="mt-3">No hay proyectos activos{% if filter_proyecto %} con ese filtro{% endif %}.</p>
     <a href="{% url 'projects' %}" class="btn btn-primary btn-sm">Ir a proyectos</a>
   </div>
   {% endif %}
 
 </main>
+
+<!-- MODAL: Asignar nuevo empleado a proyecto -->
+{% if es_admin %}
+<div class="modal fade" id="modalAsignar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title"><i class="bi bi-person-plus me-2"></i>Asignar empleado — <span id="asignarProyNombre"></span></h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" id="formAsignar">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'planificacion_gantt' %}?mes={{ mes_str }}&filter_proyecto={{ filter_proyecto }}{% if mostrar_completados %}&completados=1{% endif %}">
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Empleado <span class="text-danger">*</span></label>
+            <select name="empleado_id" id="asignarEmpSelect" class="form-select" required>
+              <option value="">— Seleccionar empleado —</option>
+            </select>
+            <div class="form-text text-muted">Solo muestra instaladores y técnicos de soporte no asignados aún.</div>
+          </div>
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label">Fecha inicio plan</label>
+              <input type="date" name="fecha_inicio_plan" class="form-control form-control-sm">
+            </div>
+            <div class="col-6">
+              <label class="form-label">Fecha fin plan</label>
+              <input type="date" name="fecha_fin_plan" class="form-control form-control-sm">
+            </div>
+          </div>
+          <div class="mt-2">
+            <label class="form-label">Días planificados</label>
+            <input type="number" name="dias_planificados" class="form-control form-control-sm" min="1" placeholder="Ej: 10">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary btn-sm">Asignar y guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Planificar fechas de empleado ya asignado -->
+<div class="modal fade" id="modalPlanificar" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title"><i class="bi bi-calendar-week me-2"></i>Planificar — <span id="planEmpNombre"></span></h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" id="formPlanificar">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{% url 'planificacion_gantt' %}?mes={{ mes_str }}&filter_proyecto={{ filter_proyecto }}{% if mostrar_completados %}&completados=1{% endif %}">
+        <div class="modal-body">
+          <p class="text-muted small mb-3">Proyecto: <strong id="planProyNombre"></strong></p>
+          <div class="row g-2">
+            <div class="col-6">
+              <label class="form-label fw-semibold">Fecha inicio <span class="text-danger">*</span></label>
+              <input type="date" name="fecha_inicio_plan" id="planFechaIni" class="form-control form-control-sm" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label fw-semibold">Fecha fin <span class="text-danger">*</span></label>
+              <input type="date" name="fecha_fin_plan" id="planFechaFin" class="form-control form-control-sm" required>
+            </div>
+          </div>
+          <div class="mt-2">
+            <label class="form-label">Días planificados</label>
+            <input type="number" name="dias_planificados" id="planDias" class="form-control form-control-sm" min="1" placeholder="Ej: 10">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-primary btn-sm">Guardar fechas</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  // Modal "Asignar nuevo empleado"
+  document.getElementById('modalAsignar').addEventListener('show.bs.modal', function (e) {
+    var btn = e.relatedTarget;
+    var proyId     = btn.dataset.proyId;
+    var proyNombre = btn.dataset.proyNombre;
+    var disponibles = JSON.parse(btn.dataset.disponibles || '[]');
+
+    document.getElementById('asignarProyNombre').textContent = proyNombre;
+
+    var form = document.getElementById('formAsignar');
+    form.action = '/proyectos/' + proyId + '/equipo/agregar/';
+
+    var sel = document.getElementById('asignarEmpSelect');
+    sel.innerHTML = '<option value="">— Seleccionar empleado —</option>';
+    disponibles.forEach(function(e) {
+      var opt = document.createElement('option');
+      opt.value = e.id;
+      opt.textContent = e.nombre;
+      sel.appendChild(opt);
+    });
+
+    // Limpiar fechas
+    form.querySelectorAll('input[type=date], input[type=number]').forEach(function(i){ i.value = ''; });
+  });
+
+  // Modal "Planificar empleado existente"
+  document.getElementById('modalPlanificar').addEventListener('show.bs.modal', function (e) {
+    var btn = e.relatedTarget;
+    var proyId     = btn.dataset.proyId;
+    var empId      = btn.dataset.empId;
+    var empNombre  = btn.dataset.empNombre;
+    var proyNombre = btn.dataset.proyNombre;
+
+    document.getElementById('planEmpNombre').textContent  = empNombre;
+    document.getElementById('planProyNombre').textContent = proyNombre;
+    document.getElementById('planFechaIni').value = btn.dataset.fechaIni || '';
+    document.getElementById('planFechaFin').value = btn.dataset.fechaFin || '';
+    document.getElementById('planDias').value     = btn.dataset.dias     || '';
+
+    document.getElementById('formPlanificar').action =
+      '/proyectos/' + proyId + '/equipo/' + empId + '/cronograma/';
+  });
+</script>
 {% endblock %}

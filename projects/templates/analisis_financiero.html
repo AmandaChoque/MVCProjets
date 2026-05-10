@@ -64,6 +64,7 @@
             <option value="pendiente"   {% if filter_estado == 'pendiente'   %}selected{% endif %}>Pendiente</option>
             <option value="en_progreso" {% if filter_estado == 'en_progreso' %}selected{% endif %}>En Progreso</option>
             <option value="completado"  {% if filter_estado == 'completado'  %}selected{% endif %}>Completado</option>
+            <option value="cancelado"   {% if filter_estado == 'cancelado'   %}selected{% endif %}>Cancelado</option>
           </select>
         </div>
         <div class="col-md-2">
@@ -99,7 +100,7 @@
     <div class="col-6 col-md">
       <div class="card kpi-card red border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-danger" style="font-size:1.2rem;">{{ totales.costo_total|floatformat:2 }}</div>
+          <div class="kpi-value"  style="color:#3b831c; font-size:1.2rem;">{{ totales.costo_total|floatformat:2 }}</div>
           <div class="kpi-label">Costo Real Bs.</div>
         </div>
       </div>
@@ -112,13 +113,33 @@
         </div>
       </div>
     </div>
+    {% if totales.multa_total %}
+    <div class="col-6 col-md">
+      <div class="card kpi-card teal border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value" style="color:#c92020; font-size:1.2rem;">{{ totales.multa_total|floatformat:2 }}</div>
+          <div class="kpi-label">Total Multas Bs.</div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
     <div class="col-6 col-md">
       <div class="card kpi-card {% if totales.rentabilidad >= 0 %}green{% else %}red{% endif %} border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
           <div class="kpi-value {% if totales.rentabilidad >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-size:1.2rem;">
             {{ totales.rentabilidad|floatformat:2 }}
           </div>
-          <div class="kpi-label">Rentabilidad Bs. · {{ totales.margen }}%</div>
+          <div class="kpi-label">Rent. Bruta Bs. · {{ totales.margen }}%</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md">
+      <div class="card kpi-card {% if totales.rentabilidad_neta >= 0 %}green{% else %}red{% endif %} border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value {% if totales.rentabilidad_neta >= 0 %}text-success{% else %}text-danger{% endif %}" style="font-size:1.2rem;">
+            {{ totales.rentabilidad_neta|floatformat:2 }}
+          </div>
+          <div class="kpi-label">Rent. Neta Bs. · {{ totales.margen_neto }}%</div>
         </div>
       </div>
     </div>
@@ -140,8 +161,10 @@
             <th scope="col" class="text-end">Costo Real (Bs.)</th>
             <th scope="col" class="text-end">Cobrado (Bs.)</th>
             <th scope="col" class="text-end">Saldo (Bs.)</th>
-            <th scope="col" class="text-end">Rentabilidad (Bs.)</th>
-            <th scope="col" class="text-center">Margen</th>
+            <th scope="col" class="text-end">Rent. Bruta (Bs.)</th>
+            <th scope="col" class="text-end">Multa (Bs.)</th>
+            <th scope="col" class="text-end">Rent. Neta (Bs.)</th>
+            <th scope="col" class="text-center">Margen Neto</th>
           </tr>
         </thead>
         <tbody>
@@ -162,6 +185,8 @@
                 <span class="badge bg-success">Completado</span>
               {% elif f.proyecto.estado_proyecto == 'en_progreso' %}
                 <span class="badge bg-primary">En Progreso</span>
+              {% elif f.proyecto.estado_proyecto == 'cancelado' %}
+                <span class="badge bg-secondary">Cancelado</span>
               {% else %}
                 <span class="badge bg-warning text-dark">Pendiente</span>
               {% endif %}
@@ -187,21 +212,41 @@
             <td class="text-end fw-semibold {% if f.rentabilidad >= 0 %}text-success{% else %}text-danger{% endif %}">
               {{ f.rentabilidad|floatformat:2 }}
             </td>
-            <td class="text-center">
-              {% if f.margen >= 30 %}
-                <span class="badge bg-success">{{ f.margen }}%</span>
-              {% elif f.margen >= 10 %}
-                <span class="badge bg-warning text-dark">{{ f.margen }}%</span>
-              {% elif f.margen >= 0 %}
-                <span class="badge bg-danger">{{ f.margen }}%</span>
+            <td class="text-end">
+              {% if f.multa > 0 %}
+                {% if f.estado_multa == 'critico' %}
+                  <span class="badge bg-danger" title="{{ f.dias_retraso }} días de retraso — tope alcanzado">
+                    {{ f.multa|floatformat:2 }}
+                  </span>
+                {% else %}
+                  <span class="badge bg-warning text-dark" title="{{ f.dias_retraso }} días de retraso">
+                    {{ f.multa|floatformat:2 }}
+                  </span>
+                {% endif %}
+              {% elif f.tiene_contrato %}
+                <span class="text-muted">—</span>
               {% else %}
-                <span class="badge bg-dark">{{ f.margen }}%</span>
+                <span class="text-xxs text-muted">sin contrato</span>
+              {% endif %}
+            </td>
+            <td class="text-end fw-semibold {% if f.rentabilidad_neta >= 0 %}text-success{% else %}text-danger{% endif %}">
+              {{ f.rentabilidad_neta|floatformat:2 }}
+            </td>
+            <td class="text-center">
+              {% if f.margen_neto >= 30 %}
+                <span class="badge bg-success">{{ f.margen_neto }}%</span>
+              {% elif f.margen_neto >= 10 %}
+                <span class="badge bg-warning text-dark">{{ f.margen_neto }}%</span>
+              {% elif f.margen_neto >= 0 %}
+                <span class="badge bg-danger">{{ f.margen_neto }}%</span>
+              {% else %}
+                <span class="badge bg-dark">{{ f.margen_neto }}%</span>
               {% endif %}
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="12" class="text-center text-muted py-4">
+            <td colspan="14" class="text-center text-muted py-4">
               <i class="bi bi-inbox me-1"></i>No se encontraron proyectos con los filtros seleccionados.
             </td>
           </tr>
@@ -223,10 +268,17 @@
             <td class="text-end {% if totales.rentabilidad >= 0 %}text-success{% else %}text-danger{% endif %}">
               {{ totales.rentabilidad|floatformat:2 }}
             </td>
+            <td class="text-end {% if totales.multa_total %}text-danger{% else %}text-muted{% endif %}">
+              {% if totales.multa_total %}{{ totales.multa_total|floatformat:2 }}{% else %}—{% endif %}
+            </td>
+            <td class="text-end {% if totales.rentabilidad_neta >= 0 %}text-success{% else %}text-danger{% endif %}">
+              {{ totales.rentabilidad_neta|floatformat:2 }}
+            </td>
             <td class="text-center">
-              {% if totales.margen >= 30 %}<span class="badge bg-success">{{ totales.margen }}%</span>
-              {% elif totales.margen >= 10 %}<span class="badge bg-warning text-dark">{{ totales.margen }}%</span>
-              {% else %}<span class="badge bg-danger">{{ totales.margen }}%</span>{% endif %}
+              {% if totales.margen_neto >= 30 %}<span class="badge bg-success">{{ totales.margen_neto }}%</span>
+              {% elif totales.margen_neto >= 10 %}<span class="badge bg-warning text-dark">{{ totales.margen_neto }}%</span>
+              {% elif totales.margen_neto >= 0 %}<span class="badge bg-danger">{{ totales.margen_neto }}%</span>
+              {% else %}<span class="badge bg-dark">{{ totales.margen_neto }}%</span>{% endif %}
             </td>
           </tr>
         </tfoot>

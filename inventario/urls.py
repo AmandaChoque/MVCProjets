@@ -5,12 +5,14 @@ urlpatterns = [
     # Proveedores
     path('proveedores/', views.proveedores, name='proveedores'),
     path('proveedores/nuevo/', views.create_proveedor, name='create_proveedor'),
+    path('proveedores/ajax/nuevo/', views.create_proveedor_ajax, name='create_proveedor_ajax'),
     path('proveedores/<int:id_proveedor>/', views.proveedor_detail, name='proveedor_detail'),
     path('proveedores/<int:id_proveedor>/desactivar/', views.deactivate_proveedor, name='proveedor_deactivate'),
 
     # Insumos
     path('insumos/', views.insumos, name='insumos'),
     path('insumos/nuevo/', views.create_insumo, name='create_insumo'),
+    path('insumos/ajax/nuevo/', views.create_insumo_ajax, name='create_insumo_ajax'),
     path('insumos/<int:id_insumo>/', views.insumo_detail, name='insumo_detail'),
     path('insumos/<int:id_insumo>/ver/', views.insumo_view, name='insumo_view'),
     path('insumos/<int:id_insumo>/desactivar/', views.deactivate_insumo, name='insumo_deactivate'),

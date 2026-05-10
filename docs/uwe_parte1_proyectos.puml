@@ -1,0 +1,182 @@
+@startuml SOBOTEC_ContentModel_Parte1
+title Modelo de Contenido UWE — Parte 1: Proyectos, Sedes y Garantías (SOBOTEC S.R.L.)
+
+!theme plain
+left to right direction
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 10
+skinparam classFontName Arial
+skinparam classHeaderFontSize 11
+skinparam classHeaderFontStyle bold
+skinparam classBackgroundColor #FEFEFE
+skinparam classBorderColor #555555
+skinparam arrowColor #333333
+skinparam arrowFontSize 9
+skinparam nodesep 25
+skinparam ranksep 35
+skinparam padding 4
+skinparam defaultTextAlignment left
+
+' ─── CLIENTE ───
+class Cliente {
+  nit_ci : String
+  nombre : String
+  tipo_contratante : String
+  telefono : String
+  correo : Email
+  direccion : String
+}
+
+' ─── PROYECTO ───
+class Proyecto {
+  codigo : String
+  nombre : String
+  tipo_proyecto : String
+  estado_proyecto : String
+  monto_total : Decimal
+  estado_pago : String
+  fecha_inicio : Date
+  fecha_fin : Date
+}
+
+' ─── CONTRATO PROYECTO ───
+class ContratoProyecto {
+  fecha_inicio : Date
+  fecha_fin : Date
+  monto_acordado : Decimal
+  porcentaje_multa_diaria : Decimal
+  porcentaje_multa_maxima : Decimal
+  garantia_meses : Integer
+}
+
+' ─── ASIGNACION ───
+class AsignacionProyecto {
+  fecha_inicio_plan : Date
+  fecha_fin_plan : Date
+  dias_planificados : Integer
+}
+
+' ─── PAGO PROYECTO ───
+class PagoProyecto {
+  monto : Decimal
+  descuento : Decimal
+  fecha : Date
+  tipo_pago : String
+  estado : String
+}
+
+' ─── HISTORIAL PRESUPUESTO ───
+class HistorialPresupuesto {
+  monto_anterior : Decimal
+  monto_actual : Decimal
+  motivo_cambio : Text
+  fecha : DateTime
+}
+
+' ─── HISTORIAL ESTADO ───
+class HistorialEstado {
+  estado_anterior : String
+  estado_nuevo : String
+  motivo : Text
+  fecha : DateTime
+}
+
+' ─── SEDE ───
+class Sede {
+  nombre : String
+  direccion : String
+  estado : String
+  latitud : Decimal
+  longitud : Decimal
+}
+
+' ─── FOTO SEDE ───
+class FotoSede {
+  foto : Image
+  descripcion : String
+}
+
+' ─── TAREA CHECKLIST ───
+class TareaChecklist {
+  descripcion : String
+  orden : Integer
+  completado : Boolean
+}
+
+' ─── SUBTAREA ───
+class SubtareaChecklist {
+  descripcion : String
+  completado : Boolean
+}
+
+' ─── PLANTILLA ───
+class PlantillaTarea {
+  nombre : String
+  tipo : String
+}
+
+class ItemPlantilla {
+  descripcion : String
+  orden : Integer
+}
+
+class SubItemPlantilla {
+  descripcion : String
+  orden : Integer
+}
+
+' ─── GARANTIA ───
+class Garantia {
+  fecha_inicio : Date
+  fecha_vencimiento : Date
+}
+
+class IncidenciaGarantia {
+  descripcion : Text
+  fecha_reporte : Date
+  costo_reparacion : Decimal
+  estado : String
+}
+
+' ─── NOTIFICACION ───
+class Notificacion {
+  tipo : String
+  mensaje : Text
+  leida : Boolean
+  fecha : DateTime
+}
+
+' ─── EMPLEADO (referencia) ───
+class Empleado <<ref>> {
+  nombre : String
+  cargo : String
+}
+
+' ═══════ RELACIONES ═══════
+Cliente         "1"    *--> "0..*" Proyecto             : contrata
+Proyecto        "1"    *--> "0..*" ContratoProyecto      : formaliza
+Proyecto        "1"    *--> "0..*" Sede                  : tiene
+Proyecto        "1"    *--> "0..*" PagoProyecto          : recibe
+Proyecto        "1"    *--> "0..*" HistorialPresupuesto  : registra
+Proyecto        "1"    *--> "0..*" HistorialEstado       : rastrea
+Proyecto        "1"    *--> "0..*" AsignacionProyecto    : planifica
+Proyecto        "0..*"  --> "0..*" Empleado              : equipo
+AsignacionProyecto "0..*" --> "1" Empleado               : asignado a
+
+ContratoProyecto "1"   *--> "0..1" Garantia             : genera
+Garantia         "1"   *--> "0..*" IncidenciaGarantia   : registra
+
+Sede         "0..*"  -->  "0..1" PlantillaTarea          : aplica
+Sede         "1"    *--> "0..*"  TareaChecklist          : lista
+Sede         "1"    *--> "0..*"  FotoSede                : documenta
+TareaChecklist "1"  *--> "0..*"  SubtareaChecklist       : subdivide
+TareaChecklist "0..*"  --> "0..*" Empleado               : participantes
+
+PlantillaTarea  "1"  *--> "0..*" ItemPlantilla           : contiene
+ItemPlantilla   "1"  *--> "0..*" SubItemPlantilla        : detalla
+
+Notificacion "0..*" --> "1"    Empleado : destino
+Notificacion "0..*" --> "0..1" Proyecto : sobre
+
+@enduml

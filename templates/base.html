@@ -277,6 +277,12 @@
             <i class="bi bi-calendar-check me-2"></i>Mi Jornada
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link {% if '/mis-reparaciones' in request.path %}active-link{% endif %}"
+             href="{% url 'mis_reparaciones' %}">
+            <i class="bi bi-tools me-2"></i>Mis Reparaciones
+          </a>
+        </li>
         {% endif %}
 
         <!-- ── MÓDULO PROYECTOS ─────────────────────────── -->
@@ -473,16 +479,16 @@
 
         {% if es_admin_o_gerente %}
         <li class="nav-item">
-          <a class="nav-link {% if '/compras' in request.path %}active-link{% endif %}"
-             href="{% url 'compras' %}">
-            <i class="bi bi-cart3 me-2"></i>Compras
+          <a class="nav-link {% if '/proveedores' in request.path %}active-link{% endif %}"
+             href="{% url 'proveedores' %}">
+            <i class="bi bi-truck me-2"></i>Proveedores
           </a>
         </li>
 
         <li class="nav-item">
-          <a class="nav-link {% if '/proveedores' in request.path %}active-link{% endif %}"
-             href="{% url 'proveedores' %}">
-            <i class="bi bi-truck me-2"></i>Proveedores
+          <a class="nav-link {% if '/compras' in request.path %}active-link{% endif %}"
+             href="{% url 'compras' %}">
+            <i class="bi bi-cart3 me-2"></i>Compras
           </a>
         </li>
         {% endif %}

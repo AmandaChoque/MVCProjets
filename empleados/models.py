@@ -87,6 +87,19 @@ class ContratoEmpleado(AuditModel):
         return f"Contrato — {self.empleado.nombre} {self.empleado.apellido_paterno}"
 
     @property
+    def vigente(self):
+        from datetime import date
+        return self.activo and self.fecha_fin >= date.today()
+
+    @property
+    def estado_contrato(self):
+        """Devuelve 'vigente', 'vencido' o 'inhabilitado'."""
+        if not self.activo:
+            return 'inhabilitado'
+        from datetime import date
+        return 'vigente' if self.fecha_fin >= date.today() else 'vencido'
+
+    @property
     def monto_diario(self):
         """Para diario: monto/días. Para mensual: monto_acordado es el salario del mes completo."""
         if self.tipo_contrato == 'mensual':

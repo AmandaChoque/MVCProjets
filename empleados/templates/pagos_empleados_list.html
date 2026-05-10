@@ -135,7 +135,7 @@
           <th>Método</th>
           <th>Fecha</th>
           <th class="text-end">Monto (Bs.)</th>
-          <th class="text-end">Contrato (Bs.)</th>
+          <th class="text-end">Ganado (Bs.)</th>
           <th class="text-end">Días trab.</th>
           <th class="text-end">Saldo (Bs.)</th>
           <th class="text-end" style="width:80px;">Acciones</th>
@@ -178,25 +178,34 @@
           </td>
           <td class="small">{{ pago.fecha|date:"d/m/Y" }}</td>
           <td class="text-end fw-semibold">{{ pago.monto|floatformat:2 }}</td>
-          <td class="text-end text-muted small">{{ pago.contrato.monto_acordado|floatformat:2 }}</td>
+          <td class="text-end text-muted small">{{ item.ganado|floatformat:2 }}</td>
           <td class="text-end small">{{ item.dias|floatformat:1 }}</td>
           <td class="text-end small fw-semibold {% if item.saldo > 0 %}text-danger{% else %}text-success{% endif %}">
             {{ item.saldo|floatformat:2 }}
           </td>
           <td class="text-end">
             {% if es_admin %}
-            {% if pago.estado == 'pendiente' %}
-            <a href="{% url 'confirmar_pago_empleado' pago.id %}" class="btn btn-sm btn-success" title="Confirmar pago">
-              <i class="bi bi-check-circle"></i>
-            </a>
-            {% else %}
             <div class="dropdown">
               <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
               <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                <li><a class="dropdown-item" href="{% url 'pago_empleado_detail' pago.id %}">Editar</a></li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'pago_empleado_detail' pago.id %}">
+                    <i class="bi bi-eye me-2 text-muted"></i>Ver
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item" href="{% url 'pago_empleado_detail' pago.id %}">
+                    <i class="bi bi-pencil me-2 text-muted"></i>Editar
+                  </a>
+                </li>
+                {% if pago.estado == 'pendiente' %}
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <a class="dropdown-item text-success fw-semibold" href="{% url 'confirmar_pago_empleado' pago.id %}">Pagar</a>
+                </li>
+                {% endif %}
               </ul>
             </div>
-            {% endif %}
             {% endif %}
           </td>
         </tr>
@@ -210,8 +219,8 @@
       {% if pagos %}
       <tfoot class="table-light small text-uppercase fw-semibold">
         <tr>
-          <td colspan="4" class="px-3 text-end fw-semibold">Total (Bs.):</td>
-          <td class="text-end fw-bold">{{ total_monto|floatformat:2 }}</td>
+          <td colspan="4" class="px-3 text-end fw-semibold">Total página (Bs.):</td>
+          <td class="text-end fw-bold">{{ total_monto_pagina|floatformat:2 }}</td>
           <td colspan="4"></td>
         </tr>
       </tfoot>

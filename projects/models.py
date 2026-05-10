@@ -43,17 +43,15 @@ class ActiveClienteManager(models.Manager):
 class Cliente(AuditModel):
 
     TIPO_CONTRATANTE_CHOICES = [
-        ('empresa', 'Empresa'),
-        ('personal', 'Personal'),
+        ('personal', 'Personal / Negocio'),
         ('entidad_publica', 'Entidad Pública'),
     ]
 
     ROL_CHOICES = [
         ('propietario', 'Propietario'),
-        ('representante', 'Representante'),
-        ('gerente', 'Gerente'),
-        ('presidente_zona', 'Presidente de Zona'),
         ('encargado', 'Encargado'),
+        ('gerente', 'Gerente'),
+        ('representante', 'Representante'),
     ]
 
     rol_contacto = models.CharField(max_length=50, choices=ROL_CHOICES, default='propietario', verbose_name="Rol de Contacto")
@@ -98,16 +96,15 @@ class Cliente(AuditModel):
 # Proyecto
 class Proyecto(AuditModel):
     PROJECT_STATUS_CHOICES = [
-        ('pendiente', 'Pendiente'),         # Pendiente
-        ('en_progreso', 'En Progreso'), # En Proceso
-        ('completado', 'Completado'),     # Terminado
+        ('pendiente', 'Pendiente'),
+        ('en_progreso', 'En Progreso'),
+        ('completado', 'Completado'),
+        ('cancelado', 'Cancelado'),
     ]
 
     PROJECT_TYPE_CHOICES = [
         ('instalacion_nueva',     'Instalación Nueva'),
-        ('ampliacion',            'Ampliación'),
         ('mantenimiento_externo', 'Mantenimiento Externo'),
-        ('emergencia',            'Emergencia'),
     ]
     # Opciones para el estado del pago
     PAYMENT_STATE_CHOICES = [
@@ -279,7 +276,7 @@ class ContratoProyecto(AuditModel):
     @property
     def dias_retraso(self):
         """Días corridos desde fecha_fin hasta hoy. 0 si el proyecto ya está completado o no hay retraso."""
-        if self.proyecto.estado_proyecto == 'completado':
+        if self.proyecto.estado_proyecto in ('completado', 'cancelado'):
             return 0
         hoy = date.today()
         if hoy > self.fecha_fin:
@@ -353,6 +350,7 @@ class HistorialEstadoProyecto(models.Model):
         ('pendiente',    'Pendiente'),
         ('en_progreso',  'En Progreso'),
         ('completado',   'Completado'),
+        ('cancelado',    'Cancelado'),
     ]
     proyecto         = models.ForeignKey(Proyecto, on_delete=models.CASCADE, related_name='historial_estado', verbose_name="Proyecto")
     estado_anterior  = models.CharField(max_length=20, choices=ESTADO_CHOICES, verbose_name="Estado Anterior")

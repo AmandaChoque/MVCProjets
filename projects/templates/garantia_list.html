@@ -1,125 +1,193 @@
 {% extends 'base.html' %}
-
 {% block content %}
-<main class="container-fluid px-4 py-4">
 
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-      <h4 class="fw-bold text-sobotec mb-0">Garantías Post-Instalación</h4>
-      <p class="text-muted small mb-0">Registro y seguimiento de garantías activas de proyectos completados</p>
+<div class="container-fluid px-4 py-4">
+
+  <!-- ======================= ENCABEZADO ======================= -->
+  <div class="mb-2">
+
+    <div class="d-flex justify-content-between align-items-center mb-2">
+      <div>
+        <h4 class="fw-bold text-sobotec mb-0">Garantías Post-Instalación</h4>
+        <p class="text-muted small mb-0">Registro y seguimiento de garantías de proyectos completados</p>
+      </div>
+    </div>
+
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+
+      <form method="GET" action="{% url 'garantias_list' %}" class="d-flex align-items-center gap-2">
+        <input type="hidden" name="search"  value="{{ search }}">
+        <input type="hidden" name="estado"  value="{{ filtro }}">
+        <input type="hidden" name="page"    value="1">
+        <span class="small text-muted">Mostrar:</span>
+        <select name="per_page" class="form-select form-select-sm" style="width:80px;" onchange="this.form.submit()">
+          <option value="10"  {% if per_page == 10  %}selected{% endif %}>10</option>
+          <option value="20"  {% if per_page == 20  %}selected{% endif %}>20</option>
+          <option value="50"  {% if per_page == 50  %}selected{% endif %}>50</option>
+          <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+        </select>
+      </form>
+
+      <div class="text-muted small">
+        Mostrando {{ garantias.start_index }}–{{ garantias.end_index }}
+        de {{ garantias.paginator.count }} registros
+      </div>
+
     </div>
   </div>
 
-  <!-- Filtros -->
-  <div class="card border-0 shadow-sm rounded-3 mb-4">
-    <div class="card-body py-3">
-      <form method="GET" class="d-flex align-items-center gap-3 flex-wrap">
-        <span class="text-muted small fw-semibold">Filtrar por estado:</span>
-        <a href="{% url 'garantias_list' %}"
-           class="btn btn-sm {% if not filtro %}btn-primary{% else %}btn-outline-secondary{% endif %}">
-          Todas ({{ total }})
-        </a>
-        <a href="?estado=vigente"
-           class="btn btn-sm {% if filtro == 'vigente' %}btn-success{% else %}btn-outline-success{% endif %}">
-          <i class="bi bi-shield-check me-1"></i>Vigentes
-        </a>
-        <a href="?estado=por_vencer"
-           class="btn btn-sm {% if filtro == 'por_vencer' %}btn-warning{% else %}btn-outline-warning{% endif %}">
-          <i class="bi bi-clock-history me-1"></i>Por vencer
-        </a>
-        <a href="?estado=vencida"
-           class="btn btn-sm {% if filtro == 'vencida' %}btn-danger{% else %}btn-outline-danger{% endif %}">
-          <i class="bi bi-shield-x me-1"></i>Vencidas
-        </a>
+
+  <!-- ======================= FILTROS ======================= -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+      <form method="GET" action="{% url 'garantias_list' %}" class="row g-2">
+        <input type="hidden" name="per_page" value="{{ per_page }}">
+
+        <div class="col-md-4">
+          <input type="text" class="form-control form-control-sm"
+                 name="search" value="{{ search|default:'' }}"
+                 placeholder="Proyecto o cliente">
+        </div>
+
+        <div class="col-md-3">
+          <select class="form-select form-select-sm" name="estado">
+            <option value="">Estado (todos)</option>
+            <option value="vigente"    {% if filtro == 'vigente'    %}selected{% endif %}>Vigente</option>
+            <option value="por_vencer" {% if filtro == 'por_vencer' %}selected{% endif %}>Por vencer</option>
+            <option value="vencida"    {% if filtro == 'vencida'    %}selected{% endif %}>Vencida</option>
+          </select>
+        </div>
+
+        <div class="col-6 col-md-2">
+          <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
+        </div>
+        <div class="col-6 col-md-1">
+          <a href="{% url 'garantias_list' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
+        </div>
       </form>
     </div>
   </div>
 
-  <!-- Tabla -->
-  <div class="card border-0 shadow-sm rounded-3">
+
+  <!-- ======================= TABLA ======================= -->
+  <div class="card border-0 shadow-sm mb-3">
     <div class="card-body p-0">
-      {% if garantias %}
-      <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0">
-          <thead class="table-light">
+      <div class="table-responsive" style="overflow:visible;">
+        <table class="table table-sm table-hover align-middle small">
+
+          <thead class="table-light small text-uppercase fw-semibold">
             <tr>
-              <th class="ps-4">Proyecto</th>
+              <th class="ps-3">Proyecto</th>
               <th>Cliente</th>
               <th>Tipo</th>
               <th>Inicio</th>
               <th>Vencimiento</th>
               <th>Estado</th>
               <th class="text-center">Incidencias</th>
-              <th class="text-end pe-4">Costo total</th>
-              <th></th>
+              <th class="text-end">Costo total</th>
+              <th style="width:60px;"></th>
             </tr>
           </thead>
+
           <tbody>
             {% for g in garantias %}
             <tr>
-              <td class="ps-4 fw-semibold">
-                <a href="{% url 'garantia_detail' g.id %}" class="text-decoration-none text-dark">
-                  {{ g.contrato.proyecto.nombre }}
-                </a>
-              </td>
-              <td class="text-muted small">
+              <td class="ps-3 fw-semibold">{{ g.contrato.proyecto.nombre }}</td>
+              <td class="text-muted">
                 {{ g.contrato.proyecto.cliente.nombre }} {{ g.contrato.proyecto.cliente.apellido_paterno }}
               </td>
               <td>
                 <span class="badge bg-secondary">{{ g.contrato.proyecto.get_tipo_proyecto_display }}</span>
               </td>
-              <td class="small">{{ g.fecha_inicio|date:"d/m/Y" }}</td>
-              <td class="small">{{ g.fecha_vencimiento|date:"d/m/Y" }}</td>
+              <td>{{ g.fecha_inicio|date:"d/m/Y" }}</td>
+              <td>{{ g.fecha_vencimiento|date:"d/m/Y" }}</td>
               <td>
                 {% if g.estado == 'vigente' %}
                   <span class="badge bg-success"><i class="bi bi-shield-check me-1"></i>Vigente</span>
-                  <span class="text-muted small ms-1">{{ g.dias_restantes }} días</span>
+                  <span class="text-muted ms-1">{{ g.dias_restantes }}d</span>
                 {% elif g.estado == 'por_vencer' %}
                   <span class="badge bg-warning text-dark"><i class="bi bi-clock-history me-1"></i>Por vencer</span>
-                  <span class="text-warning small ms-1 fw-semibold">{{ g.dias_restantes }} días</span>
+                  <span class="text-warning ms-1 fw-semibold">{{ g.dias_restantes }}d</span>
                 {% else %}
                   <span class="badge bg-danger"><i class="bi bi-shield-x me-1"></i>Vencida</span>
                 {% endif %}
               </td>
               <td class="text-center">
-                {% with total_inc=g.incidencias.count %}
-                {% if total_inc > 0 %}
-                  <span class="badge bg-danger rounded-pill">{{ total_inc }}</span>
-                {% else %}
-                  <span class="text-muted">—</span>
-                {% endif %}
+                {% with c=g.incidencias.count %}
+                  {% if c > 0 %}
+                    <span class="badge bg-danger rounded-pill">{{ c }}</span>
+                  {% else %}
+                    <span class="text-muted">—</span>
+                  {% endif %}
                 {% endwith %}
               </td>
-              <td class="text-end pe-4 small">
+              <td class="text-end pe-3">
                 {% if g.costo_total_incidencias %}
                   <span class="text-danger fw-semibold">Bs. {{ g.costo_total_incidencias|floatformat:2 }}</span>
                 {% else %}
                   <span class="text-muted">Bs. 0.00</span>
                 {% endif %}
               </td>
-              <td class="pe-3">
-                <a href="{% url 'garantia_detail' g.id %}" class="btn btn-sm btn-outline-primary">
-                  <i class="bi bi-eye"></i>
+              <td class="text-end pe-3">
+                <a href="{% url 'garantia_detail' g.id %}" class="btn btn-sm btn-outline-secondary">
+                  <i class="bi bi-eye me-1"></i>Ver
                 </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="9" class="text-center text-muted py-4 small">
+                {% if search or filtro %}
+                  No se encontraron garantías con los filtros aplicados.
+                {% else %}
+                  No hay garantías registradas aún.
+                  <span class="d-block mt-1">Se crean automáticamente al completar un proyecto con garantía configurada.</span>
+                {% endif %}
               </td>
             </tr>
             {% endfor %}
           </tbody>
+
         </table>
       </div>
-      {% else %}
-      <div class="text-center py-5 text-muted">
-        <i class="bi bi-shield fs-1 d-block mb-2"></i>
-        {% if filtro %}
-          No hay garantías con estado <strong>{{ filtro }}</strong>.
-        {% else %}
-          No hay garantías registradas aún.<br>
-          <span class="small">Se crean automáticamente al completar un proyecto con contrato que incluye garantía.</span>
-        {% endif %}
-      </div>
-      {% endif %}
     </div>
   </div>
 
-</main>
+
+  <!-- ======================= PAGINACIÓN ======================= -->
+  {% if garantias.paginator.num_pages > 1 %}
+  <nav>
+    <ul class="pagination pagination-sm justify-content-center mb-0">
+
+      {% if garantias.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ garantias.previous_page_number }}&per_page={{ per_page }}&search={{ search }}&estado={{ filtro }}">Anterior</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+      {% endif %}
+
+      {% for num in garantias.paginator.page_range %}
+        {% if garantias.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > garantias.number|add:'-3' and num < garantias.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&search={{ search }}&estado={{ filtro }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+
+      {% if garantias.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ garantias.next_page_number }}&per_page={{ per_page }}&search={{ search }}&estado={{ filtro }}">Siguiente</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+      {% endif %}
+
+    </ul>
+  </nav>
+  {% endif %}
+
+</div>
 {% endblock %}

@@ -246,9 +246,15 @@
             <td class="fin-val">Bs. {{ costo_garantia|floatformat:2 }}</td>
           </tr>
           {% endif %}
+          {% if multa_contrato %}
+          <tr>
+            <td class="fin-lbl" style="color:#c0392b;">Multa por retraso ({{ dias_retraso_contrato }}d)</td>
+            <td class="fin-val" style="color:#c0392b;">Bs. {{ multa_contrato|floatformat:2 }}</td>
+          </tr>
+          {% endif %}
           <tr class="fin-total">
-            <td class="fin-lbl" style="color:#D4B84A;">Rentabilidad ({{ margen }}%)</td>
-            <td class="fin-val" style="color:#D4B84A;">Bs. {{ rentabilidad|floatformat:2 }}</td>
+            <td class="fin-lbl" style="color:#D4B84A;">Rentabilidad neta ({{ margen_neto }}%)</td>
+            <td class="fin-val" style="color:#D4B84A;">Bs. {{ rentabilidad_neta|floatformat:2 }}</td>
           </tr>
         </table>
       </td>
