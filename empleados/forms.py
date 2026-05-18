@@ -1,13 +1,11 @@
 from django import forms
 from django.db.models import Sum
-import re
 from decimal import Decimal
 from datetime import date
 
 from .models import Empleado, PagoEmpleado, ContratoEmpleado, JornadaEmpleado
 from projects.models import Proyecto
-
-DECIMAL_REGEX = r'\d+(\.\d{1,2})?'
+from projects.validators import parse_decimal, validate_phone, validate_numeric_id, validate_document_ext
 
 
 class EmpleadoForm(forms.ModelForm):
@@ -77,23 +75,10 @@ class EmpleadoForm(forms.ModelForm):
         }
 
     def clean_carnet_identidad(self):
-        ci = self.cleaned_data.get('carnet_identidad', '')
-        if not ci:
-            raise forms.ValidationError('El carnet de identidad es obligatorio.')
-        ci_digits = ci.replace(' ', '')
-        if not ci_digits.isdigit():
-            raise forms.ValidationError('El carnet debe contener solo números.')
-        if len(ci_digits) < 6:
-            raise forms.ValidationError('El carnet debe tener al menos 7 dígitos.')
-        return ci_digits
+        return validate_numeric_id(self.cleaned_data.get('carnet_identidad', ''), min_len=6, required=True)
 
     def clean_numero_celular(self):
-        celular = self.cleaned_data.get('numero_celular', '').replace(' ', '')
-        if not celular.isdigit():
-            raise forms.ValidationError('El celular debe contener solo números.')
-        if len(celular) < 7:
-            raise forms.ValidationError('El celular debe tener al menos 8 dígitos.')
-        return celular
+        return validate_phone(self.cleaned_data.get('numero_celular', ''), min_len=7, required=False)
 
     def clean_username(self):
         username = self.cleaned_data.get('username', '').strip()
@@ -130,7 +115,6 @@ class _ContratoEmpleadoBase(forms.ModelForm):
         model = ContratoEmpleado
         fields = []
         widgets = {
-            'tipo_contrato':  forms.Select(attrs={'class': 'form-select'}),
             'fecha_firma':    forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
             'fecha_inicio':   forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
             'fecha_fin':      forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
@@ -140,20 +124,13 @@ class _ContratoEmpleadoBase(forms.ModelForm):
         }
 
     def clean_monto_acordado(self):
-        valor = str(self.cleaned_data.get('monto_acordado', '')).strip()
-        if not re.fullmatch(DECIMAL_REGEX, valor):
-            raise forms.ValidationError('Formato inválido. Use punto como separador decimal.')
-        resultado = Decimal(valor)
+        resultado = parse_decimal(self.cleaned_data.get('monto_acordado', ''))
         if resultado <= 0:
             raise forms.ValidationError('El monto debe ser mayor a cero.')
         return resultado
 
     def clean_documento(self):
-        doc = self.cleaned_data.get('documento')
-        if doc and hasattr(doc, 'name'):
-            if not doc.name.lower().endswith(('.pdf', '.jpg', '.jpeg', '.png', '.gif', '.webp')):
-                raise forms.ValidationError('Solo se permiten archivos PDF o imágenes.')
-        return doc
+        return validate_document_ext(self.cleaned_data.get('documento'))
 
     def clean(self):
         cleaned_data   = super().clean()
@@ -178,7 +155,7 @@ class _ContratoEmpleadoBase(forms.ModelForm):
 
 class ContratoEmpleadoForm(_ContratoEmpleadoBase):
     class Meta(_ContratoEmpleadoBase.Meta):
-        fields = ['empleado', 'tipo_contrato', 'fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'dias_laborales', 'observaciones', 'documento']
+        fields = ['empleado', 'fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'dias_laborales', 'observaciones', 'documento']
         widgets = {**_ContratoEmpleadoBase.Meta.widgets, 'empleado': forms.Select(attrs={'class': 'form-select'})}
 
     def __init__(self, *args, **kwargs):
@@ -215,7 +192,7 @@ class ContratoEmpleadoForm(_ContratoEmpleadoBase):
 class ContratoEmpleadoDesdeEmpleadoForm(_ContratoEmpleadoBase):
     """Contrato de empleado creado desde el perfil del empleado (sin campo empleado)."""
     class Meta(_ContratoEmpleadoBase.Meta):
-        fields = ['tipo_contrato', 'fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'dias_laborales', 'observaciones', 'documento']
+        fields = ['fecha_firma', 'fecha_inicio', 'fecha_fin', 'monto_acordado', 'dias_laborales', 'observaciones', 'documento']
 
     def __init__(self, *args, empleado=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -279,6 +256,9 @@ class JornadaEmpleadoForm(forms.ModelForm):
         self._contrato = contrato
         self._empleado = empleado
         base_qs = Proyecto.objects.filter(activo=True, estado_proyecto__in=['pendiente', 'en_progreso'])
+        # Al editar, siempre incluir el proyecto actual aunque no esté en progreso
+        if self.instance and self.instance.pk and self.instance.proyecto_id:
+            base_qs = (base_qs | Proyecto.objects.filter(pk=self.instance.proyecto_id)).distinct()
         if es_admin or empleado is None:
             self.fields['proyecto'].queryset = base_qs
         else:
@@ -336,12 +316,20 @@ class PagoEmpleadoForm(forms.ModelForm):
 
     class Meta:
         model = PagoEmpleado
-        fields = ['monto', 'fecha', 'concepto', 'tipo_pago']
+        fields = ['monto', 'fecha', 'concepto']
         widgets = {
-            'fecha':     forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'concepto':  forms.Select(attrs={'class': 'form-select'}),
-            'tipo_pago': forms.Select(attrs={'class': 'form-select'}),
+            'fecha':    forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}, format='%Y-%m-%d'),
+            'concepto': forms.Select(attrs={'class': 'form-select'}),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        choices = list(self.fields['concepto'].choices)
+        if choices and choices[0][0] == '':
+            choices[0] = ('', 'Tipo de pago')
+        else:
+            choices = [('', 'Tipo de pago')] + choices
+        self.fields['concepto'].choices = choices
 
     def clean_monto(self):
         valor = str(self.cleaned_data.get('monto', '')).strip()

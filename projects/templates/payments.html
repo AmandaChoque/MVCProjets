@@ -3,17 +3,263 @@
 
 <div class="container-fluid px-4 py-4">
 
-  <!-- ENCABEZADO -->
+{% if modo == 'historial' %}
+{# ══════════════════════════════════════════════════════════════════════════ #}
+{# MODO HISTORIAL: pagos de un proyecto                                      #}
+{# ══════════════════════════════════════════════════════════════════════════ #}
+
+  <!-- Encabezado -->
+  <div class="mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-2">
+      <a href="{% url 'payments' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Volver
+      </a>
+      <div>
+        <h5 class="fw-bold mb-0">{{ proyecto.nombre }}</h5>
+        <span class="text-muted small">{{ proyecto.codigo }}</span>
+      </div>
+    </div>
+    {% if es_admin_sec %}
+    <a href="{% url 'create_payment' %}" class="btn btn-primary btn-sm">+ Nuevo Pago</a>
+    {% endif %}
+  </div>
+
+  <!-- Resumen del proyecto -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="text-muted small mb-1">Monto acordado</div>
+          <div class="fw-bold" style="font-size:1.1rem;">Bs. {{ monto_ref|floatformat:2 }}</div>
+          <div class="text-muted" style="font-size:0.72rem;">
+            {% if contrato %}Contrato{% else %}Monto total{% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="text-muted small mb-1">Total cobrado</div>
+          <div class="fw-bold text-success" style="font-size:1.1rem;">Bs. {{ total_cobrado|floatformat:2 }}</div>
+          <div class="text-muted" style="font-size:0.72rem;">Solo pagos confirmados</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="text-muted small mb-1">Saldo pendiente</div>
+          <div class="fw-bold {% if saldo_proyecto > 0 %}text-danger{% elif saldo_proyecto < 0 %}text-warning{% else %}text-success{% endif %}" style="font-size:1.1rem;">
+            Bs. {{ saldo_proyecto|floatformat:2 }}
+          </div>
+          {% if saldo_proyecto < 0 %}
+          <div class="text-warning" style="font-size:0.72rem;">Sobrepago</div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="text-muted small mb-1">Estado cobro</div>
+          {% if proyecto.estado_pago == 'pagado' %}
+            <span class="badge bg-success fs-6">Cobrado</span>
+          {% elif proyecto.estado_pago == 'parcial' %}
+            <span class="badge bg-warning text-dark fs-6">Parcial</span>
+          {% else %}
+            <span class="badge bg-danger fs-6">Sin cobro</span>
+          {% endif %}
+          <div class="text-muted mt-1" style="font-size:0.72rem;">
+            {% if monto_ref > 0 %}
+              {% widthratio total_cobrado monto_ref 100 %}% cubierto
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alerta pagos pendientes de confirmación -->
+  {% if total_pendiente > 0 %}
+  <div class="alert alert-warning alert-dismissible fade show py-2 mb-3" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    Hay pagos pendientes de confirmar por
+    <strong>Bs. {{ total_pendiente|floatformat:2 }}</strong> en este proyecto.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endif %}
+
+  <!-- Filtro método + paginación -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+      <form method="GET" action="{% url 'payments' %}" class="row g-2 align-items-end">
+        <input type="hidden" name="proyecto_id" value="{{ proyecto_id }}">
+        <input type="hidden" name="per_page"    value="{{ per_page }}">
+        <div class="col-md-3">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Método de pago</label>
+          <select class="form-select form-select-sm" name="filter_tipo">
+            <option value="">Todos</option>
+            <option value="efectivo"      {% if filter_tipo == "efectivo"      %}selected{% endif %}>Efectivo</option>
+            <option value="transferencia" {% if filter_tipo == "transferencia" %}selected{% endif %}>Transferencia</option>
+          </select>
+        </div>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-dark btn-sm">Filtrar</button>
+        </div>
+        <div class="col-auto">
+          <a href="?proyecto_id={{ proyecto_id }}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
+        </div>
+        <div class="col-auto ms-auto d-flex align-items-center gap-2">
+          <span class="small text-muted">Mostrar:</span>
+          <select name="per_page" class="form-select form-select-sm" style="width:80px;" onchange="this.form.submit()">
+            <option value="10"  {% if per_page == 10  %}selected{% endif %}>10</option>
+            <option value="20"  {% if per_page == 20  %}selected{% endif %}>20</option>
+            <option value="50"  {% if per_page == 50  %}selected{% endif %}>50</option>
+            <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+          </select>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Tabla historial de pagos -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body p-0">
+      <div class="table-responsive" style="overflow:visible;">
+        <table class="table table-sm table-hover align-middle small">
+          <thead class="table-light small text-uppercase fw-semibold">
+            <tr>
+              <th class="px-3">Monto (Bs.)</th>
+              <th>Confirmación</th>
+              <th>Fecha pago</th>
+              <th>Registro</th>
+              <th>Método</th>
+              <th class="text-end" style="width:80px;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for payment in payments %}
+            <tr>
+              <td class="px-3 fw-semibold">
+                {{ payment.monto|floatformat:2 }}
+                {% if payment.descuento %}
+                <div class="text-muted" style="font-size:0.7rem;">+ desc. {{ payment.descuento|floatformat:2 }}</div>
+                <div class="text-success fw-semibold" style="font-size:0.7rem;">= {{ payment.monto_neto|floatformat:2 }}</div>
+                {% endif %}
+              </td>
+              <td>
+                {% if payment.estado == 'pendiente' %}
+                  <span class="badge bg-warning text-dark fw-normal"><i class="bi bi-clock me-1"></i>Pendiente</span>
+                {% else %}
+                  <span class="badge bg-success fw-normal"><i class="bi bi-check-circle me-1"></i>Confirmado</span>
+                {% endif %}
+              </td>
+              <td class="small">{{ payment.fecha|date:"d/m/Y" }}</td>
+              <td class="small text-muted">{{ payment.created|date:"d/m/Y" }}</td>
+              <td>
+                {% if payment.tipo_pago == 'transferencia' %}
+                  <span class="badge bg-primary small">Transferencia</span>
+                  {% if payment.numero_referencia %}
+                  <div class="text-muted" style="font-size:0.68rem;">{{ payment.numero_referencia }}</div>
+                  {% endif %}
+                {% else %}
+                  <span class="badge bg-info text-dark small">Efectivo</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                {% if es_admin_o_gerente %}
+                <div class="dropdown">
+                  <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
+                  <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                    <li><a class="dropdown-item" href="{% url 'payment_detail' payment.id %}"><i class="bi bi-pencil me-2 text-muted"></i>Editar</a></li>
+                    {% if payment.estado == 'pendiente' %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                      <a class="dropdown-item text-success fw-semibold" href="{% url 'confirmar_pago_proyecto' payment.id %}">
+                        <i class="bi bi-check-circle me-2"></i>Confirmar pago
+                      </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                      <button class="dropdown-item text-danger"
+                        data-bs-toggle="modal" data-bs-target="#deleteModal"
+                        data-id="{{ payment.id }}"
+                        data-nombre="{{ proyecto.nombre }} — Bs. {{ payment.monto }}">
+                        <i class="bi bi-trash me-2"></i>Eliminar
+                      </button>
+                    </li>
+                    {% endif %}
+                  </ul>
+                </div>
+                {% elif es_admin_sec and payment.estado == 'pendiente' %}
+                <a href="{% url 'confirmar_pago_proyecto' payment.id %}" class="btn btn-sm btn-success" title="Confirmar">
+                  <i class="bi bi-check-circle"></i>
+                </a>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="6" class="text-center text-muted py-3 small">
+                No hay pagos registrados para este proyecto{% if filter_tipo %} con el filtro seleccionado{% endif %}.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Paginación historial -->
+  <nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center mb-0">
+      {% if payments.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?proyecto_id={{ proyecto_id }}&page={{ payments.previous_page_number }}&per_page={{ per_page }}&filter_tipo={{ filter_tipo }}">Anterior</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+      {% endif %}
+      {% for num in payments.paginator.page_range %}
+        {% if payments.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > payments.number|add:'-3' and num < payments.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?proyecto_id={{ proyecto_id }}&page={{ num }}&per_page={{ per_page }}&filter_tipo={{ filter_tipo }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+      {% if payments.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?proyecto_id={{ proyecto_id }}&page={{ payments.next_page_number }}&per_page={{ per_page }}&filter_tipo={{ filter_tipo }}">Siguiente</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+      {% endif %}
+    </ul>
+  </nav>
+
+{% else %}
+{# ══════════════════════════════════════════════════════════════════════════ #}
+{# MODO PROYECTOS: lista de proyectos con resumen de cobros                  #}
+{# ══════════════════════════════════════════════════════════════════════════ #}
+
+  <!-- Encabezado -->
   <div class="mb-2">
     <div class="d-flex justify-content-between align-items-center mb-2">
       <h4 class="fw-bold text-sobotec mb-0">Gestión de Pagos</h4>
+      {% if es_admin_sec %}
       <a href="{% url 'create_payment' %}" class="btn btn-primary btn-sm">+ Nuevo Pago</a>
+      {% endif %}
     </div>
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
       <form method="GET" action="{% url 'payments' %}" class="d-flex align-items-center gap-2">
-        <input type="hidden" name="proyecto_id"        value="{{ proyecto_id }}">
-        <input type="hidden" name="filter_tipo"        value="{{ filter_tipo }}">
-        <input type="hidden" name="filter_estado_pago" value="{{ filter_estado_pago }}">
+        <input type="hidden" name="filter_estado_pago"     value="{{ filter_estado_pago }}">
+        <input type="hidden" name="filter_tipo"            value="{{ filter_tipo }}">
+        <input type="hidden" name="filter_estado_proyecto" value="{{ filter_estado_proyecto }}">
+        <input type="hidden" name="q"                      value="{{ search_nombre }}">
         <input type="hidden" name="page" value="1">
         <span class="small text-muted">Mostrar:</span>
         <select name="per_page" class="form-select form-select-sm" style="width:80px;" onchange="this.form.submit()">
@@ -24,45 +270,26 @@
         </select>
       </form>
       <div class="text-muted small">
-        Mostrando {{ payments.start_index }} – {{ payments.end_index }}
-        de {{ payments.paginator.count }} registros
+        Mostrando {{ proyectos.start_index }}–{{ proyectos.end_index }} de {{ proyectos.paginator.count }} proyectos
       </div>
     </div>
   </div>
-
-  <!-- ALERTA: pagos pendientes de confirmación -->
-  {% if total_pendiente_monto > 0 %}
-  <div class="alert alert-warning alert-dismissible fade show py-2" role="alert">
-    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-    Hay pagos pendientes de confirmar por un total de
-    <strong>Bs. {{ total_pendiente_monto|floatformat:2 }}</strong>.
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  </div>
-  {% endif %}
 
   <!-- KPIs -->
   <div class="row g-3 mb-3">
     <div class="col-6 col-md-3">
       <div class="card kpi-card blue border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-primary">{{ total_payments }}</div>
-          <div class="kpi-label">Registros{% if filter_estado_pago or filter_tipo or proyecto_id %} (filtrado){% endif %}</div>
+          <div class="kpi-value text-primary">{{ total_proyectos }}</div>
+          <div class="kpi-label">Proyectos{% if filter_estado_pago %} (filtrado){% endif %}</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
       <div class="card kpi-card green border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-success" style="font-size:1.2rem;">{{ total_cobrado_filtro|floatformat:2 }}</div>
-          <div class="kpi-label">Total cobrado Bs.{% if filter_estado_pago or filter_tipo or proyecto_id %} (filtrado){% endif %}</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="card kpi-card yellow border-0 shadow-sm h-100">
-        <div class="card-body py-3 px-3">
-          <div class="kpi-value text-warning" style="font-size:1.2rem;">{{ total_pendiente_monto|floatformat:2 }}</div>
-          <div class="kpi-label">Por confirmar Bs.</div>
+          <div class="kpi-value text-success" style="font-size:1.2rem;">{{ total_cobrado_global|floatformat:2 }}</div>
+          <div class="kpi-label">Total cobrado Bs.</div>
         </div>
       </div>
     </div>
@@ -77,190 +304,164 @@
     </div>
   </div>
 
-  <!-- FILTROS -->
+  <!-- Filtros -->
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">
       <form method="GET" action="{% url 'payments' %}" class="row g-2 align-items-end">
         <input type="hidden" name="per_page" value="{{ per_page }}">
-
         <div class="col-md-4">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Proyecto</label>
-          <select name="proyecto_id" class="form-select form-select-sm">
-            <option value="">Todos los proyectos</option>
-            {% for p in proyectos_lista %}
-            <option value="{{ p.id }}" {% if proyecto_id == p.id|stringformat:"s" %}selected{% endif %}>
-              {{ p.codigo }} — {{ p.nombre }}
-            </option>
-            {% endfor %}
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Nombre / código / cliente</label>
+          <input type="text" class="form-control form-control-sm" name="q"
+                 value="{{ search_nombre }}" placeholder="Buscar...">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Estado del proyecto</label>
+          <select class="form-select form-select-sm" name="filter_estado_proyecto">
+            <option value="">Todos</option>
+            <option value="pendiente"   {% if filter_estado_proyecto == "pendiente"   %}selected{% endif %}>Pendiente</option>
+            <option value="en_progreso" {% if filter_estado_proyecto == "en_progreso" %}selected{% endif %}>En progreso</option>
+            <option value="completado"  {% if filter_estado_proyecto == "completado"  %}selected{% endif %}>Completado</option>
+            <option value="cancelado"   {% if filter_estado_proyecto == "cancelado"   %}selected{% endif %}>Cancelado</option>
           </select>
         </div>
-
-        <div class="col-md-3">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Estado de pago</label>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Estado de cobro</label>
           <select class="form-select form-select-sm" name="filter_estado_pago">
             <option value="">Todos</option>
-            <option value="pagado"    {% if filter_estado_pago == "pagado"    %}selected{% endif %}>Pagado</option>
+            <option value="pagado"    {% if filter_estado_pago == "pagado"    %}selected{% endif %}>Cobrado</option>
             <option value="parcial"   {% if filter_estado_pago == "parcial"   %}selected{% endif %}>Parcial</option>
-            <option value="no_pagado" {% if filter_estado_pago == "no_pagado" %}selected{% endif %}>No pagado</option>
+            <option value="no_pagado" {% if filter_estado_pago == "no_pagado" %}selected{% endif %}>Sin cobro</option>
           </select>
         </div>
-
-        <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Método de pago</label>
-          <select class="form-select form-select-sm" name="filter_tipo">
-            <option value="">Todos</option>
-            <option value="efectivo"      {% if filter_tipo == "efectivo"      %}selected{% endif %}>Efectivo</option>
-            <option value="transferencia" {% if filter_tipo == "transferencia" %}selected{% endif %}>Transferencia</option>
-          </select>
-        </div>
-
         <div class="col-6 col-md-2">
           <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
         </div>
-        <div class="col-6 col-md-1">
+        <div class="col-6 col-md-2">
           <a href="{% url 'payments' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
         </div>
       </form>
     </div>
   </div>
 
-  <!-- TABLA -->
+  <!-- Tabla proyectos -->
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body p-0">
-      <div class="table-responsive">
+      <div class="table-responsive" style="overflow:visible;">
         <table class="table table-sm table-hover align-middle small">
           <thead class="table-light small text-uppercase fw-semibold">
             <tr>
-              <th class="px-3">Proyecto</th>
-              <th class="text-end">Este pago (Bs.)</th>
+              <th class="px-3">Código</th>
+              <th>Nombre</th>
+              <th>Contratante</th>
               <th>Estado</th>
-              <th>Fecha</th>
-              <th>Método</th>
-              <th class="text-center">Estado pago</th>
-              <th class="text-end">Cobrado / Ref. (Bs.)</th>
+              <th>Estado Pago</th>
+              <th class="text-end">Acordado (Bs.)</th>
+              <th class="text-end">Cobrado (Bs.)</th>
+              <th class="text-center">Avance</th>
               <th class="text-end">Saldo (Bs.)</th>
-              <th class="text-end" style="width:80px;">Acciones</th>
+              <th class="text-center">Pagos</th>
+              <th class="text-end" style="width:60px;">Acciones</th>
             </tr>
           </thead>
           <tbody>
-            {% for payment in payments %}
-            <tr>
-              <!-- Proyecto + estado del proyecto -->
-              <td class="px-3 py-2">
-                <div class="fw-semibold" style="font-size:0.83rem;">{{ payment.proyecto.nombre }}</div>
-                <div class="mt-1">
-                  {% if payment.proyecto.estado_proyecto == 'completado' %}
-                    <span class="badge bg-success" style="font-size:0.65rem;">Completado</span>
-                  {% elif payment.proyecto.estado_proyecto == 'en_progreso' %}
-                    <span class="badge bg-primary" style="font-size:0.65rem;">En progreso</span>
-                  {% else %}
-                    <span class="badge bg-warning text-dark" style="font-size:0.65rem;">Pendiente</span>
-                  {% endif %}
-                </div>
-              </td>
+            {% for p in proyectos %}
+            <tr class="pago-proj-row" data-href="?proyecto_id={{ p.id }}" style="cursor:pointer;">
+              <!-- Código -->
+              <td class="px-3 text-muted">{{ p.codigo }}</td>
 
-              <!-- Monto de este pago -->
-              <td class="text-end fw-semibold">
-                {{ payment.monto|floatformat:2 }}
-                {% if payment.descuento %}
-                <div class="text-muted" style="font-size:0.7rem;">desc. {{ payment.descuento|floatformat:2 }}</div>
-                {% endif %}
-              </td>
+              <!-- Nombre -->
+              <td class="fw-semibold">{{ p.nombre }}</td>
 
-              <!-- Estado del pago -->
-              <td class="small">
-                {% if payment.estado == 'pendiente' %}
-                  <span class="badge bg-warning text-dark fw-normal"><i class="bi bi-clock me-1"></i>Pendiente</span>
-                {% else %}
-                  <span class="badge bg-success fw-normal"><i class="bi bi-check-circle me-1"></i>Confirmado</span>
-                {% endif %}
-              </td>
-
-              <!-- Fecha -->
-              <td class="small">{{ payment.fecha|date:"d/m/Y" }}</td>
-
-              <!-- Método -->
+              <!-- Contratante -->
               <td>
-                {% if payment.tipo_pago == 'transferencia' %}
-                  <span class="badge bg-primary small">Transferencia</span>
+                {% if p.cliente %}
+                  {{ p.cliente.nombre }} {{ p.cliente.apellido_paterno }}
                 {% else %}
-                  <span class="badge bg-info text-dark small">Efectivo</span>
+                  <span class="text-muted">—</span>
                 {% endif %}
               </td>
 
-              <!-- Estado pago del proyecto -->
-              <td class="text-center">
-                {% if payment.proyecto.estado_pago == 'pagado' %}
-                  <span class="badge bg-success">Pagado</span>
-                {% elif payment.proyecto.estado_pago == 'parcial' %}
-                  <span class="badge bg-warning text-dark">Parcial</span>
+              <!-- Estado proyecto -->
+              <td>
+                {% if p.estado_proyecto == 'completado' %}
+                  <span class="badge bg-success small">Completado</span>
+                {% elif p.estado_proyecto == 'en_progreso' %}
+                  <span class="badge bg-primary small">En Progreso</span>
+                {% elif p.estado_proyecto == 'cancelado' %}
+                  <span class="badge bg-secondary small">Cancelado</span>
                 {% else %}
-                  <span class="badge bg-danger">No pagado</span>
+                  <span class="badge bg-warning text-dark small">Pendiente</span>
                 {% endif %}
               </td>
 
-              <!-- Cobrado total / monto referencia -->
-              <td class="text-end small">
-                <span class="{% if payment.proyecto.estado_pago == 'pagado' %}text-success fw-semibold{% endif %}">
-                  {{ payment.cobrado_proyecto|floatformat:2 }}
-                </span>
-                <span class="text-muted"> / {{ payment.monto_ref_proyecto|floatformat:2 }}</span>
-                <div class="progress mt-1" style="height:4px; border-radius:4px;">
-                  {% with pct=payment.cobrado_proyecto|floatformat:0 %}
-                  <div class="progress-bar
-                    {% if payment.proyecto.estado_pago == 'pagado' %}bg-success
-                    {% elif payment.proyecto.estado_pago == 'parcial' %}bg-warning
-                    {% else %}bg-danger{% endif %}"
-                    style="width:{% if payment.monto_ref_proyecto > 0 %}{% widthratio payment.cobrado_proyecto payment.monto_ref_proyecto 100 %}{% else %}0{% endif %}%">
-                  </div>
-                  {% endwith %}
-                </div>
+              <!-- Estado pago -->
+              <td>
+                {% if p.estado_pago == 'pagado' %}
+                  <span class="badge bg-success small">Pagado</span>
+                {% elif p.estado_pago == 'parcial' %}
+                  <span class="badge bg-info text-dark small">Parcial</span>
+                {% else %}
+                  <span class="badge bg-danger small">No Pagado</span>
+                {% endif %}
+              </td>
+
+              <!-- Monto acordado -->
+              <td class="text-end fw-semibold">{{ p.monto_ref_proyecto|floatformat:2 }}</td>
+
+              <!-- Cobrado -->
+              <td class="text-end fw-semibold text-success">{{ p.cobrado_proyecto|floatformat:2 }}</td>
+
+              <!-- Avance -->
+              <td class="text-center fw-semibold">
+                {% if p.monto_ref_proyecto > 0 %}
+                  <span class="{% if p.estado_pago == 'pagado' %}text-success{% elif p.estado_pago == 'parcial' %}text-warning{% else %}text-danger{% endif %}">
+                    {{ p.avance_pct }}%
+                  </span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
               </td>
 
               <!-- Saldo -->
-              <td class="text-end fw-semibold small">
-                {% if payment.saldo_proyecto > 0 %}
-                  <span class="text-danger">{{ payment.saldo_proyecto|floatformat:2 }}</span>
-                {% elif payment.saldo_proyecto < 0 %}
-                  <span class="text-warning" title="Sobrepago">{{ payment.saldo_proyecto|floatformat:2 }}</span>
+              <td class="text-end fw-semibold">
+                {% if p.saldo_proyecto > 0 %}
+                  <span class="text-danger">{{ p.saldo_proyecto|floatformat:2 }}</span>
+                {% elif p.saldo_proyecto < 0 %}
+                  <span class="text-warning" title="Sobrepago">{{ p.saldo_proyecto|floatformat:2 }}</span>
                 {% else %}
                   <span class="text-success">0.00</span>
                 {% endif %}
               </td>
 
+              <!-- N° pagos confirmados -->
+              <td class="text-center">
+                {% if p.num_pagos > 0 %}
+                  <span class="badge bg-light text-dark border">{{ p.num_pagos }}</span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+
               <!-- Acciones -->
               <td class="text-end">
-                {% if payment.estado == 'pendiente' %}
-                  {% if es_admin_sec %}
-                  <a href="{% url 'confirmar_pago_proyecto' payment.id %}" class="btn btn-sm btn-success" title="Confirmar pago">
-                    <i class="bi bi-check-circle"></i>
-                  </a>
-                  {% endif %}
-                {% else %}
-                  {% if es_admin_o_gerente %}
-                  <div class="dropdown">
-                    <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                      <li><a class="dropdown-item" href="{% url 'payment_detail' payment.id %}">Editar</a></li>
-                      <li><hr class="dropdown-divider"></li>
-                      <li>
-                        <button class="dropdown-item text-danger"
-                          data-bs-toggle="modal" data-bs-target="#deleteModal"
-                          data-id="{{ payment.id }}"
-                          data-nombre="{{ payment.proyecto.nombre }} — Bs. {{ payment.monto }}">
-                          Eliminar
-                        </button>
-                      </li>
-                    </ul>
-                  </div>
-                  {% endif %}
+                {% if es_admin_sec %}
+                <div class="dropdown">
+                  <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
+                  <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                    <li>
+                      <a class="dropdown-item" href="{% url 'create_payment' %}">
+                        <i class="bi bi-plus-circle me-2 text-muted"></i>Registrar pago
+                      </a>
+                    </li>
+                  </ul>
+                </div>
                 {% endif %}
               </td>
             </tr>
             {% empty %}
             <tr>
-              <td colspan="9" class="text-center text-muted py-3 small">
-                No existen pagos registrados{% if filter_estado_pago or filter_tipo or proyecto_id %} con los filtros seleccionados{% endif %}.
+              <td colspan="11" class="text-center text-muted py-3 small">
+                No hay proyectos{% if filter_estado_pago %} con el filtro seleccionado{% endif %}.
               </td>
             </tr>
             {% endfor %}
@@ -270,30 +471,28 @@
     </div>
   </div>
 
-  <!-- PAGINACIÓN -->
+  <!-- Paginación proyectos -->
   <nav class="mt-3">
     <ul class="pagination pagination-sm justify-content-center mb-0">
-      {% if payments.has_previous %}
+      {% if proyectos.has_previous %}
       <li class="page-item">
-        <a class="page-link" href="?page={{ payments.previous_page_number }}&per_page={{ per_page }}&proyecto_id={{ proyecto_id }}&filter_tipo={{ filter_tipo }}&filter_estado_pago={{ filter_estado_pago }}">Anterior</a>
+        <a class="page-link" href="?page={{ proyectos.previous_page_number }}&per_page={{ per_page }}&filter_estado_pago={{ filter_estado_pago }}&filter_estado_proyecto={{ filter_estado_proyecto }}&q={{ search_nombre }}">Anterior</a>
       </li>
       {% else %}
       <li class="page-item disabled"><span class="page-link">Anterior</span></li>
       {% endif %}
-
-      {% for num in payments.paginator.page_range %}
-        {% if payments.number == num %}
+      {% for num in proyectos.paginator.page_range %}
+        {% if proyectos.number == num %}
           <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-        {% elif num > payments.number|add:'-3' and num < payments.number|add:'3' %}
+        {% elif num > proyectos.number|add:'-3' and num < proyectos.number|add:'3' %}
           <li class="page-item">
-            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&proyecto_id={{ proyecto_id }}&filter_tipo={{ filter_tipo }}&filter_estado_pago={{ filter_estado_pago }}">{{ num }}</a>
+            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&filter_estado_pago={{ filter_estado_pago }}&filter_estado_proyecto={{ filter_estado_proyecto }}&q={{ search_nombre }}">{{ num }}</a>
           </li>
         {% endif %}
       {% endfor %}
-
-      {% if payments.has_next %}
+      {% if proyectos.has_next %}
       <li class="page-item">
-        <a class="page-link" href="?page={{ payments.next_page_number }}&per_page={{ per_page }}&proyecto_id={{ proyecto_id }}&filter_tipo={{ filter_tipo }}&filter_estado_pago={{ filter_estado_pago }}">Siguiente</a>
+        <a class="page-link" href="?page={{ proyectos.next_page_number }}&per_page={{ per_page }}&filter_estado_pago={{ filter_estado_pago }}&filter_estado_proyecto={{ filter_estado_proyecto }}&q={{ search_nombre }}">Siguiente</a>
       </li>
       {% else %}
       <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
@@ -301,31 +500,44 @@
     </ul>
   </nav>
 
+{% endif %}
+
 </div>
 
-<!-- Modal Confirmar Inhabilitación -->
+<!-- Modal eliminar pago (solo en modo historial) -->
+{% if modo == 'proyectos' %}
+<script>
+  document.querySelectorAll('.pago-proj-row').forEach(function(row) {
+    row.addEventListener('click', function(e) {
+      if (e.target.closest('.dropdown')) return;
+      window.location.href = this.dataset.href;
+    });
+  });
+</script>
+{% endif %}
+
+{% if modo == 'historial' %}
 <div class="modal fade" id="deleteModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h6 class="modal-title">Confirmar Inhabilitación</h6>
+        <h6 class="modal-title">Eliminar pago pendiente</h6>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body">
-        ¿Está seguro que desea inhabilitar el pago de
-        <strong id="pagoNombre"></strong>?
+        <p class="mb-1">¿Está seguro que desea eliminar el pago de <strong id="pagoNombre"></strong>?</p>
+        <p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Esta acción no se puede deshacer.</p>
       </div>
       <div class="modal-footer">
         <form method="POST" id="deleteForm">
           {% csrf_token %}
           <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-          <button type="submit" class="btn btn-danger btn-sm">Inhabilitar</button>
+          <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash me-1"></i>Eliminar</button>
         </form>
       </div>
     </div>
   </div>
 </div>
-
 <script>
   document.getElementById('deleteModal').addEventListener('show.bs.modal', function (event) {
     const btn = event.relatedTarget;
@@ -333,5 +545,6 @@
     document.getElementById('deleteForm').action = `/pagos/${btn.getAttribute('data-id')}/desactivar/`;
   });
 </script>
+{% endif %}
 
 {% endblock %}

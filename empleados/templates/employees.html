@@ -98,14 +98,14 @@
           <th>Carnet de Identidad</th>
           <th>Celular</th>
           <th>Proyecto actual</th>
-          <th>Fecha Registrado</th>
+          <th>Contrato</th>
           <th class="text-end" style="width: 60px;">Acciones</th>
         </tr>
       </thead>
 
       <tbody>
         {% for employee in employees %}
-        <tr {% if not employee.is_active %}class="table-secondary text-muted"{% endif %}>
+        <tr {% if not employee.is_active %}class="table-secondary text-muted"{% endif %} data-href="{% url 'employee_view' employee.id %}">
           <td class="small fw-semibold">
             {{ employee.nombre }} {{ employee.apellido_paterno }}{% if employee.apellido_materno %} {{ employee.apellido_materno }}{% endif %}
             {% if not employee.is_active %}
@@ -118,9 +118,14 @@
                   <i class="bi bi-exclamation-triangle me-1"></i>Sin contrato
                 </span>
               {% elif employee.contrato_activo.estado_contrato == 'vencido' %}
-                <span class="badge bg-warning text-dark fw-normal ms-1" style="font-size:0.65rem;"
-                      title="Contrato vencido el {{ employee.contrato_activo.fecha_fin|date:'d/m/Y' }}">
+                <span class="badge bg-danger fw-normal ms-1" style="font-size:0.65rem;"
+                      title="Contrato vencido el {{ employee.contrato_activo.fecha_fin|date:'d/m/Y' }} — renueva o extiende">
                   <i class="bi bi-clock me-1"></i>Contrato vencido
+                </span>
+              {% elif employee.dias_vencimiento <= 7 %}
+                <span class="badge bg-warning text-dark fw-normal ms-1" style="font-size:0.65rem;"
+                      title="Vence el {{ employee.contrato_activo.fecha_fin|date:'d/m/Y' }}">
+                  <i class="bi bi-hourglass-split me-1"></i>Vence en {{ employee.dias_vencimiento }}d
                 </span>
               {% endif %}
             {% endif %}
@@ -151,7 +156,14 @@
               <span class="text-muted">—</span>
             {% endif %}
           </td>
-          <td class="small">{{ employee.date_joined|date:"d/m/Y"|default:"—" }}</td>
+          <td class="small">
+            {% if employee.contrato_activo %}
+              <div>{{ employee.contrato_activo.fecha_inicio|date:"d/m/Y" }}</div>
+              <div class="text-muted"> {{ employee.contrato_activo.fecha_fin|date:"d/m/Y" }}</div>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
 
           <td class="text-end">
             <div class="dropdown">

@@ -2,7 +2,7 @@
 {% block content %}
 <main class="container-fluid px-4 py-4">
   <div class="mb-3">
-    <a href="{% url 'contrato_empleado_detail' contrato.id %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+    <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'contrato_empleado_detail' contrato.id %}{% endif %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
   </div>
 
   <div class="row g-4">
@@ -30,6 +30,7 @@
 
           <form method="POST">
             {% csrf_token %}
+            {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
             {% if form.non_field_errors %}
             <div class="alert alert-danger small">{% for e in form.non_field_errors %}{{ e }}{% endfor %}</div>
             {% endif %}
@@ -55,7 +56,7 @@
 
             <div class="d-flex justify-content-between mt-4">
               <div class="d-flex gap-2">
-                <a href="{% url 'contrato_empleado_detail' contrato.id %}" class="btn btn-outline-secondary">Cancelar</a>
+                <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'contrato_empleado_detail' contrato.id %}{% endif %}" class="btn btn-outline-secondary">Cancelar</a>
                 {% if es_admin %}
                 <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEliminar">Eliminar</button>
                 {% endif %}
@@ -86,6 +87,7 @@
         <div class="card-body p-3 d-flex gap-2">
           <form method="POST" action="{% url 'aprobar_jornada' jornada.id %}">
             {% csrf_token %}
+            {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
             <button type="submit" class="btn btn-success btn-sm">
               <i class="bi bi-check-lg me-1"></i>Aprobar jornada
             </button>
@@ -179,6 +181,7 @@
       </div>
       <form method="POST" action="{% url 'rechazar_jornada' jornada.id %}">
         {% csrf_token %}
+        {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
         <div class="modal-body">
           <label class="form-label">Motivo de rechazo <span class="text-muted small">(opcional)</span></label>
           <textarea name="motivo_rechazo" class="form-control" rows="3" placeholder="Ej: fecha incorrecta, empleado no asignado ese día..."></textarea>

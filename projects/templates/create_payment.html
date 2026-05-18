@@ -20,7 +20,7 @@
 {% block content %}
 <main class="container-fluid px-4 py-4">
   <div class="mb-3">
-    <a href="{% url 'payments' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+    <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'payments' %}{% endif %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
   </div>
 
   <!-- TARJETA -->
@@ -28,6 +28,7 @@
     <div class="card-body p-4">
       <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
         {% csrf_token %}
+        {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
         {% if form.non_field_errors %}
         <div class="alert alert-danger mt-2">
           {% for err in form.non_field_errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
@@ -151,7 +152,7 @@
 
         <!-- BOTONES -->
         <div class="d-flex justify-content-between mt-4">
-          <a href="{% url 'payments' %}" class="btn btn-outline-secondary">Cancelar</a>
+          <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'payments' %}{% endif %}" class="btn btn-outline-secondary">Cancelar</a>
           <button class="btn btn-primary px-4" type="submit">Guardar pago</button>
         </div>
       </form>

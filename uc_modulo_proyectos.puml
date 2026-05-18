@@ -1,172 +1,271 @@
 @startuml uc_modulo_proyectos
-title MÓDULO DE PROYECTOS\nSistema SOBOTEC S.R.L.
 
 left to right direction
 
 skinparam actorStyle awesome
 skinparam packageStyle rectangle
+skinparam shadowing false
+
 skinparam backgroundColor #FFFFFF
-skinparam usecaseBackgroundColor #F5F5F5
-skinparam usecaseBorderColor #777777
-skinparam usecaseFontSize 11
-skinparam actorFontSize 12
-skinparam packageBorderColor #777777
+skinparam usecaseBackgroundColor #EBF5FB
+skinparam usecaseBorderColor #2E86C1
+
+skinparam usecaseFontSize 10
+skinparam actorFontSize 11
+skinparam packageFontSize 11
+
+skinparam packageBorderColor #2E86C1
 skinparam packageBackgroundColor #FFFFFF
 skinparam packageFontStyle bold
+
 skinparam arrowColor #444444
+
 skinparam nodesep 25
-skinparam ranksep 70
+skinparam ranksep 55
 
-' ── ACTORES ──────────────────────────────────────
-actor "Administrador\n/ Gerente"         as ADM
-actor "Secretaria"                       as SEC
-actor "Instalador\n/ Técnico de Soporte" as CAMPO
+'══════════════════════════════════════
+' ACTORES IZQUIERDA
+'══════════════════════════════════════
 
-rectangle "MÓDULO DE PROYECTOS" {
+actor "Administrador\n/ Gerente" as ADM
+actor "Secretaria" as SEC
+actor "Instalador /\nTécnico" as CAMPO
 
-    ' ── COLUMNA 1: UCs principales ────────────────
-    together {
-        usecase "Gestionar\nCliente"             as UC1
-        usecase "Gestionar\nProyecto"            as UC2
-        usecase "Gestionar\nSedes / Instalación" as UC3
-        usecase "Registrar\nPago"                as UC4
-        usecase "Generar\nReporte"               as UC5
-        usecase "Gestionar\nGarantías"           as UC6
-        usecase "Gestionar\nPlantillas"          as UC7
-        usecase "Notificaciones"                 as UC8
-        usecase "Seguimiento y\nPlanificación"   as UC9
-    }
+rectangle "Sprint 1 — Módulo de Proyectos" {
 
-    ' ── COLUMNA 2: sub-casos agrupados por padre ──
+    '══════════════════════════════════
+    ' CASOS PRINCIPALES
+    '══════════════════════════════════
+
     together {
-        usecase "Registrar /\nEditar cliente"  as S1
-        usecase "Desactivar\ncliente"          as S2
-    }
-    together {
-        usecase "Crear / Editar\nproyecto"         as S3
-        usecase "Asignar equipo\ny cronograma"     as S4
-        usecase "Gestionar Contrato\nde Proyecto"  as S22
-    }
-    together {
-        usecase "Gestionar\nchecklist"         as S6
-        usecase "Subir fotos\nde sede"         as S7
-    }
-    together {
-        usecase "Registrar /\nEditar pago"     as S8
-        usecase "Ver análisis\nde pagos"       as S9
-    }
-    together {
-        usecase "Filtrar datos\nde reporte"    as S10
-        usecase "Análisis\nfinanciero"         as S11
-    }
-    together {
-        usecase "Ver garantías\nvigentes"      as S12
-        usecase "Gestionar\nincidencia"        as S13
-    }
-    together {
-        usecase "Crear / Editar\nplantilla"    as S18
-        usecase "Gestionar\nítems y subítems"  as S19
-    }
-    together {
-        usecase "Ver /\nMarcar leídas"         as S20
-    }
-    together {
-        usecase "Seguimiento\nde Avance"       as S25
-        usecase "Análisis\nde Proyecto"        as S26
-        usecase "Planificación\nGantt"         as S27
-        usecase "Calendario\nde Equipo"        as S28
+
+        
+
+        usecase "Gestionar\nProyecto" as UC2
+
+        usecase "Gestionar Sedes\ne Instalación" as UC3
+
+        usecase "Pagos\ndel Proyecto" as UC4
+
+        usecase "Gestionar\nGarantías" as UC5
+
+        usecase "Generar\nReporte" as UC6
+
+        usecase "Gestionar\nPlantillas" as UC7
+
+        usecase "Notificaciones" as UC8
+
+        usecase "Seguimiento y\nPlanificación" as UC9
     }
 
-    ' flechas ocultas para ordenar columna 2 verticalmente
-    S2  -[hidden]-> S3
-    S22 -[hidden]-> S6
-    S7  -[hidden]-> S8
-    S9  -[hidden]-> S10
-    S11 -[hidden]-> S12
-    S13 -[hidden]-> S18
-    S19 -[hidden]-> S20
-    S20 -[hidden]-> S25
 
-    ' ── COLUMNA 3: sub-sub-casos ─────────────────
-    usecase "Crear / Ver\ncontrato"         as S23
-    usecase "Desactivar\ncontrato"          as S24
-    usecase "Aplicar plantilla\nde tareas"  as S14
-    usecase "Completar /\nOrdenar tareas"   as S15
-    usecase "PDF / Excel\nde proyectos"     as S16
-    usecase "PDF / Excel\nde pagos"         as S17
-    usecase "Reordenar\nítems"              as S21
+    '══════════════════════════════════
+    ' SUBCASOS PROYECTO
+    '══════════════════════════════════
 
-    ' flechas ocultas que empujan a columna 3
-    S4  -[hidden]-> S23
-    S7  -[hidden]-> S14
-    S13 -[hidden]-> S16
-    S19 -[hidden]-> S21
+    together {
+
+        usecase "Crear /\nEditar Proyecto" as S3
+
+        usecase "Asignar Equipo\ny Cronograma" as S4
+
+        usecase "Gestionar Contrato\nde Proyecto" as S5
+    }
+
+    '══════════════════════════════════
+    ' SUBCASOS SEDES
+    '══════════════════════════════════
+
+    together {
+
+        usecase "Checklist de\nTareas" as S6
+
+        usecase "Subir Fotos\nde Sede" as S7
+
+        usecase "Aplicar Plantilla\nde Tareas" as S8
+    }
+
+    '══════════════════════════════════
+    ' SUBCASOS PAGOS
+    '══════════════════════════════════
+
+    together {
+
+        usecase "Registrar /\nConfirmar Pago" as S9
+
+ 
+    }
+
+    '══════════════════════════════════
+    ' SUBCASOS GARANTÍAS
+    '══════════════════════════════════
+
+    together {
+
+        usecase "Ver Garantías\nVigentes" as S11
+
+        usecase "Registrar\nIncidencia" as S12
+    }
+
+    '══════════════════════════════════
+    ' SUBCASOS REPORTES
+    '══════════════════════════════════
+
+    together {
+
+        usecase "Reporte PDF /\nExcel" as S13
+
+        usecase "Análisis\nFinanciero" as S14
+    }
+
+    '══════════════════════════════════
+    ' SUBCASOS PLANTILLAS
+    '══════════════════════════════════
+
+    together {
+
+        usecase "Crear /\nEditar Plantilla" as S15
+
+        usecase "Gestionar Ítems\ny Subítems" as S16
+    }
+
+    '══════════════════════════════════
+    ' SUBCASOS NOTIFICACIONES
+    '══════════════════════════════════
+
+    together {
+
+        usecase "Ver /\nMarcar Leídas" as S17
+    }
+
+    '══════════════════════════════════
+    ' SUBCASOS PLANIFICACIÓN
+    '══════════════════════════════════
+
+    together {
+
+        usecase "Seguimiento\nde Avance" as S18
+
+        usecase "Diagrama\nGantt" as S19
+
+        usecase "Calendario\nde Equipo" as S20
+    }
+
+    '══════════════════════════════════
+    ' AUTOMÁTICOS / EXTEND
+    '══════════════════════════════════
+
+    together {
+
+        usecase "Crear / Ver\nContrato" as S21
+
+        usecase "Multa Automática\npor Retraso" as S22
+
+        usecase "Crear Garantía\nAutomática" as S23
+
+        usecase "Notificar Sede\nCompletada" as S24
+    }
+
+    '══════════════════════════════════
+    ' ORDEN VISUAL
+    '══════════════════════════════════
+
+    S5  -[hidden]-> S6
+    S8  -[hidden]-> S9
+    S12 -[hidden]-> S13
+    S14 -[hidden]-> S15
+    S16 -[hidden]-> S17
+    S17 -[hidden]-> S18
+
+    S5  -[hidden]-> S21
+    S22 -[hidden]-> S23
+    S23 -[hidden]-> S24
 }
 
-' ── ASOCIACIONES ACTORES → columna 1 ─────────────
-ADM   --> UC1
-ADM   --> UC2
-ADM   --> UC3
-ADM   --> UC4
-ADM   --> UC5
-ADM   --> UC6
-ADM   --> UC7
-ADM   --> UC8
-ADM   --> UC9
+'══════════════════════════════════════
+' ACTOR DERECHA
+'══════════════════════════════════════
 
-SEC   --> UC1
-SEC   --> UC2
-SEC   --> UC4
-SEC   --> UC5
-SEC   --> UC6
-SEC   --> UC8
-SEC   --> UC9
+actor "Sistema\n(Automático)" as SIS
 
-CAMPO --> UC2
+'══════════════════════════════════════
+' RELACIONES ACTORES
+'══════════════════════════════════════
+
+ADM --> UC2
+ADM --> UC3
+ADM --> UC4
+ADM --> UC5
+ADM --> UC6
+ADM --> UC7
+ADM --> UC8
+ADM --> UC9
+
+SEC --> UC2
+SEC --> UC4
+SEC --> UC5
+SEC --> UC6
+SEC --> UC8
+
 CAMPO --> UC3
 CAMPO --> UC8
 CAMPO --> UC9
 
-' ── INCLUDE columna 1 → columna 2 ────────────────
-UC1 .> S1  : <<include>>
-UC1 .> S2  : <<include>>
+SIS --> S22
+SIS --> S23
+SIS --> S24
+
+'══════════════════════════════════════
+' INCLUDE
+'══════════════════════════════════════
+
 
 UC2 .> S3  : <<include>>
 UC2 .> S4  : <<include>>
-UC2 .> S22 : <<include>>
+UC2 .> S5  : <<include>>
 
 UC3 .> S6  : <<include>>
 UC3 .> S7  : <<include>>
+UC3 .> S8  : <<include>>
 
-UC4 .> S8  : <<include>>
 UC4 .> S9  : <<include>>
 
-UC5 .> S10 : <<include>>
 UC5 .> S11 : <<include>>
+UC5 .> S12 : <<include>>
 
-UC6 .> S12 : <<include>>
 UC6 .> S13 : <<include>>
+UC6 .> S14 : <<include>>
 
-UC7 .> S18 : <<include>>
-UC7 .> S19 : <<include>>
+UC7 .> S15 : <<include>>
+UC7 .> S16 : <<include>>
 
-UC8 .> S20 : <<include>>
+UC8 .> S17 : <<include>>
 
-UC9 .> S25 : <<include>>
-UC9 .> S26 : <<include>>
-UC9 .> S27 : <<include>>
-UC9 .> S28 : <<include>>
+UC9 .> S18 : <<include>>
+UC9 .> S19 : <<include>>
+UC9 .> S20 : <<include>>
 
-' ── INCLUDE columna 2 → columna 3 ────────────────
-S22 .> S23 : <<include>>
-S22 .> S24 : <<include>>
+'══════════════════════════════════════
+' EXTEND / AUTOMÁTICOS
+'══════════════════════════════════════
 
-S6  .> S14 : <<include>>
-S6  .> S15 : <<include>>
+S5  .> S21 : <<include>>
 
-S10 .> S16 : <<include>>
-S10 .> S17 : <<include>>
+S5  .> S22 : <<extend>>
 
-S19 .> S21 : <<include>>
+UC2 .> S23 : <<extend>>
+
+S6  .> S24 : <<extend>>
+
+note right of S22
+  Genera multa automática
+  según retraso del cronograma
+end note
+
+note right of S23
+  La garantía se genera
+  automáticamente al finalizar
+  la instalación
+end note
 
 @enduml

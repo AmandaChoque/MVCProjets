@@ -1,109 +1,183 @@
 @startuml uc_modulo_inventario
-title MÓDULO DE INVENTARIO\nSistema SOBOTEC S.R.L.
+
+
 
 left to right direction
 
 skinparam actorStyle awesome
 skinparam packageStyle rectangle
 skinparam backgroundColor #FFFFFF
-skinparam usecaseBackgroundColor #F5F5F5
-skinparam usecaseBorderColor #777777
+skinparam usecaseBackgroundColor #FEF9E7
+skinparam usecaseBorderColor #B7950B
 skinparam usecaseFontSize 11
 skinparam actorFontSize 12
-skinparam packageBorderColor #777777
+skinparam packageBorderColor #B7950B
 skinparam packageBackgroundColor #FFFFFF
 skinparam packageFontStyle bold
 skinparam arrowColor #444444
+skinparam shadowing false
+
 skinparam nodesep 25
-skinparam ranksep 70
+skinparam ranksep 60
 
-' ── ACTORES ──────────────────────────────────────
-actor "Administrador\n/ Gerente" as ADM
-actor "Secretaria"               as SEC
+'══════════════════════════════════════
+' ACTORES IZQUIERDA
+'══════════════════════════════════════
 
-rectangle "MÓDULO DE INVENTARIO" {
+actor "Gerente\nGeneral" as GER
+actor "Secretaria" as SEC
+actor "Instalador" as SUP
 
-    ' ── COLUMNA 1: UCs principales ────────────────
-    together {
-        usecase "Gestionar\nProveedor"          as UC1
-        usecase "Gestionar\nInsumo"             as UC2
-        usecase "Registrar\nCompra"             as UC3
-        usecase "Asignar Insumo\na Proyecto"    as UC4
-        usecase "Generar\nReporte"              as UC5
-    }
+rectangle "Sprint 2 — Módulo de Inventario" {
 
-    ' ── COLUMNA 2: sub-casos agrupados por padre ──
+    '══════════════════════════════════
+    ' CASOS PRINCIPALES
+    '══════════════════════════════════
+
     together {
-        usecase "Registrar /\nEditar proveedor" as S1
-        usecase "Desactivar\nproveedor"         as S2
-    }
-    together {
-        usecase "Registrar /\nEditar insumo"    as S3
-        usecase "Ver detalle\ninsumo"           as S4
-        usecase "Desactivar\ninsumo"            as S5
-    }
-    together {
-        usecase "Nueva\ncompra"                 as S6
-        usecase "Ver detalle\ncompra"           as S7
-        usecase "Desactivar\ncompra"            as S8
-    }
-    together {
-        usecase "Agregar insumo\na proyecto"    as S9
-        usecase "Ver insumo\nen proyecto"       as S10
-        usecase "Eliminar insumo\ndel proyecto" as S11
-    }
-    together {
-        usecase "Reporte\nPDF / Excel"          as S12
+        usecase "Gestionar\nProveedor" as UC1
+        usecase "Gestionar\nInsumo" as UC2
+        usecase "Asignar Insumo\na Proyecto (FIFO)" as UC4
+        usecase "Registrar\nCompra" as UC3
+        
+        usecase "Generar\nReporte" as UC5
     }
 
-    ' flechas ocultas para ordenar columna 2 verticalmente
+    '══════════════════════════════════
+    ' SUBCASOS PROVEEDOR
+    '══════════════════════════════════
+
+    together {
+        usecase "Registrar /\nEditar Proveedor" as S1
+        usecase "Desactivar\nProveedor" as S2
+    }
+
+    '══════════════════════════════════
+    ' SUBCASOS INSUMO
+    '══════════════════════════════════
+
+    together {
+        usecase "Registrar,\nEditar, \nDesactivar Insumo" as S3
+        usecase "Ver Detalles de \nCompras" as S4
+    
+    }
+
+    '══════════════════════════════════
+    ' SUBCASOS COMPRA
+    '══════════════════════════════════
+
+    together {
+        usecase "Nueva Compra" as S6
+        usecase "Desactivar \nCompra" as S8
+    }
+
+    '══════════════════════════════════
+    ' SUBCASOS ASIGNACIÓN
+    '══════════════════════════════════
+
+    together {
+        usecase "Agregar Insumo\na Proyecto" as S9
+        usecase "Ver Insumo\nen Proyecto" as S10
+        usecase "Devolver al\nStock" as S11
+    }
+
+    '══════════════════════════════════
+    ' SUBCASOS REPORTES
+    '══════════════════════════════════
+
+    together {
+        usecase "Reporte PDF /\nExcel" as S12
+    }
+
+    '══════════════════════════════════
+    ' AUTOMÁTICOS
+    '══════════════════════════════════
+
+    together {
+        usecase "Alerta Stock\nMínimo" as S13
+        usecase "Cálculo Costo FIFO\nAutomático" as S14
+        usecase "Actualizar Stock\nAutomático" as S15
+    }
+
+    '══════════════════════════════════
+    ' ORDEN VISUAL
+    '══════════════════════════════════
+
     S2  -[hidden]-> S3
-    S5  -[hidden]-> S6
     S8  -[hidden]-> S9
     S11 -[hidden]-> S12
 
-    ' ── COLUMNA 3: sub-sub-casos ──────────────────
-    usecase "Ver código QR\ndel insumo"         as S13
-    usecase "Cálculo costo\nFIFO automático"    as S14
-
-    ' flechas ocultas que empujan a columna 3
     S4  -[hidden]-> S13
-    S9  -[hidden]-> S14
+    S14 -[hidden]-> S15
 }
 
-' ── ASOCIACIONES ACTORES → columna 1 ─────────────
-ADM --> UC1
-ADM --> UC2
-ADM --> UC3
-ADM --> UC4
-ADM --> UC5
+'══════════════════════════════════════
+' ACTORES DERECHA
+'══════════════════════════════════════
+
+actor "Sistema\n(Automático)" as SIS
+
+'══════════════════════════════════════
+' RELACIONES ACTORES
+'══════════════════════════════════════
+
+GER --> UC2
+GER --> UC4
+GER --> UC5
 
 SEC --> UC1
 SEC --> UC2
 SEC --> UC3
-SEC --> UC4
 SEC --> UC5
 
-' ── INCLUDE columna 1 → columna 2 ────────────────
-UC1 .> S1  : <<include>>
-UC1 .> S2  : <<include>>
+SUP --> UC4
+SUP --> UC5
 
-UC2 .> S3  : <<include>>
-UC2 .> S4  : <<include>>
-UC2 .> S5  : <<include>>
 
-UC3 .> S6  : <<include>>
-UC3 .> S7  : <<include>>
-UC3 .> S8  : <<include>>
+SIS --> S13
+SIS --> S14
+SIS --> S15
 
-UC4 .> S9  : <<include>>
+'══════════════════════════════════════
+' INCLUDE
+'══════════════════════════════════════
+
+UC1 .> S1 : <<include>>
+UC1 .> S2 : <<include>>
+
+UC2 .> S3 : <<include>>
+UC2 .> S4 : <<include>>
+
+UC3 .> S6 : <<include>>
+UC3 .> S8 : <<include>>
+
+UC4 .> S9 : <<include>>
 UC4 .> S10 : <<include>>
 UC4 .> S11 : <<include>>
 
 UC5 .> S12 : <<include>>
 
-' ── INCLUDE columna 2 → columna 3 ────────────────
-S4  .> S13 : <<include>>
-S9  .> S14 : <<include>>
+'══════════════════════════════════════
+' EXTEND / AUTOMÁTICOS
+'══════════════════════════════════════
+
+UC2 .> S13 : <<extend>>
+
+UC4 .> S14 : <<include>>
+
+UC3 .> S15 : <<extend>>
+
+note right of S14
+  Consume lotes de compra
+  en orden cronológico (FIFO)
+  para calcular el costo real
+  asignado al proyecto
+end note
+
+note right of S15
+  Stock actualizado automáticamente
+  mediante señales Django
+  post_save y delete
+end note
 
 @enduml

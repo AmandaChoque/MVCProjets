@@ -2,7 +2,7 @@
 {% block content %}
 <main class="container py-4" style="max-width:560px;">
   <div class="mb-3">
-    <a href="{% url 'payments' %}" class="btn btn-outline-secondary btn-sm">
+    <a href="{% url 'payments' %}?proyecto_id={{ payment.proyecto.id }}" class="btn btn-outline-secondary btn-sm">
       <i class="bi bi-arrow-left me-1"></i>Volver
     </a>
   </div>
@@ -58,7 +58,7 @@
           <button type="submit" class="btn btn-success btn-sm px-4">
             <i class="bi bi-check-circle me-1"></i>Confirmar pago
           </button>
-          <a href="{% url 'payments' %}" class="btn btn-outline-secondary btn-sm">Cancelar</a>
+          <a href="{% url 'payments' %}?proyecto_id={{ payment.proyecto.id }}" class="btn btn-outline-secondary btn-sm">Cancelar</a>
         </div>
       </form>
 

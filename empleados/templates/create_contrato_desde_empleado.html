@@ -1,92 +1,152 @@
 {% extends 'base.html' %}
+{% block extra_css %}
+<style>
+  .step-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: #0F2D5A; color: #fff; font-size: .72rem; font-weight: 700;
+    flex-shrink: 0;
+  }
+  #preview-diario { transition: all .15s; }
+</style>
+{% endblock %}
+
 {% block content %}
 <main class="container-fluid px-4 py-4">
+
   <div class="mb-3">
-    <a href="{% url 'employee_view' employee.id %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+    <a href="{% url 'employee_view' employee.id %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Volver
+    </a>
+  </div>
+
+  <!-- Encabezado -->
+  <div class="mb-4">
+    <h5 class="fw-bold text-sobotec mb-0">
+      {{ employee.nombre }} {{ employee.apellido_paterno }}
+      <span class="text-muted fw-normal fs-6">— Nuevo Contrato</span>
+    </h5>
+    <div class="text-muted small">{{ employee.get_cargo_display }}</div>
   </div>
 
   <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
     {% csrf_token %}
+
     {% if form.non_field_errors %}
-    <div class="alert alert-danger mt-2">
+    <div class="alert alert-danger">
       {% for e in form.non_field_errors %}{{ e }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
     </div>
     {% endif %}
 
-    <!-- CONDICIONES SALARIALES -->
-    <div class="card border-0 shadow-sm rounded-3 mb-4">
-      <div class="card-header bg-light">
-        <h6 class="mb-0 fw-semibold">Condiciones Salariales</h6>
+    <!-- ══ PASO 1: PERÍODO ══════════════════════════════════════ -->
+    <div class="card border-0 shadow-sm rounded-3 mb-3">
+      <div class="card-header bg-light py-2 d-flex align-items-center gap-2">
+        <span class="step-badge">1</span>
+        <span class="fw-semibold small">Período del contrato</span>
       </div>
       <div class="card-body p-4">
-        <div class="alert alert-info small py-2 mb-4">
-          <i class="bi bi-info-circle me-1"></i>
-          Define el período y condiciones salariales del empleado. Los proyectos en los que trabaje se registran día a día en las <strong>jornadas</strong>.
-        </div>
-        <div class="row g-4">
-          <div class="col-lg-6">
-            <div class="mb-3">
-              <label class="form-label">Tipo de contrato <span class="text-danger">*</span></label>
-              {{ form.tipo_contrato }}
-              <div class="form-text text-muted">Por día: se paga por jornada trabajada. Mensual: salario fijo al mes.</div>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Días laborales acordados <span class="text-danger">*</span></label>
-              {{ form.dias_laborales }}
-              {% if form.dias_laborales.errors %}<div class="text-danger small mt-1">{% for e in form.dias_laborales.errors %}{{ e }}{% endfor %}</div>{% endif %}
-              <div class="form-text text-muted">
-                Se calcula automáticamente al ingresar las fechas (lunes–sábado). Puedes ajustarlo manualmente.
-                Monto diario = Monto ÷ días laborales.
-              </div>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Monto Acordado (Bs.) <span class="text-danger">*</span></label>
-              {{ form.monto_acordado }}
-              {% if form.monto_acordado.errors %}<div class="text-danger small mt-1">{% for e in form.monto_acordado.errors %}{{ e }}{% endfor %}</div>{% endif %}
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Observaciones</label>
-              {{ form.observaciones }}
-            </div>
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Fecha de firma <span class="text-danger">*</span></label>
+            {{ form.fecha_firma }}
+            {% if form.fecha_firma.errors %}
+            <div class="text-danger small mt-1">{% for e in form.fecha_firma.errors %}{{ e }}{% endfor %}</div>
+            {% endif %}
           </div>
-          <div class="col-lg-6">
-            <div class="mb-3">
-              <label class="form-label">Fecha de Firma <span class="text-danger">*</span></label>
-              {{ form.fecha_firma }}
-              {% if form.fecha_firma.errors %}<div class="text-danger small mt-1">{% for e in form.fecha_firma.errors %}{{ e }}{% endfor %}</div>{% endif %}
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Fecha de Inicio <span class="text-danger">*</span></label>
-              {{ form.fecha_inicio }}
-              {% if form.fecha_inicio.errors %}<div class="text-danger small mt-1">{% for e in form.fecha_inicio.errors %}{{ e }}{% endfor %}</div>{% endif %}
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Fecha de Fin <span class="text-danger">*</span></label>
-              {{ form.fecha_fin }}
-              {% if form.fecha_fin.errors %}<div class="text-danger small mt-1">{% for e in form.fecha_fin.errors %}{{ e }}{% endfor %}</div>{% endif %}
-            </div>
+          <div class="col-md-4">
+            <label class="form-label">Fecha de inicio <span class="text-danger">*</span></label>
+            {{ form.fecha_inicio }}
+            {% if form.fecha_inicio.errors %}
+            <div class="text-danger small mt-1">{% for e in form.fecha_inicio.errors %}{{ e }}{% endfor %}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Fecha de fin <span class="text-danger">*</span></label>
+            {{ form.fecha_fin }}
+            {% if form.fecha_fin.errors %}
+            <div class="text-danger small mt-1">{% for e in form.fecha_fin.errors %}{{ e }}{% endfor %}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Resumen período -->
+        <div id="resumen-periodo" class="mt-3 d-none">
+          <div class="border rounded-3 bg-light px-3 py-2 small text-muted d-flex flex-wrap gap-3">
+            <span>Duración: <strong id="rp-dias-cal" class="text-dark">—</strong> días calendario</span>
+            {% if employee.cargo == 'instalador' or employee.cargo == 'tecnico_soporte' %}
+            <span class="text-muted">·</span>
+            <span>Días laborables estimados (lun–sáb): <strong id="rp-dias-lab" class="text-primary">—</strong></span>
+            {% endif %}
           </div>
         </div>
       </div>
     </div>
 
-    <!-- DOCUMENTO -->
-    <div class="card border-0 shadow-sm rounded-3 mb-4">
-      <div class="card-header bg-light">
-        <h6 class="mb-0 fw-semibold">Documento firmado</h6>
+    <!-- ══ PASO 2: CONDICIONES SALARIALES ═══════════════════════ -->
+    <div class="card border-0 shadow-sm rounded-3 mb-3">
+      <div class="card-header bg-light py-2 d-flex align-items-center gap-2">
+        <span class="step-badge">2</span>
+        <span class="fw-semibold small">Condiciones salariales</span>
       </div>
       <div class="card-body p-4">
-        <div class="alert alert-info small py-2 mb-4">
-          <i class="bi bi-info-circle me-1"></i>
-          <strong>Flujo recomendado:</strong> Guarde el contrato primero &rarr; genere el PDF para imprimir y firmar &rarr; vuelva a subir el documento firmado aquí.
-        </div>
-        <div class="row g-4">
-          <div class="col-lg-6">
-            <label class="form-label">Archivo <span class="text-muted small">(opcional — puede subirlo después)</span></label>
-            {{ form.documento }}
-            <div class="form-text text-muted">Formatos aceptados: PDF, JPG, PNG, GIF, WEBP</div>
-            {% if form.documento.errors %}<div class="text-danger small mt-1">{% for e in form.documento.errors %}{{ e }}{% endfor %}</div>{% endif %}
+        <div class="row g-3 align-items-start">
+          <div class="col-md-4">
+            <label class="form-label">
+              Días laborales acordados <span class="text-danger">*</span>
+            </label>
+            {{ form.dias_laborales }}
+            {% if form.dias_laborales.errors %}
+            <div class="text-danger small mt-1">{% for e in form.dias_laborales.errors %}{{ e }}{% endfor %}</div>
+            {% endif %}
+            {% if employee.cargo == 'instalador' or employee.cargo == 'tecnico_soporte' %}
+            <div class="form-text text-muted">Se calcula al ingresar las fechas (lun–sáb). Podés ajustarlo.</div>
+            {% else %}
+            <div class="form-text text-muted">Referencia mensual (30). Podés ajustarlo.</div>
+            {% endif %}
           </div>
+          <div class="col-md-4">
+            <label class="form-label">Monto acordado (Bs.) <span class="text-danger">*</span></label>
+            {{ form.monto_acordado }}
+            {% if form.monto_acordado.errors %}
+            <div class="text-danger small mt-1">{% for e in form.monto_acordado.errors %}{{ e }}{% endfor %}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-4 d-flex align-items-end pb-1">
+            <!-- Preview monto diario -->
+            <div id="preview-diario" class="border rounded-3 bg-light px-3 py-2 w-100 text-center">
+              <div class="text-muted" style="font-size:.68rem; text-transform:uppercase; letter-spacing:.04em;">Monto diario</div>
+              <div class="fw-bold text-primary" style="font-size:1.3rem;" id="pd-valor">—</div>
+              <div class="text-muted" style="font-size:.7rem;">Bs. / día trabajado</div>
+            </div>
+          </div>
+        </div>
+        <div class="row g-3 mt-1">
+          <div class="col-md-8">
+            <label class="form-label">Observaciones</label>
+            {{ form.observaciones }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══ PASO 3: DOCUMENTO ════════════════════════════════════ -->
+    <div class="card border-0 shadow-sm rounded-3 mb-4">
+      <div class="card-header bg-light py-2 d-flex align-items-center gap-2">
+        <span class="step-badge">3</span>
+        <span class="fw-semibold small">Documento firmado <span class="text-muted fw-normal">(opcional)</span></span>
+      </div>
+      <div class="card-body p-4">
+        <div class="alert alert-info small py-2 mb-3">
+          <i class="bi bi-info-circle me-1"></i>
+          Flujo recomendado: guarda el contrato &rarr; generá el PDF para imprimir y firmar &rarr; volvé a subir el documento firmado.
+        </div>
+        <div class="col-md-6">
+          <label class="form-label">Archivo</label>
+          {{ form.documento }}
+          <div class="form-text text-muted">Formatos aceptados: PDF, JPG, PNG, GIF, WEBP</div>
+          {% if form.documento.errors %}
+          <div class="text-danger small mt-1">{% for e in form.documento.errors %}{{ e }}{% endfor %}</div>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -96,23 +156,32 @@
     </div>
 
     <div class="d-flex justify-content-between mt-2">
-      <a href="{% url 'employee_view' employee.id %}" class="btn btn-outline-secondary">Saltar por ahora</a>
+      <a href="{% url 'employee_view' employee.id %}" class="btn btn-outline-secondary">Cancelar</a>
       <button type="submit" class="btn btn-primary px-4">Guardar contrato</button>
     </div>
   </form>
 </main>
 {% endblock %}
+
 {% block extra_js %}
 <script>
 (function () {
-  const inicio  = document.getElementById('id_fecha_inicio');
-  const fin     = document.getElementById('id_fecha_fin');
-  const diasInp = document.getElementById('id_dias_laborales');
+  'use strict';
+
+  var esCampo  = ('{{ employee.cargo }}' === 'instalador' || '{{ employee.cargo }}' === 'tecnico_soporte');
+  var inicio   = document.getElementById('id_fecha_inicio');
+  var fin      = document.getElementById('id_fecha_fin');
+  var diasInp  = document.getElementById('id_dias_laborales');
+  var montoInp = document.getElementById('id_monto_acordado');
+  var pdValor  = document.getElementById('pd-valor');
+  var rpPanel  = document.getElementById('resumen-periodo');
+  var rpCal    = document.getElementById('rp-dias-cal');
+  var rpLab    = document.getElementById('rp-dias-lab');
 
   function diasLaborables(desde, hasta) {
-    let count = 0;
-    const d   = new Date(desde + 'T00:00:00');
-    const end = new Date(hasta  + 'T00:00:00');
+    var count = 0;
+    var d   = new Date(desde + 'T00:00:00');
+    var end = new Date(hasta  + 'T00:00:00');
     while (d <= end) {
       if (d.getDay() !== 0) count++;   // excluye domingos
       d.setDate(d.getDate() + 1);
@@ -120,15 +189,60 @@
     return count;
   }
 
-  function actualizar() {
-    if (!inicio.value || !fin.value || fin.value < inicio.value) return;
-    diasInp.value = diasLaborables(inicio.value, fin.value);
+  function actualizarPeriodo() {
+    if (!inicio.value || !fin.value || fin.value < inicio.value) {
+      if (rpPanel) rpPanel.classList.add('d-none');
+      return;
+    }
+    var dInicio = new Date(inicio.value + 'T00:00:00');
+    var dFin    = new Date(fin.value    + 'T00:00:00');
+    var diasCal = Math.round((dFin - dInicio) / 86400000) + 1;
+    var diasLab = diasLaborables(inicio.value, fin.value);
+
+    if (rpCal) rpCal.textContent = diasCal;
+    if (rpLab) rpLab.textContent = diasLab;
+    if (rpPanel) rpPanel.classList.remove('d-none');
+
+    if (diasInp) diasInp.value = esCampo ? diasLab : diasCal;
+    actualizarDiario();
   }
 
-  if (inicio && fin && diasInp) {
-    inicio.addEventListener('change', actualizar);
-    fin.addEventListener('change', actualizar);
+  function actualizarDiario() {
+    var dias  = parseInt(diasInp  ? diasInp.value  : 0, 10) || 0;
+    var monto = parseFloat((montoInp ? montoInp.value : '0').replace(',', '.')) || 0;
+    if (!pdValor) return;
+    if (dias > 0 && monto > 0) {
+      pdValor.textContent = 'Bs. ' + (monto / dias).toFixed(2);
+      pdValor.className   = 'fw-bold text-primary';
+    } else {
+      pdValor.textContent = '—';
+      pdValor.className   = 'fw-bold text-muted';
+    }
   }
-})();
+
+  if (inicio)   inicio.addEventListener('change', actualizarPeriodo);
+  if (fin)      fin.addEventListener('change', actualizarPeriodo);
+  if (diasInp)  diasInp.addEventListener('input', actualizarDiario);
+  if (montoInp) montoInp.addEventListener('input', actualizarDiario);
+
+  // Default dias_laborales según cargo cuando no hay valor previo
+  if (diasInp && !diasInp.value) {
+    diasInp.value = esCampo ? 28 : 30;
+  }
+
+  // Inicializar si el form se re-renderizó con errores
+  actualizarPeriodo();
+  actualizarDiario();
+
+  // Validación HTML5
+  window.addEventListener('load', function () {
+    Array.prototype.filter.call(document.getElementsByClassName('needs-validation'), function (form) {
+      form.addEventListener('submit', function (event) {
+        if (!form.checkValidity()) { event.preventDefault(); event.stopPropagation(); }
+        form.classList.add('was-validated');
+      }, false);
+    });
+  }, false);
+}());
 </script>
 {% endblock %}

@@ -96,10 +96,9 @@
         <th>Cargo</th>
         <th>Celular</th>
         <th>Modalidad</th>
-        <th class="text-right">Monto Acordado (Bs.)</th>
+        <th class="text-right">Total acordado (Bs.)</th>
         <th class="text-center">Inicio Contrato</th>
         <th class="text-center">Fin Contrato</th>
-        <th class="text-right">Devengado (Bs.)</th>
         <th class="text-right">Saldo Pendiente (Bs.)</th>
       </tr>
     </thead>
@@ -115,7 +114,6 @@
         <td class="text-right">{% if emp.contrato_activo %}{{ emp.contrato_activo.monto_acordado|floatformat:2 }}{% else %}—{% endif %}</td>
         <td class="text-center muted">{% if emp.contrato_activo %}{{ emp.contrato_activo.fecha_inicio|date:"d/m/Y" }}{% else %}—{% endif %}</td>
         <td class="text-center muted">{% if emp.contrato_activo %}{{ emp.contrato_activo.fecha_fin|date:"d/m/Y" }}{% else %}—{% endif %}</td>
-        <td class="text-right">{{ emp.total_ganado|floatformat:2 }}</td>
         <td class="text-right" style="{% if emp.saldo_pendiente > 0 %}color:#c62828;{% else %}color:#2e7d32;{% endif %} font-weight:bold;">
           {{ emp.saldo_pendiente|floatformat:2 }}
         </td>
@@ -126,8 +124,7 @@
     </tbody>
     <tfoot>
       <tr>
-        <td colspan="9" class="text-right">TOTAL</td>
-        <td class="text-right">{{ tot_devengado|floatformat:2 }}</td>
+        <td colspan="8" class="text-right">TOTAL</td>
         <td class="text-right" style="color:#c62828;">{{ tot_saldo|floatformat:2 }}</td>
       </tr>
     </tfoot>

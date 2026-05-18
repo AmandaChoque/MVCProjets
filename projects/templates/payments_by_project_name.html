@@ -1,10 +1,8 @@
 {% extends 'base.html' %}
 {% block extra_css %}
 <style>
-  .label-xs    { font-size: 0.68rem; }
-  .text-xs     { font-size: 0.66rem; }
-  .tfoot-sm    { font-size: 0.72rem; }
-  .stat-sep    { color: #dee2e6; }
+  .label-xs { font-size: 0.68rem; }
+  .text-xs  { font-size: 0.66rem; }
 </style>
 {% endblock %}
 
@@ -15,43 +13,19 @@
   <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
     <h4 class="fw-bold text-sobotec mb-0">Reporte de Pagos</h4>
     <div class="d-flex gap-2">
-      <a href="?pdf=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}&filter_tipo={{ filter_tipo }}"
+      <a href="?pdf=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}&filter_tipo={{ filter_tipo }}&filter_estado={{ filter_estado }}"
          target="_blank" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-eye me-1"></i>Vista previa PDF
       </a>
-      <a href="?pdf=1&download=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}&filter_tipo={{ filter_tipo }}"
+      <a href="?pdf=1&download=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}&filter_tipo={{ filter_tipo }}&filter_estado={{ filter_estado }}"
          class="btn btn-outline-danger btn-sm">
         <i class="bi bi-download me-1"></i>PDF
       </a>
-      <a href="?excel=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}&filter_tipo={{ filter_tipo }}"
+      <a href="?excel=1&project_name={{ project_name }}&start_date={{ start_date }}&end_date={{ end_date }}&filter_tipo={{ filter_tipo }}&filter_estado={{ filter_estado }}"
          class="btn btn-outline-success btn-sm">
         <i class="bi bi-file-earmark-excel me-1"></i>Excel
       </a>
     </div>
-  </div>
-
-  <!-- ── PER PAGE + CONTADOR ──────────────────────────────────── -->
-  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-    <form method="get" action="{% url 'filter_payments_by_project_name' %}" class="d-flex align-items-center gap-2">
-      <input type="hidden" name="project_name" value="{{ project_name|default:'' }}">
-      <input type="hidden" name="start_date"   value="{{ start_date|default:'' }}">
-      <input type="hidden" name="end_date"     value="{{ end_date|default:'' }}">
-      <input type="hidden" name="filter_tipo"  value="{{ filter_tipo|default:'' }}">
-      <input type="hidden" name="page" value="1">
-      <span class="small text-muted">Mostrar:</span>
-      <select name="per_page" class="form-select form-select-sm" style="width:80px;" onchange="this.form.submit()">
-        <option value="10"  {% if per_page == 10  %}selected{% endif %}>10</option>
-        <option value="20"  {% if per_page == 20  %}selected{% endif %}>20</option>
-        <option value="50"  {% if per_page == 50  %}selected{% endif %}>50</option>
-        <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
-      </select>
-    </form>
-    {% if payments_page %}
-    <div class="text-muted small">
-      Mostrando {{ payments_page.start_index }} – {{ payments_page.end_index }}
-      de {{ payments_page.paginator.count }} registros
-    </div>
-    {% endif %}
   </div>
 
   <!-- ── FILTROS ───────────────────────────────────────────────── -->
@@ -85,23 +59,43 @@
             <option value="transferencia" {% if filter_tipo == "transferencia" %}selected{% endif %}>Transferencia</option>
           </select>
         </div>
-        <div class="col-md-1">
-          <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Confirmación</label>
+          <select class="form-select form-select-sm" name="filter_estado">
+            <option value="">Todos</option>
+            <option value="pagado"    {% if filter_estado == "pagado"    %}selected{% endif %}>Confirmado</option>
+            <option value="pendiente" {% if filter_estado == "pendiente" %}selected{% endif %}>Pendiente</option>
+          </select>
         </div>
-        <div class="col-md-1">
-          <a href="{% url 'filter_payments_by_project_name' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-dark btn-sm">Filtrar</button>
+        </div>
+        <div class="col-auto">
+          <a href="{% url 'filter_payments_by_project_name' %}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
+        </div>
+        <div class="col-auto ms-auto d-flex align-items-center gap-2">
+          <span class="small text-muted">Mostrar:</span>
+          <select name="per_page" class="form-select form-select-sm" style="width:80px;" onchange="this.form.submit()">
+            <option value="10"  {% if per_page == 10  %}selected{% endif %}>10</option>
+            <option value="20"  {% if per_page == 20  %}selected{% endif %}>20</option>
+            <option value="50"  {% if per_page == 50  %}selected{% endif %}>50</option>
+            <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+          </select>
         </div>
       </form>
     </div>
   </div>
 
   <!-- ── KPI RESUMEN ──────────────────────────────────────────── -->
-  <div class="row g-3 mb-3">
+  <div class="row g-3 mb-2">
     <div class="col-6 col-md-3">
       <div class="card kpi-card blue border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-primary">{% if payments_page %}{{ payments_page.paginator.count }}{% else %}{{ total_payments }}{% endif %}</div>
-          <div class="kpi-label">Registros</div>
+          <div class="kpi-value text-primary">{{ total_payments }}</div>
+          <div class="kpi-label">Registros
+            {% if count_pagado %}<span class="text-success fw-normal">({{ count_pagado }} conf.)</span>{% endif %}
+            {% if count_pendiente %}<span class="text-warning fw-normal">({{ count_pendiente }} pend.)</span>{% endif %}
+          </div>
         </div>
       </div>
     </div>
@@ -109,7 +103,7 @@
       <div class="card kpi-card green border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
           <div class="kpi-value text-success" style="font-size:1.4rem;">{{ total_monto|floatformat:2 }}</div>
-          <div class="kpi-label">Total Bs.</div>
+          <div class="kpi-label">Total bruto Bs.</div>
         </div>
       </div>
     </div>
@@ -131,73 +125,146 @@
     </div>
   </div>
 
+  <!-- Barra resumen neto / descuentos -->
+  <div class="d-flex align-items-center gap-3 mb-3 px-1 small text-muted flex-wrap">
+    <span>Total bruto: <strong class="text-dark">Bs. {{ total_monto|floatformat:2 }}</strong></span>
+    {% if total_descuentos %}
+    <span>+</span>
+    <span>Descuentos: <strong class="text-warning">Bs. {{ total_descuentos|floatformat:2 }}</strong></span>
+    <span>=</span>
+    {% endif %}
+    <span>Total neto: <strong class="text-success">Bs. {{ total_neto|floatformat:2 }}</strong></span>
+  </div>
+
+  <!-- ── CONTADOR ──────────────────────────────────────────────── -->
+  {% if payments_page %}
+  <div class="text-muted small mb-2 text-end">
+    Mostrando {{ payments_page.start_index }} – {{ payments_page.end_index }} de {{ payments_page.paginator.count }} registros
+  </div>
+  {% endif %}
+
   <!-- ── TABLA ─────────────────────────────────────────────────── -->
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-header bg-light py-2">
       <span class="fw-semibold small">Detalle de Pagos</span>
     </div>
-    <div class="table-responsive" style="overflow:visible;">
+    <div class="table-responsive">
       <table class="table table-sm table-hover align-middle small">
         <thead class="table-light small text-uppercase fw-semibold">
           <tr>
+            <th class="px-3" style="white-space:nowrap;">Código</th>
             <th>Proyecto</th>
             <th>Contratante</th>
-            <th>Tipo Proyecto</th>
             <th>Estado Proyecto</th>
-            <th class="text-end">Monto Total Proy. (Bs.)</th>
-            <th class="text-end">Monto Pago (Bs.)</th>
-            <th>Fecha</th>
-            <th>Tipo Pago</th>
+            <th>Estado Pago</th>
+            <th class="text-end" style="white-space:nowrap;">Acordado (Bs.)</th>
+            <th class="text-end" style="white-space:nowrap;">Cobrado (Bs.)</th>
+            <th class="text-end" style="white-space:nowrap;">Saldo (Bs.)</th>
+            <th class="text-center">%</th>
+            <th class="text-end" style="white-space:nowrap;">Pago (Bs.)</th>
+            <th style="white-space:nowrap;">Fecha</th>
+            <th>Método</th>
+            <th>Confirmación</th>
           </tr>
         </thead>
         <tbody>
           {% for payment in payments %}
           <tr>
+            <td class="px-3 text-muted text-xs">{{ payment.proyecto.codigo }}</td>
             <td class="fw-semibold">{{ payment.proyecto.nombre }}</td>
             <td class="text-muted">
               {% if payment.proyecto.cliente %}
                 {{ payment.proyecto.cliente.nombre }} {{ payment.proyecto.cliente.apellido_paterno }}
               {% else %}—{% endif %}
             </td>
-            <td class="text-muted">
-              {% if payment.proyecto.tipo_proyecto == 'instalacion_nueva' %}Instalación
-              {% else %}Mant. Externo{% endif %}
-            </td>
             <td>
               {% if payment.proyecto.estado_proyecto == 'completado' %}
-                <span class="badge bg-success">Completado</span>
+                <span class="badge bg-success small">Completado</span>
               {% elif payment.proyecto.estado_proyecto == 'en_progreso' %}
-                <span class="badge bg-primary">En Progreso</span>
+                <span class="badge bg-primary small">En Progreso</span>
+              {% elif payment.proyecto.estado_proyecto == 'cancelado' %}
+                <span class="badge bg-secondary small">Cancelado</span>
               {% else %}
-                <span class="badge bg-warning text-dark">Pendiente</span>
+                <span class="badge bg-warning text-dark small">Pendiente</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if payment.proyecto.estado_pago == 'pagado' %}
+                <span class="badge bg-success small">Pagado</span>
+              {% elif payment.proyecto.estado_pago == 'parcial' %}
+                <span class="badge bg-info text-dark small">Parcial</span>
+              {% else %}
+                <span class="badge bg-danger small">No Pagado</span>
               {% endif %}
             </td>
             <td class="text-end">{{ payment.proyecto.monto_total|floatformat:2 }}</td>
-            <td class="text-end fw-semibold">{{ payment.monto|floatformat:2 }}</td>
-            <td class="text-muted">{{ payment.fecha|date:"d/m/Y" }}</td>
+            <td class="text-end text-success fw-semibold">{{ payment.proyecto_cobrado|floatformat:2 }}</td>
+            <td class="text-end fw-semibold {% if payment.proyecto_saldo > 0 %}text-danger{% elif payment.proyecto_saldo < 0 %}text-warning{% else %}text-success{% endif %}">
+              {{ payment.proyecto_saldo|floatformat:2 }}
+            </td>
+            <td class="text-center">
+              {% if payment.proyecto.monto_total > 0 %}
+                <span class="{% if payment.proyecto.estado_pago == 'pagado' %}text-success{% elif payment.proyecto.estado_pago == 'parcial' %}text-warning{% else %}text-danger{% endif %}">
+                  {% widthratio payment.proyecto_cobrado payment.proyecto.monto_total 100 %}%
+                </span>
+              {% else %}—{% endif %}
+            </td>
+            <td class="text-end fw-semibold">
+              {{ payment.monto|floatformat:2 }}
+              {% if payment.descuento %}
+              <div class="text-muted text-xs">+ desc. {{ payment.descuento|floatformat:2 }}</div>
+              <div class="text-success fw-semibold text-xs">= {{ payment.monto_neto|floatformat:2 }}</div>
+              {% if payment.motivo_descuento %}
+              <div class="text-muted text-xs fst-italic">{{ payment.motivo_descuento }}</div>
+              {% endif %}
+              {% endif %}
+            </td>
+            <td class="text-muted" style="white-space:nowrap;">{{ payment.fecha|date:"d/m/Y" }}</td>
             <td>
               {% if payment.tipo_pago == 'transferencia' %}
-                <span class="badge bg-primary">Transferencia</span>
+                <span class="badge bg-primary small">Transferencia</span>
+                {% if payment.numero_referencia %}
+                <div class="text-muted text-xs">{{ payment.numero_referencia }}</div>
+                {% endif %}
               {% else %}
-                <span class="badge bg-info text-dark">Efectivo</span>
+                <span class="badge bg-info text-dark small">Efectivo</span>
+              {% endif %}
+            </td>
+            <td>
+              {% if payment.estado == 'pendiente' %}
+                <span class="badge bg-warning text-dark fw-normal"><i class="bi bi-clock me-1"></i>Pendiente</span>
+              {% else %}
+                <span class="badge bg-success fw-normal"><i class="bi bi-check-circle me-1"></i>Confirmado</span>
               {% endif %}
             </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="8" class="text-center text-muted py-3">
+            <td colspan="13" class="text-center text-muted py-3">
               No se encontraron pagos con los filtros seleccionados.
             </td>
           </tr>
           {% endfor %}
         </tbody>
         {% if payments %}
-        <tfoot class="table-light small text-uppercase fw-semibold">
+        <tfoot class="table-light small fw-semibold">
           <tr>
-            <td colspan="5" class="text-end text-muted">Totales:</td>
+            <td colspan="9" class="text-end text-muted">Total bruto:</td>
             <td class="text-end">Bs. {{ total_monto|floatformat:2 }}</td>
-            <td colspan="2"></td>
+            <td colspan="3"></td>
           </tr>
+          {% if total_descuentos %}
+          <tr>
+            <td colspan="9" class="text-end text-muted">Descuentos:</td>
+            <td class="text-end text-warning">Bs. {{ total_descuentos|floatformat:2 }}</td>
+            <td colspan="3"></td>
+          </tr>
+          <tr>
+            <td colspan="9" class="text-end text-muted">Total neto:</td>
+            <td class="text-end text-success">Bs. {{ total_neto|floatformat:2 }}</td>
+            <td colspan="3"></td>
+          </tr>
+          {% endif %}
         </tfoot>
         {% endif %}
       </table>
@@ -206,10 +273,9 @@
 
   <!-- ── PAGINACIÓN ───────────────────────────────────────────── -->
   {% if payments_page and payments_page.paginator.num_pages > 1 %}
-  {% with p=payments_page params="project_name="|add:project_name|default:''|add:"&start_date="|add:start_date|default:''|add:"&end_date="|add:end_date|default:''|add:"&filter_tipo="|add:filter_tipo|default:''|add:"&per_page="|add:per_page|stringformat:"s" %}
+  {% with p=payments_page params="project_name="|add:project_name|default:''|add:"&start_date="|add:start_date|default:''|add:"&end_date="|add:end_date|default:''|add:"&filter_tipo="|add:filter_tipo|default:''|add:"&filter_estado="|add:filter_estado|default:''|add:"&per_page="|add:per_page|stringformat:"s" %}
   <nav class="mt-3">
     <ul class="pagination pagination-sm justify-content-center mb-0">
-
       {% if p.has_previous %}
       <li class="page-item">
         <a class="page-link" href="?page={{ p.previous_page_number }}&{{ params }}">Anterior</a>
@@ -217,7 +283,6 @@
       {% else %}
       <li class="page-item disabled"><span class="page-link">Anterior</span></li>
       {% endif %}
-
       {% for num in p.paginator.page_range %}
         {% if num == p.number %}
           <li class="page-item active"><span class="page-link">{{ num }}</span></li>
@@ -227,7 +292,6 @@
           <li class="page-item disabled"><span class="page-link">…</span></li>
         {% endif %}
       {% endfor %}
-
       {% if p.has_next %}
       <li class="page-item">
         <a class="page-link" href="?page={{ p.next_page_number }}&{{ params }}">Siguiente</a>
@@ -235,7 +299,6 @@
       {% else %}
       <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
       {% endif %}
-
     </ul>
   </nav>
   {% endwith %}

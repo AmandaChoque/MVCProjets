@@ -71,11 +71,29 @@
           </div>
         </div>
       </div>
+
+      <!-- Acceso rápido a revisión por proyecto -->
+      {% if proyectos_con_pendientes %}
+      <div class="mb-3">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <span class="text-muted small fw-semibold">Ir a revisión:</span>
+          {% for p in proyectos_con_pendientes %}
+          <a href="{% url 'revisar_jornadas_proyecto' p.id %}?next={% url 'employee_workload' %}"
+             class="badge text-decoration-none d-inline-flex align-items-center gap-1"
+             style="background:#fff3cd; color:#664d03; border:1px solid #ffda6a; font-size:0.78rem; font-weight:500; padding:.3em .6em; border-radius:.4rem;">
+            <i class="bi bi-clipboard2-check"></i>
+            {{ p.nombre|truncatechars:28 }}
+            <span class="badge bg-warning text-dark ms-1" style="font-size:0.7rem;">{{ p.n_pendientes }}</span>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
       <!-- TABLA -->
       <div class="card border-0 shadow-sm mb-3">
         <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
           <span class="fw-semibold small">Detalle de Jornadas</span>
-          {% if jornadas_pendientes %}
+          {% if total_pendientes %}
           <form method="POST" action="{% url 'aprobar_todas_jornadas' %}"
                 onsubmit="return confirm('¿Aprobar todas las jornadas pendientes{% if filter_empleado %} de este empleado{% endif %}?')">
             {% csrf_token %}
@@ -101,7 +119,7 @@
               </thead>
               <tbody>
                 {% for j in jornadas_pendientes %}
-                <tr>
+                <tr data-href="{% url 'jornada_detail' j.id %}?next={% url 'employee_workload' %}">
                   <td class="px-3 fw-semibold">
                     {{ j.contrato.empleado.nombre }} {{ j.contrato.empleado.apellido_paterno }}
                     <div class="text-muted" style="font-size:0.72rem;">{{ j.contrato.empleado.get_cargo_display }}</div>
@@ -109,6 +127,11 @@
                   <td>
                     <a href="{% url 'project_view' j.proyecto.id %}" class="text-decoration-none small">
                       {{ j.proyecto.nombre }}
+                    </a>
+                    <a href="{% url 'revisar_jornadas_proyecto' j.proyecto.id %}?next={% url 'employee_workload' %}"
+                       class="ms-1 text-warning" title="Revisar jornadas del proyecto"
+                       style="font-size:0.8rem;">
+                      <i class="bi bi-clipboard2-check"></i>
                     </a>
                   </td>
                   <td class="small">{{ j.fecha|date:"d/m/Y" }}</td>
@@ -125,7 +148,7 @@
                       <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
                       <ul class="dropdown-menu dropdown-menu-end shadow-sm">
                         <li>
-                          <a class="dropdown-item" href="{% url 'jornada_detail' j.id %}">
+                          <a class="dropdown-item" href="{% url 'jornada_detail' j.id %}?next={% url 'employee_workload' %}">
                             <i class="bi bi-eye me-2 text-muted"></i>Ver / Editar
                           </a>
                         </li>
@@ -164,6 +187,40 @@
               </tbody>
             </table>
           </div>
+          {% if paginator.num_pages > 1 %}
+          <div class="card-footer bg-white py-2 d-flex justify-content-between align-items-center flex-wrap gap-2 border-top">
+            <small class="text-muted">
+              Mostrando {{ jornadas_pendientes.start_index }}–{{ jornadas_pendientes.end_index }} de {{ total_pendientes }} jornada{{ total_pendientes|pluralize:"s" }}
+            </small>
+            <nav>
+              <ul class="pagination pagination-sm mb-0 justify-content-center">
+                {% if jornadas_pendientes.has_previous %}
+                <li class="page-item">
+                  <a class="page-link" href="?{% if filter_empleado %}filter_empleado={{ filter_empleado }}&{% endif %}per_page={{ per_page }}&page={{ jornadas_pendientes.previous_page_number }}">Anterior</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+                {% endif %}
+                {% for num in paginator.page_range %}
+                  {% if num == jornadas_pendientes.number %}
+                  <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                  {% elif num == 1 or num == paginator.num_pages or num >= jornadas_pendientes.number|add:"-2" and num <= jornadas_pendientes.number|add:"2" %}
+                  <li class="page-item">
+                    <a class="page-link" href="?{% if filter_empleado %}filter_empleado={{ filter_empleado }}&{% endif %}per_page={{ per_page }}&page={{ num }}">{{ num }}</a>
+                  </li>
+                  {% endif %}
+                {% endfor %}
+                {% if jornadas_pendientes.has_next %}
+                <li class="page-item">
+                  <a class="page-link" href="?{% if filter_empleado %}filter_empleado={{ filter_empleado }}&{% endif %}per_page={{ per_page }}&page={{ jornadas_pendientes.next_page_number }}">Siguiente</a>
+                </li>
+                {% else %}
+                <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+                {% endif %}
+              </ul>
+            </nav>
+          </div>
+          {% endif %}
         </div>
       </div>
 
@@ -175,6 +232,7 @@
         <span class="badge fw-normal" style="background:#198754; font-size:0.72rem;">Aprobada</span>
         <span class="badge bg-warning text-dark fw-normal" style="font-size:0.72rem;">Pendiente</span>
         <span class="badge bg-danger fw-normal" style="font-size:0.72rem;">Rechazada</span>
+        <span class="badge fw-normal" style="background:#6f42c1; font-size:0.72rem;">Asignado</span>
         {% if contrato_cal %}
         <span class="text-muted small ms-2" style="font-size:0.72rem;">
           <span style="display:inline-block;width:10px;height:10px;background:#198754;border-radius:2px;"></span>
@@ -245,6 +303,16 @@
                               title="{{ day.date|date:'d/m/Y' }} — {{ day.jornada.proyecto.nombre }}">{{ day.num }}</span>
                       {% elif day.tareas %}
                         <span class="cal-a cal-a-tareas" title="{{ day.date|date:'d/m/Y' }} — {{ day.tareas|length }} tarea(s)">{{ day.num }}</span>
+                      {% elif day.asignaciones %}
+                        {% if day.asignaciones|length == 1 %}
+                          {% with a=day.asignaciones|first %}
+                          <a href="{% url 'project_view' a.proyecto.pk %}" style="text-decoration:none;" title="{{ a.proyecto.nombre }}">
+                            <span class="cal-a cal-a-asignado">{{ day.num }}</span>
+                          </a>
+                          {% endwith %}
+                        {% else %}
+                          <span class="cal-a cal-a-asignado" title="{% for a in day.asignaciones %}{{ a.proyecto.nombre }}{% if not forloop.last %}, {% endif %}{% endfor %}">{{ day.num }}</span>
+                        {% endif %}
                       {% elif contrato_cal and day.date and day.date == contrato_cal.fecha_inicio %}
                         <span class="cal-a cal-a-contrato" title="Inicio contrato">{{ day.num }}</span>
                       {% elif contrato_cal and day.date and day.date == contrato_cal.fecha_fin %}
@@ -271,7 +339,8 @@
         <span><span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background:#ffc107;vertical-align:middle;"></span>Pendiente</span>
         <span><span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background:#dc3545;vertical-align:middle;"></span>Rechazada</span>
         <span><span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background:#0dcaf0;vertical-align:middle;"></span>Solo tareas</span>
-        <span><span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background:#6f42c1;vertical-align:middle;"></span>Inicio/Fin contrato</span>
+        <span><span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background:#6f42c1;vertical-align:middle;"></span>Asignado (sin jornada)</span>
+        <span><span class="d-inline-block rounded-circle me-1" style="width:12px;height:12px;background:#9c6d00;vertical-align:middle;"></span>Inicio/Fin contrato</span>
         <span><span class="d-inline-block me-1" style="width:12px;height:12px;background:#f8f9fa;border:1px solid #dee2e6;vertical-align:middle;"></span>Fuera de contrato</span>
       </div>
 
@@ -290,42 +359,60 @@
             {% for week in cal_weeks %}
             <tr>
               {% for day in week %}
-              <td class="p-1 align-top cal-day{% if not day.num %} cal-empty{% elif day.is_today %} cal-today{% elif contrato_cal and day.date %}{% if day.date < contrato_cal.fecha_inicio or day.date > contrato_cal.fecha_fin %} cal-fuera-contrato{% elif day.date == contrato_cal.fecha_inicio and day.date == contrato_cal.fecha_fin %} cal-contrato-inicio cal-contrato-fin{% elif day.date == contrato_cal.fecha_inicio %} cal-contrato-inicio{% elif day.date == contrato_cal.fecha_fin %} cal-contrato-fin{% endif %}{% endif %}"
+              <td class="p-1 align-top cal-day
+                  {% if not day.num %}cal-empty
+                  {% elif day.is_today %}cal-today
+                  {% elif contrato_cal and day.date %}
+                    {% if day.date < contrato_cal.fecha_inicio or day.date > contrato_cal.fecha_fin %}cal-fuera-contrato
+                    {% elif day.date == contrato_cal.fecha_inicio and day.date == contrato_cal.fecha_fin %}cal-contrato-inicio cal-contrato-fin
+                    {% elif day.date == contrato_cal.fecha_inicio %}cal-contrato-inicio
+                    {% elif day.date == contrato_cal.fecha_fin %}cal-contrato-fin
+                    {% elif day.asignaciones %}cal-asignado
+                    {% endif %}
+                  {% elif day.asignaciones %}cal-asignado
+                  {% endif %}"
                   style="height:72px;">
                 {% if day.num %}
                   <div class="d-flex justify-content-between align-items-start mb-1">
-                    {% if contrato_cal and day.date == contrato_cal.fecha_inicio and day.date == contrato_cal.fecha_fin %}
-                      <span style="font-size:0.58rem; background:#6f42c1; color:#fff; border-radius:3px; padding:0 3px; line-height:1.4;">Inicio/Fin</span>
-                    {% elif contrato_cal and day.date == contrato_cal.fecha_inicio %}
-                      <span style="font-size:0.58rem; background:#198754; color:#fff; border-radius:3px; padding:0 3px; line-height:1.4;">Inicio</span>
-                    {% elif contrato_cal and day.date == contrato_cal.fecha_fin %}
-                      <span style="font-size:0.58rem; background:#dc3545; color:#fff; border-radius:3px; padding:0 3px; line-height:1.4;">Fin</span>
-                    {% else %}
-                      <span></span>
-                    {% endif %}
+                    <div style="flex:1; min-width:0; overflow:hidden;">
+                      {% if contrato_cal and day.date == contrato_cal.fecha_inicio and day.date == contrato_cal.fecha_fin %}
+                        <span style="font-size:0.58rem; background:#6f42c1; color:#fff; border-radius:3px; padding:0 3px; line-height:1.4; display:block; margin-bottom:1px;">Inicio/Fin</span>
+                      {% elif contrato_cal and day.date == contrato_cal.fecha_inicio %}
+                        <span style="font-size:0.58rem; background:#198754; color:#fff; border-radius:3px; padding:0 3px; line-height:1.4; display:block; margin-bottom:1px;">Inicio</span>
+                      {% elif contrato_cal and day.date == contrato_cal.fecha_fin %}
+                        <span style="font-size:0.58rem; background:#dc3545; color:#fff; border-radius:3px; padding:0 3px; line-height:1.4; display:block; margin-bottom:1px;">Fin</span>
+                      {% endif %}
+                      {% for a in day.asignaciones %}
+                      <a href="{% url 'project_view' a.proyecto.pk %}"
+                         style="font-size:0.58rem; background:#6f42c1; color:#fff; border-radius:3px; padding:0 3px; line-height:1.4; text-decoration:none; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:1px;"
+                         title="{{ a.proyecto.nombre }}">
+                        <i class="bi bi-briefcase-fill"></i> {{ a.proyecto.nombre|truncatechars:11 }}
+                      </a>
+                      {% endfor %}
+                    </div>
                     <span class="{% if day.is_today %}fw-bold text-primary{% else %}text-muted{% endif %}" style="font-size:0.78rem;">{{ day.num }}</span>
                   </div>
                   {% if day.jornada %}
                     {% with j=day.jornada %}
-                    <a href="{% url 'jornada_detail' j.id %}" class="text-decoration-none d-block">
+                    <a href="{% url 'jornada_detail' j.id %}?next={% url 'employee_workload' %}" class="text-decoration-none d-block">
                       {% if j.estado == 'aprobada' %}
                         <span class="badge w-100" style="background:#198754; font-size:0.68rem;">
-                          <i class="bi bi-check-lg"></i> {% if j.dias == 0.5 %}½{% else %}1{% endif %}d
+                          <i class="bi bi-check-lg"></i> {% if j.dias == 0.5 %}½{% else %}1{% endif %}d — {{ j.proyecto.nombre|truncatechars:12 }}
                         </span>
                       {% elif j.estado == 'pendiente' %}
                         <span class="badge bg-warning text-dark w-100" style="font-size:0.68rem;">
-                          <i class="bi bi-clock"></i> {% if j.dias == 0.5 %}½{% else %}1{% endif %}d
+                          <i class="bi bi-clock"></i> {% if j.dias == 0.5 %}½{% else %}1{% endif %}d — {{ j.proyecto.nombre|truncatechars:12 }}
                         </span>
                       {% elif j.estado == 'rechazada' %}
                         <span class="badge bg-danger w-100" style="font-size:0.68rem;">
-                          <i class="bi bi-x-lg"></i> {% if j.dias == 0.5 %}½{% else %}1{% endif %}d
+                          <i class="bi bi-x-lg"></i> {% if j.dias == 0.5 %}½{% else %}1{% endif %}d — {{ j.proyecto.nombre|truncatechars:12 }}
                         </span>
                       {% endif %}
                     </a>
                     {% endwith %}
                   {% endif %}
                   {% if day.tareas %}
-                  <div class="mt-1 text-center" title="{% for t in day.tareas %}{{ t.descripcion }} ({{ t.sede.proyecto.nombre }})&#10;{% endfor %}">
+                  <div class="mt-1 text-center" title="{% for t in day.tareas %}{{ t.descripcion }} — {{ t.sede.nombre }} ({{ t.pct_al_completar }}%)&#10;{% endfor %}">
                     <span class="badge bg-light text-dark border" style="font-size:0.62rem; cursor:default;">
                       <i class="bi bi-check2-square"></i> {{ day.tareas|length }}
                     </span>
@@ -346,22 +433,44 @@
         {% for day in cal_week_days %}
         <div class="col">
           {% if day.jornada %}
-          <a href="{% url 'jornada_detail' day.jornada.id %}" class="text-decoration-none">
+          <a href="{% url 'jornada_detail' day.jornada.id %}?next={% url 'employee_workload' %}" class="text-decoration-none">
+          {% elif day.asignaciones and day.asignaciones|length == 1 %}
+          <a href="{% url 'project_view' day.asignaciones.0.proyecto.pk %}" class="text-decoration-none">
           {% endif %}
           <div class="border rounded p-2 h-100 cal-semana-day
                {% if day.is_today %}cal-semana-hoy{% endif %}
-               {% if day.jornada %}cal-semana-clickable{% endif %}
-               {% if contrato_cal %}{% if day.date < contrato_cal.fecha_inicio or day.date > contrato_cal.fecha_fin %}cal-fuera-contrato{% elif day.date == contrato_cal.fecha_inicio and day.date == contrato_cal.fecha_fin %}cal-contrato-inicio cal-contrato-fin{% elif day.date == contrato_cal.fecha_inicio %}cal-contrato-inicio{% elif day.date == contrato_cal.fecha_fin %}cal-contrato-fin{% endif %}{% endif %}">
+               {% if day.jornada or day.asignaciones %}cal-semana-clickable{% endif %}
+               {% if contrato_cal %}
+                 {% if day.date < contrato_cal.fecha_inicio or day.date > contrato_cal.fecha_fin %}cal-fuera-contrato
+                 {% elif day.date == contrato_cal.fecha_inicio and day.date == contrato_cal.fecha_fin %}cal-contrato-inicio cal-contrato-fin
+                 {% elif day.date == contrato_cal.fecha_inicio %}cal-contrato-inicio
+                 {% elif day.date == contrato_cal.fecha_fin %}cal-contrato-fin
+                 {% elif day.asignaciones %}cal-asignado
+                 {% endif %}
+               {% elif day.asignaciones %}cal-asignado
+               {% endif %}">
             <div class="text-center mb-2">
               <div class="small text-muted text-uppercase fw-semibold" style="font-size:0.7rem;">{{ day.dia_nombre }}</div>
               <div class="fw-bold {% if day.is_today %}text-primary{% endif %}" style="font-size:1.2rem;">{{ day.num }}</div>
               {% if contrato_cal and day.date == contrato_cal.fecha_inicio and day.date == contrato_cal.fecha_fin %}
-                <span style="font-size:0.62rem; background:#6f42c1; color:#fff; border-radius:3px; padding:0 4px;">Inicio/Fin contrato</span>
+                <span style="font-size:0.62rem; background:#6f42c1; color:#fff; border-radius:3px; padding:0 4px; display:inline-block; margin-bottom:2px;">Inicio/Fin contrato</span>
               {% elif contrato_cal and day.date == contrato_cal.fecha_inicio %}
-                <span style="font-size:0.62rem; background:#198754; color:#fff; border-radius:3px; padding:0 4px;">Inicio contrato</span>
+                <span style="font-size:0.62rem; background:#198754; color:#fff; border-radius:3px; padding:0 4px; display:inline-block; margin-bottom:2px;">Inicio contrato</span>
               {% elif contrato_cal and day.date == contrato_cal.fecha_fin %}
-                <span style="font-size:0.62rem; background:#dc3545; color:#fff; border-radius:3px; padding:0 4px;">Fin contrato</span>
+                <span style="font-size:0.62rem; background:#dc3545; color:#fff; border-radius:3px; padding:0 4px; display:inline-block; margin-bottom:2px;">Fin contrato</span>
               {% endif %}
+              {% for a in day.asignaciones %}
+                {% if day.jornada %}
+                <span style="font-size:0.62rem; background:#6f42c1; color:#fff; border-radius:3px; padding:0 4px; display:inline-block; margin-top:2px;">
+                  <i class="bi bi-briefcase-fill me-1"></i>{{ a.proyecto.nombre|truncatechars:14 }}
+                </span>
+                {% else %}
+                <a href="{% url 'project_view' a.proyecto.pk %}"
+                   style="font-size:0.62rem; background:#6f42c1; color:#fff; border-radius:3px; padding:0 4px; display:inline-block; margin-top:2px; text-decoration:none;">
+                  <i class="bi bi-briefcase-fill me-1"></i>{{ a.proyecto.nombre|truncatechars:14 }}
+                </a>
+                {% endif %}
+              {% endfor %}
             </div>
             {% if day.jornada %}
               {% with j=day.jornada %}
@@ -396,14 +505,26 @@
                 <i class="bi bi-check2-square me-1"></i>Tareas ({{ day.tareas|length }})
               </div>
               {% for t in day.tareas %}
-              <div class="text-truncate" style="font-size:0.68rem;" title="{{ t.descripcion }} — {{ t.sede.proyecto.nombre }}">
-                <i class="bi bi-check-circle-fill text-success me-1" style="font-size:0.6rem;"></i>{{ t.descripcion }}
+              <div class="mb-1">
+                <div class="text-truncate" style="font-size:0.68rem;" title="{{ t.descripcion }} — {{ t.sede.proyecto.nombre }}">
+                  <i class="bi bi-check-circle-fill text-success me-1" style="font-size:0.6rem;"></i>{{ t.descripcion }}
+                </div>
+                <div class="text-muted text-truncate" style="font-size:0.62rem;">
+                  <i class="bi bi-geo-alt me-1"></i>{{ t.sede.nombre }}
+                </div>
+                <div class="d-flex align-items-center gap-1 mt-1">
+                  <div class="progress flex-grow-1" style="height:4px; border-radius:2px;">
+                    <div class="progress-bar {% if t.pct_al_completar == 100 %}bg-success{% elif t.pct_al_completar >= 50 %}bg-primary{% else %}bg-warning{% endif %}"
+                         style="width:{{ t.pct_al_completar }}%"></div>
+                  </div>
+                  <span class="fw-semibold" style="font-size:0.62rem; min-width:28px; {% if t.pct_al_completar == 100 %}color:#198754{% elif t.pct_al_completar >= 50 %}color:#0d6efd{% else %}color:#fd7e14{% endif %}">{{ t.pct_al_completar }}%</span>
+                </div>
               </div>
               {% endfor %}
             </div>
             {% endif %}
           </div>
-          {% if day.jornada %}</a>{% endif %}
+          {% if day.jornada or day.asignaciones and day.asignaciones|length == 1 %}</a>{% endif %}
         </div>
         {% endfor %}
       </div>
@@ -456,11 +577,12 @@
 
 {% block extra_css %}
 <style>
-  .cal-empty           { background: #f8f9fa; }
-  .cal-today           { background: #eef2ff; }
-  .cal-fuera-contrato  { background: #f8f9fa; opacity: .55; }
-  .cal-contrato-inicio           { border-top: 3px solid #198754 !important; }
-  .cal-contrato-fin              { border-top: 3px solid #dc3545 !important; }
+  .cal-empty            { background: #f8f9fa; }
+  .cal-today            { background: #eef2ff; }
+  .cal-fuera-contrato   { background: #f8f9fa; opacity: .55; }
+  .cal-asignado         { background: #f3eeff; }
+  .cal-contrato-inicio              { border-top: 3px solid #198754 !important; }
+  .cal-contrato-fin                 { border-top: 3px solid #dc3545 !important; }
   .cal-contrato-inicio.cal-contrato-fin { border-top: 3px solid #6f42c1 !important; }
   /* celdas año */
   .cal-a { display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;font-size:0.58rem;border-radius:50%; }
@@ -468,7 +590,8 @@
   .cal-a-pendiente { color:#000; background:#ffc107; }
   .cal-a-rechazada { color:#fff; background:#dc3545; }
   .cal-a-tareas    { color:#fff; background:#0dcaf0; }
-  .cal-a-contrato  { color:#fff; background:#6f42c1; }
+  .cal-a-asignado  { color:#fff; background:#6f42c1; }
+  .cal-a-contrato  { color:#fff; background:#9c6d00; }
   .cal-a-hoy       { color:#0d6efd; font-weight:700; border:1px solid #0d6efd; }
   .cal-a-fuera     { color:#adb5bd; background:#f8f9fa; border-radius:50%; }
   .cal-a-normal    { color:#495057; }

@@ -116,6 +116,30 @@
           <span class="text-danger">*</span> Campos obligatorios
         </div>
 
+        <!-- AUDITORÍA -->
+        <div class="p-3 rounded border small text-muted" style="background:#f8f9fa;">
+          <div class="fw-semibold text-uppercase mb-2" style="font-size:.68rem; letter-spacing:.05em;">Auditoría</div>
+          <div class="row g-1">
+            <div class="col-6">
+              <span>Registrado:</span>
+              <span class="fw-semibold text-dark">{{ payment.created|date:"d/m/Y H:i" }}</span>
+            </div>
+            <div class="col-6">
+              <span>Últ. modificación:</span>
+              <span class="fw-semibold text-dark">{{ payment.updated_at|date:"d/m/Y H:i" }}</span>
+            </div>
+            {% if payment.modificado_por %}
+            <div class="col-12 mt-1">
+              <span>Modificado por:</span>
+              <span class="fw-semibold text-dark">
+                {{ payment.modificado_por.nombre }} {{ payment.modificado_por.apellido_paterno }}
+                <span class="text-muted">({{ payment.modificado_por.get_cargo_display }})</span>
+              </span>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
         {% if error %}
         <div class="alert alert-danger mt-3">{{ error }}</div>
         {% endif %}

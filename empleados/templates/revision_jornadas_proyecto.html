@@ -3,7 +3,7 @@
 <main class="container-fluid px-4 py-4">
 
   <div class="mb-3">
-    <a href="{% url 'project_view' proyecto.id %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+    <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'project_view' proyecto.id %}{% endif %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
   </div>
 
   <div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
@@ -14,15 +14,15 @@
     <div class="d-flex align-items-center gap-2 flex-wrap">
       <!-- Filtro de estado -->
       <div class="btn-group btn-group-sm" role="group">
-        <a href="?estado=pendiente"
+        <a href="?estado=pendiente{% if next_url %}&next={{ next_url }}{% endif %}"
            class="btn {% if estado_filtro == 'pendiente' %}btn-warning{% else %}btn-outline-warning{% endif %}">
           Pendientes
         </a>
-        <a href="?estado=aprobada"
+        <a href="?estado=aprobada{% if next_url %}&next={{ next_url }}{% endif %}"
            class="btn {% if estado_filtro == 'aprobada' %}btn-success{% else %}btn-outline-success{% endif %}">
           Aprobadas
         </a>
-        <a href="?estado=rechazada"
+        <a href="?estado=rechazada{% if next_url %}&next={{ next_url }}{% endif %}"
            class="btn {% if estado_filtro == 'rechazada' %}btn-danger{% else %}btn-outline-danger{% endif %}">
           Rechazadas
         </a>
@@ -86,7 +86,7 @@
           </thead>
           <tbody>
             {% for j in item.jornadas %}
-            <tr>
+            <tr data-href="{% url 'jornada_detail' j.id %}?next={% url 'revisar_jornadas_proyecto' proyecto.id %}">
               <td class="px-3 fw-semibold">{{ j.fecha|date:"d/m/Y" }}</td>
               <td>
                 {% if j.dias == 1.0 %}
@@ -106,7 +106,7 @@
                             title="Ver tareas completadas ese día">
                       <i class="bi bi-check2-circle me-1"></i>{{ j.tareas_completadas_count }} tarea{{ j.tareas_completadas_count|pluralize:"s" }}
                     </button>
-                    <a href="{% url 'jornada_detail' j.id %}" class="text-decoration-none small text-primary">
+                    <a href="{% url 'jornada_detail' j.id %}?next={% url 'revisar_jornadas_proyecto' proyecto.id %}" class="text-decoration-none small text-primary">
                       <i class="bi bi-eye me-1"></i>Ver
                     </a>
                   </div>

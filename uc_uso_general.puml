@@ -1,0 +1,71 @@
+@startuml casos_uso_modulos
+
+title CASO DE USO GENERAL DEL SISTEMA
+
+left to right direction
+
+skinparam actorStyle awesome
+skinparam backgroundColor white
+skinparam shadowing false
+skinparam packageStyle rectangle
+
+skinparam nodesep 90
+skinparam ranksep 20
+
+skinparam usecase {
+    BackgroundColor #F8F8F8
+    BorderColor #444
+    FontSize 13
+}
+
+skinparam actor {
+    FontSize 12
+    BorderColor #333
+}
+
+'══════════════════════════════
+' ACTORES IZQUIERDA
+'══════════════════════════════
+
+actor "Administrador" as ADM
+actor "Gerente General" as GER
+actor "Secretaria" as SEC
+
+'══════════════════════════════
+' SISTEMA
+'══════════════════════════════
+
+rectangle "Sistema Web SOBOTEC S.R.L." {
+
+    usecase "Módulo de\nProyectos" as UC1
+    usecase "Módulo de\nPersonal" as UC2
+    usecase "Módulo de\nInventario" as UC3
+}
+
+'══════════════════════════════
+' ACTORES DERECHA
+'══════════════════════════════
+
+actor "Supervisor" as SUP
+actor "Técnico" as TEC
+
+'══════════════════════════════
+' RELACIONES
+'══════════════════════════════
+
+ADM --> UC1
+ADM --> UC2
+ADM --> UC3
+
+GER --> UC1
+GER --> UC2
+
+SEC --> UC1
+SEC --> UC2
+
+UC1 <-- SUP
+UC3 <-- SUP
+
+UC1 <-- TEC
+
+@enduml

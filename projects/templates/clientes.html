@@ -131,7 +131,7 @@
       <tbody>
 
         {% for cliente in clientes %}
-        <tr>
+        <tr data-href="{% url 'cliente_view' cliente.id %}">
 
           <!-- <td>
             <div class="fw-semibold">
@@ -141,7 +141,15 @@
               NIT/CI: {{ cliente.nit_ci }}
             </div>
           </td> -->
-          <td class="small">{{ cliente.nombre }} {{ cliente.apellido_paterno }}</td>
+          <td class="small">
+            {{ cliente.nombre }} {{ cliente.apellido_paterno }}
+            {% if cliente.id in clientes_criticos_ids %}
+            <span class="badge bg-danger ms-1" style="font-size:.65rem;"
+                  title="Tiene proyecto(s) con multa máxima alcanzada">
+              <i class="bi bi-exclamation-octagon me-1"></i>Multa crítica
+            </span>
+            {% endif %}
+          </td>
           <td class="small">{{ cliente.nit_ci }}</td>
           <td class="small">{{ cliente.get_rol_contacto_display }}</td>
 

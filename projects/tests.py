@@ -18,13 +18,13 @@ from inventario.models import Proveedor, Insumo
 # Helpers reutilizables
 # ---------------------------------------------------------------------------
 
-def crear_empleado(username='testuser', cargo='administrador'):
+def crear_empleado(username='testuser', cargo='administrador', ci='1234560'):
     return Empleado.objects.create_user(
         username=username,
         password='pass1234',
         nombre='Test',
         apellido_paterno='User',
-        carnet_identidad='1234560',
+        carnet_identidad=ci,
         cargo=cargo,
     )
 
@@ -456,3 +456,226 @@ class CompraFormCleanCostoTest(TestCase):
         form = CompraForm(data=self._data('-100'))
         self.assertFalse(form.is_valid())
         self.assertIn('costo_unitario', form.errors)
+
+
+# ===========================================================================
+# 9. Tests de Vistas — Acceso y autenticación
+# ===========================================================================
+
+class ViewAccessTest(TestCase):
+    """Verifica que las vistas requieran login y respeten el control de roles."""
+
+    def setUp(self):
+        self.admin = crear_empleado(username='admin_vw', cargo='administrador', ci='1111111')
+        self.instalador = crear_empleado(username='install_vw', cargo='instalador', ci='2222222')
+        self.proyecto = crear_proyecto(self.admin)
+
+    def test_dashboard_sin_login_redirige_al_signin(self):
+        response = self.client.get('/dashboard/')
+        self.assertRedirects(response, '/signin/?next=/dashboard/')
+
+    def test_dashboard_con_login_retorna_200(self):
+        self.client.login(username='admin_vw', password='pass1234')
+        response = self.client.get('/dashboard/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_lista_proyectos_sin_login_redirige(self):
+        response = self.client.get('/proyectos/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_lista_proyectos_admin_retorna_200(self):
+        self.client.login(username='admin_vw', password='pass1234')
+        response = self.client.get('/proyectos/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_crear_proyecto_get_admin_retorna_200(self):
+        self.client.login(username='admin_vw', password='pass1234')
+        response = self.client.get('/proyectos/nuevo/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_instalador_redirige_a_dashboard_al_intentar_crear_proyecto(self):
+        self.client.login(username='install_vw', password='pass1234')
+        response = self.client.get('/proyectos/nuevo/')
+        self.assertRedirects(response, '/dashboard/', fetch_redirect_response=False)
+
+    def test_lista_empleados_sin_login_redirige(self):
+        response = self.client.get('/empleados/')
+        self.assertEqual(response.status_code, 302)
+
+    def test_lista_empleados_admin_retorna_200(self):
+        self.client.login(username='admin_vw', password='pass1234')
+        response = self.client.get('/empleados/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_lista_pagos_proyecto_admin_retorna_200(self):
+        self.client.login(username='admin_vw', password='pass1234')
+        response = self.client.get('/pagos/')
+        self.assertEqual(response.status_code, 200)
+
+
+# ===========================================================================
+# 10. Tests de Vistas — CRUD de Proyecto
+# ===========================================================================
+
+class ViewProyectoCRUDTest(TestCase):
+    """Verifica flujos de creación, detalle y desactivación de proyectos."""
+
+    def setUp(self):
+        self.admin = crear_empleado(username='admin_pry', cargo='administrador', ci='3333333')
+        self.proyecto = crear_proyecto(self.admin)
+        self.client.login(username='admin_pry', password='pass1234')
+
+    def test_detalle_proyecto_existente_retorna_200(self):
+        response = self.client.get(f'/proyectos/{self.proyecto.pk}/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_detalle_proyecto_inexistente_retorna_404(self):
+        response = self.client.get('/proyectos/99999/')
+        self.assertEqual(response.status_code, 404)
+
+    def test_crear_proyecto_post_valido_redirige(self):
+        today = date.today()
+        data = {
+            # ProjectForm
+            'codigo': 'PRY-VIEW',
+            'nombre': 'Proyecto Vista Test',
+            'estado_proyecto': 'pendiente',
+            'tipo_proyecto': 'mantenimiento_externo',
+            'monto_total': '',
+            'cliente': self.proyecto.cliente.pk,
+            # ContratoProyectoForm (también requerido por la vista)
+            'fecha_firma': (today - timedelta(days=5)).isoformat(),
+            'fecha_inicio': today.isoformat(),
+            'fecha_fin': (today + timedelta(days=60)).isoformat(),
+            'monto_acordado': '15000',
+            'garantia_meses': '0',
+            'porcentaje_multa_diaria': '',
+            'porcentaje_multa_maxima': '',
+        }
+        response = self.client.post('/proyectos/nuevo/', data)
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(Proyecto.objects.filter(codigo='PRY-VIEW').exists())
+
+    def test_crear_proyecto_post_sin_codigo_no_crea_proyecto(self):
+        count_antes = Proyecto.objects.count()
+        data = {
+            'codigo': '',
+            'nombre': 'Sin Codigo',
+            'estado_proyecto': 'pendiente',
+            'tipo_proyecto': 'instalacion_nueva',
+            'monto_total': '5000',
+            'cliente': self.proyecto.cliente.pk,
+        }
+        response = self.client.post('/proyectos/nuevo/', data)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(Proyecto.objects.count(), count_antes)
+
+    def test_desactivar_proyecto_lo_marca_inactivo(self):
+        self.client.post(f'/proyectos/{self.proyecto.pk}/desactivar/')
+        self.proyecto.refresh_from_db()
+        self.assertFalse(self.proyecto.activo)
+
+
+# ===========================================================================
+# 11. Tests de Vistas — Pagos de Proyecto
+# ===========================================================================
+
+class ViewPagoProyectoTest(TestCase):
+    """Verifica el flujo de creación y confirmación de pagos al proyecto."""
+
+    def setUp(self):
+        self.admin = crear_empleado(username='admin_pago', cargo='administrador', ci='4444444')
+        self.proyecto = crear_proyecto(self.admin, monto_total='8000.00')
+        self.client.login(username='admin_pago', password='pass1234')
+
+    def test_crear_pago_completo_cambia_estado_a_pagado(self):
+        self.client.post('/pagos/nuevo/', {
+            'monto': '8000',
+            'fecha': date.today().isoformat(),
+            'tipo_pago': 'efectivo',
+            'numero_referencia': '',
+            'proyecto': self.proyecto.pk,
+        })
+        self.proyecto.refresh_from_db()
+        self.assertEqual(self.proyecto.estado_pago, 'pagado')
+
+    def test_crear_pago_parcial_cambia_estado_a_parcial(self):
+        self.client.post('/pagos/nuevo/', {
+            'monto': '3000',
+            'fecha': date.today().isoformat(),
+            'tipo_pago': 'efectivo',
+            'numero_referencia': '',
+            'proyecto': self.proyecto.pk,
+        })
+        self.proyecto.refresh_from_db()
+        self.assertEqual(self.proyecto.estado_pago, 'parcial')
+
+    def test_lista_pagos_retorna_200(self):
+        response = self.client.get('/pagos/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_confirmar_pago_pendiente_cambia_estado_a_pagado(self):
+        pago = PagoProyecto.objects.create(
+            monto=Decimal('5000.00'),
+            fecha=date.today(),
+            tipo_pago='efectivo',
+            proyecto=self.proyecto,
+            estado='pendiente',
+        )
+        self.client.post(f'/pagos/{pago.pk}/confirmar/', {
+            'fecha': date.today().isoformat(),
+            'tipo_pago': 'efectivo',
+        })
+        pago.refresh_from_db()
+        self.assertEqual(pago.estado, 'pagado')
+
+
+# ===========================================================================
+# 12. Tests de Vistas — Jornadas de Empleado
+# ===========================================================================
+
+class ViewJornadaTest(TestCase):
+    """Verifica los flujos de aprobación, rechazo y acceso a jornadas."""
+
+    def setUp(self):
+        self.admin = crear_empleado(username='admin_jrn', cargo='administrador', ci='5555555')
+        self.instalador = crear_empleado(username='install_jrn', cargo='instalador', ci='6666666')
+        self.proyecto = crear_proyecto(self.admin)
+        self.proyecto.equipo.add(self.instalador)
+        contrato = ContratoEmpleado.objects.create(
+            empleado=self.instalador,
+            dias_laborales=28,
+            fecha_firma=date.today() - timedelta(days=35),
+            fecha_inicio=date.today() - timedelta(days=30),
+            fecha_fin=date.today() + timedelta(days=335),
+            monto_acordado=Decimal('2800.00'),
+        )
+        self.jornada = JornadaEmpleado.objects.create(
+            contrato=contrato,
+            proyecto=self.proyecto,
+            fecha=date.today(),
+            dias=Decimal('1.0'),
+            estado='pendiente',
+        )
+        self.client.login(username='admin_jrn', password='pass1234')
+
+    def test_aprobar_jornada_cambia_estado_a_aprobada(self):
+        self.client.post(f'/jornadas/{self.jornada.pk}/aprobar/')
+        self.jornada.refresh_from_db()
+        self.assertEqual(self.jornada.estado, 'aprobada')
+
+    def test_rechazar_jornada_cambia_estado_a_rechazada(self):
+        self.client.post(f'/jornadas/{self.jornada.pk}/rechazar/', {
+            'motivo_rechazo': 'No se registró correctamente.',
+        })
+        self.jornada.refresh_from_db()
+        self.assertEqual(self.jornada.estado, 'rechazada')
+
+    def test_lista_carga_empleados_retorna_200(self):
+        response = self.client.get('/empleados/carga/')
+        self.assertEqual(response.status_code, 200)
+
+    def test_instalador_puede_ver_su_dashboard(self):
+        self.client.login(username='install_jrn', password='pass1234')
+        response = self.client.get('/mi-trabajo/')
+        self.assertEqual(response.status_code, 200)

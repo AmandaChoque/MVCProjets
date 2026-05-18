@@ -214,7 +214,7 @@
                       {{ sub.completado_por.get_full_name|default:sub.completado_por.username }}
                     </span>
                     {% endif %}
-                    {% if es_admin %}
+                    {% if es_admin_o_gerente %}
                     <button class="btn btn-sm btn-light text-danger py-0 px-1 btn-delete-subtarea"
                             data-id="{{ sub.id }}" style="font-size:0.7rem; line-height:1;">
                       <i class="bi bi-x"></i>
@@ -224,7 +224,7 @@
                   {% endif %}
                   {% endfor %}
                 </ul>
-                {% if es_admin %}
+                {% if es_campo %}
                 <form class="form-nueva-subtarea d-flex gap-1 mt-1" data-tarea-id="{{ tarea.id }}">
                   {% csrf_token %}
                   <input type="text" name="descripcion" class="form-control form-control-sm"
@@ -235,7 +235,7 @@
                 </form>
                 {% endif %}
               </div>
-              {% elif es_admin %}
+              {% elif es_campo %}
               <!-- Sin subtareas: botón para agregar la primera -->
               <div class="ms-4 mt-1">
                 <form class="form-nueva-subtarea d-none d-flex gap-1" data-tarea-id="{{ tarea.id }}" id="form-sub-{{ tarea.id }}">
@@ -611,8 +611,9 @@ function bindTareaEvents(li) {
             // Hay más compañeros: abrir modal para seleccionar quiénes participaron
             abrirModalParticipantes(parseInt(id), data.usuario_id, data.equipo, li, data);
           } else {
-            // Solo el usuario actual en el equipo: crear jornada automáticamente sin modal
-            guardarParticipantes([data.usuario_id]);
+            // Un solo miembro en el equipo: jornada para ese miembro (no para quien hizo clic)
+            const soloId = (data.equipo && data.equipo.length === 1) ? data.equipo[0].id : data.usuario_id;
+            guardarParticipantes([soloId]);
           }
         } else {
           renderCompletadoInfo(li, null, null, null);
@@ -743,6 +744,7 @@ if (formNuevaTarea) {
           <button class="btn btn-sm btn-light text-secondary py-0 btn-edit-tarea" data-id="${data.id}"><i class="bi bi-pencil"></i></button>
           <button class="btn btn-sm btn-light text-danger py-0 btn-delete-tarea" data-id="${data.id}"><i class="bi bi-x"></i></button>
         </div>`;
+      addSubtareaSection(li, data.id);
       document.getElementById('lista-tareas').appendChild(li);
       bindTareaEvents(li);
       this.querySelector('[name=descripcion]').value = '';
@@ -811,6 +813,7 @@ if (btnAplicar) {
             <button class="btn btn-sm btn-light text-secondary py-0 btn-edit-tarea" data-id="${t.id}"><i class="bi bi-pencil"></i></button>
             <button class="btn btn-sm btn-light text-danger py-0 btn-delete-tarea" data-id="${t.id}"><i class="bi bi-x"></i></button>
           </div>`;
+        addSubtareaSection(li, t.id);
         if (listaGeneral) listaGeneral.appendChild(li);
         bindTareaEvents(li);
       });
@@ -820,6 +823,89 @@ if (btnAplicar) {
 }
 
 // ── Subtareas ─────────────────────────────────────────────────────────────────
+function bindSubtareaForm(form) {
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    const tareaId = this.dataset.tareaId;
+    const input = this.querySelector('[name=descripcion]');
+    const desc = input.value.trim();
+    if (!desc) return;
+    fetch(`/tareas/${tareaId}/subtareas/nueva/`, {
+      method: 'POST',
+      headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+      body: JSON.stringify({descripcion: desc}),
+    }).then(r => r.json()).then(data => {
+      if (!data.ok) return;
+      let lista = document.getElementById(`lista-subtareas-${tareaId}`);
+      if (!lista) {
+        const tareaLi = document.getElementById(`tarea-${tareaId}`);
+        const contenedor = tareaLi.querySelector(`#form-sub-${tareaId}`)?.parentElement;
+        if (contenedor) {
+          lista = document.createElement('ul');
+          lista.className = 'list-unstyled mb-1 border rounded-2 overflow-hidden';
+          lista.id = `lista-subtareas-${tareaId}`;
+          contenedor.insertBefore(lista, contenedor.firstChild);
+          const chkTarea = tareaLi.querySelector('.tarea-check');
+          if (chkTarea) { chkTarea.disabled = true; chkTarea.title = 'Se completa automáticamente con las subtareas'; }
+        }
+      }
+      if (lista) {
+        const li = document.createElement('li');
+        li.className = 'subtarea-item subtarea-check-item d-flex align-items-center gap-2 px-2 py-1';
+        li.id = `subtarea-${data.id}`;
+        li.dataset.id = data.id;
+        li.dataset.tareaId = tareaId;
+        li.innerHTML = `
+          <input type="checkbox" class="form-check-input subtarea-check" data-id="${data.id}"
+                 style="width:1.1em;height:1.1em;cursor:pointer;flex-shrink:0;">
+          <span class="subtarea-desc flex-grow-1" style="font-size:0.85rem;">${data.descripcion}</span>
+          <button class="btn btn-sm btn-light text-danger py-0 px-1 btn-delete-subtarea"
+                  data-id="${data.id}" style="font-size:0.7rem;line-height:1;"><i class="bi bi-x"></i></button>`;
+        lista.appendChild(li);
+        bindSubtareaEvents(li);
+      }
+      input.value = '';
+      const btnAdd = document.querySelector(`.btn-add-sub-${tareaId}`);
+      if (btnAdd) btnAdd.classList.add('d-none');
+    });
+  });
+
+  const btnCancel = form.querySelector('.btn-cancel-sub');
+  if (btnCancel) {
+    btnCancel.addEventListener('click', function() {
+      form.classList.add('d-none');
+      const tareaId = form.dataset.tareaId;
+      const btnAdd = document.querySelector(`.btn-add-sub-${tareaId}`);
+      if (btnAdd) btnAdd.classList.remove('d-none');
+    });
+  }
+}
+
+function addSubtareaSection(li, tareaId) {
+  const div = document.createElement('div');
+  div.className = 'ms-4 mt-1';
+  div.innerHTML = `
+    <form class="form-nueva-subtarea d-none d-flex gap-1" data-tarea-id="${tareaId}" id="form-sub-${tareaId}">
+      <input type="text" name="descripcion" class="form-control form-control-sm"
+             placeholder="Nueva subtarea..." style="font-size:0.82rem;">
+      <button type="submit" class="btn btn-sm btn-outline-primary py-0"><i class="bi bi-plus-lg"></i></button>
+      <button type="button" class="btn btn-sm btn-light py-0 btn-cancel-sub"><i class="bi bi-x"></i></button>
+    </form>
+    <button class="btn-toggle-subtareas btn-add-sub-${tareaId}" type="button">
+      <i class="bi bi-plus-circle me-1"></i>Agregar subtareas
+    </button>`;
+  li.appendChild(div);
+  const btnAdd = div.querySelector(`.btn-add-sub-${tareaId}`);
+  const formSub = div.querySelector(`#form-sub-${tareaId}`);
+  if (btnAdd && formSub) {
+    btnAdd.addEventListener('click', function() {
+      formSub.classList.remove('d-none');
+      this.classList.add('d-none');
+    });
+  }
+  bindSubtareaForm(formSub);
+}
+
 function bindSubtareaEvents(li) {
   const id = li.dataset.id;
   const tareaId = li.dataset.tareaId;
@@ -851,7 +937,8 @@ function bindSubtareaEvents(li) {
             if (data.equipo && data.equipo.length > 1) {
               abrirModalParticipantes(parseInt(tareaId), data.usuario_id, data.equipo, tareaLi, data);
             } else {
-              guardarParticipantes([data.usuario_id]);
+              const soloId = (data.equipo && data.equipo.length === 1) ? data.equipo[0].id : data.usuario_id;
+              guardarParticipantes([soloId]);
             }
           } else if (!data.tarea_completado && tareaLi) {
             renderCompletadoInfo(tareaLi, null, null, null);
@@ -876,68 +963,7 @@ function bindSubtareaEvents(li) {
 
 document.querySelectorAll('.subtarea-item').forEach(li => bindSubtareaEvents(li));
 
-document.querySelectorAll('.form-nueva-subtarea').forEach(form => {
-  form.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const tareaId = this.dataset.tareaId;
-    const input = this.querySelector('[name=descripcion]');
-    const desc = input.value.trim();
-    if (!desc) return;
-    fetch(`/tareas/${tareaId}/subtareas/nueva/`, {
-      method: 'POST',
-      headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
-      body: JSON.stringify({descripcion: desc}),
-    }).then(r => r.json()).then(data => {
-      if (!data.ok) return;
-      // Buscar la lista de subtareas de esta tarea o crearla
-      let lista = document.getElementById(`lista-subtareas-${tareaId}`);
-      if (!lista) {
-        // Primera subtarea: crear contenedor
-        const tareaLi = document.getElementById(`tarea-${tareaId}`);
-        const contenedor = tareaLi.querySelector(`#form-sub-${tareaId}`)?.parentElement;
-        if (contenedor) {
-          lista = document.createElement('ul');
-          lista.className = 'list-unstyled mb-1 border rounded-2 overflow-hidden';
-          lista.id = `lista-subtareas-${tareaId}`;
-          contenedor.insertBefore(lista, contenedor.firstChild);
-          // Deshabilitar checkbox de la tarea padre
-          const chkTarea = tareaLi.querySelector('.tarea-check');
-          if (chkTarea) { chkTarea.disabled = true; chkTarea.title = 'Se completa automáticamente con las subtareas'; }
-        }
-      }
-      if (lista) {
-        const li = document.createElement('li');
-        li.className = 'subtarea-item subtarea-check-item d-flex align-items-center gap-2 px-2 py-1';
-        li.id = `subtarea-${data.id}`;
-        li.dataset.id = data.id;
-        li.dataset.tareaId = tareaId;
-        li.innerHTML = `
-          <input type="checkbox" class="form-check-input subtarea-check" data-id="${data.id}"
-                 style="width:1.1em;height:1.1em;cursor:pointer;flex-shrink:0;">
-          <span class="subtarea-desc flex-grow-1" style="font-size:0.85rem;">${data.descripcion}</span>
-          <button class="btn btn-sm btn-light text-danger py-0 px-1 btn-delete-subtarea"
-                  data-id="${data.id}" style="font-size:0.7rem;line-height:1;"><i class="bi bi-x"></i></button>`;
-        lista.appendChild(li);
-        bindSubtareaEvents(li);
-      }
-      input.value = '';
-      // Ocultar botón "Agregar subtareas" si existía
-      const btnAdd = document.querySelector(`.btn-add-sub-${tareaId}`);
-      if (btnAdd) btnAdd.classList.add('d-none');
-    });
-  });
-
-  // Botón cancelar del form oculto
-  const btnCancel = form.querySelector('.btn-cancel-sub');
-  if (btnCancel) {
-    btnCancel.addEventListener('click', function() {
-      form.classList.add('d-none');
-      const tareaId = form.dataset.tareaId;
-      const btnAdd = document.querySelector(`.btn-add-sub-${tareaId}`);
-      if (btnAdd) btnAdd.classList.remove('d-none');
-    });
-  }
-});
+document.querySelectorAll('.form-nueva-subtarea').forEach(form => bindSubtareaForm(form));
 
 // ── Sync offline queue al reconectar ────────────────────────────────────────
 window.addEventListener('online', function() {

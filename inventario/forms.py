@@ -1,10 +1,8 @@
 from django import forms
-from decimal import Decimal, InvalidOperation
-import re
+from decimal import Decimal
 
 from .models import Proveedor, Insumo, Requiere, Compra, calcular_costo_fifo
-
-DECIMAL_REGEX = r'\d+(\.\d{1,2})?'
+from projects.validators import parse_decimal, validate_phone, validate_numeric_id
 
 
 class ProveedorForm(forms.ModelForm):
@@ -33,30 +31,13 @@ class ProveedorForm(forms.ModelForm):
         }
 
     def clean_telefono(self):
-        telefono = self.cleaned_data.get('telefono', '').strip().replace(' ', '').replace('-', '')
-        if not telefono:
-            raise forms.ValidationError('El teléfono es obligatorio.')
-        if not telefono.isdigit():
-            raise forms.ValidationError('El teléfono debe contener solo números.')
-        if len(telefono) < 7:
-            raise forms.ValidationError('El teléfono debe tener al menos 7 dígitos.')
-        if len(telefono) > 9:
-            raise forms.ValidationError('El teléfono no puede superar los 15 dígitos.')
-        return telefono
+        return validate_phone(self.cleaned_data.get('telefono', ''), min_len=7, max_len=9, required=True)
 
     def clean_encargado_celular(self):
-        celular = self.cleaned_data.get('encargado_celular', '').replace(' ', '')
-        if celular and not celular.isdigit():
-            raise forms.ValidationError('El celular debe contener solo números.')
-        if celular and len(celular) < 7:
-            raise forms.ValidationError('El celular debe tener al menos 7 dígitos.')
-        return celular
+        return validate_phone(self.cleaned_data.get('encargado_celular', ''), min_len=7, required=False)
 
     def clean_nit(self):
-        nit = self.cleaned_data.get('nit', '').replace(' ', '')
-        if nit and not nit.isdigit():
-            raise forms.ValidationError('El NIT debe contener solo números.')
-        return nit
+        return validate_numeric_id(self.cleaned_data.get('nit', ''), min_len=1, required=False)
 
 
 class InsumoForm(forms.ModelForm):
@@ -126,10 +107,7 @@ class CompraForm(forms.ModelForm):
         self.fields['insumo'].empty_label = 'Seleccionar insumo'
 
     def clean_costo_unitario(self):
-        valor = str(self.cleaned_data.get('costo_unitario', '')).strip()
-        if not re.fullmatch(DECIMAL_REGEX, valor):
-            raise forms.ValidationError('Formato inválido. Use punto como separador decimal.')
-        resultado = Decimal(valor)
+        resultado = parse_decimal(self.cleaned_data.get('costo_unitario', ''))
         if resultado <= 0:
             raise forms.ValidationError('El costo debe ser mayor a cero.')
         return resultado

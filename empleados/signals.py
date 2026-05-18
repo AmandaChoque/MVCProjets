@@ -20,5 +20,5 @@ def set_proyecto_fecha_inicio_en_primera_jornada(sender, instance, created, **kw
 
     from projects.models import Proyecto
     Proyecto.objects.filter(pk=proyecto.pk, fecha_inicio__isnull=True).update(
-        fecha_inicio=timezone.now().date()
+        fecha_inicio=timezone.localdate()
     )

@@ -1,31 +1,259 @@
 {% extends 'base.html' %}
-{% block extra_css %}
-<style>
-  .label-xs  { font-size: 0.68rem; }
-</style>
-{% endblock %}
-
 {% block content %}
 
 <div class="container-fluid px-4 py-4">
 
+{% if modo == 'historial' %}
+{# ══════════════════════════════════════════════════════════════════════════ #}
+{# MODO HISTORIAL: pagos de un empleado                                      #}
+{# ══════════════════════════════════════════════════════════════════════════ #}
 
-  <!-- ENCABEZADO -->
+  <!-- Encabezado -->
+  <div class="mb-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-2">
+      {% if not es_mis_pagos %}
+      <a href="{% url 'pagos_empleados_list' %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left me-1"></i>Volver
+      </a>
+      {% endif %}
+      <div>
+        <h5 class="fw-bold mb-0">
+          {% if es_mis_pagos %}Mis Cobros{% else %}{{ empleado.nombre }} {{ empleado.apellido_paterno }}{% endif %}
+        </h5>
+        <span class="text-muted small">{{ empleado.get_cargo_display }}</span>
+      </div>
+    </div>
+    {% if es_admin and not es_mis_pagos and contrato_activo %}
+    <a href="{% url 'create_pago_empleado' contrato_activo.id %}" class="btn btn-primary btn-sm">+ Nuevo Pago</a>
+    {% endif %}
+  </div>
+
+  <!-- Resumen del contrato -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="text-muted small mb-1">Monto acordado</div>
+          <div class="fw-bold" style="font-size:1.1rem;">
+            {% if contrato_activo %}Bs. {{ contrato_activo.monto_acordado|floatformat:2 }}{% else %}<span class="text-muted">—</span>{% endif %}
+          </div>
+          <div class="text-muted" style="font-size:0.72rem;">Contrato activo</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="text-muted small mb-1">Total pagado</div>
+          <div class="fw-bold text-success" style="font-size:1.1rem;">Bs. {{ resumen.pagado|floatformat:2 }}</div>
+          <div class="text-muted" style="font-size:0.72rem;">Solo pagos confirmados</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="text-muted small mb-1">Saldo pendiente</div>
+          <div class="fw-bold {% if resumen.saldo > 0 %}text-danger{% else %}text-success{% endif %}" style="font-size:1.1rem;">
+            Bs. {{ resumen.saldo|floatformat:2 }}
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="text-muted small mb-1">Estado contrato</div>
+          {% if contrato_activo %}
+            {% if contrato_activo.estado_contrato == 'vigente' %}
+              <span class="badge bg-success fs-6">Vigente</span>
+            {% elif contrato_activo.estado_contrato == 'vencido' %}
+              <span class="badge bg-danger fs-6">Vencido</span>
+            {% else %}
+              <span class="badge bg-secondary fs-6">Inhabilitado</span>
+            {% endif %}
+            <div class="text-muted mt-1" style="font-size:0.72rem;">
+              {% if contrato_activo %}
+                {% if resumen.ganado > 0 %}
+                  {% widthratio resumen.pagado resumen.ganado 100 %}% cubierto
+                {% endif %}
+              {% endif %}
+            </div>
+          {% else %}
+            <span class="badge bg-secondary fs-6">Sin contrato</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alerta pagos pendientes de confirmación -->
+  {% if total_pendiente > 0 %}
+  <div class="alert alert-warning alert-dismissible fade show py-2 mb-3" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    Hay pagos pendientes de confirmar por <strong>Bs. {{ total_pendiente|floatformat:2 }}</strong>.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endif %}
+
+  <!-- Paginación per_page -->
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+    <form method="GET" action="{% if es_mis_pagos %}{% url 'mis_pagos_view' %}{% else %}{% url 'pagos_empleados_list' %}{% endif %}" class="d-flex align-items-center gap-2">
+      {% if not es_mis_pagos %}<input type="hidden" name="empleado_id" value="{{ empleado_id }}">{% endif %}
+      <input type="hidden" name="page" value="1">
+      <span class="small text-muted">Mostrar:</span>
+      <select name="per_page" class="form-select form-select-sm" style="width:80px;" onchange="this.form.submit()">
+        <option value="10"  {% if per_page == 10  %}selected{% endif %}>10</option>
+        <option value="20"  {% if per_page == 20  %}selected{% endif %}>20</option>
+        <option value="50"  {% if per_page == 50  %}selected{% endif %}>50</option>
+        <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+      </select>
+    </form>
+    <div class="text-muted small">
+      Mostrando {{ pagos.start_index }}–{{ pagos.end_index }} de {{ pagos.paginator.count }} registros
+    </div>
+  </div>
+
+  <!-- Tabla historial de pagos -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body p-0">
+      <div class="table-responsive" style="overflow:visible;">
+        <table class="table table-sm table-hover align-middle small">
+          <thead class="table-light small text-uppercase fw-semibold">
+            <tr>
+              <th class="px-3">Concepto</th>
+              <th>Estado</th>
+              <th>Método</th>
+              <th>Fecha</th>
+              <th class="text-end">Monto (Bs.)</th>
+              <th class="text-center">Jornadas</th>
+              {% if not es_mis_pagos %}<th class="text-end" style="width:60px;">Acciones</th>{% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in pagos_data %}
+            {% with pago=item.obj %}
+            <tr class="pago-emp-row" data-href="{% url 'pago_empleado_detail' pago.id %}?next={% url 'pagos_empleados_list' %}" style="cursor:pointer;">
+              <td class="px-3">
+                {% if pago.concepto == 'pago_jornada' %}
+                  <span class="badge bg-primary fw-normal">{{ pago.get_concepto_display }}</span>
+                {% elif pago.concepto == 'adelanto' %}
+                  <span class="badge bg-warning text-dark fw-normal">{{ pago.get_concepto_display }}</span>
+                {% elif pago.concepto == 'liquidacion' %}
+                  <span class="badge bg-success fw-normal">{{ pago.get_concepto_display }}</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if pago.estado == 'pendiente' %}
+                  <span class="badge bg-warning text-dark fw-normal"><i class="bi bi-clock me-1"></i>Pendiente</span>
+                {% else %}
+                  <span class="badge bg-success fw-normal"><i class="bi bi-check-circle me-1"></i>Pagado</span>
+                {% endif %}
+              </td>
+              <td class="small">{{ pago.fecha|date:"d/m/Y" }}</td>
+              <td class="text-end fw-semibold">{{ pago.monto|floatformat:2 }}</td>
+              <td class="text-center small">
+                {% if item.jornadas_count %}
+                  <span class="badge bg-light text-dark border">{{ item.jornadas_count }}</span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              {% if not es_mis_pagos %}
+              <td class="text-end">
+                {% if es_admin %}
+                <div class="dropdown">
+                  <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
+                  <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                    <li>
+                      <a class="dropdown-item" href="{% url 'pago_empleado_detail' pago.id %}?next={% url 'pagos_empleados_list' %}">
+                        <i class="bi bi-pencil me-2 text-muted"></i>Editar
+                      </a>
+                    </li>
+                    {% if pago.estado == 'pendiente' %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                      <a class="dropdown-item text-success fw-semibold" href="{% url 'confirmar_pago_empleado' pago.id %}">
+                        <i class="bi bi-check-circle me-2"></i>Pagar
+                      </a>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                      <button class="dropdown-item text-danger"
+                        data-bs-toggle="modal" data-bs-target="#deleteModalPago"
+                        data-id="{{ pago.id }}"
+                        data-nombre="{{ empleado.nombre }} {{ empleado.apellido_paterno }} — Bs. {{ pago.monto|floatformat:2 }}">
+                        <i class="bi bi-trash me-2"></i>Eliminar
+                      </button>
+                    </li>
+                    {% endif %}
+                  </ul>
+                </div>
+                {% endif %}
+              </td>
+              {% endif %}
+            </tr>
+            {% endwith %}
+            {% empty %}
+            <tr>
+              <td colspan="{% if es_mis_pagos %}6{% else %}7{% endif %}" class="text-center text-muted py-3 small">
+                No hay pagos registrados.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Paginación historial -->
+  <nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center mb-0">
+      {% if pagos.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?{% if not es_mis_pagos %}empleado_id={{ empleado_id }}&{% endif %}page={{ pagos.previous_page_number }}&per_page={{ per_page }}">Anterior</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+      {% endif %}
+      {% for num in pagos.paginator.page_range %}
+        {% if pagos.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > pagos.number|add:'-3' and num < pagos.number|add:'3' %}
+          <li class="page-item">
+            <a class="page-link" href="?{% if not es_mis_pagos %}empleado_id={{ empleado_id }}&{% endif %}page={{ num }}&per_page={{ per_page }}">{{ num }}</a>
+          </li>
+        {% endif %}
+      {% endfor %}
+      {% if pagos.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?{% if not es_mis_pagos %}empleado_id={{ empleado_id }}&{% endif %}page={{ pagos.next_page_number }}&per_page={{ per_page }}">Siguiente</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+      {% endif %}
+    </ul>
+  </nav>
+
+{% else %}
+{# ══════════════════════════════════════════════════════════════════════════ #}
+{# MODO EMPLEADOS: lista de empleados con resumen de pagos                   #}
+{# ══════════════════════════════════════════════════════════════════════════ #}
+
+  <!-- Encabezado -->
   <div class="mb-2">
-
-    <!-- Fila 1: título + botón -->
     <div class="d-flex justify-content-between align-items-center mb-2">
       <h4 class="fw-bold text-sobotec mb-0">Pagos a Empleados</h4>
+      {% if es_admin %}
       <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalNuevoPago">
         + Nuevo Pago
       </button>
+      {% endif %}
     </div>
-
-    <!-- Fila 2: per_page + contador -->
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
       <form method="GET" action="{% url 'pagos_empleados_list' %}" class="d-flex align-items-center gap-2">
-        <input type="hidden" name="empleado_id" value="{{ empleado_id }}">
-        <input type="hidden" name="search_proyecto" value="{{ search_proyecto }}">
+        <input type="hidden" name="filter_pendiente" value="{{ filter_pendiente }}">
         <input type="hidden" name="page" value="1">
         <span class="small text-muted">Mostrar:</span>
         <select name="per_page" class="form-select form-select-sm" style="width:80px;" onchange="this.form.submit()">
@@ -36,224 +264,250 @@
         </select>
       </form>
       <div class="text-muted small">
-        Mostrando {{ pagos.start_index }} – {{ pagos.end_index }}
-        de {{ pagos.paginator.count }} registros
+        Mostrando {{ empleados.start_index }}–{{ empleados.end_index }} de {{ empleados.paginator.count }} empleados
       </div>
     </div>
-
   </div>
 
-  <!-- BANNER: pagos pendientes de confirmación -->
-  {% if empleados_con_deuda > 0 %}
-  <div class="alert alert-warning alert-dismissible fade show" role="alert">
-    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-    <strong>{{ empleados_con_deuda }} empleado{{ empleados_con_deuda|pluralize }}</strong>
-    tiene{{ empleados_con_deuda|pluralize:"n" }} pagos pendientes de confirmar
-    {% if total_pendiente_monto %}&mdash; Bs. {{ total_pendiente_monto|floatformat:2 }}{% endif %}.
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
-  </div>
-  {% endif %}
-
-  <!-- FILTROS -->
+  <!-- Filtros -->
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">
-      <form method="GET" action="{% url 'pagos_empleados_list' %}" class="row g-2">
+      <form method="GET" action="{% url 'pagos_empleados_list' %}" class="d-flex align-items-center gap-2 flex-wrap">
         <input type="hidden" name="per_page" value="{{ per_page }}">
-        <div class="col-md-4">
-          <select name="empleado_id" class="form-select form-select-sm">
-            <option value="">Todos los empleados</option>
-            {% for emp in empleados_con_pagos %}
-            <option value="{{ emp.id }}" {% if empleado_id|stringformat:"s" == emp.id|stringformat:"s" %}selected{% endif %}>
-              {{ emp.nombre }} {{ emp.apellido_paterno }} — {{ emp.get_cargo_display }}
-            </option>
-            {% endfor %}
-          </select>
-        </div>
-        <div class="col-md-4">
-          <input type="text" class="form-control form-control-sm" name="search_proyecto"
-            value="{{ search_proyecto|default:'' }}" placeholder="Buscar por proyecto" />
-        </div>
-        <div class="col-6 col-md-2">
-          <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
-        </div>
-        <div class="col-6 col-md-2">
-          <a href="{% url 'pagos_empleados_list' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
-        </div>
+        <select name="filter_pendiente" class="form-select form-select-sm" style="width:auto;">
+          <option value="">Todos los empleados</option>
+          <option value="jornadas" {% if filter_pendiente == "jornadas" %}selected{% endif %}>
+            Con jornadas aprobadas sin pagar
+          </option>
+        </select>
+        <button type="submit" class="btn btn-dark btn-sm">Filtrar</button>
+        <a href="{% url 'pagos_empleados_list' %}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
       </form>
     </div>
   </div>
 
-  <!-- KPI RESUMEN -->
+  <!-- Alerta jornadas x cobrar -->
+  {% if total_xcobrar > 0 %}
+  <div class="alert alert-info alert-dismissible fade show py-2" role="alert">
+    <i class="bi bi-cash-coin me-2"></i>
+    <strong>{{ total_xcobrar }} empleado{{ total_xcobrar|pluralize }}</strong>
+    tiene{{ total_xcobrar|pluralize:"n" }} jornadas aprobadas que aún no tienen pago asignado.
+    <a href="?filter_pendiente=jornadas" class="alert-link ms-1">Ver solo ellos</a>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endif %}
+
+  <!-- Alerta empleados con deuda -->
+  {% if empleados_con_deuda > 0 %}
+  <div class="alert alert-warning alert-dismissible fade show py-2" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    <strong>{{ empleados_con_deuda }} empleado{{ empleados_con_deuda|pluralize }}</strong>
+    tiene{{ empleados_con_deuda|pluralize:"n" }} pagos pendientes de confirmar.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endif %}
+
+  <!-- KPIs -->
   <div class="row g-3 mb-3">
     <div class="col-6 col-md-3">
       <div class="card kpi-card blue border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-primary">{{ pagos.paginator.count }}</div>
-          <div class="kpi-label">Registros</div>
+          <div class="kpi-value text-primary">{{ total_empleados }}</div>
+          <div class="kpi-label">Empleados</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
       <div class="card kpi-card green border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-success" style="font-size:1.3rem;">{{ total_monto|floatformat:2 }}</div>
+          <div class="kpi-value text-success" style="font-size:1.2rem;">{{ total_pagado_global|floatformat:2 }}</div>
           <div class="kpi-label">Total Pagado Bs.</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="card kpi-card yellow border-0 shadow-sm h-100">
+      <div class="card kpi-card orange border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-warning" style="font-size:1.3rem;">{{ total_pendiente_monto|floatformat:2 }}</div>
-          <div class="kpi-label">Por Confirmar Bs.</div>
+          <div class="kpi-value text-warning">{{ total_xcobrar }}</div>
+          <div class="kpi-label">Con jornadas x cobrar</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="card kpi-card gray border-0 shadow-sm h-100">
+      <div class="card kpi-card blue border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-secondary">{{ contratos_activos|length }}</div>
+          <div class="kpi-value text-primary">{{ contratos_activos|length }}</div>
           <div class="kpi-label">Contratos Activos</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- TABLA -->
+  <!-- Tabla empleados -->
   <div class="card border-0 shadow-sm mb-3">
-    <div class="card-header bg-light py-2">
-      <span class="fw-semibold small">Detalle de Pagos</span>
-    </div>
     <div class="card-body p-0">
-      <div class="table-responsive" style="overflow: visible;">
-    <table class="table table-sm table-hover align-middle small">
-      <thead class="table-light small text-uppercase fw-semibold">
-        <tr>
-          <th class="px-3">Empleado</th>
-          <th>Concepto</th>
-          <th>Estado</th>
-          <th>Método</th>
-          <th>Fecha</th>
-          <th class="text-end">Monto (Bs.)</th>
-          <th class="text-end">Ganado (Bs.)</th>
-          <th class="text-end">Días trab.</th>
-          <th class="text-end">Saldo (Bs.)</th>
-          <th class="text-end" style="width:80px;">Acciones</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for item in pagos_data %}
-        {% with pago=item.obj %}
-        <tr>
-          <td class="px-3 fw-semibold">
-            {{ pago.contrato.empleado.nombre }} {{ pago.contrato.empleado.apellido_paterno }}
-            <div class="text-muted" style="font-size:0.75rem;">{{ pago.contrato.empleado.get_cargo_display }}</div>
-          </td>
-          <td class="small">
-            {% if pago.concepto == 'pago_jornada' %}
-              <span class="badge bg-primary fw-normal">{{ pago.get_concepto_display }}</span>
-            {% elif pago.concepto == 'adelanto' %}
-              <span class="badge bg-warning text-dark fw-normal">{{ pago.get_concepto_display }}</span>
-            {% elif pago.concepto == 'liquidacion' %}
-              <span class="badge bg-success fw-normal">{{ pago.get_concepto_display }}</span>
-            {% elif pago.concepto == 'dia_extra' %}
-              <span class="badge bg-info text-dark fw-normal">{{ pago.get_concepto_display }}</span>
-            {% else %}
-              <span class="badge bg-secondary fw-normal">{{ pago.get_concepto_display }}</span>
-            {% endif %}
-          </td>
-          <td class="small">
-            {% if pago.estado == 'pendiente' %}
-              <span class="badge bg-warning text-dark fw-normal"><i class="bi bi-clock me-1"></i>Pendiente</span>
-            {% else %}
-              <span class="badge bg-success fw-normal"><i class="bi bi-check-circle me-1"></i>Pagado</span>
-            {% endif %}
-          </td>
-          <td class="small">
-            {% if pago.tipo_pago == 'transferencia' %}
-            <span class="badge bg-primary">Transferencia</span>
-            {% else %}
-            <span class="badge bg-info text-dark">Efectivo</span>
-            {% endif %}
-          </td>
-          <td class="small">{{ pago.fecha|date:"d/m/Y" }}</td>
-          <td class="text-end fw-semibold">{{ pago.monto|floatformat:2 }}</td>
-          <td class="text-end text-muted small">{{ item.ganado|floatformat:2 }}</td>
-          <td class="text-end small">{{ item.dias|floatformat:1 }}</td>
-          <td class="text-end small fw-semibold {% if item.saldo > 0 %}text-danger{% else %}text-success{% endif %}">
-            {{ item.saldo|floatformat:2 }}
-          </td>
-          <td class="text-end">
-            {% if es_admin %}
-            <div class="dropdown">
-              <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
-              <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                <li>
-                  <a class="dropdown-item" href="{% url 'pago_empleado_detail' pago.id %}">
-                    <i class="bi bi-eye me-2 text-muted"></i>Ver
-                  </a>
-                </li>
-                <li>
-                  <a class="dropdown-item" href="{% url 'pago_empleado_detail' pago.id %}">
-                    <i class="bi bi-pencil me-2 text-muted"></i>Editar
-                  </a>
-                </li>
-                {% if pago.estado == 'pendiente' %}
-                <li><hr class="dropdown-divider"></li>
-                <li>
-                  <a class="dropdown-item text-success fw-semibold" href="{% url 'confirmar_pago_empleado' pago.id %}">Pagar</a>
-                </li>
+      <div class="table-responsive" style="overflow:visible;">
+        <table class="table table-sm table-hover align-middle small">
+          <thead class="table-light small text-uppercase fw-semibold">
+            <tr>
+              <th class="px-3">Empleado</th>
+              <th>Cargo</th>
+              <th>Período contrato</th>
+              <th>Estado contrato</th>
+              <th class="text-end">Acordado (Bs.)</th>
+              <th class="text-end">Pagado (Bs.)</th>
+              <th class="text-center">% contrato</th>
+              <th class="text-end">Saldo (Bs.)</th>
+              <th class="text-center" title="Jornadas aprobadas sin pago asignado">Jornadas x cobrar</th>
+              <th class="text-center">Pagos</th>
+              <th class="text-end" style="width:60px;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for emp in empleados %}
+            <tr class="emp-pago-row" data-href="?empleado_id={{ emp.id }}" style="cursor:pointer;">
+
+              <!-- Empleado -->
+              <td class="px-3 fw-semibold">
+                {{ emp.nombre }} {{ emp.apellido_paterno }}
+                <div class="text-muted" style="font-size:0.7rem;">{{ emp.carnet_identidad }}</div>
+              </td>
+
+              <!-- Cargo -->
+              <td>
+                <span class="badge bg-secondary small">{{ emp.get_cargo_display }}</span>
+              </td>
+
+              <!-- Período contrato -->
+              <td class="small">
+                {% if emp.contrato_activo %}
+                  <div>{{ emp.contrato_activo.fecha_inicio|date:"d/m/Y" }}</div>
+                  <div>{{ emp.contrato_activo.fecha_fin|date:"d/m/Y" }}</div>
+                {% else %}
+                  <span class="text-muted">—</span>
                 {% endif %}
-              </ul>
-            </div>
-            {% endif %}
-          </td>
-        </tr>
-        {% endwith %}
-        {% empty %}
-        <tr>
-          <td colspan="9" class="text-center text-muted py-3 small">No hay pagos registrados.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-      {% if pagos %}
-      <tfoot class="table-light small text-uppercase fw-semibold">
-        <tr>
-          <td colspan="4" class="px-3 text-end fw-semibold">Total página (Bs.):</td>
-          <td class="text-end fw-bold">{{ total_monto_pagina|floatformat:2 }}</td>
-          <td colspan="4"></td>
-        </tr>
-      </tfoot>
-      {% endif %}
-    </table>
+              </td>
+
+              <!-- Estado contrato -->
+              <td>
+                {% if emp.contrato_activo %}
+                  {% if emp.contrato_activo.estado_contrato == 'vigente' %}
+                    <span class="badge bg-success small">Vigente</span>
+                  {% elif emp.contrato_activo.estado_contrato == 'vencido' %}
+                    <span class="badge bg-danger small">Vencido</span>
+                  {% else %}
+                    <span class="badge bg-secondary small">Inhabilitado</span>
+                  {% endif %}
+                {% else %}
+                  <span class="badge bg-light text-muted border small">Sin contrato</span>
+                {% endif %}
+              </td>
+
+              <!-- Acordado -->
+              <td class="text-end fw-semibold">
+                {% if emp.contrato_activo %}
+                  {{ emp.contrato_activo.monto_acordado|floatformat:2 }}
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+
+              <!-- Pagado -->
+              <td class="text-end fw-semibold text-success">{{ emp.pagado_emp|floatformat:2 }}</td>
+
+              <!-- Avance -->
+              <td class="text-center fw-semibold">
+                {% if emp.contrato_activo %}
+                  <span class="{% if emp.saldo_emp <= 0 %}text-success{% elif emp.avance_pct_emp > 0 %}text-warning{% else %}text-danger{% endif %}">
+                    {{ emp.avance_pct_emp }}%
+                  </span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+
+              <!-- Saldo -->
+              <td class="text-end fw-semibold">
+                {% if not emp.contrato_activo %}
+                  <span class="text-muted">—</span>
+                {% elif emp.saldo_emp > 0 %}
+                  <span class="text-danger">{{ emp.saldo_emp|floatformat:2 }}</span>
+                {% elif emp.saldo_emp < 0 %}
+                  <span class="text-warning" title="Sobrepago">{{ emp.saldo_emp|floatformat:2 }}</span>
+                {% else %}
+                  <span class="text-success">0.00</span>
+                {% endif %}
+              </td>
+
+              <!-- Jornadas x cobrar -->
+              <td class="text-center">
+                {% if emp.jornadas_xcobrar > 0 %}
+                  <span class="badge bg-warning text-dark" title="{{ emp.dias_xcobrar }} día(s) aprobado(s) sin pago">
+                    {{ emp.jornadas_xcobrar }} jornada{{ emp.jornadas_xcobrar|pluralize }}
+                  </span>
+                {% else %}
+                  <span class="text-muted small">—</span>
+                {% endif %}
+              </td>
+
+              <!-- N° pagos -->
+              <td class="text-center">
+                {% if emp.num_pagos_emp > 0 %}
+                  <span class="badge bg-light text-dark border">{{ emp.num_pagos_emp }}</span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+
+              <!-- Acciones -->
+              <td class="text-end">
+                {% if es_admin and emp.contrato_activo %}
+                <div class="dropdown">
+                  <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
+                  <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                    <li>
+                      <a class="dropdown-item" href="{% url 'create_pago_empleado' emp.contrato_activo.id %}">
+                        <i class="bi bi-plus-circle me-2 text-muted"></i>Registrar pago
+                      </a>
+                    </li>
+                  </ul>
+                </div>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="10" class="text-center text-muted py-3 small">No hay empleados registrados.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
 
-  <!-- PAGINACIÓN -->
+  <!-- Paginación empleados -->
   <nav class="mt-3">
     <ul class="pagination pagination-sm justify-content-center mb-0">
-      {% if pagos.has_previous %}
+      {% if empleados.has_previous %}
       <li class="page-item">
-        <a class="page-link" href="?page={{ pagos.previous_page_number }}&per_page={{ per_page }}&empleado_id={{ empleado_id }}&search_proyecto={{ search_proyecto }}">Anterior</a>
+        <a class="page-link" href="?page={{ empleados.previous_page_number }}&per_page={{ per_page }}">Anterior</a>
       </li>
       {% else %}
       <li class="page-item disabled"><span class="page-link">Anterior</span></li>
       {% endif %}
-
-      {% for num in pagos.paginator.page_range %}
-        {% if pagos.number == num %}
+      {% for num in empleados.paginator.page_range %}
+        {% if empleados.number == num %}
           <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-        {% elif num > pagos.number|add:'-3' and num < pagos.number|add:'3' %}
+        {% elif num > empleados.number|add:'-3' and num < empleados.number|add:'3' %}
           <li class="page-item">
-            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&empleado_id={{ empleado_id }}&search_proyecto={{ search_proyecto }}">{{ num }}</a>
+            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}">{{ num }}</a>
           </li>
         {% endif %}
       {% endfor %}
-
-      {% if pagos.has_next %}
+      {% if empleados.has_next %}
       <li class="page-item">
-        <a class="page-link" href="?page={{ pagos.next_page_number }}&per_page={{ per_page }}&empleado_id={{ empleado_id }}&search_proyecto={{ search_proyecto }}">Siguiente</a>
+        <a class="page-link" href="?page={{ empleados.next_page_number }}&per_page={{ per_page }}">Siguiente</a>
       </li>
       {% else %}
       <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
@@ -261,8 +515,67 @@
     </ul>
   </nav>
 
+{% endif %}
+
 </div>
-<!-- Modal seleccionar contrato -->
+
+<!-- Scripts clickeable rows -->
+{% if modo == 'empleados' %}
+<script>
+  document.querySelectorAll('.emp-pago-row').forEach(function(row) {
+    row.addEventListener('click', function(e) {
+      if (e.target.closest('.dropdown')) return;
+      window.location.href = this.dataset.href;
+    });
+  });
+</script>
+{% endif %}
+
+{% if modo == 'historial' %}
+<script>
+  document.querySelectorAll('.pago-emp-row').forEach(function(row) {
+    row.addEventListener('click', function(e) {
+      if (e.target.closest('.dropdown')) return;
+      window.location.href = this.dataset.href;
+    });
+  });
+</script>
+
+{% if not es_mis_pagos %}
+<!-- Modal eliminar pago empleado -->
+<div class="modal fade" id="deleteModalPago" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h6 class="modal-title">Eliminar pago pendiente</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-1">¿Está seguro que desea eliminar el pago de <strong id="pagoNombreEmp"></strong>?</p>
+        <p class="text-danger small mb-0"><i class="bi bi-exclamation-triangle me-1"></i>Esta acción no se puede deshacer.</p>
+      </div>
+      <div class="modal-footer">
+        <form method="POST" id="deleteFormPago">
+          {% csrf_token %}
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+          <button type="submit" class="btn btn-danger btn-sm"><i class="bi bi-trash me-1"></i>Eliminar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  document.getElementById('deleteModalPago').addEventListener('show.bs.modal', function(event) {
+    const btn = event.relatedTarget;
+    document.getElementById('pagoNombreEmp').textContent = btn.getAttribute('data-nombre');
+    document.getElementById('deleteFormPago').action = `/pagos-empleado/${btn.getAttribute('data-id')}/desactivar/`;
+  });
+</script>
+{% endif %}
+{% endif %}
+
+{% if modo == 'empleados' %}
+<!-- Modal seleccionar contrato para nuevo pago -->
 <div class="modal fade" id="modalNuevoPago" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -288,11 +601,12 @@
     </div>
   </div>
 </div>
-
 <script>
-  document.getElementById('btnContinuar').addEventListener('click', function () {
+  document.getElementById('btnContinuar').addEventListener('click', function() {
     const url = document.getElementById('selectContrato').value;
     if (url) window.location.href = url;
   });
 </script>
+{% endif %}
+
 {% endblock %}

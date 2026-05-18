@@ -149,7 +149,7 @@
           <td class="text-muted">{{ project.codigo }}</td>
           <td class="fw-semibold">
             {{ project.nombre }}
-            {% if project.contrato_fecha_fin and project.estado_proyecto != 'completado' %}
+            {% if project.contrato_fecha_fin and project.estado_proyecto != 'completado' and project.estado_proyecto != 'cancelado' %}
               {% if project.contrato_fecha_fin < today %}
                 <span class="badge bg-danger ms-1" title="Plazo vencido el {{ project.contrato_fecha_fin|date:'d/m/Y' }}">
                   <i class="bi bi-exclamation-circle-fill"></i> Vencido

@@ -2,17 +2,20 @@
 
 {% block extra_css %}
 <style>
-  .was-validated .form-control:valid,
-  .was-validated .form-select:valid {
-    border-color: #dee2e6;
-    background-image: none;
+  .jcal-header { width:40px; text-align:center; font-size:.63rem; color:#9ca3af; font-weight:700; text-transform:uppercase; }
+  .jcal-day {
+    width:40px; min-height:46px; border-radius:6px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    position:relative; cursor:default; padding:2px 0;
   }
-  .was-validated .form-control:valid:focus,
-  .was-validated .form-select:valid:focus {
-    border-color: #dee2e6;
-    box-shadow: 0 0 0 0.25rem rgba(39, 128, 227, 0.25);
-  }
-  .valid-feedback { display: none; }
+  .jcal-day.vacio   { background:#f9fafb; color:#d1d5db; }
+  .jcal-day.pagado  { background:#d1fae5; color:#065f46; }
+  .jcal-day.sin-pago   { background:#fef3c7; color:#92400e; }
+  .jcal-day.pendiente  { background:#dbeafe; color:#1e40af; }
+  .jcal-day.hoy { box-shadow:0 0 0 2px #0F2D5A; }
+  .jcal-num  { font-size:.8rem; font-weight:700; line-height:1; }
+  .jcal-dias { font-size:.6rem; font-weight:600; line-height:1; margin-top:2px; opacity:.8; }
+  .tarea-dot { position:absolute; bottom:3px; right:4px; width:5px; height:5px; border-radius:50%; background:#3b82f6; }
 </style>
 {% endblock %}
 
@@ -25,17 +28,19 @@
     <span class="badge bg-secondary fw-normal">{{ contrato.dias_laborales }} días laborales</span>
     <span class="badge bg-primary fw-normal">Bs. {{ contrato.monto_diario|floatformat:2 }}/día</span>
     <span class="badge bg-dark fw-normal">Monto acordado: Bs. {{ contrato.monto_acordado|floatformat:2 }}</span>
-    {% if contrato.estado_contrato == 'vigente' %}
+    {% if contrato.estado_contrato == 'vigente' and contrato.dias_hasta_vencimiento <= 7 %}
+      <span class="badge bg-warning text-dark fw-normal"><i class="bi bi-hourglass-split me-1"></i>Vence en {{ contrato.dias_hasta_vencimiento }}d</span>
+    {% elif contrato.estado_contrato == 'vigente' %}
       <span class="badge bg-success fw-normal">Vigente</span>
     {% elif contrato.estado_contrato == 'vencido' %}
-      <span class="badge bg-warning text-dark fw-normal"><i class="bi bi-clock me-1"></i>Vencido — {{ contrato.fecha_fin|date:"d/m/Y" }}</span>
+      <span class="badge bg-danger fw-normal"><i class="bi bi-clock me-1"></i>Vencido — {{ contrato.fecha_fin|date:"d/m/Y" }}</span>
     {% else %}
       <span class="badge bg-secondary fw-normal">Inhabilitado</span>
     {% endif %}
   </div>
 
   {% if contrato.estado_contrato == 'vencido' %}
-  <div class="alert alert-warning d-flex align-items-start gap-2 mb-4 py-2">
+  <div class="alert alert-danger d-flex align-items-start gap-2 mb-4 py-2">
     <i class="bi bi-clock-history fs-5 mt-1 flex-shrink-0"></i>
     <div>
       <strong>Este contrato venció el {{ contrato.fecha_fin|date:"d/m/Y" }}.</strong>
@@ -52,6 +57,18 @@
       Para registrar nuevas jornadas el empleado necesita un contrato vigente.
     </div>
   </div>
+  {% elif contrato.estado_contrato == 'vigente' and contrato.dias_hasta_vencimiento <= 7 %}
+  <div class="alert alert-warning d-flex align-items-start gap-2 mb-4 py-2">
+    <i class="bi bi-hourglass-split fs-5 mt-1 flex-shrink-0"></i>
+    <div>
+      {% if contrato.dias_hasta_vencimiento == 0 %}
+        <strong>El contrato vence hoy ({{ contrato.fecha_fin|date:"d/m/Y" }}).</strong>
+      {% else %}
+        <strong>El contrato vence en {{ contrato.dias_hasta_vencimiento }} día(s) — {{ contrato.fecha_fin|date:"d/m/Y" }}.</strong>
+      {% endif %}
+      Considera renovarlo o extender la fecha de fin antes de que expire.
+    </div>
+  </div>
   {% endif %}
 
   <!-- Balance de jornadas -->
@@ -59,16 +76,21 @@
     <div class="col-6 col-md-3">
       <div class="card kpi-card blue border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
+          {% if contrato.empleado.cargo == 'instalador' or contrato.empleado.cargo == 'tecnico_soporte' %}
           <div class="kpi-value text-primary">{{ total_dias }}</div>
           <div class="kpi-label">Días trabajados</div>
+          {% else %}
+          <div class="kpi-value text-primary" style="font-size:1rem;">Mensual</div>
+          <div class="kpi-label">Modalidad de pago</div>
+          {% endif %}
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
       <div class="card kpi-card green border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-success" style="font-size:1.35rem;">Bs. {{ total_ganado|floatformat:2 }}</div>
-          <div class="kpi-label">Total devengado</div>
+          <div class="kpi-value text-success" style="font-size:1.35rem;">Bs. {{ contrato.monto_acordado|floatformat:2 }}</div>
+          <div class="kpi-label">Total acordado</div>
         </div>
       </div>
     </div>
@@ -95,13 +117,14 @@
     </div>
   </div>
 
+  {% if contrato.empleado.cargo == 'instalador' or contrato.empleado.cargo == 'tecnico_soporte' %}
   <!-- Progreso días trabajados vs días laborales -->
   <div class="card border-0 shadow-sm mb-4 px-3 py-3">
     <div class="d-flex justify-content-between align-items-center mb-1 small">
       <span class="fw-semibold">Avance de jornadas</span>
       <span class="text-muted">
         {{ total_dias }} / {{ contrato.dias_laborales }} días
-        {% if contrato.tipo_contrato == 'mensual' %}<span class="badge bg-info text-dark ms-1">Mensual</span>{% else %}<span class="badge bg-secondary ms-1">Por día</span>{% endif %}
+        <span class="badge bg-secondary ms-1">Por jornada</span>
       </span>
     </div>
     <div class="progress" style="height:8px; border-radius:4px;">
@@ -119,11 +142,12 @@
     <div class="mt-1 text-warning small"><i class="bi bi-clock me-1"></i>Quedan pocos días disponibles en el contrato.</div>
     {% endif %}
   </div>
+  {% endif %}
 
   <div class="row g-4">
 
     <!-- Formulario del contrato -->
-    <div class="col-lg-6">
+    <div class="{% if contrato.empleado.cargo == 'instalador' or contrato.empleado.cargo == 'tecnico_soporte' %}col-lg-6{% else %}col-lg-12{% endif %}">
       <div class="card border-0 shadow-sm rounded-3">
         <div class="card-header bg-light fw-semibold small">Datos del Contrato</div>
         <div class="card-body p-4">
@@ -135,11 +159,6 @@
             </div>
             {% endif %}
 
-            <div class="mb-3">
-              <label class="form-label">Tipo de contrato <span class="text-danger">*</span></label>
-              {{ form.tipo_contrato }}
-              {% if form.tipo_contrato.errors %}<div class="text-danger small mt-1">{% for err in form.tipo_contrato.errors %}{{ err }}{% endfor %}</div>{% endif %}
-            </div>
             <div class="mb-3">
               <label class="form-label">Días laborales acordados <span class="text-danger">*</span></label>
               {{ form.dias_laborales }}
@@ -194,7 +213,6 @@
               </div>
               <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
                 <div class="d-flex gap-3">
-                  <a href="{% url 'employee_view' contrato.empleado.id %}" class="btn btn-outline-secondary">Cancelar</a>
                   <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#modalEliminar">Eliminar</button>
                 </div>
                 <button class="btn btn-primary px-4" type="submit">Actualizar contrato</button>
@@ -205,31 +223,40 @@
       </div>
     </div>
 
+    {% if contrato.empleado.cargo == 'instalador' or contrato.empleado.cargo == 'tecnico_soporte' %}
     <!-- Jornadas -->
     <div class="col-lg-6">
       <div class="card border-0 shadow-sm rounded-3">
-        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+        <div class="card-header bg-light d-flex justify-content-between align-items-center flex-wrap gap-2">
           <span class="fw-semibold small">Jornadas Diarias</span>
-          <a href="{% url 'create_jornada' contrato.id %}" class="btn btn-sm btn-primary py-0">
-            <i class="bi bi-plus-lg me-1"></i>Registrar jornada
-          </a>
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <div class="btn-group btn-group-sm" id="filtro-jornadas" role="group" aria-label="Filtrar jornadas">
+              <button type="button" class="btn btn-outline-secondary active" data-filter="todas">Todas</button>
+              <button type="button" class="btn btn-outline-secondary" data-filter="pendiente">Pendientes</button>
+              <button type="button" class="btn btn-outline-secondary" data-filter="aprobada">Aprobadas</button>
+            </div>
+            <a href="{% url 'create_jornada' contrato.id %}" class="btn btn-sm btn-primary py-0">
+              <i class="bi bi-plus-lg me-1"></i>Registrar jornada
+            </a>
+          </div>
         </div>
         <div class="card-body p-0">
           {% if jornadas %}
           <div class="table-responsive">
-            <table class="table table-sm table-hover align-middle mb-0 small">
+            <table id="tabla-jornadas" class="table table-sm table-hover align-middle mb-0 small">
               <thead class="table-light text-uppercase" style="font-size:0.7rem;">
                 <tr>
                   <th class="px-3">Fecha</th>
                   <th>Proyecto</th>
                   <th class="text-center">Días</th>
+                  <th class="text-center">Estado</th>
                   <th class="text-end">Monto (Bs.)</th>
                   <th></th>
                 </tr>
               </thead>
               <tbody>
                 {% for j in jornadas %}
-                <tr>
+                <tr data-estado="{{ j.estado }}" data-href="{% url 'jornada_detail' j.id %}">
                   <td class="px-3">{{ j.fecha|date:"d/m/Y" }}</td>
                   <td class="text-truncate" style="max-width:140px;">{{ j.proyecto.nombre }}</td>
                   <td class="text-center">
@@ -237,6 +264,17 @@
                       <span class="badge bg-primary">Completo</span>
                     {% else %}
                       <span class="badge bg-secondary">Medio</span>
+                    {% endif %}
+                  </td>
+                  <td class="text-center">
+                    {% if j.estado == 'pendiente' %}
+                      <span class="badge bg-warning text-dark" style="font-size:0.65rem;" title="Pendiente de aprobación">Pend. aprob.</span>
+                    {% elif j.pago %}
+                      <a href="{% url 'pago_empleado_detail' j.pago.id %}" class="badge bg-success text-decoration-none" style="font-size:0.65rem;" title="Ver pago — Bs. {{ j.pago.monto|floatformat:2 }} ({{ j.pago.get_concepto_display }})">
+                        <i class="bi bi-check-circle me-1"></i>Cobrado
+                      </a>
+                    {% else %}
+                      <span class="badge bg-danger bg-opacity-75" style="font-size:0.65rem;" title="Jornada aprobada pero sin pago asignado">Sin pago</span>
                     {% endif %}
                   </td>
                   <td class="text-end fw-semibold">{{ j.monto|floatformat:2 }}</td>
@@ -248,8 +286,8 @@
               </tbody>
               <tfoot class="table-light fw-semibold small">
                 <tr>
-                  <td colspan="2" class="px-3">Total</td>
-                  <td class="text-center">{{ total_dias }} días</td>
+                  <td colspan="3" class="px-3">Total</td>
+                  <td></td>
                   <td class="text-end">Bs. {{ total_ganado|floatformat:2 }}</td>
                   <td></td>
                 </tr>
@@ -262,8 +300,61 @@
         </div>
       </div>
     </div>
+    {% endif %}
 
   </div>
+
+  {% if contrato.empleado.cargo == 'instalador' or contrato.empleado.cargo == 'tecnico_soporte' %}
+  <!-- CALENDARIO DE CONTROL -->
+  <div class="card border-0 shadow-sm rounded-3 mt-4">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+      <span class="fw-semibold small">Control mensual de jornadas</span>
+      <div class="d-flex align-items-center gap-2">
+        <a href="{{ cal_prev }}" class="btn btn-sm btn-outline-secondary py-0 px-2">&#8249;</a>
+        <span class="small fw-semibold" style="min-width:140px;text-align:center;">{{ cal_mes_nombre }} {{ cal_anio }}</span>
+        <a href="{{ cal_next }}" class="btn btn-sm btn-outline-secondary py-0 px-2">&#8250;</a>
+      </div>
+    </div>
+    <div class="card-body p-3">
+      <!-- Cabecera días -->
+      <div class="d-flex gap-1 mb-1">
+        <div class="jcal-header">Lun</div>
+        <div class="jcal-header">Mar</div>
+        <div class="jcal-header">Mié</div>
+        <div class="jcal-header">Jue</div>
+        <div class="jcal-header">Vie</div>
+        <div class="jcal-header">Sáb</div>
+        <div class="jcal-header">Dom</div>
+      </div>
+      <!-- Semanas -->
+      {% for semana in cal_semanas %}
+      <div class="d-flex gap-1 mb-1">
+        {% for dia in semana %}
+        {% if dia is None %}
+        <div style="width:40px;min-height:46px;"></div>
+        {% else %}
+        <div class="jcal-day {{ dia.status }}{% if dia.es_hoy %} hoy{% endif %}"
+             title="{{ dia.date|date:'d/m/Y' }}{% if dia.jornada %} · {{ dia.jornada.dias }}d · {{ dia.jornada.proyecto.nombre }} · {{ dia.jornada.get_estado_display }}{% if dia.jornada.pago %} · Pago: {{ dia.jornada.pago.get_concepto_display }}{% endif %}{% endif %}{% if dia.tareas %} · {{ dia.tareas }} tarea{{ dia.tareas|pluralize:'s' }}{% endif %}">
+          <span class="jcal-num">{{ dia.day }}</span>
+          {% if dia.jornada %}
+          <span class="jcal-dias">{% if dia.jornada.dias == 1.0 %}1d{% else %}½d{% endif %}</span>
+          {% endif %}
+          {% if dia.tareas > 0 %}<span class="tarea-dot"></span>{% endif %}
+        </div>
+        {% endif %}
+        {% endfor %}
+      </div>
+      {% endfor %}
+      <!-- Leyenda -->
+      <div class="d-flex flex-wrap gap-3 mt-3 pt-2 border-top" style="font-size:.7rem;color:#6b7280;">
+        <span><span class="d-inline-block rounded-1 me-1" style="width:10px;height:10px;background:#d1fae5;vertical-align:middle;"></span>Aprobada + pagada</span>
+        <span><span class="d-inline-block rounded-1 me-1" style="width:10px;height:10px;background:#fef3c7;vertical-align:middle;"></span>Aprobada + sin pago</span>
+        <span><span class="d-inline-block rounded-1 me-1" style="width:10px;height:10px;background:#dbeafe;vertical-align:middle;"></span>Pendiente de aprobación</span>
+        <span><span class="d-inline-block rounded-circle me-1" style="width:8px;height:8px;background:#3b82f6;display:inline-block;vertical-align:middle;"></span>Con tareas completadas</span>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   <!-- PAGOS AL EMPLEADO -->
   <div class="card border-0 shadow-sm rounded-3 mt-4">
@@ -283,7 +374,6 @@
             <tr>
               <th class="px-3">Fecha</th>
               <th>Concepto</th>
-              <th>Método</th>
               <th>Estado</th>
               <th class="text-end px-3">Monto (Bs.)</th>
               {% if es_admin %}<th></th>{% endif %}
@@ -300,13 +390,8 @@
                   <span class="badge bg-warning text-dark fw-normal">{{ pago.get_concepto_display }}</span>
                 {% elif pago.concepto == 'liquidacion' %}
                   <span class="badge bg-success fw-normal">{{ pago.get_concepto_display }}</span>
-                {% elif pago.concepto == 'dia_extra' %}
-                  <span class="badge bg-info text-dark fw-normal">{{ pago.get_concepto_display }}</span>
-                {% else %}
-                  <span class="badge bg-secondary fw-normal">{{ pago.get_concepto_display }}</span>
                 {% endif %}
               </td>
-              <td><span class="badge bg-secondary fw-normal">{{ pago.get_tipo_pago_display }}</span></td>
               <td>
                 {% if pago.estado == 'pagado' %}
                   <span class="badge bg-success fw-normal">Pagado</span>
@@ -325,7 +410,7 @@
           </tbody>
           <tfoot class="table-light fw-semibold small">
             <tr>
-              <td colspan="4" class="px-3">Total confirmado</td>
+              <td colspan="3" class="px-3">Total confirmado</td>
               <td class="text-end px-3">Bs. {{ total_pagado|floatformat:2 }}</td>
               {% if es_admin %}<td></td>{% endif %}
             </tr>
@@ -392,6 +477,23 @@
     inicio.addEventListener('change', actualizar);
     fin.addEventListener('change', actualizar);
   }
+})();
+
+// Filtro de jornadas por estado
+(function () {
+  const grupo = document.getElementById('filtro-jornadas');
+  const tabla = document.getElementById('tabla-jornadas');
+  if (!grupo || !tabla) return;
+  grupo.addEventListener('click', function (e) {
+    const btn = e.target.closest('[data-filter]');
+    if (!btn) return;
+    grupo.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const f = btn.dataset.filter;
+    tabla.querySelectorAll('tbody tr').forEach(row => {
+      row.style.display = (f === 'todas' || row.dataset.estado === f) ? '' : 'none';
+    });
+  });
 })();
 
   document.querySelectorAll('.text-danger.small.mt-1').forEach(function (errorDiv) {

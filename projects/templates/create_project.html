@@ -75,6 +75,12 @@
               {% if form.cliente.errors %}
               <div class="text-danger small mt-1">{% for err in form.cliente.errors %}{{ err }}{% endfor %}</div>
               {% endif %}
+              <div id="clienteCriticoAviso" class="alert alert-danger py-2 small mt-2 d-none">
+                <i class="bi bi-exclamation-octagon me-1"></i>
+                <strong>Cliente con multa crítica.</strong>
+                Este cliente tiene proyecto(s) que alcanzaron el tope máximo de multa.
+                SOBOTEC no debería aceptar nuevos trabajos de este cliente por un período aproximado de 2 años.
+              </div>
             </div>
             <div class="mb-3">
               <label class="form-label" for="{{ form.observacion.id_for_label }}">Observación</label>
@@ -192,6 +198,86 @@
       <button class="btn btn-primary px-4" type="submit">Guardar proyecto</button>
     </div>
   </form>
+
+<!-- ── Modal: Nuevo Cliente Rápido ─────────────────────────────────────────── -->
+<div class="modal fade" id="modalNuevoCliente" tabindex="-1" data-bs-backdrop="static">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+
+      <div class="modal-header py-2">
+        <h6 class="modal-title fw-semibold"><i class="bi bi-person-plus me-2"></i>Nuevo cliente / contratante</h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        <div id="clienteAjaxErrors" class="alert alert-danger small py-2 d-none"></div>
+
+        <form id="formNuevoCliente" novalidate>
+          <div class="row g-3">
+
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Nombres <span class="text-danger">*</span></label>
+              <input type="text" name="nombre" class="form-control form-control-sm" placeholder="Nombres" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Apellido Paterno <span class="text-danger">*</span></label>
+              <input type="text" name="apellido_paterno" class="form-control form-control-sm" placeholder="Apellido paterno" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Apellido Materno</label>
+              <input type="text" name="apellido_materno" class="form-control form-control-sm" placeholder="Apellido materno">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">NIT / CI</label>
+              <input type="text" name="nit_ci" class="form-control form-control-sm" placeholder="Solo números" inputmode="numeric">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Tipo de contratante <span class="text-danger">*</span></label>
+              <select name="tipo_contratante" id="mc_tipo_contratante" class="form-select form-select-sm" required>
+                <option value="">Seleccionar…</option>
+                <option value="personal">Personal / Negocio</option>
+                <option value="entidad_publica">Entidad Pública</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Rol de contacto <span class="text-danger">*</span></label>
+              <select name="rol_contacto" id="mc_rol_contacto" class="form-select form-select-sm" required>
+                <option value="">Seleccionar…</option>
+                <option value="propietario">Propietario</option>
+                <option value="encargado">Encargado</option>
+                <option value="gerente" hidden disabled>Gerente</option>
+                <option value="representante" hidden disabled>Representante</option>
+              </select>
+            </div>
+            <div class="col-md-6 d-none" id="rowNombreEntidad">
+              <label class="form-label form-label-sm">Nombre de la entidad</label>
+              <input type="text" name="nombre_entidad" class="form-control form-control-sm" placeholder="Nombre de la institución">
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Teléfono <span class="text-danger">*</span></label>
+              <input type="text" name="telefono" class="form-control form-control-sm" placeholder="Solo números" inputmode="numeric" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label form-label-sm">Correo</label>
+              <input type="email" name="correo" class="form-control form-control-sm" placeholder="ejemplo@correo.com">
+            </div>
+            <div class="col-12">
+              <label class="form-label form-label-sm">Dirección <span class="text-danger">*</span></label>
+              <textarea name="direccion" class="form-control form-control-sm" rows="2" placeholder="Dirección del cliente" required></textarea>
+            </div>
+
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer py-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" id="btnGuardarCliente">Guardar cliente</button>
+      </div>
+
+    </div>
+  </div>
+</div>
 </main>
 {% endblock %}
 
@@ -266,6 +352,20 @@
       }, false);
     });
   });
+})();
+
+// ── Advertencia cliente con multa crítica ────────────────────────────────────
+(function () {
+  var CRITICOS = {{ clientes_criticos_json|safe }};
+  var sel = document.getElementById('{{ form.cliente.id_for_label }}');
+  var aviso = document.getElementById('clienteCriticoAviso');
+  if (!sel || !aviso) return;
+  function chk() {
+    var id = parseInt(sel.value, 10);
+    aviso.classList.toggle('d-none', !id || CRITICOS.indexOf(id) === -1);
+  }
+  sel.addEventListener('change', chk);
+  chk();
 })();
 
 // ── Modal Nuevo Cliente (AJAX) ────────────────────────────────────────────────
@@ -351,84 +451,4 @@
   });
 })();
 </script>
-
-<!-- ── Modal: Nuevo Cliente Rápido ─────────────────────────────────────────── -->
-<div class="modal fade" id="modalNuevoCliente" tabindex="-1" data-bs-backdrop="static">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-
-      <div class="modal-header py-2">
-        <h6 class="modal-title fw-semibold"><i class="bi bi-person-plus me-2"></i>Nuevo cliente / contratante</h6>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-      </div>
-
-      <div class="modal-body">
-        <div id="clienteAjaxErrors" class="alert alert-danger small py-2 d-none"></div>
-
-        <form id="formNuevoCliente" novalidate>
-          <div class="row g-3">
-
-            <div class="col-md-6">
-              <label class="form-label form-label-sm">Nombres <span class="text-danger">*</span></label>
-              <input type="text" name="nombre" class="form-control form-control-sm" placeholder="Nombres" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label form-label-sm">Apellido Paterno <span class="text-danger">*</span></label>
-              <input type="text" name="apellido_paterno" class="form-control form-control-sm" placeholder="Apellido paterno" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label form-label-sm">Apellido Materno</label>
-              <input type="text" name="apellido_materno" class="form-control form-control-sm" placeholder="Apellido materno">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label form-label-sm">NIT / CI</label>
-              <input type="text" name="nit_ci" class="form-control form-control-sm" placeholder="Solo números" inputmode="numeric">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label form-label-sm">Tipo de contratante <span class="text-danger">*</span></label>
-              <select name="tipo_contratante" id="mc_tipo_contratante" class="form-select form-select-sm" required>
-                <option value="">Seleccionar…</option>
-                <option value="personal">Personal / Negocio</option>
-                <option value="entidad_publica">Entidad Pública</option>
-              </select>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label form-label-sm">Rol de contacto <span class="text-danger">*</span></label>
-              <select name="rol_contacto" id="mc_rol_contacto" class="form-select form-select-sm" required>
-                <option value="">Seleccionar…</option>
-                <option value="propietario">Propietario</option>
-                <option value="encargado">Encargado</option>
-                <option value="gerente" hidden disabled>Gerente</option>
-                <option value="representante" hidden disabled>Representante</option>
-              </select>
-            </div>
-            <div class="col-md-6 d-none" id="rowNombreEntidad">
-              <label class="form-label form-label-sm">Nombre de la entidad</label>
-              <input type="text" name="nombre_entidad" class="form-control form-control-sm" placeholder="Nombre de la institución">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label form-label-sm">Teléfono <span class="text-danger">*</span></label>
-              <input type="text" name="telefono" class="form-control form-control-sm" placeholder="Solo números" inputmode="numeric" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label form-label-sm">Correo</label>
-              <input type="email" name="correo" class="form-control form-control-sm" placeholder="ejemplo@correo.com">
-            </div>
-            <div class="col-12">
-              <label class="form-label form-label-sm">Dirección <span class="text-danger">*</span></label>
-              <textarea name="direccion" class="form-control form-control-sm" rows="2" placeholder="Dirección del cliente" required></textarea>
-            </div>
-
-          </div>
-        </form>
-      </div>
-
-      <div class="modal-footer py-2">
-        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancelar</button>
-        <button type="button" class="btn btn-primary btn-sm" id="btnGuardarCliente">Guardar cliente</button>
-      </div>
-
-    </div>
-  </div>
-</div>
 {% endblock %}

@@ -10,10 +10,6 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 from projects.models import AuditModel
 
 
-METODOS_PAGO = [
-    ('efectivo',      'Efectivo'),
-    ('transferencia', 'Transferencia'),
-]
 
 
 class Empleado(AbstractUser):
@@ -55,13 +51,7 @@ class Empleado(AbstractUser):
 
 
 class ContratoEmpleado(AuditModel):
-    TIPO_CHOICES = [
-        ('diario',   'Por día (jornada)'),
-        ('mensual',  'Mensual'),
-    ]
-
     empleado        = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='contratos_empleado', verbose_name="Empleado")
-    tipo_contrato   = models.CharField(max_length=10, choices=TIPO_CHOICES, default='diario', verbose_name="Tipo de contrato")
     dias_laborales  = models.PositiveIntegerField(default=28, verbose_name="Días laborales acordados",
                           validators=[MinValueValidator(1)])
     fecha_firma     = models.DateField(verbose_name="Fecha de Firma")
@@ -101,12 +91,14 @@ class ContratoEmpleado(AuditModel):
 
     @property
     def monto_diario(self):
-        """Para diario: monto/días. Para mensual: monto_acordado es el salario del mes completo."""
-        if self.tipo_contrato == 'mensual':
-            return self.monto_acordado
         if self.monto_acordado and self.dias_laborales:
             return self.monto_acordado / Decimal(str(self.dias_laborales))
         return self.monto_acordado
+
+    @property
+    def dias_hasta_vencimiento(self):
+        from datetime import date
+        return (self.fecha_fin - date.today()).days
 
 
 class PagoEmpleado(AuditModel):
@@ -114,18 +106,15 @@ class PagoEmpleado(AuditModel):
         ('pago_jornada', 'Pago por jornada(s)'),
         ('adelanto',     'Adelanto'),
         ('liquidacion',  'Liquidación final'),
-        ('dia_extra',    'Día extra fuera del contrato'),
-        ('otro',         'Otro'),
     ]
     ESTADO_CHOICES = [
         ('pendiente', 'Pendiente'),
         ('pagado',    'Pagado'),
     ]
 
-    monto     = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto (Bs.)")
-    fecha     = models.DateField(db_index=True, verbose_name="Fecha de Pago")
-    tipo_pago = models.CharField(max_length=15, choices=METODOS_PAGO, default='efectivo', verbose_name="Método de Pago")
-    contrato  = models.ForeignKey(
+    monto    = models.DecimalField(max_digits=12, decimal_places=2, verbose_name="Monto (Bs.)")
+    fecha    = models.DateField(db_index=True, verbose_name="Fecha de Pago")
+    contrato = models.ForeignKey(
         ContratoEmpleado, on_delete=models.PROTECT,
         related_name='pagos', verbose_name="Contrato"
     )
@@ -225,6 +214,12 @@ class JornadaEmpleado(AuditModel):
             empleado = self.contrato.empleado
             if not empleado.proyectos_asignados.filter(pk=self.proyecto_id).exists():
                 raise ValidationError({'proyecto': 'El empleado no está asignado al equipo de este proyecto.'})
+        if self.fecha and self.contrato_id:
+            c = self.contrato
+            if self.fecha < c.fecha_inicio:
+                raise ValidationError({'fecha': f'La jornada ({self.fecha}) es anterior al inicio del contrato ({c.fecha_inicio}).'})
+            if self.fecha > c.fecha_fin:
+                raise ValidationError({'fecha': f'La jornada ({self.fecha}) supera la fecha de fin del contrato ({c.fecha_fin}). Renueva el contrato antes de registrar esta jornada.'})
 
     @property
     def monto(self):

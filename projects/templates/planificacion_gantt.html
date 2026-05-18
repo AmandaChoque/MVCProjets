@@ -202,7 +202,8 @@
               <span class="badge
                 {% if grupo.proyecto.estado_proyecto == 'completado' %}bg-success
                 {% elif grupo.proyecto.estado_proyecto == 'en_progreso' %}bg-primary
-                {% else %}bg-secondary{% endif %} fw-normal">
+                {% elif grupo.proyecto.estado_proyecto == 'cancelado' %}bg-secondary
+                {% else %}bg-warning text-dark{% endif %} fw-normal">
                 {{ grupo.proyecto.get_estado_proyecto_display }}
               </span>
               {% if grupo.contrato %}
@@ -244,12 +245,27 @@
               <span class="text-muted">
                 {{ fila.asignacion.fecha_inicio_plan|date:"d/m" }} → {{ fila.asignacion.fecha_fin_plan|date:"d/m" }}
               </span>
+              {% if fila.contrato_fin_emp and fila.asignacion.fecha_fin_plan > fila.contrato_fin_emp %}
+              <span class="badge bg-warning text-dark" style="font-size:.6rem;" title="Fin planificado supera el contrato ({{ fila.contrato_fin_emp|date:'d/m/Y' }})">⚠ contrato</span>
+              {% endif %}
               {% endif %}
 
-              {% if fila.retraso > 0 %}
-              <span class="badge bg-danger" style="font-size:.6rem;">{{ fila.retraso }}d retraso</span>
-              {% elif fila.eficiencia and fila.eficiencia >= 100 %}
-              <span class="badge bg-success" style="font-size:.6rem;">Adelantado</span>
+              {% if fila.asignacion %}
+              {% with est=fila.asignacion.estado_asignacion %}
+                {% if est == 'completada' %}
+                <span class="badge bg-success" style="font-size:.6rem;"><i class="bi bi-check-circle-fill me-1"></i>Completada</span>
+                {% elif est == 'vencida' %}
+                <span class="badge bg-danger" style="font-size:.6rem;"><i class="bi bi-x-circle-fill me-1"></i>Vencida{% if fila.retraso > 0 %} ({{ fila.retraso }}d){% endif %}</span>
+                {% elif est == 'por_vencer' %}
+                <span class="badge bg-warning text-dark" style="font-size:.6rem;"><i class="bi bi-clock-fill me-1"></i>Por vencer</span>
+                {% elif est == 'en_curso' %}
+                <span class="badge bg-primary" style="font-size:.6rem;"><i class="bi bi-play-circle-fill me-1"></i>En curso</span>
+                {% elif est == 'cancelado' %}
+                <span class="badge bg-secondary" style="font-size:.6rem;">Cancelada</span>
+                {% else %}
+                <span class="badge bg-secondary" style="font-size:.6rem;"><i class="bi bi-hourglass me-1"></i>Pendiente</span>
+                {% endif %}
+              {% endwith %}
               {% endif %}
 
               {% if es_admin %}
@@ -262,7 +278,8 @@
                       data-proy-nombre="{{ grupo.proyecto.nombre }}"
                       data-fecha-ini="{{ fila.asignacion.fecha_inicio_plan|date:'Y-m-d'|default:'' }}"
                       data-fecha-fin="{{ fila.asignacion.fecha_fin_plan|date:'Y-m-d'|default:'' }}"
-                      data-dias="{{ fila.asignacion.dias_planificados|default:'' }}">
+                      data-dias="{{ fila.asignacion.dias_planificados|default:'' }}"
+                      data-contrato-fin="{{ fila.contrato_fin_emp|date:'d/m/Y'|default:'' }}">
                 <i class="bi bi-pencil-fill"></i> Planificar
               </button>
               {% endif %}
@@ -395,6 +412,11 @@
         <input type="hidden" name="next" value="{% url 'planificacion_gantt' %}?mes={{ mes_str }}&filter_proyecto={{ filter_proyecto }}{% if mostrar_completados %}&completados=1{% endif %}">
         <div class="modal-body">
           <p class="text-muted small mb-3">Proyecto: <strong id="planProyNombre"></strong></p>
+          <div id="planContratoAviso" class="alert alert-warning py-2 small mb-2 d-none">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Contrato del empleado vence el <strong id="planContratoFin"></strong>.
+            Las jornadas fuera de ese rango serán bloqueadas.
+          </div>
           <div class="row g-2">
             <div class="col-6">
               <label class="form-label fw-semibold">Fecha inicio <span class="text-danger">*</span></label>
@@ -462,6 +484,15 @@
     document.getElementById('planFechaIni').value = btn.dataset.fechaIni || '';
     document.getElementById('planFechaFin').value = btn.dataset.fechaFin || '';
     document.getElementById('planDias').value     = btn.dataset.dias     || '';
+
+    var contratoFin = btn.dataset.contratoFin || '';
+    var aviso = document.getElementById('planContratoAviso');
+    if (contratoFin) {
+      document.getElementById('planContratoFin').textContent = contratoFin;
+      aviso.classList.remove('d-none');
+    } else {
+      aviso.classList.add('d-none');
+    }
 
     document.getElementById('formPlanificar').action =
       '/proyectos/' + proyId + '/equipo/' + empId + '/cronograma/';

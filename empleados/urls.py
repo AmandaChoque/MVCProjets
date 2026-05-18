@@ -29,6 +29,7 @@ urlpatterns = [
 
     # Dashboard instalador
     path('mi-trabajo/', views.instalador_dashboard, name='instalador_dashboard'),
+    path('mis-cobros/', views.mis_pagos_view, name='mis_pagos_view'),
 
     # Pagos a empleados
     path('pagos-empleados/', views.pagos_empleados_list, name='pagos_empleados_list'),

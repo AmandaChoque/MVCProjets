@@ -89,7 +89,7 @@ class CompraAdmin(admin.ModelAdmin):
 
 @admin.register(PagoEmpleado)
 class PagoEmpleadoAdmin(admin.ModelAdmin):
-    list_display = ('contrato', 'monto', 'fecha', 'concepto', 'tipo_pago', 'activo', 'created')
+    list_display = ('contrato', 'monto', 'fecha', 'concepto', 'activo', 'created')
     list_filter = ('activo',)
     search_fields = ('contrato__empleado__nombre', 'concepto')
     ordering = ('-fecha',)

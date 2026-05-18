@@ -23,6 +23,27 @@
       <span class="small">Comunícate con tu administrador para regularizar tu situación.</span>
     </div>
   </div>
+  {% elif dias_restantes_contrato == 0 %}
+  <div class="alert alert-danger d-flex align-items-start gap-3 mb-4" role="alert">
+    <i class="bi bi-bell-fill fs-4 mt-1"></i>
+    <div>
+      <strong>¡Tu contrato vence HOY ({{ contrato_para_jornada.fecha_fin|date:"d/m/Y" }})!</strong><br>
+      <span class="small">
+        Comunícate con tu administrador para renovar o crear un nuevo contrato.
+        {% if not es_instalador_tecnico %}
+          <a href="{% url 'create_contrato_empleado' contrato_para_jornada.empleado.id %}" class="alert-link ms-1">Crear nuevo contrato</a>
+        {% endif %}
+      </span>
+    </div>
+  </div>
+  {% elif dias_restantes_contrato > 0 and dias_restantes_contrato <= 7 %}
+  <div class="alert alert-warning d-flex align-items-start gap-3 mb-4" role="alert">
+    <i class="bi bi-clock-fill fs-4 mt-1"></i>
+    <div>
+      <strong>Tu contrato vence en {{ dias_restantes_contrato }} día{{ dias_restantes_contrato|pluralize:"s" }} ({{ contrato_para_jornada.fecha_fin|date:"d/m/Y" }}).</strong><br>
+      <span class="small">Comunícate con tu administrador para renovar tu contrato a tiempo.</span>
+    </div>
+  </div>
   {% elif contrato_para_jornada_vencido %}
   <div class="alert alert-warning d-flex align-items-start gap-3 mb-4" role="alert">
     <i class="bi bi-exclamation-triangle-fill fs-4 mt-1"></i>
@@ -34,11 +55,11 @@
   </div>
   {% endif %}
 
-  <!-- RESUMEN: Jornada de hoy · Balance · Contrato -->
+  <!-- RESUMEN: Jornada de hoy · Balance · Contrato · Reparaciones -->
   <div class="row g-3 mb-4">
 
     <!-- Jornada de hoy -->
-    <div class="col-md-5">
+    <div class="col-sm-6 col-xl-3">
       <div class="card border-0 shadow-sm h-100">
         <div class="card-header bg-light py-2 px-3">
           <span class="text-muted small fw-semibold text-uppercase" style="letter-spacing:.05em;">
@@ -73,14 +94,24 @@
             {% endif %}
             {% endfor %}
           {% else %}
-            <p class="text-muted small mb-0">Aún no registraste tu jornada de hoy.</p>
+            <p class="text-muted small mb-1">Aún no registraste tu jornada de hoy.</p>
+            {% if mis_asignaciones %}
+            <div class="mt-1">
+              <span class="text-muted" style="font-size:.72rem;">Tus proyectos activos:</span>
+              {% for asig in mis_asignaciones %}
+              <div class="small fw-semibold text-primary mt-1">
+                <i class="bi bi-briefcase me-1"></i>{{ asig.proyecto.nombre }}
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
           {% endif %}
         </div>
       </div>
     </div>
 
     <!-- Balance -->
-    <div class="col-md-4">
+    <div class="col-sm-6 col-xl-3">
       <div class="card border-0 shadow-sm h-100">
         <div class="card-header bg-light py-2 px-3">
           <span class="text-muted small fw-semibold text-uppercase" style="letter-spacing:.05em;">Mi Balance</span>
@@ -110,7 +141,7 @@
           {% endif %}
           <!-- Montos -->
           <div class="d-flex justify-content-between align-items-end mt-2 pt-2 border-top">
-            <span class="text-muted small">Total ganado</span>
+            <span class="text-muted small">Total acordado</span>
             <span class="fw-semibold text-primary">Bs. {{ resumen_pago.total_ganado|floatformat:2 }}</span>
           </div>
           <div class="d-flex justify-content-between align-items-end mt-1">
@@ -145,7 +176,7 @@
     </div>
 
     <!-- Mi Contrato -->
-    <div class="col-md-3">
+    <div class="col-sm-6 col-xl-3">
       <div class="card border-0 shadow-sm h-100">
         <div class="card-header bg-light py-2 px-3">
           <span class="text-muted small fw-semibold text-uppercase" style="letter-spacing:.05em;">Mi Contrato</span>
@@ -219,7 +250,144 @@
       </div>
     </div>
 
+    <!-- Mis Reparaciones -->
+    {% if es_instalador_tecnico %}
+    <div class="col-sm-6 col-xl-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-light py-2 px-3">
+          <span class="text-muted small fw-semibold text-uppercase" style="letter-spacing:.05em;">Mis Reparaciones</span>
+        </div>
+        <div class="card-body py-3 px-3">
+          {% if rep_pendientes or rep_en_curso %}
+          <div class="d-flex justify-content-between align-items-end mb-1">
+            <span class="text-muted small"><i class="bi bi-clock me-1 text-warning"></i>Pendientes</span>
+            <span class="fw-semibold {% if rep_pendientes > 0 %}text-warning{% else %}text-muted{% endif %}">{{ rep_pendientes }}</span>
+          </div>
+          <div class="d-flex justify-content-between align-items-end mb-3">
+            <span class="text-muted small"><i class="bi bi-tools me-1 text-primary"></i>En reparación</span>
+            <span class="fw-semibold {% if rep_en_curso > 0 %}text-primary{% else %}text-muted{% endif %}">{{ rep_en_curso }}</span>
+          </div>
+          <a href="{% url 'mis_reparaciones' %}" class="btn btn-sm btn-outline-primary w-100 py-1">
+            <i class="bi bi-tools me-1"></i>Ver detalle
+          </a>
+          {% else %}
+          <div class="text-center py-2">
+            <i class="bi bi-check-circle-fill text-success fs-4 mb-1 d-block"></i>
+            <span class="small fw-semibold text-success">Sin reparaciones activas</span>
+          </div>
+          <a href="{% url 'mis_reparaciones' %}" class="btn btn-sm btn-outline-secondary w-100 py-1 mt-2">
+            <i class="bi bi-clock-history me-1"></i>Ver historial
+          </a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
   </div>
+
+  <!-- MIS ASIGNACIONES -->
+  <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+    <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing:.05em;">
+      Mis Proyectos Asignados
+    </div>
+    <a href="{% url 'calendario_equipo' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-calendar3 me-1"></i>Ver calendario
+    </a>
+  </div>
+
+  {% if mis_asignaciones %}
+  <div class="row g-3 mb-4">
+    {% for asig in mis_asignaciones %}
+    {% with estado=asig.estado_asignacion %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card border-0 shadow-sm h-100
+        {% if estado == 'vencida' %}border-start border-danger border-3
+        {% elif estado == 'por_vencer' %}border-start border-warning border-3
+        {% elif estado == 'completada' %}border-start border-success border-3
+        {% elif estado == 'en_curso' %}border-start border-primary border-3
+        {% else %}border-start border-secondary border-3{% endif %}">
+        <div class="card-body py-3 px-3">
+
+          <!-- Nombre del proyecto + badge estado -->
+          <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+            <a href="{% url 'project_detail' asig.proyecto.pk %}" class="fw-semibold small text-decoration-none text-dark lh-sm">
+              {{ asig.proyecto.nombre }}
+            </a>
+            {% if estado == 'vencida' %}
+              <span class="badge bg-danger text-nowrap">Vencida</span>
+            {% elif estado == 'por_vencer' %}
+              <span class="badge bg-warning text-dark text-nowrap">Por vencer</span>
+            {% elif estado == 'completada' %}
+              <span class="badge bg-success text-nowrap">Completada</span>
+            {% elif estado == 'en_curso' %}
+              <span class="badge bg-primary text-nowrap">En curso</span>
+            {% else %}
+              <span class="badge bg-secondary text-nowrap">Pendiente</span>
+            {% endif %}
+          </div>
+
+          <!-- Fechas -->
+          <div class="d-flex gap-3 mb-2 small text-muted">
+            {% if asig.fecha_inicio_plan %}
+            <span><i class="bi bi-calendar-event me-1"></i>{{ asig.fecha_inicio_plan|date:"d/m/Y" }}</span>
+            {% endif %}
+            {% if asig.fecha_fin_plan %}
+            <span><i class="bi bi-calendar-check me-1"></i>{{ asig.fecha_fin_plan|date:"d/m/Y" }}</span>
+            {% endif %}
+            {% if not asig.fecha_inicio_plan and not asig.fecha_fin_plan %}
+            <span class="text-muted fst-italic">Sin fechas planificadas</span>
+            {% endif %}
+          </div>
+
+          <!-- Barra de progreso días -->
+          {% if asig.dias_planificados %}
+          <div class="mb-1">
+            <div class="d-flex justify-content-between small mb-1">
+              <span class="text-muted">Días trabajados</span>
+              <span class="fw-semibold
+                {% if estado == 'vencida' %}text-danger
+                {% elif estado == 'por_vencer' %}text-warning
+                {% elif estado == 'completada' %}text-success
+                {% else %}text-primary{% endif %}">
+                {{ asig.dias_reales }} / {{ asig.dias_planificados }} días
+              </span>
+            </div>
+            <div class="progress" style="height:6px; border-radius:4px;">
+              <div class="progress-bar
+                {% if estado == 'vencida' %}bg-danger
+                {% elif estado == 'por_vencer' %}bg-warning
+                {% elif estado == 'completada' %}bg-success
+                {% else %}bg-primary{% endif %}"
+                data-w="{{ asig.pct_avance }}"></div>
+            </div>
+          </div>
+          {% endif %}
+
+          <!-- Alerta de vencimiento -->
+          {% if estado == 'vencida' %}
+          <div class="text-danger small mt-2">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>
+            Plazo vencido hace {{ asig.dias_retraso }} día{{ asig.dias_retraso|pluralize:"s" }}
+          </div>
+          {% elif estado == 'por_vencer' %}
+          <div class="text-warning small mt-2">
+            <i class="bi bi-clock-history me-1"></i>
+            Vence en {{ asig.fecha_fin_plan|timeuntil }}
+          </div>
+          {% endif %}
+
+        </div>
+      </div>
+    </div>
+    {% endwith %}
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="alert alert-light border mb-4 py-2 px-3 small text-muted">
+    <i class="bi bi-info-circle me-1"></i>No tienes proyectos asignados con cronograma actualmente.
+  </div>
+  {% endif %}
 
   <!-- MIS JORNADAS -->
   {% if jornadas_recientes %}
@@ -276,7 +444,14 @@
                 {% if j.estado == 'rechazada' %}class="table-danger"
                 {% elif j.estado == 'pendiente' %}class="table-warning"{% endif %}>
               <td class="px-3 fw-semibold text-nowrap">{{ j.fecha|date:"d/m/Y" }}</td>
-              <td>{{ j.proyecto.nombre }}</td>
+              <td>
+                {{ j.proyecto.nombre }}
+                {% if j.proyecto.estado_proyecto == 'cancelado' %}
+                  <span class="badge bg-dark fw-normal ms-1" style="font-size:.65rem;">Cancelado</span>
+                {% elif j.proyecto.estado_proyecto == 'completado' %}
+                  <span class="badge bg-success fw-normal ms-1" style="font-size:.65rem;">Completado</span>
+                {% endif %}
+              </td>
               <td class="text-center">
                 {% if j.dias == 1.0 %}
                   <span class="badge bg-primary fw-normal">Día completo</span>
@@ -302,7 +477,7 @@
                 {% endif %}
               </td>
               <td class="text-center">
-                {% if j.estado != 'aprobada' %}
+                {% if j.estado != 'aprobada' and j.proyecto.estado_proyecto != 'cancelado' %}
                 <a href="{% url 'jornada_detail' j.id %}" class="btn btn-outline-secondary btn-sm py-0 px-2"
                    title="Editar jornada">
                   <i class="bi bi-pencil"></i>
@@ -323,98 +498,49 @@
   </div>
   {% endif %}
 
-  <!-- PROYECTOS -->
-  {% if proyectos_data %}
-  <div class="text-muted small fw-semibold text-uppercase mb-2" style="letter-spacing:.05em;">Mis Proyectos</div>
-  <div class="accordion" id="accordionProyectos">
-    {% for item in proyectos_data %}
-    <div class="accordion-item border-0 shadow-sm mb-2 rounded-3 overflow-hidden">
-      <h2 class="accordion-header">
-        <button class="accordion-button {% if not forloop.first %}collapsed{% endif %} py-3"
-                type="button" data-bs-toggle="collapse"
-                data-bs-target="#proyecto{{ item.proyecto.id }}">
-          <div class="d-flex align-items-center gap-3 w-100 me-3">
-            <span class="fw-semibold">{{ item.proyecto.nombre }}</span>
-            <div class="flex-grow-1">
-              <div class="progress" style="height:5px;border-radius:4px;">
-                <div class="progress-bar {% if item.pct_global == 100 %}bg-success{% else %}bg-primary{% endif %}"
-                     data-w="{{ item.pct_global }}"></div>
-              </div>
-            </div>
-            <span class="badge {% if item.pct_global == 100 %}bg-success{% else %}bg-secondary{% endif %} fw-normal">
-              {{ item.pct_global }}%
-            </span>
-          </div>
-        </button>
-      </h2>
-      <div id="proyecto{{ item.proyecto.id }}"
-           class="accordion-collapse collapse {% if forloop.first %}show{% endif %}">
-        <div class="accordion-body pt-2 pb-3 px-3">
-
-          {% if item.sedes %}
-            {% for sede in item.sedes %}
-            <div class="mb-3">
-              <!-- Sede header -->
-              <div class="d-flex align-items-center gap-2 mb-2">
-                <i class="bi bi-geo-alt text-secondary small"></i>
-                <a href="{% url 'sede_view' sede.id %}" class="fw-semibold small text-decoration-none text-dark">
-                  {{ sede.direccion }}
-                </a>
-                {% if sede.estado == 'completado' %}
-                  <span class="badge bg-success fw-normal ms-auto">Completada</span>
-                {% elif sede.estado == 'en_progreso' %}
-                  <span class="badge bg-primary fw-normal ms-auto">{{ sede.porcentaje_checklist }}%</span>
-                {% else %}
-                  <span class="badge bg-warning text-dark fw-normal ms-auto">Pendiente</span>
-                {% endif %}
-              </div>
-
-              <!-- Tareas -->
-              {% with tareas_sede=sede.tareas.all %}
-              {% if tareas_sede %}
-              <div class="ps-3">
-                {% for tarea in tareas_sede %}
-                {% if tarea.activo %}
-                <div class="d-flex align-items-center gap-2 py-1 {% if not forloop.last %}border-bottom{% endif %}">
-                  <button type="button"
-                          class="btn btn-sm p-0 tarea-pill border-0 bg-transparent"
-                          data-id="{{ tarea.id }}"
-                          title="{% if tarea.completado %}Marcar como pendiente{% else %}Completar tarea{% endif %}">
-                    <i class="bi {% if tarea.completado %}bi-check-circle-fill text-success{% else %}bi-circle text-muted{% endif %} fs-6"></i>
-                  </button>
-                  <span class="small {% if tarea.completado %}text-decoration-line-through text-muted{% endif %}">
-                    {{ tarea.descripcion }}
-                  </span>
-                </div>
-                {% endif %}
-                {% endfor %}
-              </div>
-              {% endif %}
-              {% endwith %}
-            </div>
-            {% if not forloop.last %}<hr class="my-2">{% endif %}
-            {% endfor %}
-          {% else %}
-            <p class="text-muted small mb-2">Sin sedes registradas.</p>
-          {% endif %}
-
-          <div class="mt-3">
-            <a href="{% url 'project_view' item.proyecto.id %}" class="btn btn-sm btn-outline-secondary py-0">
-              <i class="bi bi-eye me-1"></i>Ver proyecto completo
-            </a>
-          </div>
-        </div>
-      </div>
+  <!-- TAREAS PENDIENTES -->
+  <div class="d-flex justify-content-between align-items-center mb-2 mt-2 flex-wrap gap-2">
+    <div class="text-muted small fw-semibold text-uppercase" style="letter-spacing:.05em;">
+      Tareas Pendientes
     </div>
-    {% endfor %}
+    {% if mis_tareas_pendientes %}
+    <span class="badge bg-warning text-dark px-2 py-1">
+      <i class="bi bi-list-check me-1"></i>{{ mis_tareas_pendientes|length }} pendiente{{ mis_tareas_pendientes|length|pluralize:"s" }}
+    </span>
+    {% endif %}
   </div>
 
-  {% else %}
-  <div class="card border-0 shadow-sm">
-    <div class="card-body text-center text-muted py-5">
-      <i class="bi bi-briefcase" style="font-size:2.5rem;"></i>
-      <p class="mt-2 mb-0">No tienes proyectos activos asignados.</p>
+  {% if mis_tareas_pendientes %}
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body p-0">
+      {% for tarea in mis_tareas_pendientes %}
+      {% ifchanged tarea.sede.proyecto.id %}
+      <div class="px-3 py-2 border-bottom" style="background:#e9ecef;">
+        <span class="fw-semibold small text-dark">
+          <i class="bi bi-briefcase me-1 text-primary"></i>{{ tarea.sede.proyecto.nombre }}
+        </span>
+      </div>
+      {% endifchanged %}
+      {% ifchanged tarea.sede.id %}
+      <div class="px-3 py-1 border-bottom" style="background:#f8f9fa;">
+        <span class="text-muted small">
+          <i class="bi bi-geo-alt me-1"></i>
+          <a href="{% url 'sede_view' tarea.sede.id %}" class="text-muted text-decoration-none">{{ tarea.sede.nombre|default:tarea.sede.direccion }}</a>
+        </span>
+      </div>
+      {% endifchanged %}
+      <div class="d-flex align-items-center gap-2 px-3 py-2 border-bottom tarea-row" data-id="{{ tarea.id }}">
+        <button type="button" class="btn btn-sm p-0 tarea-pill border-0 bg-transparent" data-id="{{ tarea.id }}">
+          <i class="bi bi-circle text-muted fs-6"></i>
+        </button>
+        <span class="small tarea-desc">{{ tarea.descripcion }}</span>
+      </div>
+      {% endfor %}
     </div>
+  </div>
+  {% else %}
+  <div class="alert alert-light border mb-4 py-2 px-3 small text-muted">
+    <i class="bi bi-check-circle me-1 text-success"></i>No tenés tareas pendientes.
   </div>
   {% endif %}
 
@@ -494,11 +620,9 @@ document.querySelectorAll('[data-w]').forEach(function(el) {
   el.style.width = el.dataset.w + '%';
 });
 
-// ── Tareas / participantes ────────────────────────────────────────────────────
+// ── Toggle tareas + modal participantes ──────────────────────────────────────
 const CSRF = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
-
-let _modalTareaId   = null;
-let _modalUsuarioId = null;
+let _modalTareaId = null, _modalUsuarioId = null;
 const modalEl = document.getElementById('modalParticipantes');
 const bsModal = modalEl ? new bootstrap.Modal(modalEl) : null;
 
@@ -509,65 +633,23 @@ function guardarParticipantes(ids) {
     body: JSON.stringify({participantes: ids}),
   }).then(r => r.json()).then(res => {
     if (res.ok) {
-      if (res.jornadas_creadas && res.jornadas_creadas.length > 0) {
-        mostrarAlerta(res.jornadas_creadas);
-      }
-      if (res.sin_contrato && res.sin_contrato.length > 0) {
-        mostrarAlertaSinContrato(res.sin_contrato);
-      }
+      if (res.jornadas_creadas?.length) mostrarToast(res.jornadas_creadas, 'success');
+      if (res.sin_contrato?.length)    mostrarToast(res.sin_contrato, 'danger');
     }
   });
-  if (bsModal) {
-    if (document.activeElement) document.activeElement.blur();
-    bsModal.hide();
-  }
+  if (bsModal) { if (document.activeElement) document.activeElement.blur(); bsModal.hide(); }
 }
 
-function mostrarAlerta(nombres) {
+function mostrarToast(nombres, tipo) {
   const div = document.createElement('div');
-  div.className = 'alert alert-success alert-dismissible fade show position-fixed bottom-0 end-0 m-3 shadow-sm';
-  div.style.zIndex = 9999;
-  div.style.maxWidth = '360px';
-  div.innerHTML = `
-    <i class="bi bi-calendar-check me-2"></i>
-    <strong>Jornada registrada</strong> para:<br>
-    <span class="small">${nombres.join(', ')}</span>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  `;
+  div.className = `alert alert-${tipo} alert-dismissible fade show position-fixed bottom-0 end-0 m-3 shadow-sm`;
+  div.style.cssText = 'z-index:9999;max-width:360px;';
+  const msg = tipo === 'success'
+    ? `<strong>Jornada registrada</strong> para:<br><span class="small">${nombres.join(', ')}</span>`
+    : `<strong>Sin contrato:</strong><br><span class="small">${nombres.join(', ')}</span>`;
+  div.innerHTML = `<i class="bi bi-calendar-check me-2"></i>${msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
   document.body.appendChild(div);
   setTimeout(() => div.remove(), 5000);
-}
-
-function mostrarAlertaSinContrato(nombres) {
-  const div = document.createElement('div');
-  div.className = 'alert alert-danger alert-dismissible fade show position-fixed bottom-0 end-0 m-3 shadow-sm';
-  div.style.zIndex = 9999;
-  div.style.maxWidth = '420px';
-  div.innerHTML = `
-    <i class="bi bi-exclamation-triangle-fill me-2"></i>
-    <strong>Jornada NO registrada</strong> para:<br>
-    <span class="small">${nombres.join(', ')}</span><br>
-    <span class="small">No tienen ningún contrato registrado.<br>
-    <strong>Avisa al administrador</strong> para que registre la jornada manualmente.</span>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-  `;
-  document.body.appendChild(div);
-}
-
-function abrirModalParticipantes(tareaId, usuarioId, equipo) {
-  _modalTareaId   = tareaId;
-  _modalUsuarioId = usuarioId;
-  const box = document.getElementById('participantes-checkboxes');
-  box.innerHTML = equipo.map(e => `
-    <div class="form-check">
-      <input class="form-check-input" type="checkbox" id="mp_${e.id}" value="${e.id}"
-             ${e.id === usuarioId ? 'checked' : ''}>
-      <label class="form-check-label" for="mp_${e.id}">
-        ${e.nombre} <span class="text-muted small">(${e.cargo})</span>
-      </label>
-    </div>
-  `).join('');
-  bsModal.show();
 }
 
 if (modalEl) {
@@ -576,61 +658,50 @@ if (modalEl) {
     if (!ids.includes(_modalUsuarioId)) ids.push(_modalUsuarioId);
     guardarParticipantes(ids);
   });
-  document.getElementById('btn-solo-yo').addEventListener('click', () => {
-    guardarParticipantes([_modalUsuarioId]);
-  });
+  document.getElementById('btn-solo-yo').addEventListener('click', () => guardarParticipantes([_modalUsuarioId]));
 }
 
 document.querySelectorAll('.tarea-pill').forEach(btn => {
   btn.addEventListener('click', function() {
     const id = this.dataset.id;
     const icon = this.querySelector('i');
-    const texto = this.nextElementSibling;
+    const row  = this.closest('.tarea-row');
+    const desc = row?.querySelector('.tarea-desc');
     const eraCompletado = icon.classList.contains('bi-check-circle-fill');
-    const ahoraCompletado = !eraCompletado;
 
-    icon.className = ahoraCompletado ? 'bi bi-check-circle-fill text-success fs-6' : 'bi bi-circle text-muted fs-6';
-    if (texto) texto.classList.toggle('text-decoration-line-through', ahoraCompletado);
-    if (texto) texto.classList.toggle('text-muted', ahoraCompletado);
+    icon.className = eraCompletado ? 'bi bi-circle text-muted fs-6' : 'bi bi-check-circle-fill text-success fs-6';
+    if (desc) { desc.classList.toggle('text-decoration-line-through', !eraCompletado); desc.classList.toggle('text-muted', !eraCompletado); }
 
     fetch(`/tareas/${id}/alternar/`, {
       method: 'POST',
       headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'},
-    }).then(r => {
-      if (!r.ok) throw new Error('error');
-      return r.json();
-    }).then(data => {
+    }).then(r => { if (!r.ok) throw new Error(); return r.json(); })
+    .then(data => {
       if (!data.ok) {
         icon.className = eraCompletado ? 'bi bi-check-circle-fill text-success fs-6' : 'bi bi-circle text-muted fs-6';
-        if (texto) texto.classList.toggle('text-decoration-line-through', eraCompletado);
+        if (desc) { desc.classList.toggle('text-decoration-line-through', eraCompletado); desc.classList.toggle('text-muted', eraCompletado); }
         return;
       }
-      if (data.completado && data.equipo && data.equipo.length > 1) {
-        _modalTareaId   = parseInt(id);
-        _modalUsuarioId = data.usuario_id;
-        abrirModalParticipantes(parseInt(id), data.usuario_id, data.equipo);
-      } else if (data.completado) {
-        guardarParticipantes([data.usuario_id]);
+      if (data.completado) {
+        _modalTareaId = parseInt(id); _modalUsuarioId = data.usuario_id;
+        if (data.equipo?.length > 1) {
+          const box = document.getElementById('participantes-checkboxes');
+          box.innerHTML = data.equipo.map(e => `
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="mp_${e.id}" value="${e.id}" ${e.id === data.usuario_id ? 'checked' : ''}>
+              <label class="form-check-label" for="mp_${e.id}">${e.nombre} <span class="text-muted small">(${e.cargo})</span></label>
+            </div>`).join('');
+          bsModal.show();
+        } else {
+          const soloId = (data.equipo?.length === 1) ? data.equipo[0].id : data.usuario_id;
+          guardarParticipantes([soloId]);
+        }
+        if (row) setTimeout(() => row.remove(), 300);
       }
     }).catch(() => {
       icon.className = eraCompletado ? 'bi bi-check-circle-fill text-success fs-6' : 'bi bi-circle text-muted fs-6';
-      if (texto) texto.classList.toggle('text-decoration-line-through', eraCompletado);
-      const queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
-      queue.push({url: `/tareas/${id}/alternar/`, method: 'POST'});
-      localStorage.setItem('offlineQueue', JSON.stringify(queue));
     });
   });
 });
-
-window.addEventListener('online', function() {
-  const queue = JSON.parse(localStorage.getItem('offlineQueue') || '[]');
-  if (!queue.length) return;
-  Promise.allSettled(queue.map(item =>
-    fetch(item.url, {method: item.method, headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest'}})
-  )).then(() => { localStorage.removeItem('offlineQueue'); location.reload(); });
-});
-
-window.addEventListener('offline', () => { document.title = '[OFFLINE] ' + document.title; });
-window.addEventListener('online',  () => { document.title = document.title.replace('[OFFLINE] ', ''); });
 </script>
 {% endblock %}

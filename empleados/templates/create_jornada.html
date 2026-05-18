@@ -18,13 +18,13 @@
         <div class="card-body p-4">
 
           {% if contrato_vencido %}
-          <div class="alert alert-warning d-flex align-items-start gap-2 py-2 small mb-3">
-            <i class="bi bi-exclamation-triangle-fill mt-1 flex-shrink-0"></i>
+          <div class="alert alert-danger d-flex align-items-start gap-2 py-2 small mb-3">
+            <i class="bi bi-x-circle-fill mt-1 flex-shrink-0"></i>
             <div>
               <strong>Contrato vencido.</strong>
               El contrato de <strong>{{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }}</strong>
               venció el <strong>{{ contrato.fecha_fin|date:"d/m/Y" }}</strong>.
-              La jornada se registrará igualmente, pero el administrador verá un aviso al aprobarla.
+              No se pueden registrar jornadas fuera del rango del contrato. Renueva el contrato primero.
             </div>
           </div>
           {% endif %}
@@ -48,6 +48,7 @@
             <div class="mb-3">
               <label class="form-label">Días trabajados <span class="text-danger">*</span></label>
               {{ form.dias }}
+              <div id="monto-hint" class="form-text text-muted mt-1"></div>
             </div>
             <div class="mb-3">
               <label class="form-label">Observación</label>
@@ -97,7 +98,7 @@
           <div class="card kpi-card green border-0 shadow-sm h-100">
             <div class="card-body py-3 px-3">
               <div class="kpi-value text-success" style="font-size:1.35rem;">Bs. {{ total_ganado|floatformat:2 }}</div>
-              <div class="kpi-label">Total devengado</div>
+              <div class="kpi-label">Total acordado</div>
             </div>
           </div>
         </div>
@@ -226,6 +227,21 @@
       restoreChecked();
     }
   }
+})();
+
+// Hint de monto según días seleccionados
+(function () {
+  const diasSel    = document.getElementById('id_dias');
+  const hint       = document.getElementById('monto-hint');
+  const montoDiario = parseFloat("{{ contrato.monto_diario }}");
+  if (!diasSel || !hint || isNaN(montoDiario)) return;
+  function actualizar() {
+    const val = parseFloat(diasSel.value);
+    if (isNaN(val)) { hint.textContent = ''; return; }
+    hint.textContent = '= Bs. ' + (val * montoDiario).toFixed(2);
+  }
+  diasSel.addEventListener('change', actualizar);
+  actualizar();
 })();
 </script>
 {% endblock %}

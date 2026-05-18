@@ -71,7 +71,7 @@
       </thead>
       <tbody>
         {% for proveedor in proveedores %}
-        <tr>
+        <tr data-href="{% url 'proveedor_detail' proveedor.id %}">
           <td class="small fw-semibold">{{ proveedor.nombre }}</td>
           <td class="small">{{ proveedor.get_rubro_display }}</td>
           <td class="small">{{ proveedor.telefono }}</td>

@@ -72,7 +72,7 @@
       </thead>
       <tbody>
         {% for compra in compras %}
-        <tr>
+        <tr data-href="{% url 'compra_detail' compra.id %}">
           <td class="small">{{ compra.proveedor.nombre|default:"Proveedor eliminado" }}</td>
           <td class="small fw-semibold">{{ compra.insumo.nombre|default:"Insumo eliminado" }}</td>
           <td class="text-center small">{{ compra.cantidad }} {{ compra.insumo.unidad_abrev|default:"u." }}</td>

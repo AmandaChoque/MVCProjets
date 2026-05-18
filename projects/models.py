@@ -14,6 +14,7 @@ from django.dispatch import receiver
 
 from django.db.models import Sum
 from dateutil.relativedelta import relativedelta
+from django.apps import apps
 # Create your models here.
 
 # Auditoria
@@ -27,10 +28,25 @@ class AuditModel(models.Model):
         related_name='+',
         verbose_name="Eliminado por"
     )
+    modificado_por = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL,
+        related_name='+',
+        verbose_name="Modificado por"
+    )
     activo = models.BooleanField(default=True, db_index=True, verbose_name="Activo")
 
     class Meta:
         abstract = True
+
+    def save(self, *args, **kwargs):
+        user = getattr(self, '_modified_by', None)
+        if user is not None:
+            self.modificado_por = user
+            update_fields = kwargs.get('update_fields')
+            if update_fields is not None and 'modificado_por' not in update_fields:
+                kwargs['update_fields'] = list(update_fields) + ['modificado_por']
+        super().save(*args, **kwargs)
 
 
 # Contratante
@@ -230,6 +246,39 @@ class AsignacionProyecto(AuditModel):
         if self.fecha_fin_plan:
             hoy = date.today()
             return max((hoy - self.fecha_fin_plan).days, 0)
+        return 0
+
+    @property
+    def estado_asignacion(self):
+        """
+        Estado calculado al vuelo según fechas y avance real.
+        completada  → proyecto completado o días reales >= días planificados
+        vencida     → fecha_fin_plan ya pasó y no está completada
+        por_vencer  → quedan ≤ 5 días para fecha_fin_plan
+        en_curso    → dentro del rango de fechas
+        pendiente   → fecha_inicio_plan aún no llegó (o sin fechas)
+        """
+        hoy = date.today()
+        if self.proyecto.estado_proyecto == 'cancelado':
+            return 'cancelado'
+        if self.proyecto.estado_proyecto == 'completado':
+            return 'completada'
+        if self.dias_planificados and self.dias_reales >= self.dias_planificados:
+            return 'completada'
+        if self.fecha_fin_plan:
+            if hoy > self.fecha_fin_plan:
+                return 'vencida'
+            if (self.fecha_fin_plan - hoy).days <= 5:
+                return 'por_vencer'
+        if self.fecha_inicio_plan and hoy >= self.fecha_inicio_plan:
+            return 'en_curso'
+        return 'pendiente'
+
+    @property
+    def pct_avance(self):
+        """Porcentaje de días reales sobre días planificados (máx 100)."""
+        if self.dias_planificados and self.dias_planificados > 0:
+            return min(round((self.dias_reales / self.dias_planificados) * 100), 100)
         return 0
 
 
@@ -561,7 +610,7 @@ class FotoSede(AuditModel):
         ordering = ['-created']
 
     def __str__(self):
-        return f"Foto — {self.sede.nombre} ({self.created.date() if self.created else ''})"
+        return f"Foto — {self.sede.nombre} ({timezone.localtime(self.created).date() if self.created else ''})"
 
 
 # ── Tarea de checklist por sede ───────────────────────────────────────────────
@@ -723,28 +772,6 @@ def _saldo_pendiente_proyecto(proyecto):
     return max(Decimal('0'), proyecto.monto_total - cubierto)
 
 
-def _aplicar_pago_pendiente_proyecto(proyecto, estado_nuevo):
-    """Crea o desactiva el PagoProyecto pendiente según el estado del proyecto."""
-    if estado_nuevo == 'completado':
-        if not proyecto.pagos.filter(activo=True, estado='pendiente').exists():
-            saldo = _saldo_pendiente_proyecto(proyecto)
-            if saldo > 0:
-                PagoProyecto.objects.create(
-                    proyecto=proyecto,
-                    monto=saldo,
-                    fecha=date.today(),
-                    tipo_pago='efectivo',
-                    estado='pendiente',
-                )
-    else:
-        proyecto.pagos.filter(activo=True, estado='pendiente').update(activo=False)
-
-
-@receiver(post_save, sender=Proyecto)
-def sync_pago_pendiente_proyecto(sender, instance, **kwargs):
-    _aplicar_pago_pendiente_proyecto(instance, instance.estado_proyecto)
-
-
 # ── Señal: notificaciones de sede ────────────────────────────────────────────
 
 # ── Garantía post-instalación ─────────────────────────────────────────────────
@@ -872,6 +899,14 @@ def crear_garantia_al_completar(sender, instance, **kwargs):
     )
 
 
+@receiver(post_save, sender=Proyecto)
+def desactivar_contrato_al_cancelar(sender, instance, **kwargs):
+    """Al cancelar un proyecto desactiva su ContratoProyecto activo (si existe)."""
+    if instance.estado_proyecto != 'cancelado':
+        return
+    instance.contratos.filter(activo=True).update(activo=False, deleted_at=timezone.now())
+
+
 @receiver(post_save, sender=TareaChecklist)
 def notificar_sede_completada(sender, instance, **kwargs):
     """
@@ -899,7 +934,7 @@ def notificar_sede_completada(sender, instance, **kwargs):
             nuevo_estado = 'pendiente'
         if proyecto.estado_proyecto != nuevo_estado:
             update_fields = {'estado_proyecto': nuevo_estado}
-            hoy = timezone.now().date()
+            hoy = timezone.localdate()
             # Primer avance → fijar fecha_inicio del proyecto
             if nuevo_estado == 'en_progreso' and not proyecto.fecha_inicio:
                 update_fields['fecha_inicio'] = hoy
@@ -907,8 +942,6 @@ def notificar_sede_completada(sender, instance, **kwargs):
             if nuevo_estado == 'completado' and not proyecto.fecha_fin:
                 update_fields['fecha_fin'] = hoy
             Proyecto.objects.filter(pk=proyecto.pk).update(**update_fields)
-            # .update() bypasses post_save; sincronizar pago pendiente manualmente
-            _aplicar_pago_pendiente_proyecto(proyecto, nuevo_estado)
 
     if sede.estado == 'completado':
         admins = list(get_user_model().objects.filter(
@@ -936,3 +969,42 @@ def notificar_sede_completada(sender, instance, **kwargs):
             if nuevas:
                 Notificacion.objects.bulk_create(nuevas)
 
+
+@receiver(post_save, sender=TareaChecklist)
+def crear_jornada_al_completar_tarea(sender, instance, **kwargs):
+    """
+    Si la tarea se marca completada y tiene exactamente un participante,
+    crea automáticamente una JornadaEmpleado pendiente para ese empleado.
+    """
+    if not instance.activo or not instance.completado:
+        return
+
+    participantes = list(instance.participantes.all())
+    if len(participantes) != 1:
+        return
+
+    empleado = participantes[0]
+    proyecto = instance.sede.proyecto
+    fecha = instance.fecha_completado.date() if instance.fecha_completado else timezone.localdate()
+
+    JornadaEmpleado = apps.get_model('empleados', 'JornadaEmpleado')
+    ContratoEmpleado = apps.get_model('empleados', 'ContratoEmpleado')
+
+    contrato = ContratoEmpleado.objects.filter(empleado=empleado, activo=True).first()
+    if not contrato:
+        return
+
+    if fecha < contrato.fecha_inicio or fecha > contrato.fecha_fin:
+        return
+
+    JornadaEmpleado.objects.get_or_create(
+        contrato=contrato,
+        proyecto=proyecto,
+        fecha=fecha,
+        defaults={
+            'dias': Decimal('1.0'),
+            'observacion': '',
+            'estado': 'pendiente',
+            'registrado_por': instance.completado_por,
+        }
+    )

@@ -91,7 +91,7 @@
 
           <tbody>
             {% for g in garantias %}
-            <tr>
+            <tr data-href="{% url 'garantia_detail' g.id %}">
               <td class="ps-3 fw-semibold">{{ g.contrato.proyecto.nombre }}</td>
               <td class="text-muted">
                 {{ g.contrato.proyecto.cliente.nombre }} {{ g.contrato.proyecto.cliente.apellido_paterno }}

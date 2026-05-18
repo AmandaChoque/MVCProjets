@@ -86,11 +86,12 @@
               <thead class="table-light small text-uppercase fw-semibold">
                 <tr>
                   <th class="px-3">Período</th>
-                  <th class="text-end">Monto acordado (Bs.)</th>
+                  <th class="text-end">Total acordado (Bs.)</th>
                   <th class="text-center">Estado</th>
                   <th class="text-center">Vigencia</th>
+                  {% if employee.cargo == 'instalador' or employee.cargo == 'tecnico_soporte' %}
                   <th class="text-center">Días trab.</th>
-                  <th class="text-end">Devengado (Bs.)</th>
+                  {% endif %}
                   <th class="text-end">Pagado (Bs.)</th>
                   <th class="text-end px-3">Saldo (Bs.)</th>
                   <th></th>
@@ -112,17 +113,20 @@
                     {% else %}
                       <span class="badge bg-secondary fw-normal">Inhabilitado</span>
                     {% endif %}
-                    {% if item.jornadas_pendientes > 0 %}
-                      <br><span class="badge bg-warning text-dark fw-normal mt-1" title="Jornadas pendientes de aprobar">
-                        <i class="bi bi-clock me-1"></i>{{ item.jornadas_pendientes }} pendiente{{ item.jornadas_pendientes|pluralize:"s" }}
-                      </span>
+                    {% if employee.cargo == 'instalador' or employee.cargo == 'tecnico_soporte' %}
+                      {% if item.jornadas_pendientes > 0 %}
+                        <br><span class="badge bg-warning text-dark fw-normal mt-1" title="Jornadas pendientes de aprobar">
+                          <i class="bi bi-clock me-1"></i>{{ item.jornadas_pendientes }} pendiente{{ item.jornadas_pendientes|pluralize:"s" }}
+                        </span>
+                      {% endif %}
                     {% endif %}
                   </td>
                   <td class="text-center text-muted small">
                     {{ item.contrato.fecha_inicio|date:"d/m/Y" }}<br>{{ item.contrato.fecha_fin|date:"d/m/Y" }}
                   </td>
+                  {% if employee.cargo == 'instalador' or employee.cargo == 'tecnico_soporte' %}
                   <td class="text-center fw-semibold">{{ item.total_dias }}</td>
-                  <td class="text-end text-success fw-semibold">{{ item.total_ganado|floatformat:2 }}</td>
+                  {% endif %}
                   <td class="text-end text-info fw-semibold">{{ item.total_pagado|floatformat:2 }}</td>
                   <td class="text-end px-3 fw-semibold {% if item.saldo_jornadas > 0 %}text-danger{% else %}text-success{% endif %}">
                     {{ item.saldo_jornadas|floatformat:2 }}

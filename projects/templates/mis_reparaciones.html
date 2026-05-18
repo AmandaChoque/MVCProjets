@@ -26,7 +26,7 @@
           </thead>
           <tbody>
             {% for inc in incidencias %}
-            <tr>
+            <tr data-href="{% url 'incidencia_garantia_detail' inc.id %}">
               <td class="ps-4">
                 <span class="fw-semibold small">{{ inc.garantia.contrato.proyecto.nombre }}</span><br>
                 <span class="text-muted" style="font-size:0.75rem;">

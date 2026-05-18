@@ -13,6 +13,7 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 
 from projects.models import Proyecto
 from projects.decorators import cargo_required, ROLES_ADMIN, ROLES_CAMPO, ROLES_INSTALADOR
+from projects.validators import parse_pagination
 from .models import Proveedor, Insumo, Requiere, Compra, RequiereLote, calcular_costo_fifo
 from .forms import ProveedorForm, InsumoForm, RequerirForm, CompraForm
 
@@ -23,17 +24,7 @@ from .forms import ProveedorForm, InsumoForm, RequerirForm, CompraForm
 @cargo_required(*ROLES_CAMPO)
 def proveedores(request):
     search_nombre = request.GET.get('search_nombre', '')
-    page     = request.GET.get('page', 1)
-    per_page = request.GET.get('per_page', 10)
-
-    try:
-        page = max(int(page), 1)
-    except ValueError:
-        page = 1
-    try:
-        per_page = int(per_page) if int(per_page) in [10, 20, 50, 100] else 10
-    except ValueError:
-        per_page = 10
+    page, per_page = parse_pagination(request)
 
     qs = Proveedor.objects.filter(activo=True).order_by('nombre')
     if search_nombre:
@@ -115,17 +106,7 @@ def insumos(request):
     search_nombre    = request.GET.get('search_nombre', '')
     filter_categoria = request.GET.get('filter_categoria', '')
     filter_stock     = request.GET.get('filter_stock', '')
-    page     = request.GET.get('page', 1)
-    per_page = request.GET.get('per_page', 10)
-
-    try:
-        page = max(int(page), 1)
-    except ValueError:
-        page = 1
-    try:
-        per_page = int(per_page) if int(per_page) in [10, 20, 50, 100] else 10
-    except ValueError:
-        per_page = 10
+    page, per_page = parse_pagination(request)
 
     qs = Insumo.objects.filter(activo=True).order_by('categoria', 'nombre')
     if search_nombre:
@@ -424,17 +405,7 @@ def deactivate_requiere(request, id_requiere):
 @cargo_required(*ROLES_CAMPO)
 def compras(request):
     search   = request.GET.get('search', '')
-    page     = request.GET.get('page', 1)
-    per_page = request.GET.get('per_page', 10)
-
-    try:
-        page = max(int(page), 1)
-    except ValueError:
-        page = 1
-    try:
-        per_page = int(per_page) if int(per_page) in [10, 20, 50, 100] else 10
-    except ValueError:
-        per_page = 10
+    page, per_page = parse_pagination(request)
 
     qs = Compra.objects.filter(activo=True).select_related('proveedor', 'insumo').order_by('-fecha')
     if search:
@@ -520,10 +491,7 @@ def inventario_report(request):
     search_nombre    = request.GET.get('search_nombre', '').strip()
     filter_categoria = request.GET.get('filter_categoria', '')
     filter_stock     = request.GET.get('filter_stock', '')
-    per_page = int(request.GET.get('per_page', 10))
-    if per_page not in (10, 20, 50, 100):
-        per_page = 10
-    page = request.GET.get('page', 1)
+    page, per_page = parse_pagination(request)
 
     qs = Insumo.objects.filter(activo=True).order_by('categoria', 'nombre')
     if search_nombre:
@@ -537,47 +505,63 @@ def inventario_report(request):
     elif filter_stock == 'ok':
         qs = qs.exclude(stock__lte=0).exclude(stock_minimo__gt=0, stock__lte=F('stock_minimo'))
 
-    insumos_list = list(qs)
-    for ins in insumos_list:
-        ins.valor_stock = ins.stock * ins.ultimo_precio_compra
-        ins.estado = ins.stock_status  # 'agotado', 'bajo', 'ok'
+    from django.db.models import Count, ExpressionWrapper, DecimalField as DjDecimalField
+    from decimal import Decimal
 
-    total_insumos = len(insumos_list)
-    cnt_agotados  = sum(1 for i in insumos_list if i.estado == 'agotado')
-    cnt_bajo      = sum(1 for i in insumos_list if i.estado == 'bajo')
-    cnt_ok        = sum(1 for i in insumos_list if i.estado == 'ok')
-    valor_total   = sum(i.valor_stock for i in insumos_list)
+    # Expresión reutilizable: stock × precio = valor en stock
+    valor_expr = ExpressionWrapper(
+        F('stock') * F('ultimo_precio_compra'),
+        output_field=DjDecimalField(max_digits=14, decimal_places=2)
+    )
 
-    # ── Datos para gráficos (solo en vista HTML, no en PDF/Excel) ─────────────
-    # Gráfico 1: cantidad de ítems por categoría
-    from collections import defaultdict
-    cat_counts  = defaultdict(int)
-    cat_valores = defaultdict(float)
+    # ── KPIs desde BD (sin cargar objetos) ───────────────────────────────────
+    agg = qs.aggregate(
+        total=Count('id'),
+        valor_total=Sum(valor_expr),
+        cnt_agotados=Count('id', filter=Q(stock__lte=0)),
+        cnt_bajo=Count('id', filter=Q(
+            stock__gt=0, stock_minimo__gt=0, stock__lte=F('stock_minimo')
+        )),
+    )
+    total_insumos = agg['total']
+    valor_total   = agg['valor_total'] or Decimal('0')
+    cnt_agotados  = agg['cnt_agotados']
+    cnt_bajo      = agg['cnt_bajo']
+    cnt_ok        = total_insumos - cnt_agotados - cnt_bajo
+
+    # ── Gráfico 1: cantidad e valor por categoría (GROUP BY en BD) ───────────
     cat_labels_map = dict(Insumo.CATEGORIA_CHOICES)
-    for ins in insumos_list:
-        label = cat_labels_map.get(ins.categoria, ins.categoria)
-        cat_counts[label]  += 1
-        cat_valores[label] += float(ins.valor_stock)
+    cat_data = list(
+        qs.values('categoria')
+        .annotate(cnt=Count('id'), val=Sum(valor_expr))
+        .order_by('categoria')
+    )
+    chart_cat_labels  = json.dumps([cat_labels_map.get(r['categoria'], r['categoria']) for r in cat_data])
+    chart_cat_counts  = json.dumps([r['cnt'] for r in cat_data])
+    chart_cat_valores = json.dumps([round(float(r['val'] or 0), 2) for r in cat_data])
 
-    chart_cat_labels = json.dumps(list(cat_counts.keys()))
-    chart_cat_counts = json.dumps(list(cat_counts.values()))
-    chart_cat_valores = json.dumps([round(v, 2) for v in cat_valores.values()])
+    # ── Gráfico 2: top 8 por valor en stock (ORDER BY + LIMIT en BD) ─────────
+    top_8 = list(qs.annotate(valor_stock=valor_expr).order_by('-valor_stock')[:8])
+    chart_top_labels  = json.dumps([i.nombre[:20] for i in top_8])
+    chart_top_valores = json.dumps([float(i.valor_stock or 0) for i in top_8])
 
-    # Gráfico 2: top 8 insumos por valor en stock
-    top_insumos = sorted(insumos_list, key=lambda x: x.valor_stock, reverse=True)[:8]
-    chart_top_labels = json.dumps([f"{i.nombre[:20]}" for i in top_insumos])
-    chart_top_valores = json.dumps([float(i.valor_stock) for i in top_insumos])
+    # ── Carga de items: todos para PDF/Excel, paginados para HTML ────────────
+    qs_anotado = qs.annotate(valor_stock=valor_expr)
 
-    # PDF/Excel: lista completa; HTML: paginada
     if 'pdf' in request.GET or 'excel' in request.GET:
+        insumos_list = list(qs_anotado)
+        for ins in insumos_list:
+            ins.estado = ins.stock_status
         insumos_page = None
     else:
-        paginator = Paginator(insumos_list, per_page)
+        paginator = Paginator(qs_anotado, per_page)
         try:
             insumos_page = paginator.page(page)
         except (PageNotAnInteger, EmptyPage):
             insumos_page = paginator.page(1)
         insumos_list = list(insumos_page.object_list)
+        for ins in insumos_list:
+            ins.estado = ins.stock_status
 
     context = {
         'insumos':           insumos_list,
@@ -647,7 +631,7 @@ def inventario_report(request):
         ws.row_dimensions[1].height = 26
 
         gen_por  = request.user.get_full_name() or request.user.username
-        info_str = f'Generado por: {gen_por}  |  Fecha: {timezone.now().strftime("%d/%m/%Y %H:%M")}'
+        info_str = f'Generado por: {gen_por}  |  Fecha: {timezone.localtime(timezone.now()).strftime("%d/%m/%Y %H:%M")}'
         if search_nombre:      info_str += f'  |  Nombre: {search_nombre}'
         if filter_categoria:   info_str += f'  |  Categoría: {filter_categoria}'
         if filter_stock:       info_str += f'  |  Stock: {filter_stock}'

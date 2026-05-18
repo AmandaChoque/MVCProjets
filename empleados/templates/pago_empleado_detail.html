@@ -2,46 +2,69 @@
 
 {% block extra_css %}
 <style>
-  .was-validated .form-control:valid,
-  .was-validated .form-select:valid {
-    border-color: #dee2e6;
-    background-image: none;
+  .concepto-card {
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: border-color .15s, background-color .15s;
   }
-  .was-validated .form-control:valid:focus,
-  .was-validated .form-select:valid:focus {
-    border-color: #dee2e6;
-    box-shadow: 0 0 0 0.25rem rgba(39, 128, 227, 0.25);
-  }
-  .valid-feedback { display: none; }
+  .concepto-card:hover { border-color: #adb5bd; }
+  .concepto-card.selected { border-color: #0F2D5A; background-color: #f0f4fb; }
+  .concepto-card .concepto-icon { font-size: 1.4rem; }
 </style>
 {% endblock %}
 
 {% block content %}
 <main class="container-fluid px-4 py-4">
+
   <div class="mb-3">
-    <a href="{% url 'contrato_empleado_detail' contrato.id %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
+    <a href="{% if next_url %}{{ next_url }}{% else %}{% url 'contrato_empleado_detail' contrato.id %}{% endif %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-arrow-left me-1"></i>Volver
+    </a>
   </div>
 
-  <!-- Resumen del contrato -->
-  <div class="card border-0 shadow-sm rounded-3 mb-4">
-    <div class="card-body p-3">
-      <div class="row g-3 text-center">
-        <div class="col-md-3">
-          <div class="text-muted small">Días trabajados</div>
-          <div class="fw-semibold">{{ resumen.total_dias }} día(s)</div>
-          <div class="text-muted" style="font-size:0.75rem;">Bs. {{ contrato.monto_diario|floatformat:2 }} / día</div>
+  <!-- Encabezado -->
+  <div class="mb-3">
+    <h5 class="fw-bold text-sobotec mb-0">
+      {{ contrato.empleado.nombre }} {{ contrato.empleado.apellido_paterno }}
+      <span class="text-muted fw-normal fs-6">— Editar Pago</span>
+    </h5>
+    <div class="text-muted small">
+      Contrato: {{ contrato.fecha_inicio|date:"d/m/Y" }} – {{ contrato.fecha_fin|date:"d/m/Y" }}
+      &nbsp;·&nbsp; Bs. {{ contrato.monto_diario|floatformat:2 }} / día
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card blue border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-primary">{{ resumen.total_dias }}</div>
+          <div class="kpi-label">Días trabajados</div>
         </div>
-        <div class="col-md-3">
-          <div class="text-muted small">Total ganado</div>
-          <div class="fw-semibold text-primary">Bs. {{ resumen.ganado|floatformat:2 }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card green border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-success" style="font-size:1.3rem;">{{ contrato.monto_acordado|floatformat:2 }}</div>
+          <div class="kpi-label">Total acordado Bs.</div>
         </div>
-        <div class="col-md-3">
-          <div class="text-muted small">Ya pagado</div>
-          <div class="fw-semibold text-success">Bs. {{ resumen.pagado|floatformat:2 }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card teal border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-success" style="font-size:1.3rem; color:#20c997 !important;">{{ resumen.pagado|floatformat:2 }}</div>
+          <div class="kpi-label">Ya pagado Bs. <span class="text-muted fw-normal" style="font-size:.7rem;">(sin este pago)</span></div>
         </div>
-        <div class="col-md-3">
-          <div class="text-muted small">Saldo pendiente</div>
-          <div class="fw-bold {% if resumen.saldo > 0 %}text-danger{% else %}text-success{% endif %}">Bs. {{ resumen.saldo|floatformat:2 }}</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card {% if resumen.saldo > 0 %}red{% else %}gray{% endif %} border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value {% if resumen.saldo > 0 %}text-danger{% else %}text-secondary{% endif %}" style="font-size:1.3rem;">{{ resumen.saldo|floatformat:2 }}</div>
+          <div class="kpi-label">Saldo pendiente Bs.</div>
         </div>
       </div>
     </div>
@@ -51,116 +74,185 @@
     <div class="card-body p-4">
       <form method="POST" class="needs-validation" novalidate>
         {% csrf_token %}
+        {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}">{% endif %}
+
+        {# Campo oculto — se actualiza con JS al elegir tarjeta de concepto #}
+        {{ form.concepto.as_hidden }}
+
         {% if form.non_field_errors %}
         <div class="alert alert-danger mt-2">
           {% for err in form.non_field_errors %}{{ err }}{% if not forloop.last %}<br>{% endif %}{% endfor %}
         </div>
         {% endif %}
-
-        <div class="row g-4">
-          <div class="col-lg-6">
-            <div class="mb-3">
-              <label class="form-label">Monto (Bs.) <span class="text-danger">*</span></label>
-              {{ form.monto }}
-              {% if form.monto.errors %}
-              <div class="text-danger small mt-1">{% for err in form.monto.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Fecha <span class="text-danger">*</span></label>
-              {{ form.fecha }}
-              {% if form.fecha.errors %}
-              <div class="text-danger small mt-1">{% for err in form.fecha.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
-            </div>
-          </div>
-          <div class="col-lg-6">
-            <div class="mb-3">
-              <label class="form-label">Concepto <span class="text-danger">*</span></label>
-              {{ form.concepto }}
-              {% if form.concepto.errors %}
-              <div class="text-danger small mt-1">{% for err in form.concepto.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Método de Pago <span class="text-danger">*</span></label>
-              {{ form.tipo_pago }}
-              {% if form.tipo_pago.errors %}
-              <div class="text-danger small mt-1">{% for err in form.tipo_pago.errors %}{{ err }}{% endfor %}</div>
-              {% endif %}
-            </div>
-          </div>
-        </div>
-
-        <div class="text-muted small mt-2 mb-3">
-          <span class="text-danger">*</span> Campos obligatorios
-        </div>
-
-        <!-- Jornadas cubiertas por este pago -->
-        <div class="mt-3 mb-1">
-          <label class="form-label fw-semibold">Jornadas cubiertas por este pago</label>
-        </div>
-        {% if jornadas_cubiertas or jornadas_pendientes %}
-        <div class="table-responsive mb-3">
-          <table class="table table-sm table-hover align-middle mb-0">
-            <thead class="table-light">
-              <tr>
-                <th style="width:40px;"><input type="checkbox" id="chk_all" class="form-check-input"></th>
-                <th>Fecha</th>
-                <th>Proyecto</th>
-                <th class="text-center">Días</th>
-                <th class="text-end">Monto (Bs.)</th>
-                <th class="text-center">Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {% for j in jornadas_cubiertas %}
-              <tr>
-                <td><input type="checkbox" name="jornadas" value="{{ j.pk }}" class="form-check-input chk-jornada" data-monto="{{ j.monto }}" checked></td>
-                <td>{{ j.fecha }}</td>
-                <td>{{ j.proyecto.nombre }}</td>
-                <td class="text-center">{% if j.dias == 1.0 %}Día completo{% else %}Medio día{% endif %}</td>
-                <td class="text-end">{{ j.monto|floatformat:2 }}</td>
-                <td class="text-center"><span class="badge bg-success-subtle text-success">Cubierta</span></td>
-              </tr>
-              {% endfor %}
-              {% for j in jornadas_pendientes %}
-              <tr>
-                <td><input type="checkbox" name="jornadas" value="{{ j.pk }}" class="form-check-input chk-jornada" data-monto="{{ j.monto }}"></td>
-                <td>{{ j.fecha }}</td>
-                <td>{{ j.proyecto.nombre }}</td>
-                <td class="text-center">{% if j.dias == 1.0 %}Día completo{% else %}Medio día{% endif %}</td>
-                <td class="text-end">{{ j.monto|floatformat:2 }}</td>
-                <td class="text-center"><span class="badge bg-warning-subtle text-warning">Pendiente</span></td>
-              </tr>
-              {% endfor %}
-            </tbody>
-          </table>
-        </div>
-        {% else %}
-        <div class="alert alert-light border text-muted small py-2 mb-3">
-          No hay jornadas registradas en este contrato.
+        {% if form.concepto.errors %}
+        <div class="alert alert-danger py-2 small">
+          {% for err in form.concepto.errors %}{{ err }}{% endfor %}
         </div>
         {% endif %}
 
-        <div class="d-flex justify-content-between mt-4">
-          {% if contrato.proyecto %}<a href="{% url 'project_view' contrato.proyecto.id %}" class="btn btn-outline-secondary">Cancelar</a>{% else %}<a href="{% url 'employee_view' contrato.empleado.id %}" class="btn btn-outline-secondary">Cancelar</a>{% endif %}
+        <!-- ── 1. CONCEPTO ───────────────────────────────────── -->
+        <div class="mb-4">
+          <label class="form-label fw-semibold">Tipo de pago <span class="text-danger">*</span></label>
+          <div class="row g-2" id="concepto-cards">
+
+            <div class="col-6 col-md-4 col-lg concepto-option" data-value="pago_jornada">
+              <div class="concepto-card card border rounded-3 h-100 p-3 text-center">
+                <div class="concepto-icon mb-1"><i class="bi bi-calendar-check text-primary"></i></div>
+                <div class="fw-semibold small">Pago por jornada(s)</div>
+                <div class="text-muted" style="font-size:.68rem;">Cubre días trabajados</div>
+              </div>
+            </div>
+
+            <div class="col-6 col-md-4 col-lg concepto-option" data-value="adelanto">
+              <div class="concepto-card card border rounded-3 h-100 p-3 text-center">
+                <div class="concepto-icon mb-1"><i class="bi bi-cash-coin text-warning"></i></div>
+                <div class="fw-semibold small">Adelanto</div>
+                <div class="text-muted" style="font-size:.68rem;">Pago anticipado parcial</div>
+              </div>
+            </div>
+
+            <div class="col-6 col-md-4 col-lg concepto-option" data-value="liquidacion">
+              <div class="concepto-card card border rounded-3 h-100 p-3 text-center">
+                <div class="concepto-icon mb-1"><i class="bi bi-file-earmark-check text-success"></i></div>
+                <div class="fw-semibold small">Liquidación final</div>
+                <div class="text-muted" style="font-size:.68rem;">Cierre total del contrato</div>
+              </div>
+            </div>
+
+
+          </div>
+        </div>
+
+        <!-- ── 2. JORNADAS (solo para pago_jornada) ─────────── -->
+        <div id="seccion-jornadas" class="d-none mb-4">
+          {% if jornadas_cubiertas or jornadas_pendientes %}
+          <label class="form-label fw-semibold">
+            Jornadas cubiertas
+            <span class="text-muted fw-normal small">(las marcadas quedan vinculadas a este pago)</span>
+          </label>
+          <div class="card border-0 bg-light rounded-3">
+            <div class="table-responsive">
+              <table class="table table-sm table-hover align-middle mb-0 small">
+                <thead class="table-light">
+                  <tr>
+                    <th style="width:40px;">
+                      <input type="checkbox" id="chk_all" class="form-check-input">
+                    </th>
+                    <th>Fecha</th>
+                    <th>Proyecto</th>
+                    <th class="text-center">Días</th>
+                    <th class="text-end">Monto (Bs.)</th>
+                    <th class="text-center">Estado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for j in jornadas_cubiertas %}
+                  <tr>
+                    <td><input type="checkbox" name="jornadas" value="{{ j.pk }}"
+                               class="form-check-input chk-jornada" data-monto="{{ j.monto }}" checked></td>
+                    <td>{{ j.fecha|date:"d/m/Y" }}</td>
+                    <td>{{ j.proyecto.nombre }}</td>
+                    <td class="text-center">{% if j.dias == 1.0 %}Día completo{% else %}Medio día{% endif %}</td>
+                    <td class="text-end fw-semibold">{{ j.monto|floatformat:2 }}</td>
+                    <td class="text-center"><span class="badge bg-success-subtle text-success">Cubierta</span></td>
+                  </tr>
+                  {% endfor %}
+                  {% for j in jornadas_pendientes %}
+                  <tr>
+                    <td><input type="checkbox" name="jornadas" value="{{ j.pk }}"
+                               class="form-check-input chk-jornada" data-monto="{{ j.monto }}"></td>
+                    <td>{{ j.fecha|date:"d/m/Y" }}</td>
+                    <td>{{ j.proyecto.nombre }}</td>
+                    <td class="text-center">{% if j.dias == 1.0 %}Día completo{% else %}Medio día{% endif %}</td>
+                    <td class="text-end fw-semibold">{{ j.monto|floatformat:2 }}</td>
+                    <td class="text-center"><span class="badge bg-warning-subtle text-warning">Pendiente</span></td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          {% else %}
+          <div class="alert alert-light border text-muted small py-2">
+            <i class="bi bi-info-circle me-1"></i>
+            No hay jornadas registradas en este contrato.
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- ── 3. MONTO, FECHA Y MÉTODO ──────────────────────── -->
+        <div class="row g-3 mb-3">
+          <div class="col-md-4">
+            <label class="form-label">Monto (Bs.) <span class="text-danger">*</span></label>
+            {{ form.monto }}
+            {% if form.monto.errors %}
+            <div class="text-danger small mt-1">{% for err in form.monto.errors %}{{ err }}{% endfor %}</div>
+            {% endif %}
+          </div>
+          <div class="col-md-4">
+            <label class="form-label">Fecha <span class="text-danger">*</span></label>
+            {{ form.fecha }}
+            {% if form.fecha.errors %}
+            <div class="text-danger small mt-1">{% for err in form.fecha.errors %}{{ err }}{% endfor %}</div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- ── 4. MINI RESUMEN EN TIEMPO REAL ────────────────── -->
+        <div class="border rounded-3 bg-light px-3 py-2 mb-4"
+             data-acordado="{{ contrato.monto_acordado }}"
+             data-pagado="{{ resumen.pagado }}"
+             id="resumen-pago">
+          <div class="row g-0 text-center">
+            <div class="col border-end py-2">
+              <div class="text-muted" style="font-size:.72rem;">Total acordado</div>
+              <div class="fw-semibold small">Bs. {{ contrato.monto_acordado|floatformat:2 }}</div>
+            </div>
+            <div class="col border-end py-2">
+              <div class="text-muted" style="font-size:.72rem;">Ya pagado</div>
+              <div class="fw-semibold small text-success">Bs. {{ resumen.pagado|floatformat:2 }}</div>
+            </div>
+            <div class="col border-end py-2">
+              <div class="text-muted" style="font-size:.72rem;">Este pago</div>
+              <div class="fw-semibold small text-primary" id="rp-este">Bs. 0.00</div>
+            </div>
+            <div class="col py-2">
+              <div class="text-muted" style="font-size:.72rem;">Total acumulado</div>
+              <div class="fw-bold small" id="rp-total">Bs. {{ resumen.pagado|floatformat:2 }}</div>
+            </div>
+          </div>
+          <div id="rp-alerta" class="alert alert-danger py-1 px-2 small mt-2 mb-0 d-none">
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            El total acumulado supera el monto acordado del contrato.
+          </div>
+        </div>
+
+        <!-- ── BOTONES ────────────────────────────────────────── -->
+        <div class="d-flex justify-content-between mt-2">
+          {% if next_url %}
+          <a href="{{ next_url }}" class="btn btn-outline-secondary">Cancelar</a>
+          {% elif contrato.proyecto %}
+          <a href="{% url 'project_view' contrato.proyecto.id %}" class="btn btn-outline-secondary">Cancelar</a>
+          {% else %}
+          <a href="{% url 'employee_view' contrato.empleado.id %}" class="btn btn-outline-secondary">Cancelar</a>
+          {% endif %}
           <div class="d-flex gap-2">
-            {% if es_admin %}
+            {% if es_admin and pago.estado == 'pendiente' %}
             <button type="button" class="btn btn-outline-danger"
                     data-bs-toggle="modal" data-bs-target="#deleteModal">
               Eliminar
             </button>
             {% endif %}
-            <button class="btn btn-primary px-4" type="submit">Guardar Cambios</button>
+            <button class="btn btn-primary px-4" type="submit" id="btn-guardar">Guardar Cambios</button>
           </div>
         </div>
+
       </form>
     </div>
   </div>
 </main>
 
-{% if es_admin %}
+{% if es_admin and pago.estado == 'pendiente' %}
 <div class="modal fade" id="deleteModal" tabindex="-1">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -187,14 +279,82 @@
 
 {% block extra_js %}
 <script>
-  var montoInput = document.getElementById('id_monto');
+(function () {
+  'use strict';
 
+  var conceptoInput = document.getElementById('id_concepto');
+  var montoInput    = document.getElementById('id_monto');
+  var rpEste        = document.getElementById('rp-este');
+  var rpTotal       = document.getElementById('rp-total');
+  var rpAlerta      = document.getElementById('rp-alerta');
+  var btnGuardar    = document.getElementById('btn-guardar');
+  var secJornadas   = document.getElementById('seccion-jornadas');
+  var resumenEl     = document.getElementById('resumen-pago');
+
+  var ACORDADO = parseFloat(resumenEl ? resumenEl.dataset.acordado : 0) || 0;
+  var PAGADO   = parseFloat(resumenEl ? resumenEl.dataset.pagado   : 0) || 0;
+
+  // ── Selección de concepto por tarjeta ──────────────────────
+  document.querySelectorAll('.concepto-option').forEach(function (opt) {
+    opt.addEventListener('click', function () {
+      var val = opt.dataset.value;
+      conceptoInput.value = val;
+      document.querySelectorAll('.concepto-option .concepto-card').forEach(function (c) {
+        c.classList.remove('selected');
+      });
+      opt.querySelector('.concepto-card').classList.add('selected');
+      actualizarSeccionJornadas(val);
+    });
+  });
+
+  function actualizarSeccionJornadas(val) {
+    if (val === 'pago_jornada') {
+      secJornadas.classList.remove('d-none');
+    } else {
+      secJornadas.classList.add('d-none');
+      document.querySelectorAll('.chk-jornada').forEach(function (c) { c.checked = false; });
+      var chkAll = document.getElementById('chk_all');
+      if (chkAll) chkAll.checked = false;
+      actualizarResumen();
+    }
+  }
+
+  // Seleccionar la tarjeta del concepto actual del pago
+  var valorActual = conceptoInput ? conceptoInput.value : '';
+  if (valorActual) {
+    var optActual = document.querySelector('.concepto-option[data-value="' + valorActual + '"]');
+    if (optActual) {
+      optActual.querySelector('.concepto-card').classList.add('selected');
+      actualizarSeccionJornadas(valorActual);
+    }
+  }
+
+  // ── Resumen en tiempo real ──────────────────────────────────
+  function actualizarResumen() {
+    var estePago = parseFloat(montoInput ? montoInput.value : 0) || 0;
+    var total    = PAGADO + estePago;
+    var sobre    = total > ACORDADO + 0.005;
+
+    if (rpEste)  rpEste.textContent  = 'Bs. ' + estePago.toFixed(2);
+    if (rpTotal) {
+      rpTotal.textContent = 'Bs. ' + total.toFixed(2);
+      rpTotal.className   = 'fw-bold small ' + (sobre ? 'text-danger' : total >= ACORDADO - 0.005 ? 'text-success' : 'text-primary');
+    }
+    if (rpAlerta)   rpAlerta.classList.toggle('d-none', !sobre);
+    if (btnGuardar) btnGuardar.disabled = sobre;
+  }
+
+  if (montoInput) montoInput.addEventListener('input', actualizarResumen);
+  actualizarResumen();
+
+  // ── Selección de jornadas → actualiza monto ─────────────────
   function recalcularMonto() {
     var total = 0;
     document.querySelectorAll('.chk-jornada:checked').forEach(function (c) {
       total += parseFloat(c.dataset.monto || 0);
     });
-    if (total > 0 && montoInput) montoInput.value = total.toFixed(2);
+    if (montoInput) montoInput.value = total > 0 ? total.toFixed(2) : '';
+    actualizarResumen();
   }
 
   var chkAll = document.getElementById('chk_all');
@@ -204,26 +364,31 @@
       recalcularMonto();
     });
   }
-
   document.querySelectorAll('.chk-jornada').forEach(function (c) {
     c.addEventListener('change', recalcularMonto);
   });
-  document.querySelectorAll('.text-danger.small.mt-1').forEach(function (errorDiv) {
-    var prev = errorDiv.previousElementSibling;
-    if (prev && (prev.tagName === 'INPUT' || prev.tagName === 'SELECT' || prev.tagName === 'TEXTAREA')) {
+
+  // ── Marcar campos inválidos ─────────────────────────────────
+  document.querySelectorAll('.text-danger.small.mt-1').forEach(function (div) {
+    var prev = div.previousElementSibling;
+    if (prev && (prev.tagName === 'INPUT' || prev.tagName === 'SELECT')) {
       prev.classList.add('is-invalid');
     }
   });
-  (function () {
-    'use strict';
-    window.addEventListener('load', function () {
-      Array.prototype.filter.call(document.getElementsByClassName('needs-validation'), function (form) {
-        form.addEventListener('submit', function (event) {
-          if (!form.checkValidity()) { event.preventDefault(); event.stopPropagation(); }
-          form.classList.add('was-validated');
-        }, false);
-      });
-    }, false);
-  })();
+
+  // ── Validación HTML5 ────────────────────────────────────────
+  window.addEventListener('load', function () {
+    Array.prototype.filter.call(document.getElementsByClassName('needs-validation'), function (form) {
+      form.addEventListener('submit', function (event) {
+        if (!form.checkValidity()) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+      }, false);
+    });
+  }, false);
+
+}());
 </script>
 {% endblock %}

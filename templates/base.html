@@ -189,6 +189,13 @@
       /* Utilidad de color de marca */
       .text-sobotec { color: #1B4D90; }
 
+      /* Bootstrap validation — suprime el borde verde y el check icon en campos válidos */
+      .was-validated .form-control:valid,
+      .was-validated .form-select:valid { border-color: #dee2e6; background-image: none; }
+      .was-validated .form-control:valid:focus,
+      .was-validated .form-select:valid:focus { border-color: #dee2e6; box-shadow: 0 0 0 .25rem rgba(39,128,227,.25); }
+      .valid-feedback { display: none; }
+
       /* Responsive */
       @media (max-width: 992px) {
         .main-content {
@@ -277,12 +284,8 @@
             <i class="bi bi-calendar-check me-2"></i>Mi Jornada
           </a>
         </li>
-        <li class="nav-item">
-          <a class="nav-link {% if '/mis-reparaciones' in request.path %}active-link{% endif %}"
-             href="{% url 'mis_reparaciones' %}">
-            <i class="bi bi-tools me-2"></i>Mis Reparaciones
-          </a>
-        </li>
+        
+        
         {% endif %}
 
         <!-- ── MÓDULO PROYECTOS ─────────────────────────── -->
@@ -355,6 +358,14 @@
               </li>
               {% endif %}
               {% endif %}
+              {% if es_instalador_tecnico %}
+              <li>
+                <a class="nav-link {% if request.resolver_match.url_name == 'calendario_equipo' %}active-link{% endif %}"
+                   href="{% url 'calendario_equipo' %}">
+                  <i class="bi bi-calendar3 me-2"></i>Mi Calendario
+                </a>
+              </li>
+              {% endif %}
             </ul>
           </div>
         </li>
@@ -401,6 +412,20 @@
         {% endif %}
 
         <!-- ── MÓDULO EMPLEADOS ────────────────────────── -->
+         
+
+        {% if es_instalador_tecnico %}
+        <li class="sidebar-section mod-empleados">
+          <i class="bi bi-wallet2 me-1"></i>Mi Cuenta
+        </li>
+        <li class="nav-item">
+          <a class="nav-link {% if '/mis-cobros' in request.path %}active-link{% endif %}"
+             href="{% url 'mis_pagos_view' %}">
+            <i class="bi bi-wallet2 me-2"></i>Mis Cobros
+          </a>
+        </li>
+        {% endif %}
+
         {% if es_admin_o_gerente %}
         <li class="sidebar-section mod-empleados">
           <i class="bi bi-people me-1"></i>Personal
@@ -677,5 +702,15 @@
       resetSessionTimer();
     </script>
     {% endif %}
+    <script>
+    document.querySelectorAll('tr[data-href]').forEach(function(row) {
+      row.style.cursor = 'pointer';
+      row.addEventListener('click', function(e) {
+        if (!e.target.closest('a, button, input, select, textarea, .dropdown, .form-check')) {
+          window.location.href = row.dataset.href;
+        }
+      });
+    });
+    </script>
   </body>
 </html>

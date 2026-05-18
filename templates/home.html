@@ -324,6 +324,32 @@
       </div>
       {% endif %}
 
+      <!-- Multas críticas -->
+      {% if alertas_multas_criticas %}
+      <div class="accordion-item">
+        <h2 class="accordion-header">
+          <button class="accordion-button collapsed py-2 small fw-semibold"
+                  type="button" data-bs-toggle="collapse" data-bs-target="#collapseAlertasMultas">
+            <i class="bi bi-exclamation-octagon text-danger me-2"></i>
+            Clientes con multa crítica
+            <span class="badge bg-danger ms-2">{{ alertas_multas_criticas|length }}</span>
+          </button>
+        </h2>
+        <div id="collapseAlertasMultas" class="accordion-collapse collapse"
+             data-bs-parent="#accordionAlertas">
+          <div class="accordion-body py-2 px-3">
+            {% for a in alertas_multas_criticas %}
+            <div class="d-flex align-items-start gap-2 py-1 border-bottom border-light-subtle small">
+              <i class="bi {{ a.icono }} text-{{ a.tipo }} mt-1 flex-shrink-0"></i>
+              <span class="flex-grow-1">{{ a.msg }}</span>
+              <a href="{{ a.url }}" class="btn btn-sm btn-outline-secondary py-0 px-2 flex-shrink-0" style="font-size:0.72rem;">Ver</a>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
     </div>
   </div>
   {% endif %}
@@ -470,7 +496,7 @@
       <div class="card kpi-card teal border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
           <div class="kpi-value text-success" style="font-size:1.5rem;">Bs. {{ total_facturado|floatformat:2 }}</div>
-          <div class="kpi-label">Total Facturado</div>
+          <div class="kpi-label">Total Acordado</div>
         </div>
       </div>
     </div>
