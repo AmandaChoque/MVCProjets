@@ -1,0 +1,103 @@
+@startuml SOBOTEC_CM_Inventario
+title Modelo de Contenido UWE — Módulo: Inventario (SOBOTEC S.R.L.)
+
+left to right direction
+
+skinparam classFontSize 10
+skinparam classFontName Arial
+skinparam classHeaderFontSize 11
+skinparam classHeaderFontStyle bold
+skinparam arrowColor #000000
+skinparam arrowFontSize 9
+skinparam nodesep 25
+skinparam ranksep 35
+skinparam padding 4
+skinparam defaultTextAlignment left
+skinparam shadowing false
+
+skinparam class {
+  BackgroundColor        #e1e1e1
+  BorderColor            #000000
+  HeaderBackgroundColor  #e1e1e1
+  FontColor              #000000
+  AttributeFontColor     #000000
+}
+
+' ─── PROVEEDOR ───
+class Proveedor {
+  nombre : String
+  rubro : String
+  nit : String
+  telefono : String
+  correo : Email
+  direccion : String
+  encargado_nombre : String
+  encargado_cargo : String
+  encargado_celular : String
+}
+
+' ─── INSUMO ───
+class Insumo {
+  nombre : String
+  marca : String
+  modelo : String
+  categoria : String
+  unidad_medida : String
+  stock_minimo : Integer
+  stock : Integer
+  ultimo_precio_compra : Decimal
+  / stock_status : String
+}
+
+' ─── COMPRA ───
+class Compra {
+  cantidad : Integer
+  costo_unitario : Decimal
+  fecha : Date
+  numero_factura : String
+  / costo_total : Decimal
+}
+
+' ─── REQUIERE ───
+class Requiere {
+  cantidad : Integer
+  durante_garantia : Boolean
+  / costo_total : Decimal
+}
+
+' ─── REQUIERE LOTE (trazabilidad FIFO) ───
+class RequiereLote {
+  cantidad : Integer
+  / subtotal : Decimal
+}
+
+' ─── PROYECTO (referencia) ───
+class Proyecto <<ref>> {
+  codigo : String
+  nombre : String
+}
+
+' ═══════ RELACIONES ═══════
+Proveedor  "1"    --  "0..*" Compra        : suministra
+Insumo     "1"    --  "0..*" Compra        : comprado como
+Insumo     "1"    --  "0..*" Requiere      : requerido en
+Proyecto   "1"    --  "0..*" Requiere      : consume
+Requiere   "1"    --  "0..*" RequiereLote  : trazado FIFO
+Compra     "1"    --  "0..*" RequiereLote  : lote de
+
+note bottom of Insumo
+  stock y ultimo_precio_compra
+  son mantenidos SOLO por señales
+  (no modificar directamente)
+  stock_status: agotado / bajo / ok
+end note
+
+note bottom of RequiereLote
+  Trazabilidad FIFO:
+  calcular_costo_fifo() consume
+  compras por fecha ascendente
+end note
+
+note "/ atributo derivado (calculado)" as N1
+
+@enduml

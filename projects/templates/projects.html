@@ -21,7 +21,6 @@
         <input type="hidden" name="search_nombre"       value="{{ search_nombre }}">
         <input type="hidden" name="filter_estado"       value="{{ filter_estado }}">
         <input type="hidden" name="filter_tipo"         value="{{ filter_tipo }}">
-        <input type="hidden" name="filter_pago"         value="{{ filter_pago }}">
         <input type="hidden" name="fecha_inicio_desde"  value="{{ fecha_inicio_desde }}">
         <input type="hidden" name="fecha_inicio_hasta"  value="{{ fecha_inicio_hasta }}">
         <input type="hidden" name="fecha_fin_desde"     value="{{ fecha_fin_desde }}">
@@ -75,18 +74,6 @@
           </select>
         </div>
 
-        {% if not es_instalador_tecnico %}
-        <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Estado de pago</label>
-          <select class="form-select form-select-sm" name="filter_pago">
-            <option value="">Todos</option>
-            <option value="no_pagado" {% if filter_pago == "no_pagado" %}selected{% endif %}>No Pagado</option>
-            <option value="parcial" {% if filter_pago == "parcial" %}selected{% endif %}>Pago Parcial</option>
-            <option value="pagado" {% if filter_pago == "pagado" %}selected{% endif %}>Pagado</option>
-          </select>
-        </div>
-        {% endif %}
-
         <!-- Fechas de inicio -->
         <div class="col-md-2">
           <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Inicio desde contrato</label>
@@ -123,6 +110,50 @@
     </div>
   </div>
 
+  <!-- ======================= KPIs ======================= -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md">
+      <div class="card kpi-card blue border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-primary">{{ kpi_total }}</div>
+          <div class="kpi-label">Total proyectos</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md">
+      <div class="card kpi-card blue border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-primary">{{ kpi_progreso }}</div>
+          <div class="kpi-label">En Progreso</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md">
+      <div class="card kpi-card green border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-success">{{ kpi_completado }}</div>
+          <div class="kpi-label">Completados</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md">
+      <div class="card kpi-card orange border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-warning">{{ kpi_pendiente }}</div>
+          <div class="kpi-label">Pendientes</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md">
+      <div class="card kpi-card red border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-danger">{{ kpi_cancelado }}</div>
+          <div class="kpi-label">Cancelados</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ======================= TABLA ======================= -->
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body p-0">
@@ -135,11 +166,10 @@
           <th>Contratante</th>
           <th>Tipo</th>
           <th>Estado</th>
+          <th>Cumplimiento</th>
           <th>Período Contrato</th>
           <th>Ejecución</th>
           <th style="min-width:120px;">Avance</th>
-          {% if not es_instalador_tecnico %}<th>Estado Pago</th>{% endif %}
-          {% if not es_instalador_tecnico %}<th>Monto Total (Bs.)</th>{% endif %}
           <th class="text-end" style="width:60px;">Acciones</th>
         </tr>
       </thead>
@@ -147,16 +177,7 @@
         {% for project in projects %}
         <tr class="project-row" data-href="{% url 'project_view' project.id %}" style="cursor:pointer;">
           <td class="text-muted">{{ project.codigo }}</td>
-          <td class="fw-semibold">
-            {{ project.nombre }}
-            {% if project.contrato_fecha_fin and project.estado_proyecto != 'completado' and project.estado_proyecto != 'cancelado' %}
-              {% if project.contrato_fecha_fin < today %}
-                <span class="badge bg-danger ms-1" title="Plazo vencido el {{ project.contrato_fecha_fin|date:'d/m/Y' }}">
-                  <i class="bi bi-exclamation-circle-fill"></i> Vencido
-                </span>
-              {% endif %}
-            {% endif %}
-          </td>
+          <td class="fw-semibold">{{ project.nombre }}</td>
           <td>
             {% if project.cliente %}
               {{ project.cliente.nombre }} {{ project.cliente.apellido_paterno }}
@@ -178,6 +199,40 @@
               <span class="badge bg-warning text-dark small">Pendiente</span>
             {% endif %}
           </td>
+
+          <!-- Cumplimiento del contrato -->
+          <td>
+            {% if project.estado_proyecto == 'cancelado' %}
+              <span class="text-muted small">—</span>
+            {% elif project.estado_multa_val == 'critico' %}
+              <div>
+                <span class="badge bg-danger" style="font-size:.7rem;"
+                      title="{{ project.dias_retraso_val }} días de retraso — tope máximo alcanzado">
+                  <i class="bi bi-exclamation-octagon-fill me-1"></i>Castigado
+                </span>
+              </div>
+              <div class="text-muted" style="font-size:.68rem; margin-top:2px;">
+                Bs. {{ project.multa_val|floatformat:2 }} · {{ project.dias_retraso_val }}d
+              </div>
+            {% elif project.estado_multa_val == 'en_multa' %}
+              <div>
+                <span class="badge bg-warning text-dark" style="font-size:.7rem;"
+                      title="{{ project.dias_retraso_val }} días de retraso — acumulando multa">
+                  <i class="bi bi-clock-history me-1"></i>En multa
+                </span>
+              </div>
+              <div class="text-muted" style="font-size:.68rem; margin-top:2px;">
+                Bs. {{ project.multa_val|floatformat:2 }} · {{ project.dias_retraso_val }}d
+              </div>
+            {% elif not project.contrato_fecha_fin %}
+              <span class="text-muted small">Sin contrato</span>
+            {% else %}
+              <span style="font-size:.75rem; color:#6c757d;">
+                <i class="bi bi-check-circle text-success me-1"></i>En plazo
+              </span>
+            {% endif %}
+          </td>
+
           <td class="periodo-txt">
             {% if project.contrato_fecha_inicio %}
               <div>{{ project.contrato_fecha_inicio|date:"d/m/Y" }}</div>
@@ -216,18 +271,6 @@
               <span class="text-muted" style="font-size:0.72rem;">Sin sedes</span>
             {% endif %}
           </td>
-          {% if not es_instalador_tecnico %}
-          <td>
-            {% if project.estado_pago == 'pagado' %}
-              <span class="badge bg-success small">Pagado</span>
-            {% elif project.estado_pago == 'parcial' %}
-              <span class="badge bg-info text-dark small">Parcial</span>
-            {% else %}
-              <span class="badge bg-danger small">No Pagado</span>
-            {% endif %}
-          </td>
-          <td class="fw-semibold">{{ project.monto_total|floatformat:2 }}</td>
-          {% endif %}
           <td class="text-end">
             <div class="dropdown">
               <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
@@ -256,7 +299,7 @@
         </tr>
         {% empty %}
         <tr>
-          <td colspan="12" class="text-center text-muted py-3 small">
+          <td colspan="10" class="text-center text-muted py-3 small">
             No se encontraron proyectos con los filtros seleccionados.
           </td>
         </tr>
@@ -273,7 +316,7 @@
 
       {% if projects.has_previous %}
       <li class="page-item">
-        <a class="page-link" href="?page={{ projects.previous_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}&filter_pago={{ filter_pago }}&fecha_inicio_desde={{ fecha_inicio_desde }}&fecha_inicio_hasta={{ fecha_inicio_hasta }}&fecha_fin_desde={{ fecha_fin_desde }}&fecha_fin_hasta={{ fecha_fin_hasta }}">
+        <a class="page-link" href="?page={{ projects.previous_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}&fecha_inicio_desde={{ fecha_inicio_desde }}&fecha_inicio_hasta={{ fecha_inicio_hasta }}&fecha_fin_desde={{ fecha_fin_desde }}&fecha_fin_hasta={{ fecha_fin_hasta }}">
           Anterior
         </a>
       </li>
@@ -286,7 +329,7 @@
           <li class="page-item active"><span class="page-link">{{ num }}</span></li>
         {% elif num > projects.number|add:'-3' and num < projects.number|add:'3' %}
           <li class="page-item">
-            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}&filter_pago={{ filter_pago }}&fecha_inicio_desde={{ fecha_inicio_desde }}&fecha_inicio_hasta={{ fecha_inicio_hasta }}&fecha_fin_desde={{ fecha_fin_desde }}&fecha_fin_hasta={{ fecha_fin_hasta }}">
+            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}&fecha_inicio_desde={{ fecha_inicio_desde }}&fecha_inicio_hasta={{ fecha_inicio_hasta }}&fecha_fin_desde={{ fecha_fin_desde }}&fecha_fin_hasta={{ fecha_fin_hasta }}">
               {{ num }}
             </a>
           </li>
@@ -295,7 +338,7 @@
 
       {% if projects.has_next %}
       <li class="page-item">
-        <a class="page-link" href="?page={{ projects.next_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}&filter_pago={{ filter_pago }}&fecha_inicio_desde={{ fecha_inicio_desde }}&fecha_inicio_hasta={{ fecha_inicio_hasta }}&fecha_fin_desde={{ fecha_fin_desde }}&fecha_fin_hasta={{ fecha_fin_hasta }}">
+        <a class="page-link" href="?page={{ projects.next_page_number }}&per_page={{ per_page }}&search_nombre={{ search_nombre }}&filter_estado={{ filter_estado }}&filter_tipo={{ filter_tipo }}&fecha_inicio_desde={{ fecha_inicio_desde }}&fecha_inicio_hasta={{ fecha_inicio_hasta }}&fecha_fin_desde={{ fecha_fin_desde }}&fecha_fin_hasta={{ fecha_fin_hasta }}">
           Siguiente
         </a>
       </li>

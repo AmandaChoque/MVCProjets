@@ -238,6 +238,8 @@
         <td>
           {% if project.cumplimiento == 'completado' %}
             <span class="badge" style="background:#e9e9e9;color:#333;">Completado</span>
+          {% elif project.cumplimiento == 'completado_tarde' %}
+            <span class="badge" style="background:#fde8e8;color:#c0392b;">Completado tarde (+{{ project.dias_info }}d)</span>
           {% elif project.cumplimiento == 'vencido' %}
             <span class="badge" style="background:#fde8e8;color:#c0392b;">Vencido ({{ project.dias_info }}d)</span>
           {% elif project.cumplimiento == 'en_plazo' %}

@@ -1,0 +1,78 @@
+@startuml uc_modulo_inventario_clean
+
+left to right direction
+
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam backgroundColor #FFFFFF
+skinparam usecaseBackgroundColor #FEF9E7
+skinparam usecaseBorderColor #B7950B
+skinparam usecaseFontSize 11
+skinparam actorFontSize 12
+skinparam packageBorderColor #B7950B
+skinparam packageBackgroundColor #FFFFFF
+skinparam packageFontStyle bold
+skinparam arrowColor #444444
+skinparam shadowing false
+skinparam nodesep 30
+skinparam ranksep 70
+
+actor "Administrador\n/ Gerente" as ADM
+actor "Secretaria"               as SEC
+actor "Instalador"               as INST
+
+rectangle "Sprint 2 — Módulo de Inventario" {
+
+    together {
+        usecase "Gestionar\nProveedor"             as UC1
+        usecase "Gestionar\nInsumo"                as UC2
+        usecase "Registrar\nCompra"                as UC3
+        usecase "Asignar Insumo\na Proyecto (FIFO)" as UC4
+        usecase "Generar\nReporte"                 as UC5
+    }
+
+    together {
+        usecase "Alerta Stock\nMínimo"          as S13
+        usecase "Cálculo Costo\nFIFO Automático" as S14
+        usecase "Actualizar Stock\nAutomático"   as S15
+    }
+
+    UC5 -[hidden]-> S13
+}
+
+actor "Sistema\n(Automático)" as SIS
+
+ADM  --> UC1
+ADM  --> UC2
+ADM  --> UC3
+ADM  --> UC4
+ADM  --> UC5
+
+SEC  --> UC5
+
+INST --> UC2
+INST --> UC4
+INST --> UC5
+
+SIS  --> S13
+SIS  --> S14
+SIS  --> S15
+
+UC2 .> S13 : <<extend>>
+UC4 .> S14 : <<include>>
+UC3 .> S15 : <<extend>>
+
+note right of S14
+  Consume lotes de compra
+  en orden cronológico (FIFO)
+  para calcular el costo real
+  asignado al proyecto
+end note
+
+note right of S15
+  Stock actualizado automáticamente
+  mediante señales Django
+  post_save y delete
+end note
+
+@enduml

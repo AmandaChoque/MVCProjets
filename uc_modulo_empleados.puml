@@ -24,7 +24,7 @@ actor "Sistema\n(automático)"            as SIS
 
 rectangle "Sprint 3 — Módulo de Personal" {
 
-  ' ── COLUMNA 1: UCs principales (mismo rango) ──
+  ' ── COLUMNA 1: UCs principales ──
   together {
     usecase "Gestionar\nEmpleado"          as UC1
     usecase "Gestionar\nContrato Empleado" as UC2
@@ -32,32 +32,45 @@ rectangle "Sprint 3 — Módulo de Personal" {
     usecase "Gestionar\nPago Empleado"     as UC4
     usecase "Ver Calendario\nde Jornadas"  as UC5
     usecase "Generar\nReporte"             as UC6
+    usecase "Mi Trabajo\n(Dashboard)"      as UC7
+    usecase "Mis Cobros"                   as UC8
   }
 
-  ' ── COLUMNA 2: sub-casos, un grupo por UC ─────
+  ' ── SUBCASOS EMPLEADO ──
   together {
     usecase "Registrar /\nEditar empleado" as S1
     usecase "Desactivar /\nReactivar"      as S2
   }
+
+  ' ── SUBCASOS CONTRATO ──
   together {
     usecase "Crear\ncontrato"      as S3
     usecase "Ver PDF\ncontrato"    as S4
     usecase "Desactivar\ncontrato" as S5
   }
+
+  ' ── SUBCASOS JORNADAS ──
   together {
-    usecase "Registrar\njornada manual"    as S6
-    usecase "Aprobar jornada"  as S7
-  
+    usecase "Registrar\njornada manual" as S6
+    usecase "Aprobar jornada"           as S7
+    usecase "Rechazar jornada"          as S8
+    usecase "Aprobar todas\n(masivo)"   as S9
   }
+
+  ' ── SUBCASOS PAGOS ──
   together {
     usecase "Registrar\npago"              as S10
     usecase "Confirmar /\nDesactivar pago" as S11
   }
+
+  ' ── SUBCASOS CALENDARIO ──
   together {
     usecase "Vista mensual\ncon tareas"   as S12
     usecase "Vista semanal\ncon progreso" as S13
     usecase "Vista anual"                 as S14
   }
+
+  ' ── SUBCASOS REPORTE ──
   together {
     usecase "Reporte PDF\n/ Excel" as S15
   }
@@ -65,20 +78,19 @@ rectangle "Sprint 3 — Módulo de Personal" {
   ' flechas ocultas: mantienen el orden vertical entre grupos
   S2  -[hidden]-> S3
   S5  -[hidden]-> S6
+  S9  -[hidden]-> S10
   S11 -[hidden]-> S12
   S14 -[hidden]-> S15
 
-  ' ── COLUMNA 3: sub-sub-casos automáticos ──────
+  ' ── AUTOMÁTICOS ──
   usecase "Jornada auto-creada\nal completar tarea" as S16
-  usecase "Dashboard\npersonalizado"                as S17
-  usecase "% avance sede\npor día trabajado"        as S18
+  usecase "% avance sede\npor día trabajado"        as S17
 
   S6  -[hidden]-> S16
-  S12 -[hidden]-> S17
-  S13 -[hidden]-> S18
+  S13 -[hidden]-> S17
 }
 
-' ── ACTORES → columna 1 ──────────────────────────
+' ── ACTORES → UCs principales ──────────────────────
 ADM   --> UC1
 ADM   --> UC2
 ADM   --> UC3
@@ -86,17 +98,17 @@ ADM   --> UC4
 ADM   --> UC5
 ADM   --> UC6
 
-SEC   --> UC1
-SEC   --> UC2
 SEC   --> UC4
 SEC   --> UC6
 
 CAMPO --> UC3
 CAMPO --> UC5
+CAMPO --> UC7
+CAMPO --> UC8
 
 SIS   --> S16
 
-' ── INCLUDE columna 1 → columna 2 ────────────────
+' ── INCLUDE columna 1 → subcasos ────────────────────
 UC1 .> S1  : <<include>>
 UC1 .> S2  : <<include>>
 
@@ -106,7 +118,8 @@ UC2 .> S5  : <<include>>
 
 UC3 .> S6  : <<include>>
 UC3 .> S7  : <<include>>
-
+UC3 .> S8  : <<include>>
+UC3 .> S9  : <<include>>
 
 UC4 .> S10 : <<include>>
 UC4 .> S11 : <<include>>
@@ -118,9 +131,8 @@ UC5 .> S14 : <<include>>
 UC6 .> S15 : <<include>>
 
 ' ── EXTEND / automáticos ──────────────────────────
-UC3   .> S16 : <<extend>>
-CAMPO .> S17 : <<extend>>
-S13   .> S18 : <<include>>
+UC3 .> S16 : <<extend>>
+S13 .> S17 : <<include>>
 
 note right of S16
   El sistema crea la jornada
@@ -128,7 +140,7 @@ note right of S16
   de una tarea completada
 end note
 
-note right of S18
+note right of S17
   Muestra qué tareas realizó
   el empleado cada día y el %
   de avance de la sede en ese momento

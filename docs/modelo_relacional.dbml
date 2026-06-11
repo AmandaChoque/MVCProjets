@@ -1,0 +1,345 @@
+Project SOBOTEC {
+  database_type: "PostgreSQL"
+  Note: "Sistema de Gestión de Proyectos — SOBOTEC S.R.L."
+}
+
+//////////////////////////////////////////////////////
+// MÓDULO: EMPLEADOS
+//////////////////////////////////////////////////////
+
+Table empleado {
+  id int [pk]
+  username varchar
+  nombre varchar
+  apellido_paterno varchar
+  apellido_materno varchar
+  cargo varchar
+  carnet_identidad varchar [unique]
+  is_active boolean
+}
+
+Table contrato_empleado {
+  id int [pk]
+  empleado_id int [ref: > empleado.id]
+  dias_laborales int
+  fecha_inicio date
+  fecha_fin date
+  monto_acordado decimal
+  activo boolean
+}
+
+Table pago_empleado {
+  id int [pk]
+  contrato_id int [ref: > contrato_empleado.id]
+  monto decimal
+  fecha date
+  concepto varchar
+  estado varchar
+  activo boolean
+}
+
+Table jornada_empleado {
+  id int [pk]
+  contrato_id int [ref: > contrato_empleado.id]
+  proyecto_id int [ref: > proyecto.id]
+  pago_id int [null, ref: > pago_empleado.id]
+  registrado_por_id int
+  fecha date
+  dias decimal
+  estado varchar
+  activo boolean
+}
+
+TableGroup "Modulo Personal" {
+  empleado
+  contrato_empleado
+  pago_empleado
+  jornada_empleado
+}
+
+//////////////////////////////////////////////////////
+// MÓDULO: PROYECTOS - CORE
+//////////////////////////////////////////////////////
+
+Table cliente {
+  id int [pk]
+  nit_ci varchar
+  nombre varchar
+  apellido_paterno varchar
+  tipo_contratante varchar
+  rol_contacto varchar
+  telefono varchar
+  correo varchar
+  nombre_entidad varchar
+  activo boolean
+}
+
+Table proyecto {
+  id int [pk]
+  cliente_id int [ref: > cliente.id]
+  creado_por_id int
+  codigo varchar [unique]
+  nombre varchar [unique]
+  estado_proyecto varchar
+  tipo_proyecto varchar
+  fecha_inicio date
+  fecha_fin date
+  monto_total decimal
+  estado_pago varchar
+  activo boolean
+}
+
+Table proyecto_equipo {
+  proyecto_id int [ref: > proyecto.id]
+  empleado_id int [ref: > empleado.id]
+  indexes {
+    (proyecto_id, empleado_id) [pk]
+  }
+}
+
+Table asignacion_proyecto {
+  id int [pk]
+  proyecto_id int [ref: > proyecto.id]
+  empleado_id int [ref: > empleado.id]
+  fecha_inicio_plan date
+  fecha_fin_plan date
+  dias_planificados int
+  activo boolean
+}
+
+Table contrato_proyecto {
+  id int [pk]
+  proyecto_id int [ref: > proyecto.id]
+  fecha_inicio date
+  fecha_fin date
+  monto_acordado decimal
+  porcentaje_multa_diaria decimal
+  porcentaje_multa_maxima decimal
+  garantia_meses int
+  activo boolean
+}
+
+TableGroup "Modulo Proyectos - Core" {
+  cliente
+  proyecto
+  proyecto_equipo
+  asignacion_proyecto
+  contrato_proyecto
+}
+
+//////////////////////////////////////////////////////
+// MÓDULO: PROYECTOS - SEGUIMIENTO
+//////////////////////////////////////////////////////
+
+Table historial_presupuesto {
+  id int [pk]
+  proyecto_id int [ref: > proyecto.id]
+  modificado_por_id int
+  monto_anterior decimal
+  monto_actual decimal
+  motivo_cambio text
+  fecha timestamp
+}
+
+Table historial_estado_proyecto {
+  id int [pk]
+  proyecto_id int [ref: > proyecto.id]
+  cambiado_por_id int
+  estado_anterior varchar
+  estado_nuevo varchar
+  motivo text
+  fecha timestamp
+}
+
+Table pago_proyecto {
+  id int [pk]
+  proyecto_id int [ref: > proyecto.id]
+  monto decimal
+  descuento decimal
+  fecha date
+  tipo_pago varchar
+  estado varchar
+  activo boolean
+}
+
+Table garantia {
+  id int [pk]
+  contrato_id int [unique, ref: - contrato_proyecto.id]
+  fecha_inicio date
+  fecha_vencimiento date
+  activo boolean
+}
+
+Table incidencia_garantia {
+  id int [pk]
+  garantia_id int [ref: > garantia.id]
+  reparado_por_id int
+  descripcion text
+  fecha_reporte date
+  costo_reparacion decimal
+  estado varchar
+  activo boolean
+}
+
+TableGroup "Modulo Proyectos - Seguimiento" {
+  historial_presupuesto
+  historial_estado_proyecto
+  pago_proyecto
+  garantia
+  incidencia_garantia
+}
+
+//////////////////////////////////////////////////////
+// MÓDULO: PROYECTOS - SEDES
+//////////////////////////////////////////////////////
+
+Table plantilla_tarea {
+  id int [pk]
+  nombre varchar
+  tipo varchar
+  activo boolean
+}
+
+Table item_plantilla {
+  id int [pk]
+  plantilla_id int [ref: > plantilla_tarea.id]
+  descripcion varchar
+  orden int
+  activo boolean
+}
+
+Table sub_item_plantilla {
+  id int [pk]
+  item_id int [ref: > item_plantilla.id]
+  descripcion varchar
+  orden int
+  activo boolean
+}
+
+Table sede {
+  id int [pk]
+  proyecto_id int [ref: > proyecto.id]
+  plantilla_id int [null, ref: > plantilla_tarea.id]
+  nombre varchar
+  direccion varchar
+  estado varchar
+  activo boolean
+}
+
+Table foto_sede {
+  id int [pk]
+  sede_id int [ref: > sede.id]
+  subida_por_id int
+  descripcion varchar
+  activo boolean
+}
+
+Table tarea_checklist {
+  id int [pk]
+  sede_id int [ref: > sede.id]
+  completado_por_id int
+  descripcion varchar
+  orden int
+  completado boolean
+  activo boolean
+}
+
+Table subtarea_checklist {
+  id int [pk]
+  tarea_id int [ref: > tarea_checklist.id]
+  completado_por_id int
+  descripcion varchar
+  orden int
+  completado boolean
+  activo boolean
+}
+
+Table tarea_participantes {
+  tarea_id int [ref: > tarea_checklist.id]
+  empleado_id int [ref: > empleado.id]
+  indexes {
+    (tarea_id, empleado_id) [pk]
+  }
+}
+
+Table notificacion {
+  id int [pk]
+  destinatario_id int [ref: > empleado.id]
+  proyecto_id int [null, ref: > proyecto.id]
+  sede_id int [null, ref: > sede.id]
+  tipo varchar
+  leida boolean
+  fecha timestamp
+}
+
+TableGroup "Modulo Proyectos - Sedes" {
+  plantilla_tarea
+  item_plantilla
+  sub_item_plantilla
+  sede
+  foto_sede
+  tarea_checklist
+  subtarea_checklist
+  tarea_participantes
+  notificacion
+}
+
+//////////////////////////////////////////////////////
+// MÓDULO: INVENTARIO
+//////////////////////////////////////////////////////
+
+Table proveedor {
+  id int [pk]
+  nombre varchar
+  rubro varchar
+  nit varchar
+  telefono varchar
+  activo boolean
+}
+
+Table insumo {
+  id int [pk]
+  nombre varchar
+  marca varchar
+  modelo varchar
+  categoria varchar
+  unidad_medida varchar
+  stock decimal
+  stock_minimo decimal
+  activo boolean
+}
+
+Table compra {
+  id int [pk]
+  proveedor_id int [null, ref: > proveedor.id]
+  insumo_id int [null, ref: > insumo.id]
+  cantidad decimal
+  costo_unitario decimal
+  fecha date
+  activo boolean
+}
+
+Table requiere {
+  id int [pk]
+  proyecto_id int [ref: > proyecto.id]
+  insumo_id int [null, ref: > insumo.id]
+  cantidad decimal
+  durante_garantia boolean
+  activo boolean
+}
+
+Table requiere_lote {
+  id int [pk]
+  requiere_id int [ref: > requiere.id]
+  compra_id int [ref: > compra.id]
+  cantidad decimal
+  activo boolean
+}
+
+TableGroup "Modulo Inventario" {
+  proveedor
+  insumo
+  compra
+  requiere
+  requiere_lote
+}

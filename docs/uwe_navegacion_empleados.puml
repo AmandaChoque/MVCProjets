@@ -1,0 +1,139 @@
+@startuml SOBOTEC_Nav_Empleados
+title Modelo de Navegación UWE — Módulo: Empleados (SOBOTEC S.R.L.)
+
+scale max 1050 width
+
+!theme plain
+hide circle
+left to right direction
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 7
+skinparam classFontName Arial
+skinparam classHeaderFontSize 8
+skinparam classHeaderFontStyle bold
+skinparam arrowColor #444444
+skinparam arrowFontSize 6
+skinparam nodesep 6
+skinparam ranksep 14
+skinparam padding 1
+skinparam shadowing false
+
+skinparam class {
+  BackgroundColor<<index>>           #D5F5E3
+  BorderColor<<index>>               #1E8449
+  BackgroundColor<<navigationClass>> #D6EAF8
+  BorderColor<<navigationClass>>     #1A5276
+  BackgroundColor<<process>>         #FDEBD0
+  BorderColor<<process>>             #784212
+  BackgroundColor<<menu>>            #E8DAEF
+  BorderColor<<menu>>                #6C3483
+}
+
+' ─── ENTRADA ───
+class "Menú\nPrincipal"         as MenuPrincipal       <<menu>>
+
+' ─── EMPLEADOS ───
+class "Lista\nEmpleados"        as ListaEmpleados      <<index>>
+class "Ver\nEmpleado"           as VerEmpleado         <<navigationClass>>
+class "Form.\nEmpleado"         as FormEmpleado        <<process>>
+
+' ─── CONTRATOS EMPLEADO ───
+class "Detalle\nContrato"       as DetalleContrato     <<navigationClass>>
+class "Form.\nContrato"         as FormContrato        <<process>>
+class "PDF\nContrato"           as PdfContrato         <<navigationClass>>
+
+' ─── JORNADAS ───
+class "Lista\nJornadas"         as ListaJornadas       <<index>>
+class "Detalle\nJornada"        as DetalleJornada      <<navigationClass>>
+class "Form.\nJornada"          as FormJornada         <<process>>
+class "Revisión\nJornadas"      as RevisionJornadas    <<navigationClass>>
+class "Carga /\nAprobación"     as CargaAprobacion     <<navigationClass>>
+
+' ─── PAGOS EMPLEADO ───
+class "Lista\nPagos Empleado"   as ListaPagosEmpleado  <<index>>
+class "Detalle\nPago Empleado"  as DetallePagoEmpleado <<navigationClass>>
+class "Form.\nPago"             as FormPago            <<process>>
+
+' ─── VISTAS GLOBALES ───
+class "Calendario\nJornadas"    as CalendarioJornadas  <<navigationClass>>
+class "Reporte\nPersonal"       as ReportePersonal     <<navigationClass>>
+
+' ─── VISTAS DE CAMPO ───
+class "Mi Trabajo\n(Dashboard)" as MiTrabajo           <<navigationClass>>
+class "Mis Cobros"              as MisCobros           <<navigationClass>>
+
+' ═══════════════════════════════════════
+' NAVEGACIÓN
+' ═══════════════════════════════════════
+
+' --- Accesos desde el menú ---
+MenuPrincipal --> ListaEmpleados
+MenuPrincipal --> ListaPagosEmpleado
+MenuPrincipal --> CalendarioJornadas
+MenuPrincipal --> ReportePersonal
+MenuPrincipal --> RevisionJornadas
+MenuPrincipal --> CargaAprobacion
+MenuPrincipal --> MiTrabajo
+MenuPrincipal --> MisCobros
+
+' --- Empleados ---
+ListaEmpleados --> VerEmpleado
+ListaEmpleados --> FormEmpleado
+VerEmpleado    --> FormEmpleado
+VerEmpleado    --> DetalleContrato
+VerEmpleado    --> FormContrato
+
+' --- Contratos empleado ---
+DetalleContrato --> FormContrato
+DetalleContrato --> PdfContrato
+DetalleContrato --> ListaJornadas
+DetalleContrato --> ListaPagosEmpleado
+DetalleContrato --> FormJornada
+
+' --- Jornadas ---
+ListaJornadas  --> DetalleJornada
+ListaJornadas  --> FormJornada
+DetalleJornada --> FormJornada
+
+' --- Pagos empleado ---
+ListaPagosEmpleado  --> DetallePagoEmpleado
+ListaPagosEmpleado  --> FormPago
+DetallePagoEmpleado --> FormPago
+
+' ─── NOTAS DE ROLES ───
+note bottom of MiTrabajo
+  Instalador y
+  Tecnico de Soporte
+end note
+
+note bottom of MisCobros
+  Instalador y
+  Tecnico de Soporte
+end note
+
+note bottom of FormEmpleado
+  Solo Administrador
+  puede crear/editar
+  empleados
+end note
+
+note bottom of CargaAprobacion
+  Administrador puede
+  aprobar todas las
+  jornadas en bulk
+end note
+
+note bottom of RevisionJornadas
+  Revision de jornadas
+  por proyecto
+  (Admin / Gerente)
+end note
+
+note bottom of DetalleJornada
+  Acciones disponibles:
+  Aprobar / Rechazar
+  (Admin / Gerente)
+end note
+
+@enduml

@@ -17,6 +17,8 @@
     <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
       <form method="GET" action="{% url 'compras' %}" class="d-flex align-items-center gap-2">
         <input type="hidden" name="search" value="{{ search }}">
+<input type="hidden" name="fecha_ini" value="{{ fecha_ini }}">
+        <input type="hidden" name="fecha_fin" value="{{ fecha_fin }}">
         <input type="hidden" name="page" value="1">
         <span class="small text-muted">Mostrar:</span>
         <select name="per_page" class="form-select form-select-sm" style="width: 80px;" onchange="this.form.submit()">
@@ -37,16 +39,25 @@
   <!-- FILTROS -->
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">
-      <form method="GET" action="{% url 'compras' %}" class="row g-2">
+      <form method="GET" action="{% url 'compras' %}" class="row g-2 align-items-end">
         <input type="hidden" name="per_page" value="{{ per_page }}">
-        <div class="col-md-4">
+        <div class="col-md-3">
+          <label class="form-label form-label-sm mb-1 text-muted small">Buscar</label>
           <input type="text" class="form-control form-control-sm" name="search"
-            value="{{ search|default:'' }}" placeholder="Buscar por insumo o proveedor" />
+            value="{{ search|default:'' }}" placeholder="Insumo o proveedor" />
         </div>
-        <div class="col-6 col-md-2">
+<div class="col-md-2">
+          <label class="form-label form-label-sm mb-1 text-muted small">Desde</label>
+          <input type="date" class="form-control form-control-sm" name="fecha_ini" value="{{ fecha_ini }}" />
+        </div>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm mb-1 text-muted small">Hasta</label>
+          <input type="date" class="form-control form-control-sm" name="fecha_fin" value="{{ fecha_fin }}" />
+        </div>
+        <div class="col-6 col-md-auto">
           <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
         </div>
-        <div class="col-6 col-md-1">
+        <div class="col-6 col-md-auto">
           <a href="{% url 'compras' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
         </div>
       </form>
@@ -113,9 +124,10 @@
   <!-- PAGINACIÓN -->
   <nav class="mt-3">
     <ul class="pagination pagination-sm justify-content-center mb-0">
+      {% with qs="per_page="|add:per_page|add:"&search="|add:search|add:"&fecha_ini="|add:fecha_ini|add:"&fecha_fin="|add:fecha_fin %}
       {% if compras.has_previous %}
       <li class="page-item">
-        <a class="page-link" href="?page={{ compras.previous_page_number }}&per_page={{ per_page }}&search={{ search }}">Anterior</a>
+        <a class="page-link" href="?page={{ compras.previous_page_number }}&{{ qs }}">Anterior</a>
       </li>
       {% else %}
       <li class="page-item disabled"><span class="page-link">Anterior</span></li>
@@ -126,18 +138,19 @@
           <li class="page-item active"><span class="page-link">{{ num }}</span></li>
         {% elif num > compras.number|add:'-3' and num < compras.number|add:'3' %}
           <li class="page-item">
-            <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&search={{ search }}">{{ num }}</a>
+            <a class="page-link" href="?page={{ num }}&{{ qs }}">{{ num }}</a>
           </li>
         {% endif %}
       {% endfor %}
 
       {% if compras.has_next %}
       <li class="page-item">
-        <a class="page-link" href="?page={{ compras.next_page_number }}&per_page={{ per_page }}&search={{ search }}">Siguiente</a>
+        <a class="page-link" href="?page={{ compras.next_page_number }}&{{ qs }}">Siguiente</a>
       </li>
       {% else %}
       <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
       {% endif %}
+      {% endwith %}
     </ul>
   </nav>
 

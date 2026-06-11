@@ -1,61 +1,72 @@
 {% extends 'base.html' %}
+{% block extra_css %}
+<style>
+  .label-xs  { font-size: 0.68rem; }
+  .text-xs   { font-size: 0.66rem; }
+
+  /* Urgency border-left */
+  .urgencia-critico { border-left: 4px solid #dc3545 !important; }
+  .urgencia-multa   { border-left: 4px solid #ffc107 !important; }
+  .urgencia-ok      { border-left: 4px solid #198754 !important; }
+  .urgencia-none    { border-left: 4px solid transparent; }
+
+  /* Clickable row */
+  .row-clickable { cursor: pointer; }
+  .row-clickable:hover td { background-color: #eef2ff !important; }
+
+  /* Employee chip */
+  .emp-chip {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 50%;
+    font-size: 0.6rem; font-weight: 700; color: #fff;
+    background: #1B4D90; margin-right: 2px; flex-shrink: 0;
+  }
+  .emp-chip.tecnico { background: #6c757d; }
+
+  /* Big percentage number */
+  .pct-grande { font-size: 1.55rem; font-weight: 700; line-height: 1; min-width: 48px; }
+
+  /* Dot legend */
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid px-4 py-4">
 
-  <!-- ENCABEZADO -->
-  <div class="mb-2">
-    <div class="d-flex justify-content-between align-items-center mb-2">
-      <h4 class="fw-bold text-sobotec mb-0">Seguimiento de Avance</h4>
-      <a href="{% url 'projects' %}" class="btn btn-outline-secondary btn-sm">
-        <i class="bi bi-arrow-left me-1"></i>Proyectos
-      </a>
+  <!-- ── ENCABEZADO ─────────────────────────────────────────────── -->
+  <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div>
+      <h4 class="fw-bold text-sobotec mb-0">Seguimiento de Obra</h4>
+      <div class="text-muted" style="font-size:0.82rem;">Avance de instalaciones en campo</div>
     </div>
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <form method="GET" action="{% url 'seguimiento_avance' %}" class="d-flex align-items-center gap-2">
-        <input type="hidden" name="q"        value="{{ search_nombre }}">
-        <input type="hidden" name="estado"   value="{{ filter_estado }}">
-        <input type="hidden" name="empleado" value="{{ filter_empleado }}">
-        <input type="hidden" name="page"     value="1">
-        <span class="small text-muted">Mostrar:</span>
-        <select name="per_page" class="form-select form-select-sm" style="width:80px;" onchange="this.form.submit()">
-          <option value="10"  {% if per_page == 10  %}selected{% endif %}>10</option>
-          <option value="15"  {% if per_page == 15  %}selected{% endif %}>15</option>
-          <option value="20"  {% if per_page == 20  %}selected{% endif %}>20</option>
-          <option value="50"  {% if per_page == 50  %}selected{% endif %}>50</option>
-        </select>
-      </form>
-      <div class="text-muted small">
-        Mostrando {{ page_obj.start_index }} – {{ page_obj.end_index }}
-        de {{ total_proyectos }} registro{{ total_proyectos|pluralize:"s" }}
-      </div>
-    </div>
+    <a href="{% url 'projects' %}" class="btn btn-outline-secondary btn-sm">
+      <i class="bi bi-list-ul me-1"></i>Lista de proyectos
+    </a>
   </div>
 
-  <!-- FILTROS -->
+  <!-- ── FILTROS ────────────────────────────────────────────────── -->
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">
       <form method="GET" action="{% url 'seguimiento_avance' %}" class="row g-2 align-items-end">
         <input type="hidden" name="per_page" value="{{ per_page }}">
-
         <div class="col-md-3">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Nombre del proyecto</label>
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Nombre del proyecto</label>
           <input type="text" class="form-control form-control-sm" name="q"
-                 value="{{ search_nombre }}" placeholder="Buscar por nombre...">
+                 value="{{ search_nombre }}" placeholder="Buscar...">
         </div>
-
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Estado</label>
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Estado</label>
           <select class="form-select form-select-sm" name="estado">
             <option value="">Todos</option>
             <option value="pendiente"   {% if filter_estado == "pendiente"   %}selected{% endif %}>Pendiente</option>
-            <option value="en_progreso" {% if filter_estado == "en_progreso" %}selected{% endif %}>En Progreso</option>
+            <option value="en_progreso" {% if filter_estado == "en_progreso" %}selected{% endif %}>En progreso</option>
             <option value="completado"  {% if filter_estado == "completado"  %}selected{% endif %}>Completado</option>
             <option value="cancelado"   {% if filter_estado == "cancelado"   %}selected{% endif %}>Cancelado</option>
           </select>
         </div>
-
-        <div class="col-md-4">
-          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Instalador / Técnico</label>
+        <div class="col-md-3">
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Instalador / Técnico</label>
           <select class="form-select form-select-sm" name="empleado">
             <option value="">Todos</option>
             {% for emp in empleados_campo %}
@@ -65,392 +76,388 @@
             {% endfor %}
           </select>
         </div>
-
-        <div class="col-6 col-md-1">
-          <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
+        <div class="col-auto">
+          <button type="submit" class="btn btn-dark btn-sm">Filtrar</button>
         </div>
-        <div class="col-6 col-md-2">
-          <a href="{% url 'seguimiento_avance' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
+        <div class="col-auto">
+          <a href="{% url 'seguimiento_avance' %}" class="btn btn-outline-secondary btn-sm">Limpiar</a>
         </div>
-
+        <div class="col-auto ms-auto d-flex align-items-center gap-2">
+          <span class="small text-muted">Mostrar:</span>
+          <select name="per_page" class="form-select form-select-sm" style="width:80px;" onchange="this.form.submit()">
+            <option value="10"  {% if per_page == 10  %}selected{% endif %}>10</option>
+            <option value="15"  {% if per_page == 15  %}selected{% endif %}>15</option>
+            <option value="20"  {% if per_page == 20  %}selected{% endif %}>20</option>
+            <option value="50"  {% if per_page == 50  %}selected{% endif %}>50</option>
+          </select>
+        </div>
       </form>
     </div>
   </div>
 
-  <!-- KPIs (reactivos a los filtros) -->
+  <!-- ── KPIs ──────────────────────────────────────────────────── -->
   <div class="row g-3 mb-3">
     <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-sm">
+      <a href="?estado=en_progreso" class="text-decoration-none">
+        <div class="card kpi-card primary border-0 shadow-sm h-100">
+          <div class="card-body py-3 px-3">
+            <div class="kpi-value" style="color:#0d6efd;">{{ proyectos_en_progreso }}</div>
+            <div class="kpi-label">En progreso</div>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md-3">
+      <a href="?estado=completado" class="text-decoration-none">
+        <div class="card kpi-card green border-0 shadow-sm h-100">
+          <div class="card-body py-3 px-3">
+            <div class="kpi-value text-success">{{ proyectos_completados }}</div>
+            <div class="kpi-label">Completados</div>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card teal border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="fw-bold fs-4 text-sobotec">{{ total_proyectos }}</div>
-          <div class="text-muted small">{% if filter_estado or search_nombre or filter_empleado %}Proyectos filtrados{% else %}Total proyectos{% endif %}</div>
+          <div class="kpi-value text-info">{{ promedio_avance }}%</div>
+          <div class="kpi-label">Avance promedio</div>
         </div>
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-sm">
+      <div class="card kpi-card blue border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="fw-bold fs-4 text-warning">{{ proyectos_en_progreso }}</div>
-          <div class="text-muted small">En progreso</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body py-3 px-3">
-          <div class="fw-bold fs-4 text-success">{{ proyectos_completados }}</div>
-          <div class="text-muted small">Completados</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="card border-0 shadow-sm">
-        <div class="card-body py-3 px-3">
-          <div class="fw-bold fs-4 text-primary">{{ promedio_avance }}%</div>
-          <div class="text-muted small">Avance promedio (tareas)</div>
+          <div class="kpi-value text-primary">{{ total_proyectos }}</div>
+          <div class="kpi-label">
+            {% if filter_estado or search_nombre or filter_empleado %}Filtrados{% else %}Total proyectos{% endif %}
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- CONTENIDO -->
-  <div class="row g-3">
+  <!-- ── CONTADOR + LEYENDA ─────────────────────────────────────── -->
+  <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-1">
+    <div class="d-flex align-items-center gap-3 label-xs text-muted">
+      <span><span class="dot me-1" style="background:#dc3545;"></span>Retraso crítico</span>
+      <span><span class="dot me-1" style="background:#ffc107;"></span>En multa</span>
+      <span><span class="dot me-1" style="background:#198754;"></span>Completado</span>
+    </div>
+    <div class="text-muted small">
+      Mostrando {{ page_obj.start_index }}–{{ page_obj.end_index }} de {{ total_proyectos }} proyecto{{ total_proyectos|pluralize:"s" }}
+    </div>
+  </div>
 
-    <!-- Avance por Proyecto -->
-    <div class="col-12 col-xl-8">
-      <div class="card border-0 shadow-sm mb-3">
-        <div class="card-body p-0">
-          <div class="table-responsive">
-            <table class="table table-sm table-hover align-middle small">
-              <thead class="table-light small text-uppercase fw-semibold">
-                <tr>
-                  <th class="px-3 py-2">Proyecto</th>
-                  <th class="px-3 py-2" style="min-width:140px;">Progreso tareas</th>
-                  <th class="px-2 py-2 text-center">Sedes</th>
-                  <th class="px-2 py-2">Vence / Retraso</th>
-                  <th class="px-2 py-2 text-center">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for item in proyectos_avance %}
-                {% with multa=item.contrato.estado_multa|default:"normal" %}
-                <tr class="{% if item.proyecto.estado_proyecto != 'completado' %}{% if multa == 'critico' %}table-danger{% elif multa == 'en_multa' %}table-warning{% endif %}{% endif %}" data-href="{% url 'project_view' item.proyecto.id %}">
-                  <td class="px-3 py-2">
-                    <a href="{% url 'project_detail' item.proyecto.id %}"
-                       class="fw-semibold text-decoration-none text-sobotec" style="font-size:0.85rem;">
-                      {{ item.proyecto.nombre }}
-                    </a>
-                    <div class="text-muted" style="font-size:0.72rem;">
-                      {{ item.proyecto.codigo }}
-                      {% if item.proyecto.cliente %}
-                        · {{ item.proyecto.cliente.nombre }} {{ item.proyecto.cliente.apellido_paterno }}
-                      {% endif %}
-                    </div>
-                    {% if item.fin.situacion == 'perdida' %}
-                      <span class="badge bg-danger mt-1" style="font-size:0.62rem;"
-                            title="Mano de obra + multa (Bs {{ item.fin.costo|floatformat:0 }}) supera lo cobrado (Bs {{ item.fin.pagado|floatformat:0 }})">
-                        <i class="bi bi-graph-down-arrow me-1"></i>En pérdida
-                      </span>
-                    {% elif item.fin.situacion == 'riesgo' %}
-                      <span class="badge bg-warning text-dark mt-1" style="font-size:0.62rem;"
-                            title="Costos (Bs {{ item.fin.costo|floatformat:0 }}) ya son ≥80% de lo cobrado (Bs {{ item.fin.pagado|floatformat:0 }})">
-                        <i class="bi bi-exclamation-circle me-1"></i>Margen ajustado
-                      </span>
-                    {% endif %}
-                  </td>
+  <!-- ── TABLA PRINCIPAL ────────────────────────────────────────── -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle small mb-0">
+          <thead class="table-light fw-semibold text-uppercase" style="font-size:0.68rem;">
+            <tr>
+              <th class="px-3 py-2" style="min-width:220px;">Proyecto</th>
+              <th class="py-2" style="min-width:210px;">
+                <i class="bi bi-bar-chart-line me-1 text-muted"></i>Avance de obra
+              </th>
+              <th class="py-2" style="min-width:155px;">
+                <i class="bi bi-calendar-check me-1 text-muted"></i>Plazo de entrega
+              </th>
+              <th class="py-2 text-center" style="min-width:100px;">Estado</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for item in proyectos_avance %}
+            {% with multa=item.contrato.estado_multa|default:"normal" %}
+            <tr class="row-clickable
+              {% if item.proyecto.estado_proyecto == 'completado' %}urgencia-ok
+              {% elif multa == 'critico' %}urgencia-critico
+              {% elif multa == 'en_multa' %}urgencia-multa
+              {% else %}urgencia-none{% endif %}"
+              data-href="{% url 'project_view' item.proyecto.id %}">
 
-                  <td class="px-3 py-2">
-                    {% if item.tiene_sedes %}
-                      <div class="d-flex align-items-center gap-2">
-                        <div class="progress flex-grow-1" style="height:14px; border-radius:4px;">
-                          <div class="progress-bar fw-semibold
-                            {% if item.progreso == 100 %}bg-success
-                            {% elif item.progreso >= 50 %}bg-primary
-                            {% else %}bg-warning text-dark{% endif %}"
-                            style="width:{{ item.progreso }}%; font-size:0.72rem;">
-                            {% if item.progreso > 10 %}{{ item.progreso }}%{% endif %}
-                          </div>
-                        </div>
-                        <span class="text-muted fw-semibold" style="font-size:0.75rem; min-width:32px;">{{ item.progreso }}%</span>
+              <!-- ① Proyecto + Equipo -->
+              <td class="px-3 py-2">
+                <div class="fw-semibold" style="font-size:0.88rem;">{{ item.proyecto.nombre }}</div>
+                <div class="text-muted label-xs mb-1">
+                  <span>{{ item.proyecto.codigo }}</span>
+                  {% if item.proyecto.cliente %}
+                    &nbsp;·&nbsp;{{ item.proyecto.cliente.nombre }} {{ item.proyecto.cliente.apellido_paterno }}
+                  {% endif %}
+                </div>
+                {% if item.equipo_tareas %}
+                <div class="d-flex flex-wrap gap-0">
+                  {% for et in item.equipo_tareas %}
+                  <span class="emp-chip {% if et.empleado.cargo != 'instalador' %}tecnico{% endif %}"
+                        title="{{ et.empleado.nombre }} {{ et.empleado.apellido_paterno }} — {{ et.empleado.get_cargo_display }}">
+                    {{ et.empleado.nombre|slice:":1" }}{{ et.empleado.apellido_paterno|slice:":1" }}
+                  </span>
+                  {% endfor %}
+                </div>
+                {% else %}
+                  <span class="text-muted label-xs"><i class="bi bi-person-dash me-1"></i>Sin equipo asignado</span>
+                {% endif %}
+              </td>
+
+              <!-- ② Avance de obra -->
+              <td class="py-2 px-2">
+                {% if item.tiene_sedes %}
+                  <div class="d-flex align-items-center gap-2">
+                    <span class="pct-grande
+                      {% if item.progreso == 100 %}text-success
+                      {% elif item.progreso >= 60 %}text-primary
+                      {% elif item.progreso >= 30 %}text-info
+                      {% else %}text-warning{% endif %}">
+                      {{ item.progreso }}%
+                    </span>
+                    <div class="flex-grow-1">
+                      <div class="progress mb-1" style="height:10px; border-radius:5px;">
+                        <div class="progress-bar
+                          {% if item.progreso == 100 %}bg-success
+                          {% elif item.progreso >= 60 %}bg-primary
+                          {% elif item.progreso >= 30 %}bg-info
+                          {% else %}bg-warning{% endif %}"
+                          role="progressbar" style="width:{{ item.progreso }}%;"></div>
                       </div>
-                    {% else %}
-                      <span class="text-muted" style="font-size:0.75rem;">Sin sedes registradas</span>
-                    {% endif %}
-                  </td>
-
-                  <td class="px-2 py-2 text-center" style="font-size:0.82rem;">
-                    {% if item.total_sedes > 0 %}
-                      <span class="text-success fw-semibold">{{ item.sedes_completadas }}</span>
-                      <span class="text-muted">/{{ item.total_sedes }}</span>
-                    {% else %}
-                      <span class="text-muted">—</span>
-                    {% endif %}
-                  </td>
-
-                  <td class="px-2 py-2" style="font-size:0.78rem;">
-                    {% if item.contrato %}
-                      {% if item.contrato.dias_retraso > 0 and item.proyecto.estado_proyecto != 'completado' %}
-                        <div class="fw-semibold text-danger">
-                          <i class="bi bi-exclamation-triangle-fill me-1"></i>{{ item.contrato.dias_retraso }} día{{ item.contrato.dias_retraso|pluralize:"s" }} de retraso
-                        </div>
-                        {% if multa == 'critico' %}
-                          <span class="badge bg-danger mt-1" style="font-size:0.65rem;">
-                            <i class="bi bi-slash-circle me-1"></i>Tope multa — Bs {{ item.contrato.multa_acumulada|floatformat:0 }}
+                      <div class="label-xs">
+                        <i class="bi bi-geo-alt-fill me-1 text-secondary"></i>
+                        {% if item.sedes_completadas == item.total_sedes %}
+                          <span class="text-success fw-semibold">
+                            {{ item.sedes_completadas }}/{{ item.total_sedes }} sede{{ item.total_sedes|pluralize:"s" }} terminada{{ item.sedes_completadas|pluralize:"s" }}
                           </span>
-                        {% elif multa == 'en_multa' %}
-                          <span class="badge bg-warning text-dark mt-1" style="font-size:0.65rem;">
-                            <i class="bi bi-cash me-1"></i>En multa — Bs {{ item.contrato.multa_acumulada|floatformat:0 }}
+                        {% elif item.sedes_completadas == 0 %}
+                          <span class="text-muted">
+                            0/{{ item.total_sedes }} sede{{ item.total_sedes|pluralize:"s" }} — ninguna terminada
+                          </span>
+                        {% else %}
+                          <span class="text-muted">
+                            {{ item.sedes_completadas }}/{{ item.total_sedes }} sede{{ item.total_sedes|pluralize:"s" }} terminada{{ item.sedes_completadas|pluralize:"s" }}
                           </span>
                         {% endif %}
-                      {% else %}
-                        <span class="text-muted">
-                          <i class="bi bi-calendar3 me-1"></i>{{ item.contrato.fecha_fin|date:"d/m/Y" }}
-                        </span>
-                      {% endif %}
-                    {% else %}
-                      <span class="text-muted">Sin contrato</span>
-                    {% endif %}
-                  </td>
-
-                  <td class="px-2 py-2 text-center">
-                    {% if item.proyecto.estado_proyecto == 'completado' %}
-                      <span class="badge bg-success small">Completado</span>
-                    {% elif item.proyecto.estado_proyecto == 'en_progreso' %}
-                      <span class="badge bg-primary small">En Progreso</span>
-                    {% elif item.proyecto.estado_proyecto == 'cancelado' %}
-                      <span class="badge bg-secondary small">Cancelado</span>
-                    {% else %}
-                      <span class="badge bg-warning text-dark small">Pendiente</span>
-                    {% endif %}
-                  </td>
-                </tr>
-                {% endwith %}
-                {% empty %}
-                <tr>
-                  <td colspan="5" class="text-center text-muted py-3 small">
-                    No se encontraron proyectos con los filtros seleccionados.
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        {% if paginator.num_pages > 1 %}
-        <nav class="mt-3 mb-2">
-          <ul class="pagination pagination-sm justify-content-center mb-0">
-
-            {% if page_obj.has_previous %}
-            <li class="page-item">
-              <a class="page-link" href="?page={{ page_obj.previous_page_number }}&per_page={{ per_page }}&q={{ search_nombre }}&estado={{ filter_estado }}&empleado={{ filter_empleado }}">
-                Anterior
-              </a>
-            </li>
-            {% else %}
-            <li class="page-item disabled"><span class="page-link">Anterior</span></li>
-            {% endif %}
-
-            {% for num in paginator.page_range %}
-              {% if page_obj.number == num %}
-                <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-              {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
-                <li class="page-item">
-                  <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&q={{ search_nombre }}&estado={{ filter_estado }}&empleado={{ filter_empleado }}">
-                    {{ num }}
-                  </a>
-                </li>
-              {% endif %}
-            {% endfor %}
-
-            {% if page_obj.has_next %}
-            <li class="page-item">
-              <a class="page-link" href="?page={{ page_obj.next_page_number }}&per_page={{ per_page }}&q={{ search_nombre }}&estado={{ filter_estado }}&empleado={{ filter_empleado }}">
-                Siguiente
-              </a>
-            </li>
-            {% else %}
-            <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
-            {% endif %}
-
-          </ul>
-        </nav>
-        {% endif %}
-      </div>
-    </div>
-
-    <!-- Equipo por Proyecto -->
-    <div class="col-12 col-xl-4">
-      <div class="card border-0 shadow-sm mb-3">
-        <div class="card-header bg-light py-2 px-3">
-          <span class="fw-semibold small">
-            <i class="bi bi-people-fill me-1 text-primary"></i>Equipo por Proyecto
-          </span>
-          <span class="text-muted ms-2" style="font-size:0.7rem;">tareas completadas por miembro</span>
-        </div>
-        <div style="max-height:430px; overflow-y:auto;">
-          {% for item in proyectos_avance %}{% if item.equipo_tareas %}
-          <div class="px-3 py-2 border-bottom">
-            <div class="d-flex justify-content-between align-items-start mb-1">
-              <a href="{% url 'project_view' item.proyecto.id %}"
-                 class="fw-semibold text-decoration-none text-sobotec"
-                 style="font-size:0.8rem; line-height:1.3; max-width:165px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; display:block;">
-                {{ item.proyecto.nombre }}
-              </a>
-              {% if item.proyecto.estado_proyecto == 'en_progreso' %}
-                <span class="badge bg-primary flex-shrink-0 ms-1" style="font-size:0.6rem;">En Progreso</span>
-              {% elif item.proyecto.estado_proyecto == 'completado' %}
-                <span class="badge bg-success flex-shrink-0 ms-1" style="font-size:0.6rem;">Completado</span>
-              {% elif item.proyecto.estado_proyecto == 'pendiente' %}
-                <span class="badge bg-warning text-dark flex-shrink-0 ms-1" style="font-size:0.6rem;">Pendiente</span>
-              {% else %}
-                <span class="badge bg-secondary flex-shrink-0 ms-1" style="font-size:0.6rem;">Cancelado</span>
-              {% endif %}
-            </div>
-            <div class="progress mb-2" style="height:4px; border-radius:2px;">
-              <div class="progress-bar {% if item.progreso == 100 %}bg-success{% elif item.progreso >= 50 %}bg-primary{% else %}bg-warning{% endif %}"
-                   style="width:{{ item.progreso }}%;"></div>
-            </div>
-            {% for et in item.equipo_tareas %}
-            <div class="d-flex justify-content-between align-items-center py-1">
-              <div style="min-width:0;">
-                <span class="fw-semibold d-block text-truncate" style="font-size:0.76rem;">
-                  {{ et.empleado.nombre }} {{ et.empleado.apellido_paterno }}
-                </span>
-                <span class="{% if et.empleado.cargo == 'instalador' %}text-primary{% else %}text-secondary{% endif %}"
-                      style="font-size:0.65rem;">
-                  {{ et.empleado.get_cargo_display }}
-                </span>
-              </div>
-              <div class="text-end flex-shrink-0 ms-2">
-                {% if et.completadas > 0 %}
-                  <span class="fw-bold text-success" style="font-size:0.85rem;">{{ et.completadas }}</span>
-                  <span class="text-muted" style="font-size:0.65rem;"> tarea{{ et.completadas|pluralize:"s" }}</span>
+                      </div>
+                    </div>
+                  </div>
                 {% else %}
-                  <span class="text-muted" style="font-size:0.72rem;">0 tareas</span>
+                  <div class="text-muted label-xs">
+                    <i class="bi bi-exclamation-circle me-1 text-warning"></i>Sin sedes registradas
+                  </div>
                 {% endif %}
-              </div>
-            </div>
+              </td>
+
+              <!-- ③ Plazo de entrega -->
+              <td class="py-2" style="font-size:0.83rem;">
+                {% if item.contrato %}
+                  {% if item.proyecto.estado_proyecto == 'completado' %}
+                    <div class="text-success fw-semibold">
+                      <i class="bi bi-check-circle-fill me-1"></i>Entregado
+                    </div>
+                    <div class="label-xs text-muted mt-1">{{ item.contrato.fecha_fin|date:"d/m/Y" }}</div>
+                  {% elif item.contrato.dias_retraso > 0 %}
+                    <div class="fw-bold text-danger" style="font-size:0.93rem;">
+                      <i class="bi bi-alarm-fill me-1"></i>{{ item.contrato.dias_retraso }} día{{ item.contrato.dias_retraso|pluralize:"s" }} de retraso
+                    </div>
+                    <div class="label-xs text-muted mb-1">Venció: {{ item.contrato.fecha_fin|date:"d/m/Y" }}</div>
+                    {% if multa == 'critico' %}
+                      <span class="badge bg-danger" style="font-size:0.62rem;">
+                        <i class="bi bi-slash-circle me-1"></i>Tope multa · Bs.{{ item.contrato.multa_acumulada|floatformat:0 }}
+                      </span>
+                    {% elif multa == 'en_multa' %}
+                      <span class="badge bg-warning text-dark" style="font-size:0.62rem;">
+                        <i class="bi bi-cash me-1"></i>Multa · Bs.{{ item.contrato.multa_acumulada|floatformat:0 }}
+                      </span>
+                    {% endif %}
+                  {% else %}
+                    <div class="label-xs text-muted mb-1">Fecha de entrega:</div>
+                    <div class="fw-semibold">{{ item.contrato.fecha_fin|date:"d/m/Y" }}</div>
+                  {% endif %}
+                {% else %}
+                  <span class="text-muted label-xs"><i class="bi bi-dash me-1"></i>Sin contrato</span>
+                {% endif %}
+              </td>
+
+              <!-- ④ Estado -->
+              <td class="py-2 text-center">
+                {% if item.proyecto.estado_proyecto == 'completado' %}
+                  <span class="badge bg-success">Completado</span>
+                {% elif item.proyecto.estado_proyecto == 'en_progreso' %}
+                  <span class="badge bg-primary">En progreso</span>
+                {% elif item.proyecto.estado_proyecto == 'cancelado' %}
+                  <span class="badge bg-secondary">Cancelado</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark">Pendiente</span>
+                {% endif %}
+                <div class="mt-1" onclick="event.stopPropagation()">
+                  <a href="{% url 'project_view' item.proyecto.id %}"
+                     class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:0.68rem;">
+                    Ver <i class="bi bi-arrow-right"></i>
+                  </a>
+                </div>
+              </td>
+
+            </tr>
+            {% endwith %}
+            {% empty %}
+            <tr>
+              <td colspan="4" class="text-center text-muted py-5">
+                <i class="bi bi-search d-block fs-2 mb-2"></i>
+                No se encontraron proyectos con los filtros seleccionados.
+              </td>
+            </tr>
             {% endfor %}
-          </div>
-          {% endif %}{% endfor %}
-          {% if not proyectos_avance %}
-          <div class="text-center text-muted py-4 small">
-            <i class="bi bi-people fs-3 d-block mb-2"></i>
-            Sin proyectos con los filtros seleccionados.
-          </div>
-          {% endif %}
-        </div>
-        <div class="px-3 py-2 border-top" style="font-size:0.68rem; color:#888;">
-          <i class="bi bi-info-circle me-1"></i>
-          Cantidad de tareas del checklist marcadas como completadas por cada miembro del equipo
-        </div>
+          </tbody>
+        </table>
       </div>
     </div>
 
+    <!-- Paginación -->
+    {% if paginator.num_pages > 1 %}
+    <nav class="py-2">
+      <ul class="pagination pagination-sm justify-content-center mb-0">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.previous_page_number }}&per_page={{ per_page }}&q={{ search_nombre }}&estado={{ filter_estado }}&empleado={{ filter_empleado }}">Anterior</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">Anterior</span></li>
+        {% endif %}
+        {% for num in paginator.page_range %}
+          {% if page_obj.number == num %}
+            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+          {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+              <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&q={{ search_nombre }}&estado={{ filter_estado }}&empleado={{ filter_empleado }}">{{ num }}</a>
+            </li>
+          {% endif %}
+        {% endfor %}
+        {% if page_obj.has_next %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ page_obj.next_page_number }}&per_page={{ per_page }}&q={{ search_nombre }}&estado={{ filter_estado }}&empleado={{ filter_empleado }}">Siguiente</a>
+        </li>
+        {% else %}
+        <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+        {% endif %}
+      </ul>
+    </nav>
+    {% endif %}
   </div>
 
-  <!-- ── RENDIMIENTO POR EMPLEADO ─────────────────────────────────────── -->
+  <!-- ── DESEMPEÑO DEL PERSONAL (secundario) ───────────────────── -->
   {% if rendimiento_empleados %}
-  <div class="card border-0 shadow-sm mt-3">
-    <div class="card-header bg-light py-2 px-3 d-flex align-items-center justify-content-between flex-wrap gap-2">
-      <span class="fw-semibold small">
-        <i class="bi bi-speedometer2 me-1 text-primary"></i>Rendimiento por Empleado — Cumplimiento de plazos
-      </span>
-      <span class="text-muted" style="font-size:0.7rem;">
-        Basado en asignaciones de proyectos (completados vs. plazo vencido sin terminar)
-      </span>
+  <div class="card border-0 shadow-sm">
+    <div class="card-header bg-light py-2 px-3">
+      <div class="fw-semibold small mb-1">
+        <i class="bi bi-people-fill me-1 text-primary"></i>Desempeño del Personal de Campo
+      </div>
+      <div class="label-xs text-muted">
+        Cuántos proyectos terminó cada técnico, cuántos siguen con el plazo vencido sin terminar, y cuántos están activos ahora.
+      </div>
     </div>
     <div class="table-responsive">
-      <table class="table table-sm table-hover align-middle small mb-0">
-        <thead class="table-light small text-uppercase fw-semibold">
+      <table class="table table-sm table-hover align-middle mb-0" style="font-size:0.82rem;">
+        <thead class="table-light" style="font-size:0.72rem;">
           <tr>
-            <th class="px-3 py-2">#</th>
-            <th class="py-2">Empleado</th>
-            <th class="py-2 text-center text-success" title="Proyectos completados donde participó">
-              <i class="bi bi-check-circle-fill me-1"></i>A tiempo
+            <th class="px-3 py-2 text-uppercase fw-semibold">#</th>
+            <th class="py-2 text-uppercase fw-semibold">Empleado</th>
+            <th class="py-2 text-center">
+              <div class="text-success fw-semibold text-uppercase">Terminados</div>
+              <div class="text-muted fw-normal label-xs">proyectos completados</div>
             </th>
-            <th class="py-2 text-center text-danger" title="Asignaciones con plazo superado y proyecto sin completar">
-              <i class="bi bi-x-circle-fill me-1"></i>Vencidas
+            <th class="py-2 text-center">
+              <div class="text-danger fw-semibold text-uppercase">Con retraso</div>
+              <div class="text-muted fw-normal label-xs">plazo vencido, sin terminar</div>
             </th>
-            <th class="py-2 text-center text-muted" title="Proyectos activos aún en plazo">
-              <i class="bi bi-play-circle me-1"></i>Activas
+            <th class="py-2 text-center">
+              <div class="text-primary fw-semibold text-uppercase">En curso</div>
+              <div class="text-muted fw-normal label-xs">activos ahora</div>
             </th>
-            <th class="py-2 text-center" title="Proyectos completados / (completados + vencidos) × 100">
-              Tasa de cumplimiento
+            <th class="py-2" style="min-width:150px;">
+              <div class="text-uppercase fw-semibold">Cumplimiento</div>
+              <div class="text-muted fw-normal label-xs">terminados ÷ (terminados + retraso)</div>
             </th>
+            <th class="py-2 text-center text-uppercase fw-semibold">Situación</th>
           </tr>
         </thead>
         <tbody>
           {% for item in rendimiento_empleados %}
-          <tr {% if item.vencidas > 0 and item.tasa is not None and item.tasa < 60 %}class="table-danger bg-opacity-25"{% endif %}>
-            <td class="px-3 text-muted fw-semibold" style="font-size:0.75rem;">{{ forloop.counter }}</td>
+          <tr>
+            <td class="px-3 text-muted fw-semibold label-xs">{{ forloop.counter }}</td>
             <td class="py-2">
               <a href="{% url 'employee_detail' item.empleado.id %}"
-                 class="fw-semibold text-decoration-none text-dark d-block" style="font-size:0.82rem;">
+                 class="fw-semibold text-decoration-none text-dark d-block">
                 {{ item.empleado.nombre }} {{ item.empleado.apellido_paterno }}
               </a>
-              <span class="{% if item.empleado.cargo == 'instalador' %}text-primary{% else %}text-secondary{% endif %}"
-                    style="font-size:0.68rem;">
+              <span class="label-xs {% if item.empleado.cargo == 'instalador' %}text-primary{% else %}text-secondary{% endif %}">
                 {{ item.empleado.get_cargo_display }}
               </span>
             </td>
             <td class="text-center py-2">
               {% if item.a_tiempo > 0 %}
-                <span class="fw-bold text-success" style="font-size:0.9rem;">{{ item.a_tiempo }}</span>
+                <span class="fw-bold text-success" style="font-size:1.1rem;">{{ item.a_tiempo }}</span>
               {% else %}
-                <span class="text-muted">0</span>
+                <span class="text-muted">—</span>
               {% endif %}
             </td>
             <td class="text-center py-2">
               {% if item.vencidas > 0 %}
-                <span class="fw-bold text-danger" style="font-size:0.9rem;">{{ item.vencidas }}</span>
+                <span class="fw-bold text-danger" style="font-size:1.1rem;">{{ item.vencidas }}</span>
               {% else %}
-                <span class="text-muted">0</span>
+                <span class="text-muted">—</span>
               {% endif %}
             </td>
-            <td class="text-center py-2 text-muted">{{ item.activas }}</td>
             <td class="text-center py-2">
-              {% if item.tasa is not None %}
-                {% if item.tasa >= 80 %}
-                  <span class="badge bg-success fs-6 px-3">{{ item.tasa }}%</span>
-                {% elif item.tasa >= 60 %}
-                  <span class="badge bg-warning text-dark fs-6 px-3">{{ item.tasa }}%</span>
-                {% else %}
-                  <span class="badge bg-danger fs-6 px-3">{{ item.tasa }}%</span>
-                {% endif %}
+              {% if item.activas > 0 %}
+                <span class="badge bg-primary rounded-pill px-3">{{ item.activas }}</span>
               {% else %}
-                <span class="text-muted small">— sin historial cerrado</span>
+                <span class="text-muted">—</span>
+              {% endif %}
+            </td>
+            <td class="py-2">
+              {% if item.tasa is not None %}
+                <div class="d-flex align-items-center gap-2">
+                  <div class="progress flex-grow-1" style="height:10px; border-radius:5px;">
+                    <div class="progress-bar
+                      {% if item.tasa >= 80 %}bg-success{% elif item.tasa >= 60 %}bg-warning{% else %}bg-danger{% endif %}"
+                      style="width:{{ item.tasa }}%;"></div>
+                  </div>
+                  <span class="fw-semibold {% if item.tasa >= 80 %}text-success{% elif item.tasa >= 60 %}text-warning{% else %}text-danger{% endif %}"
+                        style="min-width:36px;">{{ item.tasa }}%</span>
+                </div>
+              {% else %}
+                <span class="text-muted label-xs">Sin historial</span>
+              {% endif %}
+            </td>
+            <td class="text-center py-2">
+              {% if item.tasa is None %}
+                <span class="badge bg-secondary">Sin datos</span>
+              {% elif item.tasa >= 80 %}
+                <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Excelente</span>
+              {% elif item.tasa >= 60 %}
+                <span class="badge bg-warning text-dark"><i class="bi bi-dash-circle me-1"></i>Regular</span>
+              {% else %}
+                <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Crítico</span>
               {% endif %}
             </td>
           </tr>
           {% endfor %}
         </tbody>
-        {% if rendimiento_empleados|length > 1 %}
-        <tfoot class="table-light fw-semibold small">
-          <tr>
-            <td colspan="2" class="px-3 py-2">Total equipo</td>
-            <td class="text-center py-2 text-success">
-              {% with total=0 %}
-              {% for e in rendimiento_empleados %}{% with total=total|add:e.a_tiempo %}{% endwith %}{% endfor %}
-              {% for e in rendimiento_empleados %}{{ e.a_tiempo|add:0 }}{% if not forloop.last %}+{% endif %}{% endfor %}
-              {% endwith %}
-            </td>
-            <td class="text-center py-2 text-danger">—</td>
-            <td class="text-center py-2 text-muted">—</td>
-            <td class="text-center py-2">—</td>
-          </tr>
-        </tfoot>
-        {% endif %}
       </table>
     </div>
-    <div class="px-3 py-2 border-top" style="font-size:0.68rem; color:#888;">
-      <i class="bi bi-info-circle me-1"></i>
-      <strong>A tiempo</strong>: proyectos completados donde el empleado participó. &nbsp;
-      <strong>Vencidas</strong>: plazo planificado superado y el proyecto sigue sin completar. &nbsp;
-      <strong>Tasa</strong>: A tiempo ÷ (A tiempo + Vencidas) × 100. Filas en rojo = tasa menor al 60%.
+    <div class="px-3 py-2 border-top label-xs" style="background:#f8f9fa; color:#666;">
+      <span class="badge bg-success me-1">Excelente</span> 80%+ completados a tiempo &nbsp;
+      <span class="badge bg-warning text-dark me-1">Regular</span> 60–79% &nbsp;
+      <span class="badge bg-danger me-1">Crítico</span> menos del 60% &nbsp;
+      <span class="badge bg-secondary me-1">Sin datos</span> sin proyectos cerrados aún
     </div>
   </div>
   {% endif %}
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  document.querySelectorAll('tr[data-href]').forEach(function(tr) {
+    tr.addEventListener('click', function() { window.location = tr.dataset.href; });
+  });
+</script>
 {% endblock %}

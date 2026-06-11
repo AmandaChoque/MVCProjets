@@ -242,7 +242,9 @@
               {% else %}
                 <span class="badge bg-warning text-dark">Pendiente</span>
               {% endif %}
-              {% if project.cumplimiento == 'vencido' %}
+              {% if project.cumplimiento == 'completado_tarde' %}
+                <div class="text-xxs text-danger mt-1"><i class="bi bi-clock-history me-1"></i>Entregado tarde (+{{ project.dias_info }}d)</div>
+              {% elif project.cumplimiento == 'vencido' %}
                 <div class="text-xxs text-danger mt-1">Vencido hace {{ project.dias_info }}d</div>
               {% elif project.cumplimiento == 'en_plazo' %}
                 <div class="text-xxs text-muted mt-1">{{ project.dias_info }}d restantes</div>

@@ -382,8 +382,12 @@ def project_report(request):
             )
             fecha_fin_contrato = p.contrato_fecha_fin
             if p.estado_proyecto == 'completado':
-                p.cumplimiento = 'completado'
-                p.dias_info = None
+                if fecha_fin_contrato and p.fecha_fin and p.fecha_fin > fecha_fin_contrato:
+                    p.cumplimiento = 'completado_tarde'
+                    p.dias_info = (p.fecha_fin - fecha_fin_contrato).days
+                else:
+                    p.cumplimiento = 'completado'
+                    p.dias_info = None
             elif not fecha_fin_contrato:
                 p.cumplimiento = 'sin_fecha'
                 p.dias_info = None
@@ -586,7 +590,6 @@ def projects(request):
     search_nombre        = request.GET.get('search_nombre', '')
     filter_estado        = request.GET.get('filter_estado', '')
     filter_tipo          = request.GET.get('filter_tipo', '')
-    filter_pago          = request.GET.get('filter_pago', '')
     fecha_inicio_desde   = request.GET.get('fecha_inicio_desde', '')
     fecha_inicio_hasta   = request.GET.get('fecha_inicio_hasta', '')
     fecha_fin_desde      = request.GET.get('fecha_fin_desde', '')
@@ -606,9 +609,6 @@ def projects(request):
         qs = qs.filter(estado_proyecto=filter_estado)
     if filter_tipo:
         qs = qs.filter(tipo_proyecto=filter_tipo)
-    if filter_pago:
-        qs = qs.filter(estado_pago=filter_pago)
-
     # Filtros de rango de fechas (ignorar valores vacíos o malformados)
     if fecha_inicio_desde:
         try:
@@ -630,6 +630,13 @@ def projects(request):
             qs = qs.filter(fecha_fin__lte=datetime.strptime(fecha_fin_hasta, '%Y-%m-%d').date())
         except ValueError:
             fecha_fin_hasta = ''
+
+    # KPIs calculados antes del annotate para evitar SQL complejo
+    kpi_total      = qs.count()
+    kpi_progreso   = qs.filter(estado_proyecto='en_progreso').count()
+    kpi_completado = qs.filter(estado_proyecto='completado').count()
+    kpi_pendiente  = qs.filter(estado_proyecto='pendiente').count()
+    kpi_cancelado  = qs.filter(estado_proyecto='cancelado').count()
 
     _total_sq = (
         TareaChecklist.objects
@@ -686,18 +693,39 @@ def projects(request):
         else:
             _p.ultimo_avance = None
 
+    _contratos_multa_map = {
+        c.proyecto_id: c
+        for c in ContratoProyecto.objects.filter(
+            activo=True, proyecto_id__in=_page_ids
+        ).select_related('proyecto')
+    }
+    for _p in projects_page:
+        _c = _contratos_multa_map.get(_p.pk)
+        if _c:
+            _p.estado_multa_val  = _c.estado_multa
+            _p.multa_val         = _c.multa_acumulada
+            _p.dias_retraso_val  = _c.dias_retraso
+        else:
+            _p.estado_multa_val  = 'normal'
+            _p.multa_val         = Decimal('0')
+            _p.dias_retraso_val  = 0
+
     context = {
         'projects':            projects_page,
         'search_nombre':       search_nombre,
         'filter_estado':       filter_estado,
         'filter_tipo':         filter_tipo,
-        'filter_pago':         filter_pago,
         'fecha_inicio_desde':  fecha_inicio_desde,
         'fecha_inicio_hasta':  fecha_inicio_hasta,
         'fecha_fin_desde':     fecha_fin_desde,
         'fecha_fin_hasta':     fecha_fin_hasta,
         'per_page':            per_page,
         'today':               timezone.now().date(),
+        'kpi_total':           kpi_total,
+        'kpi_progreso':        kpi_progreso,
+        'kpi_completado':      kpi_completado,
+        'kpi_pendiente':       kpi_pendiente,
+        'kpi_cancelado':       kpi_cancelado,
     }
     return render(request, 'projects.html', context)
 
@@ -729,6 +757,8 @@ def project_detail(request, id_project):
             form = ProjectForm(request.POST, instance=project)
             project = form.save(commit=False)
             project._current_user = request.user
+            if project.estado_proyecto == 'completado' and not project.fecha_fin:
+                project._cambio_a_completado = True
             project.save()
             return redirect('projects')
         except ValueError:
@@ -1044,21 +1074,29 @@ def clientes(request):
     filter_tipo = request.GET.get('filter_tipo', '')
     page, per_page = parse_pagination(request)
 
-    # IDs de clientes con al menos un contrato en multa crítica (tope alcanzado).
-    # Solo cargamos contratos con fecha_fin pasada (los únicos que pueden tener multa).
+    # Historial de cumplimiento por cliente: peor estado de multa registrado
+    # en cualquier proyecto (activo, completado o vencido). 'critico' > 'en_multa' > 'normal'.
     from django.utils import timezone as _tz
     _today = _tz.localdate()
-    _contratos_vencidos = (
+    _contratos_historicos = (
         ContratoProyecto.objects
-        .filter(activo=True, fecha_fin__lt=_today,
-                proyecto__activo=True, proyecto__cliente__isnull=False)
+        .filter(proyecto__activo=True, proyecto__cliente__isnull=False)
+        .filter(
+            Q(fecha_fin__lt=_today) |
+            Q(proyecto__estado_proyecto='completado')
+        )
         .select_related('proyecto')
     )
-    clientes_criticos_ids = {
-        c.proyecto.cliente_id
-        for c in _contratos_vencidos
-        if c.estado_multa == 'critico'
-    }
+    _PESO = {'critico': 2, 'en_multa': 1, 'normal': 0}
+    historial_cumplimiento: dict = {}  # cliente_id -> worst estado_multa
+    clientes_criticos_ids = set()
+    for c in _contratos_historicos:
+        cid = c.proyecto.cliente_id
+        estado = c.estado_multa
+        if _PESO.get(estado, 0) > _PESO.get(historial_cumplimiento.get(cid, 'normal'), 0):
+            historial_cumplimiento[cid] = estado
+        if estado == 'critico':
+            clientes_criticos_ids.add(cid)
 
     # Start with all clients
     # clientes = Cliente.objects.all()
@@ -1081,7 +1119,7 @@ def clientes(request):
     
     # Total count before pagination
     total_clientes = clientes.count()
-    
+
     # Pagination with configurable per_page
     paginator = Paginator(clientes, per_page)
     try:
@@ -1090,7 +1128,11 @@ def clientes(request):
         clientes_page = paginator.page(1)
     except EmptyPage:
         clientes_page = paginator.page(paginator.num_pages)
-    
+
+    # Anotar el historial de cumplimiento directamente en cada objeto de la página
+    for c in clientes_page:
+        c.cumplimiento_historico = historial_cumplimiento.get(c.id, 'normal')
+
     context = {
         'clientes': clientes_page,
         'total_clientes': total_clientes,
@@ -1676,7 +1718,7 @@ def sede_view(request, id_sede):
         'plantillas': plantillas,
         'actividad_hoy': actividad_hoy,
         'equipo_json': equipo_json,
-        'participantes_map_json': _json.dumps(participantes_map),
+        'participantes_map_json': json.dumps(participantes_map),
     }
     return render(request, 'sede_view.html', context)
 
@@ -2143,12 +2185,23 @@ def payment_list(request):
         )
     proyectos_qs = proyectos_qs.order_by('codigo')
 
-    # KPIs globales (sin paginar, aggregate directo)
-    kpi_agg = PagoProyecto.objects.filter(activo=True, estado='pagado').aggregate(
-        t=Sum('monto'), td=Sum('descuento')
-    )
-    total_cobrado_global = float(kpi_agg['t'] or 0) + float(kpi_agg['td'] or 0)
+    # KPIs globales (sobre el queryset filtrado)
     total_proyectos = proyectos_qs.count()
+    estado_counts = {
+        row['estado_pago']: row['cnt']
+        for row in proyectos_qs.values('estado_pago').annotate(cnt=Count('id'))
+    }
+    count_no_pagados = estado_counts.get('no_pagado', 0)
+    count_parciales  = estado_counts.get('parcial', 0)
+    count_pagados    = estado_counts.get('pagado', 0)
+
+    kpi_agg = PagoProyecto.objects.filter(
+        activo=True, estado='pagado', proyecto__in=proyectos_qs
+    ).aggregate(t=Sum('monto'), td=Sum('descuento'))
+    total_cobrado_global = float(kpi_agg['t'] or 0) + float(kpi_agg['td'] or 0)
+
+    monto_total_global = float(proyectos_qs.aggregate(t=Sum('monto_total'))['t'] or 0)
+    total_saldo_global = round(monto_total_global - total_cobrado_global, 2)
 
     paginator = Paginator(proyectos_qs, per_page)
     try:
@@ -2194,7 +2247,11 @@ def payment_list(request):
         'modo':                    'proyectos',
         'proyectos':               proyectos_page,
         'total_proyectos':         total_proyectos,
+        'count_no_pagados':        count_no_pagados,
+        'count_parciales':         count_parciales,
+        'count_pagados':           count_pagados,
         'total_cobrado_global':    round(total_cobrado_global, 2),
+        'total_saldo_global':      total_saldo_global,
         'filter_estado_pago':      filter_estado_pago,
         'filter_tipo':             filter_tipo,
         'filter_estado_proyecto':  filter_estado_proyecto,
@@ -2391,102 +2448,114 @@ def confirmar_pago_proyecto(request, id_payment):
 @login_required
 @cargo_required(*ROLES_ADMIN_SEC)
 def filter_payments_by_project_name(request):
-    project_name = request.GET.get('project_name', '')
-    start_date   = request.GET.get('start_date', '')
-    end_date     = request.GET.get('end_date', '')
+    project_name  = request.GET.get('project_name', '')
+    start_date    = request.GET.get('start_date', '')
+    end_date      = request.GET.get('end_date', '')
     filter_tipo   = request.GET.get('filter_tipo', '')
     filter_estado = request.GET.get('filter_estado', '')
     page, per_page = parse_pagination(request)
 
-    projects = Proyecto.objects.filter(activo=True).values('nombre').distinct()
-    payments = PagoProyecto.objects.filter(activo=True).select_related('proyecto', 'proyecto__cliente')
+    projects_list = Proyecto.objects.filter(activo=True).values('nombre').distinct()
+
+    proyectos_qs = Proyecto.objects.filter(activo=True).select_related('cliente').order_by('codigo')
 
     if project_name:
-        payments = payments.filter(proyecto__nombre__icontains=project_name)
-    if start_date:
-        payments = payments.filter(fecha__gte=start_date)
-    if end_date:
-        payments = payments.filter(fecha__lte=end_date)
-    if filter_tipo:
-        payments = payments.filter(tipo_pago=filter_tipo)
-    if filter_estado:
-        payments = payments.filter(estado=filter_estado)
+        proyectos_qs = proyectos_qs.filter(nombre__icontains=project_name)
 
-    cobrado_subq = PagoProyecto.objects.filter(
-        proyecto_id=OuterRef('proyecto_id'),
-        activo=True,
-        estado='pagado'
-    ).values('proyecto_id').annotate(t=Sum('monto')).values('t')
+    # Limitar a proyectos que tengan al menos un pago con los filtros aplicados
+    if start_date or end_date or filter_tipo or filter_estado:
+        pago_q = Q(pagos__activo=True)
+        if start_date:
+            try:
+                pago_q &= Q(pagos__fecha__gte=datetime.strptime(start_date, "%Y-%m-%d").date())
+            except ValueError:
+                pass
+        if end_date:
+            try:
+                pago_q &= Q(pagos__fecha__lte=datetime.strptime(end_date, "%Y-%m-%d").date())
+            except ValueError:
+                pass
+        if filter_tipo:
+            pago_q &= Q(pagos__tipo_pago=filter_tipo)
+        if filter_estado:
+            pago_q &= Q(pagos__estado=filter_estado)
+        proyectos_qs = proyectos_qs.filter(pago_q).distinct()
 
-    payments = payments.annotate(
-        proyecto_cobrado=Coalesce(
-            Subquery(cobrado_subq, output_field=ModelDecimalField(max_digits=14, decimal_places=2)),
-            Decimal('0')
-        )
-    ).annotate(
-        proyecto_saldo=ExpressionWrapper(
-            F('proyecto__monto_total') - F('proyecto_cobrado'),
-            output_field=ModelDecimalField(max_digits=14, decimal_places=2)
-        )
-    )
-
-    agg = payments.aggregate(
-        total_monto=Sum('monto'),
-        total_neto=Sum(F('monto') + Coalesce('descuento', Decimal('0'))),
-        total_descuentos=Sum('descuento'),
-        monto_efectivo=Sum('monto', filter=Q(tipo_pago='efectivo')),
-        monto_transferencia=Sum('monto', filter=Q(tipo_pago='transferencia')),
-        count_efectivo=Count('id', filter=Q(tipo_pago='efectivo')),
-        count_transferencia=Count('id', filter=Q(tipo_pago='transferencia')),
-        count_pendiente=Count('id', filter=Q(estado='pendiente')),
-        count_pagado=Count('id', filter=Q(estado='pagado')),
-        total_payments=Count('id'),
-    )
-    total_monto         = agg['total_monto']         or 0
-    total_neto          = agg['total_neto']          or 0
-    total_descuentos    = agg['total_descuentos']    or 0
-    monto_efectivo      = agg['monto_efectivo']      or 0
-    monto_transferencia = agg['monto_transferencia'] or 0
-    count_efectivo      = agg['count_efectivo']      or 0
-    count_transferencia = agg['count_transferencia'] or 0
-    count_pendiente     = agg['count_pendiente']     or 0
-    count_pagado        = agg['count_pagado']        or 0
-    total_payments      = agg['total_payments']      or 0
+    # KPIs globales
+    total_proyectos = proyectos_qs.count()
+    estado_counts = {
+        row['estado_pago']: row['cnt']
+        for row in proyectos_qs.values('estado_pago').annotate(cnt=Count('id'))
+    }
+    count_no_pagados = estado_counts.get('no_pagado', 0)
+    count_parciales  = estado_counts.get('parcial', 0)
+    count_pagados    = estado_counts.get('pagado', 0)
+    kpi_agg = PagoProyecto.objects.filter(
+        activo=True, estado='pagado', proyecto__in=proyectos_qs
+    ).aggregate(t=Sum('monto'), td=Sum('descuento'))
+    total_cobrado_global = float(kpi_agg['t'] or 0) + float(kpi_agg['td'] or 0)
+    monto_total_global   = float(proyectos_qs.aggregate(t=Sum('monto_total'))['t'] or 0)
+    total_saldo_global   = round(monto_total_global - total_cobrado_global, 2)
 
     # PDF/Excel: lista completa; HTML: paginada
-    payments = payments.order_by('-fecha')
     if 'pdf' in request.GET or 'excel' in request.GET:
+        proyectos_pag = list(proyectos_qs)
         payments_page = None
     else:
-        paginator = Paginator(payments, per_page)
+        paginator = Paginator(proyectos_qs, per_page)
         try:
             payments_page = paginator.page(page)
         except (PageNotAnInteger, EmptyPage):
             payments_page = paginator.page(1)
-        payments = list(payments_page.object_list)
+        proyectos_pag = list(payments_page.object_list)
+
+    # Enriquecer con cobrado, saldo y n_pagos
+    page_ids = [p.pk for p in proyectos_pag]
+    pagos_agg = (
+        PagoProyecto.objects
+        .filter(activo=True, estado='pagado', proyecto_id__in=page_ids)
+        .values('proyecto_id')
+        .annotate(total=Sum('monto'), total_desc=Sum('descuento'), num=Count('id'))
+    )
+    cobrado_map = {
+        row['proyecto_id']: {
+            'cobrado': float(row['total'] or 0) + float(row['total_desc'] or 0),
+            'num': row['num'],
+        }
+        for row in pagos_agg
+    }
+    contratos_map = {
+        c['proyecto_id']: float(c['monto_acordado'])
+        for c in ContratoProyecto.objects.filter(activo=True, proyecto_id__in=page_ids)
+        .values('proyecto_id', 'monto_acordado')
+    }
+    for p in proyectos_pag:
+        datos = cobrado_map.get(p.pk, {'cobrado': 0, 'num': 0})
+        cobrado = datos['cobrado']
+        monto_ref = contratos_map.get(p.pk) or float(p.monto_total)
+        p.cobrado_proyecto   = round(cobrado, 2)
+        p.monto_ref_proyecto = round(monto_ref, 2)
+        p.saldo_proyecto     = round(monto_ref - cobrado, 2)
+        p.num_pagos          = datos['num']
 
     context = {
-        'payments': payments,
-        'projects': projects,
-        'project_name': project_name,
-        'start_date': start_date,
-        'end_date': end_date,
-        'filter_tipo': filter_tipo,
-        'filter_estado': filter_estado,
-        'total_monto': total_monto,
-        'total_neto': total_neto,
-        'total_descuentos': total_descuentos,
-        'monto_efectivo': monto_efectivo,
-        'monto_transferencia': monto_transferencia,
-        'count_efectivo': count_efectivo,
-        'count_transferencia': count_transferencia,
-        'count_pendiente': count_pendiente,
-        'count_pagado': count_pagado,
-        'total_payments': total_payments,
-        'payments_page': payments_page,
-        'per_page': per_page,
-        'now': timezone.now(),
-        'generado_por': request.user.get_full_name() or request.user.username,
+        'proyectos':            proyectos_pag,
+        'projects':             projects_list,
+        'project_name':         project_name,
+        'start_date':           start_date,
+        'end_date':             end_date,
+        'filter_tipo':          filter_tipo,
+        'filter_estado':        filter_estado,
+        'total_proyectos':      total_proyectos,
+        'count_no_pagados':     count_no_pagados,
+        'count_parciales':      count_parciales,
+        'count_pagados':        count_pagados,
+        'total_cobrado_global': round(total_cobrado_global, 2),
+        'total_saldo_global':   total_saldo_global,
+        'payments_page':        payments_page,
+        'per_page':             per_page,
+        'now':                  timezone.now(),
+        'generado_por':         request.user.get_full_name() or request.user.username,
     }
 
     if 'pdf' in request.GET:
@@ -2501,7 +2570,7 @@ def filter_payments_by_project_name(request):
         return response
 
     if 'excel' in request.GET:
-        NUM_COLS = 13
+        NUM_COLS = 9
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = 'Pagos Clientes'
@@ -2544,49 +2613,44 @@ def filter_payments_by_project_name(request):
         ws['A2'].alignment = Alignment(horizontal='left', vertical='center', indent=1)
         ws.row_dimensions[2].height = 18
         ws.append([]); ws.row_dimensions[3].height = 6
-        headers = ['Código', 'Proyecto', 'Cliente', 'Estado Proyecto', 'Estado Pago Proy.',
-                   'Monto Acordado (Bs.)', 'Cobrado Proy. (Bs.)', 'Saldo Proy. (Bs.)',
-                   'Monto Pago (Bs.)', 'Descuento (Bs.)', 'Fecha', 'Tipo de Pago', 'Confirmación']
+        headers = ['Código', 'Proyecto', 'Cliente', 'Estado Proyecto', 'Estado Pago',
+                   'Acordado (Bs.)', 'Cobrado (Bs.)', 'Saldo (Bs.)', 'N° Pagos']
         ws.append(headers)
         for cell in ws[4]:
             cell.font = header_font; cell.fill = header_fill
             cell.alignment = center; cell.border = cell_border
         ws.row_dimensions[4].height = 22
         last_row = 4
-        for i, p in enumerate(payments, start=5):
-            cliente_str = (f'{p.proyecto.cliente.nombre} {p.proyecto.cliente.apellido_paterno}'
-                           if p.proyecto.cliente else '—')
+        for i, p in enumerate(proyectos_pag, start=5):
+            cliente_str = (f'{p.cliente.nombre} {p.cliente.apellido_paterno}' if p.cliente else '—')
             ws.append([
-                p.proyecto.codigo, p.proyecto.nombre, cliente_str,
-                p.proyecto.get_estado_proyecto_display(),
-                p.proyecto.get_estado_pago_display(),
-                float(p.proyecto.monto_total),
-                float(p.proyecto_cobrado),
-                float(p.proyecto_saldo),
-                float(p.monto),
-                float(p.descuento) if p.descuento is not None else 0.0,
-                p.fecha.strftime('%d/%m/%Y') if p.fecha else '—',
-                p.get_tipo_pago_display(),
-                p.get_estado_display(),
+                p.codigo, p.nombre, cliente_str,
+                p.get_estado_proyecto_display(),
+                p.get_estado_pago_display(),
+                p.monto_ref_proyecto,
+                p.cobrado_proyecto,
+                p.saldo_proyecto,
+                p.num_pagos,
             ])
             row_fill = alt_fill if i % 2 == 0 else None
             for j, cell in enumerate(ws[i], start=1):
                 if row_fill: cell.fill = row_fill
                 cell.border = cell_border
-                if j in (6, 7, 8, 9, 10):
+                if j in (6, 7, 8):
                     cell.alignment = right_al; cell.number_format = money_fmt
-                elif j == 11: cell.alignment = center
-                else:         cell.alignment = left
+                elif j == 9: cell.alignment = center
+                else:        cell.alignment = left
             ws.row_dimensions[i].height = 16
             last_row = i
         total_row = last_row + 1
-        ws.append(['', 'TOTAL', '', '', '', '', '', '', float(total_monto), float(total_descuentos), '', '', ''])
+        ws.append(['', 'TOTAL', '', '', '',
+                   monto_total_global, total_cobrado_global, total_saldo_global, ''])
         for j, cell in enumerate(ws[total_row], start=1):
             cell.font = total_font; cell.fill = total_fill; cell.border = total_border
-            if j in (6, 7, 8, 9, 10): cell.alignment = right_al; cell.number_format = money_fmt
-            else:                      cell.alignment = left
+            if j in (6, 7, 8): cell.alignment = right_al; cell.number_format = money_fmt
+            else:               cell.alignment = left
         ws.row_dimensions[total_row].height = 18
-        for col_idx, width in enumerate([12, 28, 22, 16, 14, 20, 18, 16, 18, 14, 12, 14, 14], start=1):
+        for col_idx, width in enumerate([12, 30, 22, 16, 14, 18, 18, 16, 10], start=1):
             ws.column_dimensions[openpyxl.utils.get_column_letter(col_idx)].width = width
         ws.freeze_panes = 'A5'
         ws.auto_filter.ref = f'A4:{openpyxl.utils.get_column_letter(NUM_COLS)}4'
@@ -3881,3 +3945,62 @@ def project_finalizacion_pdf(request, id_project):
     if pisa_status.err:
         return HttpResponse('Error al generar el PDF', status=500)
     return response
+
+
+def consulta_proyecto(request):
+    resultado = None
+    error = None
+
+    if request.method == 'POST':
+        codigo = request.POST.get('codigo', '').strip().upper()
+        nit_ci = request.POST.get('nit_ci', '').strip()
+
+        if not codigo or not nit_ci:
+            error = 'Por favor ingresa el código de proyecto y tu número de CI/NIT.'
+        else:
+            proyecto = (
+                Proyecto.objects
+                .filter(codigo__iexact=codigo, cliente__nit_ci=nit_ci, activo=True)
+                .select_related('cliente')
+                .prefetch_related(
+                    Prefetch(
+                        'sedes',
+                        queryset=Sede.objects.filter(activo=True).prefetch_related(
+                            Prefetch('tareas', queryset=TareaChecklist.objects.filter(activo=True))
+                        ).order_by('nombre'),
+                    ),
+                    Prefetch('contratos', queryset=ContratoProyecto.objects.filter(activo=True)),
+                )
+                .first()
+            )
+
+            if not proyecto:
+                error = 'No se encontró ningún proyecto con ese código y CI/NIT. Verifica los datos ingresados.'
+            else:
+                contrato = proyecto.contratos.filter(activo=True).first()
+                garantia = None
+                if contrato:
+                    try:
+                        garantia = contrato.garantia
+                    except Exception:
+                        pass
+
+                sedes = list(proyecto.sedes.all())
+                total_sedes = len(sedes)
+                sedes_completadas = sum(1 for s in sedes if s.estado == 'completado')
+                pct_global = round(sum(s.porcentaje_checklist for s in sedes) / total_sedes) if total_sedes else 0
+
+                resultado = {
+                    'proyecto': proyecto,
+                    'contrato': contrato,
+                    'garantia': garantia,
+                    'sedes': sedes,
+                    'total_sedes': total_sedes,
+                    'sedes_completadas': sedes_completadas,
+                    'pct_global': pct_global,
+                }
+
+    return render(request, 'consulta_proyecto.html', {
+        'resultado': resultado,
+        'error': error,
+    })

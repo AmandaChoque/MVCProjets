@@ -147,7 +147,6 @@
                 <th>Estado cobro</th>
                 <th class="text-end">Acordado (Bs.)</th>
                 <th class="text-end">Cobrado (Bs.)</th>
-                <th class="text-center">Avance</th>
                 <th class="text-end">Saldo (Bs.)</th>
                 <th class="text-center">Pagos</th>
               </tr>
@@ -170,16 +169,6 @@
                 </td>
                 <td class="text-end">{{ p.monto_total|floatformat:2 }}</td>
                 <td class="text-end fw-semibold text-success">{{ p.cobrado|floatformat:2 }}</td>
-                <td class="text-center">
-                  {% if p.monto_total > 0 %}
-                    {% widthratio p.cobrado p.monto_total 100 as avance_pct %}
-                    <span class="{% if p.estado_pago == 'pagado' %}text-success{% elif p.estado_pago == 'parcial' %}text-warning{% else %}text-danger{% endif %} fw-semibold">
-                      {{ avance_pct }}%
-                    </span>
-                  {% else %}
-                    <span class="text-muted">—</span>
-                  {% endif %}
-                </td>
                 <td class="text-end fw-semibold">
                   {% if p.saldo > 0 %}
                     <span class="text-danger">{{ p.saldo|floatformat:2 }}</span>
@@ -195,7 +184,7 @@
               </tr>
               {% empty %}
               <tr>
-                <td colspan="7" class="text-center text-muted py-3">Sin proyectos con pagos.</td>
+                <td colspan="6" class="text-center text-muted py-3">Sin proyectos con pagos.</td>
               </tr>
               {% endfor %}
             </tbody>

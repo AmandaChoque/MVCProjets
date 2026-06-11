@@ -137,7 +137,7 @@ def insumos(request):
 
 
 @login_required
-@cargo_required(*ROLES_CAMPO)
+@cargo_required(*ROLES_ADMIN)
 def create_insumo(request):
     if request.method == 'GET':
         return render(request, 'create_insumo.html', {'form': InsumoForm()})
@@ -404,7 +404,9 @@ def deactivate_requiere(request, id_requiere):
 @login_required
 @cargo_required(*ROLES_CAMPO)
 def compras(request):
-    search   = request.GET.get('search', '')
+    search    = request.GET.get('search', '')
+    fecha_ini = request.GET.get('fecha_ini', '')
+    fecha_fin = request.GET.get('fecha_fin', '')
     page, per_page = parse_pagination(request)
 
     qs = Compra.objects.filter(activo=True).select_related('proveedor', 'insumo').order_by('-fecha')
@@ -412,6 +414,10 @@ def compras(request):
         qs = qs.filter(
             Q(insumo__nombre__icontains=search) | Q(proveedor__nombre__icontains=search)
         )
+    if fecha_ini:
+        qs = qs.filter(fecha__gte=fecha_ini)
+    if fecha_fin:
+        qs = qs.filter(fecha__lte=fecha_fin)
 
     paginator = Paginator(qs, per_page)
     try:
@@ -423,6 +429,8 @@ def compras(request):
         'compras': compras_page,
         'search': search,
         'per_page': per_page,
+        'fecha_ini': fecha_ini,
+        'fecha_fin': fecha_fin,
     })
 
 

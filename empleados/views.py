@@ -342,39 +342,68 @@ def employee_view(request, id_employee):
 @cargo_required(*ROLES_ADMIN)
 def employee_workload(request):
     filter_empleado = request.GET.get('filter_empleado', '')
-    page, per_page = parse_pagination(request, default_per_page=20)
+    filter_proyecto = request.GET.get('filter_proyecto', '')
+    filter_estado   = request.GET.get('filter_estado', '')
+    fecha_ini       = request.GET.get('fecha_ini', '')
+    fecha_fin       = request.GET.get('fecha_fin', '')
+    page, per_page  = parse_pagination(request, default_per_page=20)
 
-    # ── Tab 1: jornadas pendientes (tabla plana, filtrable) ───────────────────
-    jornadas_pend_qs = (
-        JornadaEmpleado.objects.filter(activo=True, estado='pendiente')
-        .select_related('contrato__empleado', 'proyecto')
-        .order_by('contrato__empleado__apellido_paterno', 'fecha')
+    from django.db.models import Count
+
+    # ── Tabla de jornadas (todas, filtrable) ─────────────────────────────────
+    qs = (
+        JornadaEmpleado.objects.filter(activo=True)
+        .select_related('contrato__empleado', 'contrato', 'proyecto')
+        .order_by('-fecha', 'contrato__empleado__apellido_paterno')
     )
     if filter_empleado:
         try:
-            jornadas_pend_qs = jornadas_pend_qs.filter(contrato__empleado_id=int(filter_empleado))
+            qs = qs.filter(contrato__empleado_id=int(filter_empleado))
         except ValueError:
             filter_empleado = ''
+    if filter_proyecto:
+        try:
+            qs = qs.filter(proyecto_id=int(filter_proyecto))
+        except ValueError:
+            filter_proyecto = ''
+    if filter_estado:
+        qs = qs.filter(estado=filter_estado)
+    if fecha_ini:
+        qs = qs.filter(fecha__gte=fecha_ini)
+    if fecha_fin:
+        qs = qs.filter(fecha__lte=fecha_fin)
 
-    total_pendientes = jornadas_pend_qs.count()
-    paginator_j      = Paginator(jornadas_pend_qs, per_page)
-    jornadas_page    = paginator_j.get_page(page)
+    # Totales para el resumen
+    total_qs       = qs.count()
+    total_aprobadas  = qs.filter(estado='aprobada').count()
+    total_pendientes = qs.filter(estado='pendiente').count()
+    total_rechazadas = qs.filter(estado='rechazada').count()
 
-    # Empleados con jornadas pendientes (solo para el filtro)
-    empleados_pendientes = (
-        Empleado.objects.filter(
-            contratos_empleado__jornadas__activo=True,
-            contratos_empleado__jornadas__estado='pendiente',
-        ).distinct().order_by('apellido_paterno', 'nombre')
-    )
+    paginator_j   = Paginator(qs, per_page)
+    jornadas_page = paginator_j.get_page(page)
 
-    # Todos los empleados activos (para el filtro del calendario)
+    # Empleados activos para filtro
     empleados_activos = (
         Empleado.objects.filter(is_active=True)
         .order_by('apellido_paterno', 'nombre')
     )
 
-    # Contrato activo del empleado seleccionado (para indicadores en el calendario)
+    # Proyectos con jornadas activas para filtro
+    proyectos_filtro = (
+        Proyecto.objects
+        .filter(activo=True, jornadas_empleados__activo=True)
+        .distinct().order_by('nombre')
+    )
+
+    # Proyectos con pendientes (acceso rápido)
+    proyectos_con_pendientes = (
+        Proyecto.objects
+        .filter(activo=True, jornadas_empleados__activo=True, jornadas_empleados__estado='pendiente')
+        .annotate(n_pendientes=Count('jornadas_empleados', distinct=True))
+        .order_by('nombre').distinct()
+    )
+
+    # Contrato activo del empleado seleccionado (para el calendario)
     contrato_cal = None
     if filter_empleado:
         try:
@@ -384,27 +413,9 @@ def employee_workload(request):
         except ValueError:
             pass
 
-    # ── Proyectos con jornadas pendientes (acceso rápido a revisión) ─────────
-    from projects.models import Proyecto
-    from django.db.models import Count
-    proyectos_con_pendientes = (
-        Proyecto.objects
-        .filter(activo=True, jornadas_empleados__activo=True, jornadas_empleados__estado='pendiente')
-        .annotate(n_pendientes=Count('jornadas_empleados', distinct=True))
-        .order_by('nombre')
-        .distinct()
-    )
-    if filter_empleado:
-        try:
-            proyectos_con_pendientes = proyectos_con_pendientes.filter(
-                jornadas_empleados__contrato__empleado_id=int(filter_empleado),
-            )
-        except ValueError:
-            pass
-
     # ── Calendario de jornadas ────────────────────────────────────────────────
-    today  = date.today()
-    emp_id = int(filter_empleado) if filter_empleado else None
+    today   = date.today()
+    emp_id  = int(filter_empleado) if filter_empleado else None
     asig_ranges = []
     if emp_id:
         asig_ranges = list(
@@ -417,12 +428,19 @@ def employee_workload(request):
 
     return render(request, 'employee_workload.html', {
         'jornadas_pendientes':       jornadas_page,
-        'empleados_pendientes':      empleados_pendientes,
         'empleados_activos':         empleados_activos,
+        'proyectos_filtro':          proyectos_filtro,
+        'proyectos_con_pendientes':  proyectos_con_pendientes,
         'contrato_cal':              contrato_cal,
         'filter_empleado':           filter_empleado,
+        'filter_proyecto':           filter_proyecto,
+        'filter_estado':             filter_estado,
+        'fecha_ini':                 fecha_ini,
+        'fecha_fin':                 fecha_fin,
+        'total_qs':                  total_qs,
+        'total_aprobadas':           total_aprobadas,
         'total_pendientes':          total_pendientes,
-        'proyectos_con_pendientes':  proyectos_con_pendientes,
+        'total_rechazadas':          total_rechazadas,
         'paginator':                 paginator_j,
         'per_page':                  per_page,
         'today':                     today,
@@ -592,7 +610,7 @@ def reactivate_employee(request, id_employee):
 # ── Reporte de empleados ──────────────────────────────────────────────────────
 
 @login_required
-@cargo_required(*ROLES_ADMIN)
+@cargo_required(*ROLES_ADMIN_SEC)
 def employee_report(request):
     search_nombre = request.GET.get('search_nombre', '').strip()
     filter_cargo  = request.GET.get('filter_cargo', '')

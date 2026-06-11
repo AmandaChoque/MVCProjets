@@ -275,35 +275,6 @@
     </div>
   </div>
 
-  <!-- KPIs -->
-  <div class="row g-3 mb-3">
-    <div class="col-6 col-md-3">
-      <div class="card kpi-card blue border-0 shadow-sm h-100">
-        <div class="card-body py-3 px-3">
-          <div class="kpi-value text-primary">{{ total_proyectos }}</div>
-          <div class="kpi-label">Proyectos{% if filter_estado_pago %} (filtrado){% endif %}</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="card kpi-card green border-0 shadow-sm h-100">
-        <div class="card-body py-3 px-3">
-          <div class="kpi-value text-success" style="font-size:1.2rem;">{{ total_cobrado_global|floatformat:2 }}</div>
-          <div class="kpi-label">Total cobrado Bs.</div>
-        </div>
-      </div>
-    </div>
-    <div class="col-6 col-md-3">
-      <div class="card kpi-card gray border-0 shadow-sm h-100">
-        <div class="card-body py-3 px-3 d-flex flex-column justify-content-center">
-          <a href="{% url 'payment_analysis' %}" class="btn btn-outline-secondary btn-sm">
-            <i class="bi bi-graph-up me-1"></i>Análisis financiero
-          </a>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- Filtros -->
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body py-2">
@@ -343,6 +314,64 @@
     </div>
   </div>
 
+  <!-- KPIs -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="card kpi-card blue border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-primary">{{ total_proyectos }}</div>
+          <div class="kpi-label">Total proyectos</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <a href="?filter_estado_pago=no_pagado{% if filter_estado_proyecto %}&filter_estado_proyecto={{ filter_estado_proyecto }}{% endif %}{% if search_nombre %}&q={{ search_nombre }}{% endif %}" class="text-decoration-none">
+        <div class="card kpi-card red border-0 shadow-sm h-100">
+          <div class="card-body py-3 px-3">
+            <div class="kpi-value text-danger">{{ count_no_pagados }}</div>
+            <div class="kpi-label">Sin cobro</div>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <a href="?filter_estado_pago=parcial{% if filter_estado_proyecto %}&filter_estado_proyecto={{ filter_estado_proyecto }}{% endif %}{% if search_nombre %}&q={{ search_nombre }}{% endif %}" class="text-decoration-none">
+        <div class="card kpi-card yellow border-0 shadow-sm h-100">
+          <div class="card-body py-3 px-3">
+            <div class="kpi-value text-warning">{{ count_parciales }}</div>
+            <div class="kpi-label">Cobro parcial</div>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <a href="?filter_estado_pago=pagado{% if filter_estado_proyecto %}&filter_estado_proyecto={{ filter_estado_proyecto }}{% endif %}{% if search_nombre %}&q={{ search_nombre }}{% endif %}" class="text-decoration-none">
+        <div class="card kpi-card green border-0 shadow-sm h-100">
+          <div class="card-body py-3 px-3">
+            <div class="kpi-value text-success">{{ count_pagados }}</div>
+            <div class="kpi-label">Cobrado completo</div>
+          </div>
+        </div>
+      </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="card kpi-card teal border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-success" style="font-size:1.2rem;">{{ total_cobrado_global|floatformat:2 }}</div>
+          <div class="kpi-label">Total cobrado Bs.</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="card kpi-card {% if total_saldo_global > 0 %}red{% else %}green{% endif %} border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value {% if total_saldo_global > 0 %}text-danger{% else %}text-success{% endif %}" style="font-size:1.2rem;">{{ total_saldo_global|floatformat:2 }}</div>
+          <div class="kpi-label">Saldo pendiente Bs.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- Tabla proyectos -->
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body p-0">
@@ -357,7 +386,6 @@
               <th>Estado Pago</th>
               <th class="text-end">Acordado (Bs.)</th>
               <th class="text-end">Cobrado (Bs.)</th>
-              <th class="text-center">Avance</th>
               <th class="text-end">Saldo (Bs.)</th>
               <th class="text-center">Pagos</th>
               <th class="text-end" style="width:60px;">Acciones</th>
@@ -411,17 +439,6 @@
               <!-- Cobrado -->
               <td class="text-end fw-semibold text-success">{{ p.cobrado_proyecto|floatformat:2 }}</td>
 
-              <!-- Avance -->
-              <td class="text-center fw-semibold">
-                {% if p.monto_ref_proyecto > 0 %}
-                  <span class="{% if p.estado_pago == 'pagado' %}text-success{% elif p.estado_pago == 'parcial' %}text-warning{% else %}text-danger{% endif %}">
-                    {{ p.avance_pct }}%
-                  </span>
-                {% else %}
-                  <span class="text-muted">—</span>
-                {% endif %}
-              </td>
-
               <!-- Saldo -->
               <td class="text-end fw-semibold">
                 {% if p.saldo_proyecto > 0 %}
@@ -460,7 +477,7 @@
             </tr>
             {% empty %}
             <tr>
-              <td colspan="11" class="text-center text-muted py-3 small">
+              <td colspan="10" class="text-center text-muted py-3 small">
                 No hay proyectos{% if filter_estado_pago %} con el filtro seleccionado{% endif %}.
               </td>
             </tr>

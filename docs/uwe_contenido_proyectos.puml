@@ -1,5 +1,5 @@
-@startuml SOBOTEC_ContentModel_Parte1
-title Modelo de Contenido UWE — Parte 1: Proyectos, Sedes y Garantías (SOBOTEC S.R.L.)
+@startuml SOBOTEC_CM_Proyectos
+title Modelo de Contenido UWE — Módulo: Proyectos (SOBOTEC S.R.L.)
 
 left to right direction
 
@@ -23,7 +23,6 @@ skinparam class {
   AttributeFontColor     #000000
 }
 
-
 ' ─── CLIENTE ───
 class Cliente {
   nit_ci : String
@@ -46,7 +45,7 @@ class Proyecto {
   tipo_proyecto : String
   estado_proyecto : String
   monto_total : Decimal
-  estado_pago : String
+  / estado_pago : String
   fecha_inicio : Date
   fecha_fin : Date
   observacion : Text
@@ -63,6 +62,9 @@ class ContratoProyecto {
   garantia_meses : Integer
   observaciones : Text
   documento : File
+  / dias_retraso : Integer
+  / multa_acumulada : Decimal
+  / estado_multa : String
 }
 
 ' ─── ASIGNACION ───
@@ -70,6 +72,10 @@ class AsignacionProyecto {
   fecha_inicio_plan : Date
   fecha_fin_plan : Date
   dias_planificados : Integer
+  / dias_reales : Decimal
+  / eficiencia_pct : Decimal
+  / estado_asignacion : String
+  / pct_avance : Decimal
 }
 
 ' ─── PAGO PROYECTO ───
@@ -81,6 +87,7 @@ class PagoProyecto {
   tipo_pago : String
   numero_referencia : String
   estado : String
+  / monto_neto : Decimal
 }
 
 ' ─── HISTORIAL PRESUPUESTO ───
@@ -107,6 +114,7 @@ class Sede {
   estado : String
   latitud : Decimal
   longitud : Decimal
+  / porcentaje_checklist : Decimal
 }
 
 ' ─── FOTO SEDE ───
@@ -152,6 +160,9 @@ class SubItemPlantilla {
 class Garantia {
   fecha_inicio : Date
   fecha_vencimiento : Date
+  / estado : String
+  / dias_restantes : Integer
+  / costo_total_incidencias : Decimal
 }
 
 class IncidenciaGarantia {
@@ -178,31 +189,33 @@ class Empleado <<ref>> {
 }
 
 ' ═══════ RELACIONES ═══════
-Cliente              "1"     --  "0..*" Proyecto               : contrata
-Proyecto             "1"     --  "0..*" ContratoProyecto       : formaliza
-Proyecto             "1"     --  "0..*" Sede                   : tiene
-Proyecto             "1"     --  "0..*" PagoProyecto           : recibe
-Proyecto             "1"     --  "0..*" HistorialPresupuesto   : registra
-Proyecto             "1"     --  "0..*" HistorialEstadoProyecto : rastrea
-Proyecto             "1"     --  "0..*" AsignacionProyecto     : planifica
-Proyecto             "0..*"  --  "0..*" Empleado               : equipo
-AsignacionProyecto   "0..*"  --  "1"   Empleado               : asignado a
+Cliente              "1"     --  "0..*" Proyecto                  : contrata
+Proyecto             "1"     --  "0..*" ContratoProyecto          : formaliza
+Proyecto             "1"     --  "0..*" Sede                      : tiene
+Proyecto             "1"     --  "0..*" PagoProyecto              : recibe
+Proyecto             "1"     --  "0..*" HistorialPresupuesto      : registra
+Proyecto             "1"     --  "0..*" HistorialEstadoProyecto   : rastrea
+Proyecto             "1"     --  "0..*" AsignacionProyecto        : planifica
+Proyecto             "0..*"  --  "0..*" Empleado                  : equipo
+AsignacionProyecto   "0..*"  --  "1"   Empleado                   : asignado a
 
-ContratoProyecto     "1"     --  "0..1" Garantia               : genera
-Garantia             "1"     --  "0..*" IncidenciaGarantia     : registra
-IncidenciaGarantia   "0..*"  --  "0..1" Empleado              : reparado por
+ContratoProyecto     "1"     --  "0..1" Garantia                  : genera
+Garantia             "1"     --  "0..*" IncidenciaGarantia        : registra
+IncidenciaGarantia   "0..*"  --  "0..1" Empleado                  : reparado por
 
-Sede                 "0..*"  --  "0..1" PlantillaTarea         : aplica
-Sede                 "1"     --  "0..*" TareaChecklist         : lista
-Sede                 "1"     --  "0..*" FotoSede               : documenta
-TareaChecklist       "1"     --  "0..*" SubtareaChecklist      : subdivide
-TareaChecklist       "0..*"  --  "0..*" Empleado              : participantes
+Sede                 "0..*"  --  "0..1" PlantillaTarea            : aplica
+Sede                 "1"     --  "0..*" TareaChecklist            : lista
+Sede                 "1"     --  "0..*" FotoSede                  : documenta
+TareaChecklist       "1"     --  "0..*" SubtareaChecklist         : subdivide
+TareaChecklist       "0..*"  --  "0..*" Empleado                  : participantes
 
-PlantillaTarea       "1"     --  "0..*" ItemPlantilla          : contiene
-ItemPlantilla        "1"     --  "0..*" SubItemPlantilla       : detalla
+PlantillaTarea       "1"     --  "0..*" ItemPlantilla             : contiene
+ItemPlantilla        "1"     --  "0..*" SubItemPlantilla          : detalla
 
-Notificacion         "0..*"  --  "1"   Empleado               : destino
-Notificacion         "0..*"  --  "0..1" Proyecto              : sobre
-Notificacion         "0..*"  --  "0..1" Sede                  : sobre
+Notificacion         "0..*"  --  "1"   Empleado                   : destino
+Notificacion         "0..*"  --  "0..1" Proyecto                  : sobre
+Notificacion         "0..*"  --  "0..1" Sede                      : sobre
+
+note "/ atributo derivado (calculado)" as N1
 
 @enduml

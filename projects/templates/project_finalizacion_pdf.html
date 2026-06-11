@@ -181,7 +181,26 @@
           <tr><td class="lbl">Fecha inicio</td><td>{{ project.fecha_inicio|date:"d/m/Y"|default:"—" }}</td></tr>
           <tr><td class="lbl">Fecha entrega</td><td>{{ project.fecha_fin|date:"d/m/Y"|default:"—" }}</td></tr>
           {% if contrato_proyecto %}
+          <tr><td class="lbl">Fecha pactada</td><td>{{ contrato_proyecto.fecha_fin|date:"d/m/Y" }}</td></tr>
           <tr><td class="lbl">Monto acordado</td><td><b>Bs. {{ contrato_proyecto.monto_acordado|floatformat:2 }}</b></td></tr>
+          {% if contrato_proyecto.dias_retraso > 0 %}
+          <tr>
+            <td class="lbl" style="color:#c0392b;">Días de retraso</td>
+            <td style="color:#c0392b; font-weight:bold;">{{ contrato_proyecto.dias_retraso }} día{{ contrato_proyecto.dias_retraso|pluralize:"s" }}</td>
+          </tr>
+          <tr>
+            <td class="lbl" style="color:#c0392b;">Multa aplicada</td>
+            <td style="color:#c0392b; font-weight:bold;">
+              Bs. {{ contrato_proyecto.multa_acumulada|floatformat:2 }}
+              {% if contrato_proyecto.multa_tope_alcanzado %} (tope {{ contrato_proyecto.porcentaje_multa_maxima }}% alcanzado){% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td class="lbl">Cumplimiento plazo</td>
+            <td style="color:#27ae60; font-weight:bold;">Entregado en plazo</td>
+          </tr>
+          {% endif %}
           <tr>
             <td class="lbl">Garantía</td>
             <td>{{ contrato_proyecto.garantia_meses }} mes{% if contrato_proyecto.garantia_meses != 1 %}es{% endif %}</td>

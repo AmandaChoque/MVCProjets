@@ -44,3 +44,7 @@ class UsuarioPersonal(HttpUser):
     @task(1)
     def mi_trabajo(self):
         self.client.get("/mi-trabajo/", name="Dashboard Mi trabajo")
+
+    @task(1)
+    def mis_cobros(self):
+        self.client.get("/mis-cobros/", name="Mis cobros")

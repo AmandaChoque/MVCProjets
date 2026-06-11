@@ -123,6 +123,7 @@
           <th>NIT/CI:</th>
           <th>Cargo</th>
           <th>Tipo</th>
+          <th>Cumplimiento</th>
           <th>Contacto</th>
           <th class="text-end" style="width: 60px;">Acciones</th>
         </tr>
@@ -141,15 +142,7 @@
               NIT/CI: {{ cliente.nit_ci }}
             </div>
           </td> -->
-          <td class="small">
-            {{ cliente.nombre }} {{ cliente.apellido_paterno }}
-            {% if cliente.id in clientes_criticos_ids %}
-            <span class="badge bg-danger ms-1" style="font-size:.65rem;"
-                  title="Tiene proyecto(s) con multa máxima alcanzada">
-              <i class="bi bi-exclamation-octagon me-1"></i>Multa crítica
-            </span>
-            {% endif %}
-          </td>
+          <td class="small">{{ cliente.nombre }} {{ cliente.apellido_paterno }}</td>
           <td class="small">{{ cliente.nit_ci }}</td>
           <td class="small">{{ cliente.get_rol_contacto_display }}</td>
 
@@ -158,6 +151,24 @@
               <span class="badge bg-warning text-dark small">{{ cliente.get_tipo_contratante_display }}</span>
             {% else %}
               <span class="badge bg-success small">{{ cliente.get_tipo_contratante_display }}</span>
+            {% endif %}
+          </td>
+
+          <td>
+            {% if cliente.cumplimiento_historico == 'critico' %}
+              <span class="badge bg-danger" style="font-size:.7rem;"
+                    title="Al menos un proyecto alcanzó el tope máximo de multa">
+                <i class="bi bi-exclamation-octagon-fill me-1"></i>Multa máxima
+              </span>
+            {% elif cliente.cumplimiento_historico == 'en_multa' %}
+              <span class="badge bg-warning text-dark" style="font-size:.7rem;"
+                    title="Al menos un proyecto fue entregado con retraso">
+                <i class="bi bi-clock-history me-1"></i>Entregó tarde
+              </span>
+            {% else %}
+              <span style="font-size:.75rem; color:#6c757d;">
+                <i class="bi bi-check-circle text-success me-1"></i>Sin multas
+              </span>
             {% endif %}
           </td>
 

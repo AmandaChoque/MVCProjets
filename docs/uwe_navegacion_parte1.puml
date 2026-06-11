@@ -1,0 +1,136 @@
+@startuml SOBOTEC_NavModel_Parte1
+title Modelo de Navegación UWE — Parte 1: Proyectos (SOBOTEC S.R.L.)
+
+!theme plain
+hide circle
+left to right direction
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 9
+skinparam classFontName Arial
+skinparam classHeaderFontSize 10
+skinparam classHeaderFontStyle bold
+skinparam arrowColor #444444
+skinparam arrowFontSize 8
+skinparam nodesep 20
+skinparam ranksep 35
+skinparam padding 3
+skinparam shadowing false
+
+skinparam class {
+  BackgroundColor<<index>>           #D5F5E3
+  BorderColor<<index>>               #1E8449
+  BackgroundColor<<navigationClass>> #D6EAF8
+  BorderColor<<navigationClass>>     #1A5276
+  BackgroundColor<<process>>         #FDEBD0
+  BorderColor<<process>>             #784212
+  BackgroundColor<<menu>>            #E8DAEF
+  BorderColor<<menu>>                #6C3483
+}
+
+' ─── ENTRADA ───
+class "Login" <<process>>
+class "Dashboard" <<navigationClass>>
+class "Menú Lateral" <<menu>>
+
+' ─── CLIENTES ───
+class "Lista\nClientes" <<index>>
+class "Detalle\nCliente" <<navigationClass>>
+class "Form. Cliente" <<process>>
+
+' ─── PROYECTOS ───
+class "Lista\nProyectos" <<index>>
+class "Detalle\nProyecto" <<navigationClass>>
+class "Form. Proyecto" <<process>>
+class "Equipo /\nAsignaciones" <<navigationClass>>
+class "Historial\nEstado/Presupuesto" <<navigationClass>>
+
+' ─── SEGUIMIENTO (ADMIN/GER) ───
+class "Planificación\nGantt" <<navigationClass>>
+class "Análisis\nFinanciero" <<navigationClass>>
+
+' ─── CONTRATO PROYECTO ───
+class "Detalle\nContrato" <<navigationClass>>
+class "Form. Contrato" <<process>>
+
+' ─── SEDES ───
+class "Lista\nSedes" <<index>>
+class "Detalle\nSede" <<navigationClass>>
+class "Checklist\nTareas" <<navigationClass>>
+class "Galería\nFotos" <<navigationClass>>
+
+' ─── PAGOS PROYECTO ───
+class "Lista\nPagos" <<index>>
+class "Detalle\nPago" <<navigationClass>>
+class "Form. Pago" <<process>>
+
+' ─── GARANTÍAS ───
+class "Lista\nGarantías" <<index>>
+class "Detalle\nGarantía" <<navigationClass>>
+class "Form. Incidencia" <<process>>
+
+' ─── PLANTILLAS ───
+class "Lista\nPlantillas" <<index>>
+class "Detalle\nPlantilla" <<navigationClass>>
+
+' ─── NOTIFICACIONES ───
+class "Notificaciones" <<index>>
+
+' ─── REPORTE ───
+class "Reporte\nProyectos" <<navigationClass>>
+
+' ═══ NAVEGACIÓN ═══
+
+"Login"           --> "Dashboard"
+"Dashboard"       --> "Menú Lateral"
+
+"Menú Lateral"    --> "Lista\nClientes"
+"Menú Lateral"    --> "Lista\nProyectos"
+"Menú Lateral"    --> "Lista\nPagos"
+"Menú Lateral"    --> "Lista\nGarantías"
+"Menú Lateral"    --> "Lista\nPlantillas"
+"Menú Lateral"    --> "Notificaciones"
+"Menú Lateral"    --> "Planificación\nGantt"
+"Menú Lateral"    --> "Análisis\nFinanciero"
+"Menú Lateral"    --> "Reporte\nProyectos"
+
+"Lista\nClientes"         --> "Detalle\nCliente"
+"Detalle\nCliente"        --> "Form. Cliente"
+
+"Lista\nProyectos"        --> "Detalle\nProyecto"
+"Detalle\nProyecto"       --> "Form. Proyecto"
+"Detalle\nProyecto"       --> "Detalle\nContrato"
+"Detalle\nProyecto"       --> "Lista\nSedes"
+"Detalle\nProyecto"       --> "Lista\nPagos"
+"Detalle\nProyecto"       --> "Detalle\nGarantía"
+"Detalle\nProyecto"       --> "Equipo /\nAsignaciones"
+"Detalle\nProyecto"       --> "Historial\nEstado/Presupuesto"
+
+"Detalle\nContrato"       --> "Form. Contrato"
+
+"Lista\nSedes"            --> "Detalle\nSede"
+"Detalle\nSede"           --> "Checklist\nTareas"
+"Detalle\nSede"           --> "Galería\nFotos"
+
+"Lista\nPagos"            --> "Detalle\nPago"
+"Detalle\nPago"           --> "Form. Pago"
+
+"Lista\nGarantías"        --> "Detalle\nGarantía"
+"Detalle\nGarantía"       --> "Form. Incidencia"
+
+"Lista\nPlantillas"       --> "Detalle\nPlantilla"
+
+note bottom of "Planificación\nGantt"
+  Administrador y Gerente
+end note
+
+note bottom of "Análisis\nFinanciero"
+  Administrador y Gerente
+end note
+
+note bottom of "Lista\nClientes"
+  Administrador, Gerente
+  y Secretaria
+end note
+
+@enduml

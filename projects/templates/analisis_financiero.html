@@ -215,13 +215,20 @@
             <td class="text-end">
               {% if f.multa > 0 %}
                 {% if f.estado_multa == 'critico' %}
-                  <span class="badge bg-danger" title="{{ f.dias_retraso }} días de retraso — tope alcanzado">
+                  <span class="badge bg-danger"
+                        title="{{ f.dias_retraso }}d de retraso — tope máximo alcanzado{% if f.proyecto.estado_proyecto == 'completado' %} (cerrado){% endif %}">
                     {{ f.multa|floatformat:2 }}
                   </span>
                 {% else %}
-                  <span class="badge bg-warning text-dark" title="{{ f.dias_retraso }} días de retraso">
+                  <span class="badge bg-warning text-dark"
+                        title="{{ f.dias_retraso }}d de retraso{% if f.proyecto.estado_proyecto == 'completado' %} (cerrado){% endif %}">
                     {{ f.multa|floatformat:2 }}
                   </span>
+                {% endif %}
+                {% if f.proyecto.estado_proyecto == 'completado' %}
+                  <div class="text-xxs text-muted mt-0">{{ f.dias_retraso }}d · cerrado</div>
+                {% else %}
+                  <div class="text-xxs text-muted mt-0">{{ f.dias_retraso }}d retraso</div>
                 {% endif %}
               {% elif f.tiene_contrato %}
                 <span class="text-muted">—</span>

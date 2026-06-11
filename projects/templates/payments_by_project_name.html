@@ -44,11 +44,11 @@
           </select>
         </div>
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1 label-xs">Fecha inicio</label>
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Fecha inicio pago</label>
           <input type="date" name="start_date" class="form-control form-control-sm" value="{{ start_date }}">
         </div>
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1 label-xs">Fecha fin</label>
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Fecha fin pago</label>
           <input type="date" name="end_date" class="form-control form-control-sm" value="{{ end_date }}">
         </div>
         <div class="col-md-2">
@@ -60,7 +60,7 @@
           </select>
         </div>
         <div class="col-md-2">
-          <label class="form-label form-label-sm text-muted mb-1 label-xs">Confirmación</label>
+          <label class="form-label form-label-sm text-muted mb-1 label-xs">Confirmación pago</label>
           <select class="form-select form-select-sm" name="filter_estado">
             <option value="">Todos</option>
             <option value="pagado"    {% if filter_estado == "pagado"    %}selected{% endif %}>Confirmado</option>
@@ -86,188 +86,154 @@
     </div>
   </div>
 
-  <!-- ── KPI RESUMEN ──────────────────────────────────────────── -->
-  <div class="row g-3 mb-2">
-    <div class="col-6 col-md-3">
+  <!-- ── KPIs ──────────────────────────────────────────────────── -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-4 col-xl-2">
       <div class="card kpi-card blue border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-primary">{{ total_payments }}</div>
-          <div class="kpi-label">Registros
-            {% if count_pagado %}<span class="text-success fw-normal">({{ count_pagado }} conf.)</span>{% endif %}
-            {% if count_pendiente %}<span class="text-warning fw-normal">({{ count_pendiente }} pend.)</span>{% endif %}
+          <div class="kpi-value text-primary">{{ total_proyectos }}</div>
+          <div class="kpi-label">Total proyectos</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <a href="?filter_estado_pago=no_pagado{% if project_name %}&project_name={{ project_name }}{% endif %}" class="text-decoration-none">
+        <div class="card kpi-card red border-0 shadow-sm h-100">
+          <div class="card-body py-3 px-3">
+            <div class="kpi-value text-danger">{{ count_no_pagados }}</div>
+            <div class="kpi-label">Sin cobro</div>
           </div>
         </div>
+      </a>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="card kpi-card yellow border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-warning">{{ count_parciales }}</div>
+          <div class="kpi-label">Cobro parcial</div>
+        </div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4 col-xl-2">
       <div class="card kpi-card green border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-success" style="font-size:1.4rem;">{{ total_monto|floatformat:2 }}</div>
-          <div class="kpi-label">Total bruto Bs.</div>
+          <div class="kpi-value text-success">{{ count_pagados }}</div>
+          <div class="kpi-label">Cobrado completo</div>
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
+    <div class="col-6 col-md-4 col-xl-2">
       <div class="card kpi-card teal border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-info" style="font-size:1.4rem;">{{ monto_efectivo|floatformat:2 }}</div>
-          <div class="kpi-label">Efectivo Bs. <span class="text-muted fw-normal">({{ count_efectivo }})</span></div>
+          <div class="kpi-value text-success" style="font-size:1.2rem;">{{ total_cobrado_global|floatformat:2 }}</div>
+          <div class="kpi-label">Total cobrado Bs.</div>
         </div>
       </div>
     </div>
-    <div class="col-6 col-md-3">
-      <div class="card kpi-card primary border-0 shadow-sm h-100">
+    <div class="col-6 col-md-4 col-xl-2">
+      <div class="card kpi-card {% if total_saldo_global > 0 %}red{% else %}green{% endif %} border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value" style="font-size:1.4rem; color:#0d6efd;">{{ monto_transferencia|floatformat:2 }}</div>
-          <div class="kpi-label">Transferencia Bs. <span class="text-muted fw-normal">({{ count_transferencia }})</span></div>
+          <div class="kpi-value {% if total_saldo_global > 0 %}text-danger{% else %}text-success{% endif %}" style="font-size:1.2rem;">{{ total_saldo_global|floatformat:2 }}</div>
+          <div class="kpi-label">Saldo pendiente Bs.</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Barra resumen neto / descuentos -->
-  <div class="d-flex align-items-center gap-3 mb-3 px-1 small text-muted flex-wrap">
-    <span>Total bruto: <strong class="text-dark">Bs. {{ total_monto|floatformat:2 }}</strong></span>
-    {% if total_descuentos %}
-    <span>+</span>
-    <span>Descuentos: <strong class="text-warning">Bs. {{ total_descuentos|floatformat:2 }}</strong></span>
-    <span>=</span>
-    {% endif %}
-    <span>Total neto: <strong class="text-success">Bs. {{ total_neto|floatformat:2 }}</strong></span>
-  </div>
-
-  <!-- ── CONTADOR ──────────────────────────────────────────────── -->
+  <!-- ── CONTADOR ─────────────────────────────────────────────── -->
   {% if payments_page %}
   <div class="text-muted small mb-2 text-end">
-    Mostrando {{ payments_page.start_index }} – {{ payments_page.end_index }} de {{ payments_page.paginator.count }} registros
+    Mostrando {{ payments_page.start_index }} – {{ payments_page.end_index }} de {{ payments_page.paginator.count }} proyectos
   </div>
   {% endif %}
 
   <!-- ── TABLA ─────────────────────────────────────────────────── -->
   <div class="card border-0 shadow-sm mb-3">
-    <div class="card-header bg-light py-2">
-      <span class="fw-semibold small">Detalle de Pagos</span>
-    </div>
-    <div class="table-responsive">
-      <table class="table table-sm table-hover align-middle small">
-        <thead class="table-light small text-uppercase fw-semibold">
-          <tr>
-            <th class="px-3" style="white-space:nowrap;">Código</th>
-            <th>Proyecto</th>
-            <th>Contratante</th>
-            <th>Estado Proyecto</th>
-            <th>Estado Pago</th>
-            <th class="text-end" style="white-space:nowrap;">Acordado (Bs.)</th>
-            <th class="text-end" style="white-space:nowrap;">Cobrado (Bs.)</th>
-            <th class="text-end" style="white-space:nowrap;">Saldo (Bs.)</th>
-            <th class="text-center">%</th>
-            <th class="text-end" style="white-space:nowrap;">Pago (Bs.)</th>
-            <th style="white-space:nowrap;">Fecha</th>
-            <th>Método</th>
-            <th>Confirmación</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for payment in payments %}
-          <tr>
-            <td class="px-3 text-muted text-xs">{{ payment.proyecto.codigo }}</td>
-            <td class="fw-semibold">{{ payment.proyecto.nombre }}</td>
-            <td class="text-muted">
-              {% if payment.proyecto.cliente %}
-                {{ payment.proyecto.cliente.nombre }} {{ payment.proyecto.cliente.apellido_paterno }}
-              {% else %}—{% endif %}
-            </td>
-            <td>
-              {% if payment.proyecto.estado_proyecto == 'completado' %}
-                <span class="badge bg-success small">Completado</span>
-              {% elif payment.proyecto.estado_proyecto == 'en_progreso' %}
-                <span class="badge bg-primary small">En Progreso</span>
-              {% elif payment.proyecto.estado_proyecto == 'cancelado' %}
-                <span class="badge bg-secondary small">Cancelado</span>
-              {% else %}
-                <span class="badge bg-warning text-dark small">Pendiente</span>
-              {% endif %}
-            </td>
-            <td>
-              {% if payment.proyecto.estado_pago == 'pagado' %}
-                <span class="badge bg-success small">Pagado</span>
-              {% elif payment.proyecto.estado_pago == 'parcial' %}
-                <span class="badge bg-info text-dark small">Parcial</span>
-              {% else %}
-                <span class="badge bg-danger small">No Pagado</span>
-              {% endif %}
-            </td>
-            <td class="text-end">{{ payment.proyecto.monto_total|floatformat:2 }}</td>
-            <td class="text-end text-success fw-semibold">{{ payment.proyecto_cobrado|floatformat:2 }}</td>
-            <td class="text-end fw-semibold {% if payment.proyecto_saldo > 0 %}text-danger{% elif payment.proyecto_saldo < 0 %}text-warning{% else %}text-success{% endif %}">
-              {{ payment.proyecto_saldo|floatformat:2 }}
-            </td>
-            <td class="text-center">
-              {% if payment.proyecto.monto_total > 0 %}
-                <span class="{% if payment.proyecto.estado_pago == 'pagado' %}text-success{% elif payment.proyecto.estado_pago == 'parcial' %}text-warning{% else %}text-danger{% endif %}">
-                  {% widthratio payment.proyecto_cobrado payment.proyecto.monto_total 100 %}%
-                </span>
-              {% else %}—{% endif %}
-            </td>
-            <td class="text-end fw-semibold">
-              {{ payment.monto|floatformat:2 }}
-              {% if payment.descuento %}
-              <div class="text-muted text-xs">+ desc. {{ payment.descuento|floatformat:2 }}</div>
-              <div class="text-success fw-semibold text-xs">= {{ payment.monto_neto|floatformat:2 }}</div>
-              {% if payment.motivo_descuento %}
-              <div class="text-muted text-xs fst-italic">{{ payment.motivo_descuento }}</div>
-              {% endif %}
-              {% endif %}
-            </td>
-            <td class="text-muted" style="white-space:nowrap;">{{ payment.fecha|date:"d/m/Y" }}</td>
-            <td>
-              {% if payment.tipo_pago == 'transferencia' %}
-                <span class="badge bg-primary small">Transferencia</span>
-                {% if payment.numero_referencia %}
-                <div class="text-muted text-xs">{{ payment.numero_referencia }}</div>
+    <div class="card-body p-0">
+      <div class="table-responsive" style="overflow:visible;">
+        <table class="table table-sm table-hover align-middle small">
+          <thead class="table-light small text-uppercase fw-semibold">
+            <tr>
+              <th class="px-3" style="white-space:nowrap;">Código</th>
+              <th>Proyecto / Contratante</th>
+              <th>Estado</th>
+              <th>Estado Pago</th>
+              <th class="text-end" style="white-space:nowrap;">Acordado (Bs.)</th>
+              <th class="text-end" style="white-space:nowrap;">Cobrado (Bs.)</th>
+              <th class="text-end" style="white-space:nowrap;">Saldo (Bs.)</th>
+              <th class="text-center">Pagos</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in proyectos %}
+            <tr>
+              <td class="px-3 text-muted text-xs">{{ p.codigo }}</td>
+              <td>
+                <div class="fw-semibold">{{ p.nombre }}</div>
+                {% if p.cliente %}
+                <div class="text-muted" style="font-size:0.68rem;">{{ p.cliente.nombre }} {{ p.cliente.apellido_paterno }}</div>
                 {% endif %}
-              {% else %}
-                <span class="badge bg-info text-dark small">Efectivo</span>
-              {% endif %}
-            </td>
-            <td>
-              {% if payment.estado == 'pendiente' %}
-                <span class="badge bg-warning text-dark fw-normal"><i class="bi bi-clock me-1"></i>Pendiente</span>
-              {% else %}
-                <span class="badge bg-success fw-normal"><i class="bi bi-check-circle me-1"></i>Confirmado</span>
-              {% endif %}
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="13" class="text-center text-muted py-3">
-              No se encontraron pagos con los filtros seleccionados.
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-        {% if payments %}
-        <tfoot class="table-light small fw-semibold">
-          <tr>
-            <td colspan="9" class="text-end text-muted">Total bruto:</td>
-            <td class="text-end">Bs. {{ total_monto|floatformat:2 }}</td>
-            <td colspan="3"></td>
-          </tr>
-          {% if total_descuentos %}
-          <tr>
-            <td colspan="9" class="text-end text-muted">Descuentos:</td>
-            <td class="text-end text-warning">Bs. {{ total_descuentos|floatformat:2 }}</td>
-            <td colspan="3"></td>
-          </tr>
-          <tr>
-            <td colspan="9" class="text-end text-muted">Total neto:</td>
-            <td class="text-end text-success">Bs. {{ total_neto|floatformat:2 }}</td>
-            <td colspan="3"></td>
-          </tr>
+              </td>
+              <td>
+                {% if p.estado_proyecto == 'completado' %}
+                  <span class="badge bg-success small">Completado</span>
+                {% elif p.estado_proyecto == 'en_progreso' %}
+                  <span class="badge bg-primary small">En Progreso</span>
+                {% elif p.estado_proyecto == 'cancelado' %}
+                  <span class="badge bg-secondary small">Cancelado</span>
+                {% else %}
+                  <span class="badge bg-warning text-dark small">Pendiente</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if p.estado_pago == 'pagado' %}
+                  <span class="badge bg-success small">Pagado</span>
+                {% elif p.estado_pago == 'parcial' %}
+                  <span class="badge bg-info text-dark small">Parcial</span>
+                {% else %}
+                  <span class="badge bg-danger small">No Pagado</span>
+                {% endif %}
+              </td>
+              <td class="text-end fw-semibold">{{ p.monto_ref_proyecto|floatformat:2 }}</td>
+              <td class="text-end fw-semibold text-success">{{ p.cobrado_proyecto|floatformat:2 }}</td>
+              <td class="text-end fw-semibold">
+                {% if p.saldo_proyecto > 0 %}
+                  <span class="text-danger">{{ p.saldo_proyecto|floatformat:2 }}</span>
+                {% elif p.saldo_proyecto < 0 %}
+                  <span class="text-warning" title="Sobrepago">{{ p.saldo_proyecto|floatformat:2 }}</span>
+                {% else %}
+                  <span class="text-success">0.00</span>
+                {% endif %}
+              </td>
+              <td class="text-center">
+                {% if p.num_pagos > 0 %}
+                  <span class="badge bg-light text-dark border">{{ p.num_pagos }}</span>
+                {% else %}
+                  <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="8" class="text-center text-muted py-3 small">
+                No se encontraron proyectos con los filtros seleccionados.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+          {% if proyectos %}
+          <tfoot class="table-light small fw-semibold">
+            <tr>
+              <td colspan="4" class="text-end text-muted">Totales:</td>
+              <td class="text-end">Bs. {{ total_cobrado_global|add:total_saldo_global|floatformat:2 }}</td>
+              <td class="text-end text-success">Bs. {{ total_cobrado_global|floatformat:2 }}</td>
+              <td class="text-end {% if total_saldo_global > 0 %}text-danger{% else %}text-success{% endif %}">Bs. {{ total_saldo_global|floatformat:2 }}</td>
+              <td></td>
+            </tr>
+          </tfoot>
           {% endif %}
-        </tfoot>
-        {% endif %}
-      </table>
+        </table>
+      </div>
     </div>
   </div>
 

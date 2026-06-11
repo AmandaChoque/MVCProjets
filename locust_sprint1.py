@@ -43,6 +43,22 @@ class UsuarioProyectos(HttpUser):
     def listar_pagos(self):
         self.client.get("/pagos/", name="Lista de pagos")
 
+    @task(2)
+    def listar_garantias(self):
+        self.client.get("/garantias/", name="Lista de garantías")
+
+    @task(2)
+    def seguimiento_proyectos(self):
+        self.client.get("/proyectos/seguimiento/", name="Seguimiento de proyectos")
+
+    @task(1)
+    def planificacion_gantt(self):
+        self.client.get("/proyectos/planificacion/", name="Planificación Gantt")
+
+    @task(1)
+    def calendario_equipo(self):
+        self.client.get("/proyectos/calendario/", name="Calendario del equipo")
+
     @task(1)
     def dashboard(self):
         self.client.get("/dashboard/", name="Dashboard")

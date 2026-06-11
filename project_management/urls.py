@@ -23,6 +23,7 @@ from projects import views
 
 urlpatterns = [
     path('', views.landing_view, name='landing'),
+    path('consulta-proyecto/', views.consulta_proyecto, name='consulta_proyecto'),
     path('dashboard/', views.dashboard_home, name='dashboard'),
     path('admin/', admin.site.urls),
     path('signup/', views.signup, name='signup'),

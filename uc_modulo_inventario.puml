@@ -24,9 +24,9 @@ skinparam ranksep 60
 ' ACTORES IZQUIERDA
 '══════════════════════════════════════
 
-actor "Gerente\nGeneral" as GER
+actor "Administrador\n/ Gerente" as ADM
 actor "Secretaria" as SEC
-actor "Instalador" as SUP
+actor "Instalador" as INST
 
 rectangle "Sprint 2 — Módulo de Inventario" {
 
@@ -39,7 +39,7 @@ rectangle "Sprint 2 — Módulo de Inventario" {
         usecase "Gestionar\nInsumo" as UC2
         usecase "Asignar Insumo\na Proyecto (FIFO)" as UC4
         usecase "Registrar\nCompra" as UC3
-        
+
         usecase "Generar\nReporte" as UC5
     }
 
@@ -59,7 +59,7 @@ rectangle "Sprint 2 — Módulo de Inventario" {
     together {
         usecase "Registrar,\nEditar, \nDesactivar Insumo" as S3
         usecase "Ver Detalles de \nCompras" as S4
-    
+
     }
 
     '══════════════════════════════════
@@ -121,18 +121,17 @@ actor "Sistema\n(Automático)" as SIS
 ' RELACIONES ACTORES
 '══════════════════════════════════════
 
-GER --> UC2
-GER --> UC4
-GER --> UC5
+ADM --> UC1
+ADM --> UC2
+ADM --> UC3
+ADM --> UC4
+ADM --> UC5
 
-SEC --> UC1
-SEC --> UC2
-SEC --> UC3
 SEC --> UC5
 
-SUP --> UC4
-SUP --> UC5
-
+INST --> UC2
+INST --> UC4
+INST --> UC5
 
 SIS --> S13
 SIS --> S14
@@ -178,6 +177,12 @@ note right of S15
   Stock actualizado automáticamente
   mediante señales Django
   post_save y delete
+end note
+
+note bottom of INST
+  Técnico de Soporte tiene
+  acceso de solo lectura
+  (no asigna insumos)
 end note
 
 @enduml

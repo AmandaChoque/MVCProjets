@@ -324,10 +324,22 @@ class ContratoProyecto(AuditModel):
 
     @property
     def dias_retraso(self):
-        """Días corridos desde fecha_fin hasta hoy. 0 si el proyecto ya está completado o no hay retraso."""
-        if self.proyecto.estado_proyecto in ('completado', 'cancelado'):
+        """
+        Días de retraso respecto a la fecha pactada en el contrato.
+        - Proyecto completado: usa la fecha real de entrega (proyecto.fecha_fin) para
+          conservar la multa acumulada al momento de cierre, aunque pase el tiempo.
+        - Proyecto cancelado: sin penalización.
+        - En curso: días corridos desde fecha_fin del contrato hasta hoy.
+        """
+        estado = self.proyecto.estado_proyecto
+        if estado == 'cancelado':
             return 0
         hoy = date.today()
+        if estado == 'completado':
+            fecha_entrega = self.proyecto.fecha_fin or hoy
+            if fecha_entrega > self.fecha_fin:
+                return (fecha_entrega - self.fecha_fin).days
+            return 0
         if hoy > self.fecha_fin:
             return (hoy - self.fecha_fin).days
         return 0
@@ -438,6 +450,8 @@ def registrar_cambio_estado_proyecto(sender, instance, **kwargs):
             cambiado_por=getattr(instance, '_current_user', None),
             motivo=getattr(instance, '_motivo_cambio_estado', ''),
         )
+        # Bandera para fijar la fecha real de entrega en post_save
+        instance._cambio_a_completado = (instance.estado_proyecto == 'completado')
 
 
 @receiver(pre_save, sender=Proyecto)
@@ -907,6 +921,17 @@ def desactivar_contrato_al_cancelar(sender, instance, **kwargs):
     instance.contratos.filter(activo=True).update(activo=False, deleted_at=timezone.now())
 
 
+@receiver(post_save, sender=Proyecto)
+def fijar_fecha_fin_al_completar(sender, instance, **kwargs):
+    """
+    Cuando el proyecto se completa manualmente (via vista), fija fecha_fin
+    a la fecha real de cierre para preservar el cómputo de multa.
+    La vía por checklist ya actualiza fecha_fin directamente en notificar_sede_completada.
+    """
+    if instance.estado_proyecto == 'completado' and not instance.fecha_fin:
+        Proyecto.objects.filter(pk=instance.pk).update(fecha_fin=date.today())
+
+
 @receiver(post_save, sender=TareaChecklist)
 def notificar_sede_completada(sender, instance, **kwargs):
     """
@@ -938,8 +963,8 @@ def notificar_sede_completada(sender, instance, **kwargs):
             # Primer avance → fijar fecha_inicio del proyecto
             if nuevo_estado == 'en_progreso' and not proyecto.fecha_inicio:
                 update_fields['fecha_inicio'] = hoy
-            # Todas las sedes completadas → fijar fecha_fin del proyecto
-            if nuevo_estado == 'completado' and not proyecto.fecha_fin:
+            # Todas las sedes completadas → fijar la fecha real de entrega
+            if nuevo_estado == 'completado':
                 update_fields['fecha_fin'] = hoy
             Proyecto.objects.filter(pk=proyecto.pk).update(**update_fields)
 
@@ -1004,7 +1029,7 @@ def crear_jornada_al_completar_tarea(sender, instance, **kwargs):
         defaults={
             'dias': Decimal('1.0'),
             'observacion': '',
-            'estado': 'pendiente',
+            'estado': 'aprobada',
             'registrado_por': instance.completado_por,
         }
     )

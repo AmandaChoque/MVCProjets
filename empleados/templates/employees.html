@@ -99,6 +99,7 @@
           <th>Celular</th>
           <th>Proyecto actual</th>
           <th>Contrato</th>
+          <th>Estado</th>
           <th class="text-end" style="width: 60px;">Acciones</th>
         </tr>
       </thead>
@@ -159,9 +160,22 @@
           <td class="small">
             {% if employee.contrato_activo %}
               <div>{{ employee.contrato_activo.fecha_inicio|date:"d/m/Y" }}</div>
-              <div class="text-muted"> {{ employee.contrato_activo.fecha_fin|date:"d/m/Y" }}</div>
+              <div class="text-muted">{{ employee.contrato_activo.fecha_fin|date:"d/m/Y" }}</div>
             {% else %}
               <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if employee.contrato_activo %}
+              {% if employee.contrato_activo.estado_contrato == 'vigente' %}
+                <span class="badge bg-success fw-normal small">Vigente</span>
+              {% elif employee.contrato_activo.estado_contrato == 'vencido' %}
+                <span class="badge bg-danger fw-normal small">Vencido</span>
+              {% else %}
+                <span class="badge bg-secondary fw-normal small">Inhabilitado</span>
+              {% endif %}
+            {% else %}
+              <span class="badge bg-light text-muted border small">Sin contrato</span>
             {% endif %}
           </td>
 

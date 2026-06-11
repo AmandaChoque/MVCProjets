@@ -10,6 +10,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 El sistema cubre el ciclo completo: captación del cliente → planificación del proyecto → seguimiento en campo (sedes, checklists, fotos) → control de costos (jornadas + insumos FIFO) → pagos al cliente y empleados → garantías post-entrega. Incluye reportes PDF y Excel.
 
+El sistema también expone una **página pública de consulta** (`/consulta-proyecto/`) donde el cliente final (sin cuenta en el sistema) puede consultar el estado de su proyecto ingresando el código de proyecto y su CI/NIT. Muestra: estado del proyecto, fechas, contrato, avance de sedes (% checklist), estado de pago y garantía. No expone datos internos (costos FIFO, jornadas, observaciones).
+
 ## Empresa
 
 **SOBOTEC S.R.L.** instala, amplía y mantiene sistemas de seguridad (cámaras IP/analógicas, DVR/NVR, alarmas, sensores) en Bolivia.
@@ -199,7 +201,7 @@ python manage.py test projects.tests.CompraFormCleanCostoTest
 
 **Forms**: Campos monetarios usan `CharField` + `clean_*` con `DECIMAL_REGEX = r'\d+(\.\d{1,2})?'` (sin comas, punto decimal). Todos los widgets usan Bootstrap `form-control`/`form-select`. Forms de projects están en `form.py` (NO `forms.py`); empleados e inventario usan `forms.py`.
 
-**Views**: Todas usan `@login_required`. Patrón: GET retorna form, POST valida y redirige. `messages.success()` en create/update. `get_object_or_404()` para lookups.
+**Views**: Casi todas usan `@login_required`. Excepción: `consulta_proyecto` es pública (sin `@login_required` ni `@cargo_required`), accesible desde `/consulta-proyecto/`. Patrón general: GET retorna form, POST valida y redirige. `messages.success()` en create/update. `get_object_or_404()` para lookups.
 
 **Role-based access**: `@cargo_required(*cargos)` de `projects/decorators.py` siempre después de `@login_required`. Grupos predefinidos:
 - `ROLES_ADMIN = ('administrador', 'gerente')`
@@ -241,6 +243,7 @@ Superusers bypasean todo. Templates usan `{% if es_admin %}`, `{% if es_campo %}
 
 ```
 /                                                → landing
+/consulta-proyecto/                              → consulta_proyecto (PÚBLICA, sin login: búsqueda por código + CI/NIT)
 /dashboard/                                      → home
 /signin/, /signup/, /signout/
 /extend-session/                                 → AJAX session extension (POST)

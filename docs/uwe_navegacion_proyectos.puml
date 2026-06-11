@@ -1,0 +1,205 @@
+@startuml SOBOTEC_Nav_Proyectos
+title Modelo de Navegación UWE — Módulo: Proyectos (SOBOTEC S.R.L.)
+
+scale max 1050 width
+
+!theme plain
+hide circle
+left to right direction
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 7
+skinparam classFontName Arial
+skinparam classHeaderFontSize 8
+skinparam classHeaderFontStyle bold
+skinparam arrowColor #444444
+skinparam arrowFontSize 6
+skinparam nodesep 6
+skinparam ranksep 14
+skinparam padding 1
+skinparam shadowing false
+
+skinparam class {
+  BackgroundColor<<index>>           #D5F5E3
+  BorderColor<<index>>               #1E8449
+  BackgroundColor<<navigationClass>> #D6EAF8
+  BorderColor<<navigationClass>>     #1A5276
+  BackgroundColor<<process>>         #FDEBD0
+  BorderColor<<process>>             #784212
+  BackgroundColor<<menu>>            #E8DAEF
+  BorderColor<<menu>>                #6C3483
+}
+
+' ─── ACCESO PÚBLICO ───
+class "Landing\n(/)" as Landing <<navigationClass>>
+class "Consulta\nProyecto" as ConsultaProyecto <<process>>
+class "Ficha Estado\nProyecto" as FichaEstado <<navigationClass>>
+
+' ─── AUTENTICACIÓN ───
+class "Login"           as Login           <<process>>
+class "Dashboard"       as Dashboard       <<navigationClass>>
+class "Menú\nPrincipal" as MenuPrincipal   <<menu>>
+
+' ─── CLIENTES ───
+class "Lista\nClientes" as ListaClientes   <<index>>
+class "Ver\nCliente"    as VerCliente      <<navigationClass>>
+class "Form.\nCliente"  as FormCliente     <<process>>
+
+' ─── PROYECTOS ───
+class "Lista\nProyectos"          as ListaProyectos  <<index>>
+class "Ver\nProyecto"             as VerProyecto     <<navigationClass>>
+class "Form.\nProyecto"           as FormProyecto    <<process>>
+class "Historial\nEstado/Presup." as HistorialEstado <<navigationClass>>
+class "Acta de\nEntrega (PDF)"    as ActaEntrega     <<navigationClass>>
+
+' ─── VISTAS GLOBALES ADMIN/GER ───
+class "Seguimiento\nAvance"  as SeguimientoAvance  <<navigationClass>>
+class "Planificacion\nGantt" as PlanGantt          <<navigationClass>>
+class "Analisis\nFinanciero" as AnalisisFinanciero <<navigationClass>>
+class "Reporte\nProyectos"   as ReporteProyectos   <<navigationClass>>
+class "Calendario\nEquipo"   as CalendarioEquipo   <<navigationClass>>
+
+' ─── EQUIPO / ASIGNACIONES ───
+class "Gestion\nEquipo"     as GestionEquipo    <<navigationClass>>
+class "Editar\nAsignacion"  as EditarAsignacion <<process>>
+
+' ─── CONTRATO PROYECTO ───
+class "Detalle\nContrato" as DetalleContrato <<navigationClass>>
+class "Form.\nContrato"   as FormContrato   <<process>>
+
+' ─── SEDES ───
+class "Lista\nSedes"      as ListaSedes      <<index>>
+class "Ver\nSede"         as VerSede         <<navigationClass>>
+class "Form.\nSede"       as FormSede        <<process>>
+class "Checklist\nTareas" as ChecklistTareas <<navigationClass>>
+class "Galeria\nFotos"    as GaleriaFotos    <<navigationClass>>
+
+' ─── PAGOS PROYECTO ───
+class "Lista\nPagos"    as ListaPagos    <<index>>
+class "Ver\nPago"       as VerPago       <<navigationClass>>
+class "Form.\nPago"     as FormPago      <<process>>
+class "Analisis\nPagos" as AnalisisPagos <<navigationClass>>
+
+' ─── GARANTÍAS ───
+class "Lista\nGarantias"    as ListaGarantias    <<index>>
+class "Detalle\nGarantia"   as DetalleGarantia   <<navigationClass>>
+class "Form.\nIncidencia"   as FormIncidencia    <<process>>
+class "Detalle\nIncidencia" as DetalleIncidencia <<navigationClass>>
+class "Mis\nReparaciones"   as MisReparaciones   <<index>>
+
+' ─── PLANTILLAS ───
+class "Lista\nPlantillas"  as ListaPlantillas  <<index>>
+class "Detalle\nPlantilla" as DetallePlantilla <<navigationClass>>
+class "Form.\nPlantilla"   as FormPlantilla    <<process>>
+
+' ─── NOTIFICACIONES ───
+class "Notificaciones" as Notificaciones <<index>>
+
+' ═══════════════════════════════════════
+' NAVEGACIÓN
+' ═══════════════════════════════════════
+
+' --- Acceso público (sin login) ---
+Landing           --> ConsultaProyecto : "Estado de\nProyecto"
+ConsultaProyecto  --> FichaEstado      : "código + CI/NIT"
+
+Login         --> Dashboard
+Dashboard     --> MenuPrincipal
+
+' --- Accesos desde el menú ---
+MenuPrincipal --> ListaClientes
+MenuPrincipal --> ListaProyectos
+MenuPrincipal --> ListaPagos
+MenuPrincipal --> ListaGarantias
+MenuPrincipal --> ListaPlantillas
+MenuPrincipal --> Notificaciones
+MenuPrincipal --> SeguimientoAvance
+MenuPrincipal --> PlanGantt
+MenuPrincipal --> AnalisisFinanciero
+MenuPrincipal --> ReporteProyectos
+MenuPrincipal --> AnalisisPagos
+MenuPrincipal --> MisReparaciones
+MenuPrincipal --> CalendarioEquipo
+
+' --- Clientes ---
+ListaClientes --> VerCliente
+ListaClientes --> FormCliente
+VerCliente    --> FormCliente
+
+' --- Proyectos ---
+ListaProyectos --> VerProyecto
+ListaProyectos --> FormProyecto
+VerProyecto    --> FormProyecto
+VerProyecto    --> DetalleContrato
+VerProyecto    --> ListaSedes
+VerProyecto    --> ListaPagos
+VerProyecto    --> DetalleGarantia
+VerProyecto    --> GestionEquipo
+VerProyecto    --> HistorialEstado
+VerProyecto    --> ActaEntrega
+
+' --- Contrato de proyecto ---
+VerProyecto     --> FormContrato
+DetalleContrato --> FormContrato
+
+' --- Equipo / Asignaciones ---
+GestionEquipo --> EditarAsignacion
+
+' --- Sedes ---
+ListaSedes --> VerSede
+ListaSedes --> FormSede
+VerSede    --> FormSede
+VerSede    --> ChecklistTareas
+VerSede    --> GaleriaFotos
+
+' --- Pagos proyecto ---
+ListaPagos --> VerPago
+ListaPagos --> FormPago
+VerPago    --> FormPago
+
+' --- Garantías ---
+ListaGarantias  --> DetalleGarantia
+DetalleGarantia --> FormIncidencia
+FormIncidencia  --> DetalleIncidencia
+
+' --- Plantillas ---
+ListaPlantillas  --> DetallePlantilla
+ListaPlantillas  --> FormPlantilla
+DetallePlantilla --> FormPlantilla
+
+' ─── NOTAS DE ROLES ───
+note bottom of PlanGantt
+  Administrador y Gerente
+end note
+
+note bottom of AnalisisFinanciero
+  Administrador y Gerente
+end note
+
+note bottom of ListaClientes
+  Administrador, Gerente
+  y Secretaria
+end note
+
+note bottom of MisReparaciones
+  Instalador y
+  Tecnico de Soporte
+end note
+
+note bottom of CalendarioEquipo
+  Todos los roles.
+  Campo: solo propias jornadas.
+end note
+
+note bottom of DetalleContrato
+  Garantia manual
+  disponible aqui.
+end note
+
+note bottom of ConsultaProyecto
+  Sin autenticacion.
+  Entrada: codigo + CI/NIT.
+  No expone costos ni jornadas.
+end note
+
+@enduml

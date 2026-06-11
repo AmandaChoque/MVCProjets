@@ -1,4 +1,4 @@
-@startuml uc_modulo_proyectos
+@startuml uc_modulo_proyectos_clean
 
 left to right direction
 
@@ -9,23 +9,15 @@ skinparam shadowing false
 skinparam backgroundColor #FFFFFF
 skinparam usecaseBackgroundColor #EBF5FB
 skinparam usecaseBorderColor #2E86C1
-
 skinparam usecaseFontSize 10
 skinparam actorFontSize 11
 skinparam packageFontSize 11
-
 skinparam packageBorderColor #2E86C1
 skinparam packageBackgroundColor #FFFFFF
 skinparam packageFontStyle bold
-
 skinparam arrowColor #444444
-
 skinparam nodesep 30
 skinparam ranksep 70
-
-'══════════════════════════════════════
-' ACTORES IZQUIERDA
-'══════════════════════════════════════
 
 actor "Administrador\n/ Gerente" as ADM
 actor "Secretaria" as SEC
@@ -35,7 +27,7 @@ actor "Cliente\n(externo)" as CLI
 rectangle "Sprint 1 — Módulo de Proyectos" {
 
     together {
-        usecase "Crear / Editar /\nDesactivar Cliente" as UC1
+        usecase "Gestionar Cliente" as UC1
         usecase "Gestionar\nProyecto" as UC2
         usecase "Gestionar Sedes\ne Instalación" as UC3
         usecase "Registrar /\nConfirmar Pago" as UC4
@@ -57,15 +49,7 @@ rectangle "Sprint 1 — Módulo de Proyectos" {
     UC9 -[hidden]-> S21
 }
 
-'══════════════════════════════════════
-' ACTOR DERECHA
-'══════════════════════════════════════
-
 actor "Sistema\n(Automático)" as SIS
-
-'══════════════════════════════════════
-' RELACIONES ACTORES
-'══════════════════════════════════════
 
 ADM --> UC1
 ADM --> UC2
@@ -92,10 +76,6 @@ CLI --> UC10
 SIS --> S22
 SIS --> S23
 SIS --> S24
-
-'══════════════════════════════════════
-' EXTEND / AUTOMÁTICOS
-'══════════════════════════════════════
 
 UC2 .> S21 : <<include>>
 UC2 .> S22 : <<extend>>

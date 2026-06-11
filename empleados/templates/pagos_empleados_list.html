@@ -353,10 +353,8 @@
               <th class="px-3">Empleado</th>
               <th>Cargo</th>
               <th>Período contrato</th>
-              <th>Estado contrato</th>
               <th class="text-end">Acordado (Bs.)</th>
               <th class="text-end">Pagado (Bs.)</th>
-              <th class="text-center">% contrato</th>
               <th class="text-end">Saldo (Bs.)</th>
               <th class="text-center" title="Jornadas aprobadas sin pago asignado">Jornadas x cobrar</th>
               <th class="text-center">Pagos</th>
@@ -388,21 +386,6 @@
                 {% endif %}
               </td>
 
-              <!-- Estado contrato -->
-              <td>
-                {% if emp.contrato_activo %}
-                  {% if emp.contrato_activo.estado_contrato == 'vigente' %}
-                    <span class="badge bg-success small">Vigente</span>
-                  {% elif emp.contrato_activo.estado_contrato == 'vencido' %}
-                    <span class="badge bg-danger small">Vencido</span>
-                  {% else %}
-                    <span class="badge bg-secondary small">Inhabilitado</span>
-                  {% endif %}
-                {% else %}
-                  <span class="badge bg-light text-muted border small">Sin contrato</span>
-                {% endif %}
-              </td>
-
               <!-- Acordado -->
               <td class="text-end fw-semibold">
                 {% if emp.contrato_activo %}
@@ -414,17 +397,6 @@
 
               <!-- Pagado -->
               <td class="text-end fw-semibold text-success">{{ emp.pagado_emp|floatformat:2 }}</td>
-
-              <!-- Avance -->
-              <td class="text-center fw-semibold">
-                {% if emp.contrato_activo %}
-                  <span class="{% if emp.saldo_emp <= 0 %}text-success{% elif emp.avance_pct_emp > 0 %}text-warning{% else %}text-danger{% endif %}">
-                    {{ emp.avance_pct_emp }}%
-                  </span>
-                {% else %}
-                  <span class="text-muted">—</span>
-                {% endif %}
-              </td>
 
               <!-- Saldo -->
               <td class="text-end fw-semibold">

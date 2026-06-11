@@ -290,7 +290,10 @@
             <div class="position-relative" id="foto-{{ foto.id }}">
               <img src="{{ foto.foto.url }}" alt="{{ foto.descripcion|default:'Foto' }}"
                    class="foto-thumb" data-bs-toggle="modal" data-bs-target="#modalFoto"
-                   data-src="{{ foto.foto.url }}" data-desc="{{ foto.descripcion }}">
+                   data-src="{{ foto.foto.url }}"
+                   data-desc="{{ foto.descripcion }}"
+                   data-autor="{{ foto.subida_por.get_full_name|default:foto.subida_por.username|default:'Desconocido' }}"
+                   data-fecha="{{ foto.created|date:'d/m/Y H:i' }}">
               {% if es_admin %}
               <button class="btn btn-danger btn-sm position-absolute top-0 end-0 py-0 px-1 btn-delete-foto"
                       data-id="{{ foto.id }}" style="font-size:.7rem; border-radius:0 6px 0 4px;">
@@ -406,6 +409,10 @@
       <div class="modal-body p-2 text-center">
         <img id="modalFotoImg" src="" class="img-fluid rounded" alt="">
         <p class="text-muted small mt-2 mb-0" id="modalFotoDesc"></p>
+        <div class="d-flex justify-content-center gap-3 mt-1">
+          <span class="text-muted" style="font-size:.75rem;"><i class="bi bi-person me-1"></i><span id="modalFotoAutor"></span></span>
+          <span class="text-muted" style="font-size:.75rem;"><i class="bi bi-clock me-1"></i><span id="modalFotoFecha"></span></span>
+        </div>
       </div>
     </div>
   </div>
@@ -773,6 +780,8 @@ document.querySelectorAll('.foto-thumb').forEach(img => {
   img.addEventListener('click', function() {
     document.getElementById('modalFotoImg').src = this.dataset.src;
     document.getElementById('modalFotoDesc').textContent = this.dataset.desc || '';
+    document.getElementById('modalFotoAutor').textContent = this.dataset.autor || '';
+    document.getElementById('modalFotoFecha').textContent = this.dataset.fecha || '';
   });
 });
 

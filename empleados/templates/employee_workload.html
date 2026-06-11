@@ -6,6 +6,18 @@
   <div class="mb-2">
     <div class="d-flex justify-content-between align-items-center mb-2">
       <h4 class="fw-bold text-sobotec mb-0">Gestión de Jornadas</h4>
+      {% if es_admin %}
+        {% if contrato_cal %}
+          <a href="{% url 'create_jornada' contrato_cal.id %}" class="btn btn-primary btn-sm">
+            <i class="bi bi-plus-lg me-1"></i>Nueva Jornada
+          </a>
+        {% else %}
+          <button class="btn btn-primary btn-sm" disabled
+                  title="Selecciona un empleado con contrato activo para registrar una jornada">
+            <i class="bi bi-plus-lg me-1"></i>Nueva Jornada
+          </button>
+        {% endif %}
+      {% endif %}
     </div>
   </div>
 
@@ -34,196 +46,261 @@
     </li> -->
   <!-- </ul> -->
   
-  <!-- FILTRO -->
-      <div class="card border-0 shadow-sm mb-3">
-        <div class="card-body py-2">
-          <form method="GET" action="{% url 'employee_workload' %}" class="row g-2 align-items-end">
-            <div class="col-md-5">
-              <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Empleado</label>
-              <select name="filter_empleado" class="form-select form-select-sm">
-                <option value="">Todos los empleados</option>
-                {% for emp in empleados_activos %}
-                <option value="{{ emp.id }}"
-                  {% if filter_empleado|stringformat:"s" == emp.id|stringformat:"s" %}selected{% endif %}>
-                  {{ emp.nombre }} {{ emp.apellido_paterno }} — {{ emp.get_cargo_display }}
-                </option>
-                {% endfor %}
-              </select>
-            </div>
-            <div class="col-6 col-md-2">
-              <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
-            </div>
-            <div class="col-6 col-md-1">
-              <a href="{% url 'employee_workload' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
-            </div>
-          </form>
+  
+  <!-- Per page + contador -->
+  <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+    <form method="GET" action="{% url 'employee_workload' %}" class="d-flex align-items-center gap-2">
+      <input type="hidden" name="filter_empleado" value="{{ filter_empleado }}">
+      <input type="hidden" name="filter_proyecto" value="{{ filter_proyecto }}">
+      <input type="hidden" name="filter_estado" value="{{ filter_estado }}">
+      <input type="hidden" name="fecha_ini" value="{{ fecha_ini }}">
+      <input type="hidden" name="fecha_fin" value="{{ fecha_fin }}">
+      <input type="hidden" name="page" value="1">
+      <span class="small text-muted">Mostrar:</span>
+      <select name="per_page" class="form-select form-select-sm" style="width:80px;" onchange="this.form.submit()">
+        <option value="10"  {% if per_page == 10  %}selected{% endif %}>10</option>
+        <option value="20"  {% if per_page == 20  %}selected{% endif %}>20</option>
+        <option value="50"  {% if per_page == 50  %}selected{% endif %}>50</option>
+        <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+      </select>
+    </form>
+    <div class="text-muted small">
+      Mostrando {{ jornadas_pendientes.start_index }}–{{ jornadas_pendientes.end_index }}
+      de {{ jornadas_pendientes.paginator.count }} jornadas
+    </div>
+  </div>
+  <!-- FILTROS -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-body py-2">
+      <form method="GET" action="{% url 'employee_workload' %}" class="row g-2 align-items-end">
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Proyecto</label>
+          <select name="filter_proyecto" class="form-select form-select-sm">
+            <option value="">Todos los proyectos</option>
+            {% for p in proyectos_filtro %}
+            <option value="{{ p.id }}" {% if filter_proyecto == p.id|stringformat:"s" %}selected{% endif %}>
+              {{ p.nombre|truncatechars:30 }}
+            </option>
+            {% endfor %}
+          </select>
         </div>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Empleado</label>
+          <select name="filter_empleado" class="form-select form-select-sm">
+            <option value="">Todos</option>
+            {% for emp in empleados_activos %}
+            <option value="{{ emp.id }}" {% if filter_empleado == emp.id|stringformat:"s" %}selected{% endif %}>
+              {{ emp.nombre }} {{ emp.apellido_paterno }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Estado</label>
+          <select name="filter_estado" class="form-select form-select-sm">
+            <option value="">Todos</option>
+            <option value="pendiente"  {% if filter_estado == 'pendiente'  %}selected{% endif %}>Pendiente</option>
+            <option value="aprobada"   {% if filter_estado == 'aprobada'   %}selected{% endif %}>Aprobada</option>
+            <option value="rechazada"  {% if filter_estado == 'rechazada'  %}selected{% endif %}>Rechazada</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Desde</label>
+          <input type="date" name="fecha_ini" class="form-control form-control-sm" value="{{ fecha_ini }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label form-label-sm text-muted mb-1" style="font-size:0.72rem;">Hasta</label>
+          <input type="date" name="fecha_fin" class="form-control form-control-sm" value="{{ fecha_fin }}">
+        </div>
+        <div class="col-6 col-md-auto">
+          <button type="submit" class="btn btn-dark btn-sm w-100">Filtrar</button>
+        </div>
+        <div class="col-6 col-md-auto">
+          <a href="{% url 'employee_workload' %}" class="btn btn-outline-secondary btn-sm w-100">Limpiar</a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="row g-3 mb-3">
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card blue border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-primary">{{ total_qs }}</div>
+          <div class="kpi-label">Total jornadas</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card green border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-success">{{ total_aprobadas }}</div>
+          <div class="kpi-label">Aprobadas</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card orange border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-warning">{{ total_pendientes }}</div>
+          <div class="kpi-label">Pendientes</div>
+        </div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3">
+      <div class="card kpi-card red border-0 shadow-sm h-100">
+        <div class="card-body py-3 px-3">
+          <div class="kpi-value text-danger">{{ total_rechazadas }}</div>
+          <div class="kpi-label">Rechazadas</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Acceso rápido a revisión por proyecto -->
+  {% if proyectos_con_pendientes %}
+  <div class="mb-3">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <span class="text-muted small fw-semibold">Pendientes por proyecto:</span>
+      {% for p in proyectos_con_pendientes %}
+      <a href="{% url 'revisar_jornadas_proyecto' p.id %}?next={% url 'employee_workload' %}"
+         class="badge text-decoration-none d-inline-flex align-items-center gap-1"
+         style="background:#fff3cd; color:#664d03; border:1px solid #ffda6a; font-size:0.78rem; font-weight:500; padding:.3em .6em; border-radius:.4rem;">
+        <i class="bi bi-clipboard2-check"></i>
+        {{ p.nombre|truncatechars:28 }}
+        <span class="badge bg-warning text-dark ms-1" style="font-size:0.7rem;">{{ p.n_pendientes }}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- TABLA -->
+  <div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
+      <span class="fw-semibold small">Detalle de Jornadas</span>
+      <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary btn-sm" id="btnToggleCal" onclick="toggleCalendario()">
+          <i class="bi bi-calendar3 me-1"></i>Ver Calendario
+        </button>
+        {% if total_pendientes %}
+        <form method="POST" action="{% url 'aprobar_todas_jornadas' %}"
+              onsubmit="return confirm('¿Aprobar todas las jornadas pendientes{% if filter_empleado %} de este empleado{% endif %}?')">
+          {% csrf_token %}
+          <input type="hidden" name="filter_empleado" value="{{ filter_empleado }}">
+          <button type="submit" class="btn btn-outline-success btn-sm">
+            <i class="bi bi-check2-all me-1"></i>Aprobar todo
+          </button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive" style="overflow:visible;">
+        <table class="table table-sm table-hover align-middle small">
+          <thead class="table-light small text-uppercase fw-semibold">
+            <tr>
+              <th class="px-3 py-2">Empleado</th>
+              <th class="py-2">Proyecto</th>
+              <th class="py-2">Fecha</th>
+              <th class="text-center py-2">Días</th>
+              <th class="text-end py-2">Monto (Bs.)</th>
+              <th class="text-center py-2">Estado</th>
+              <th class="text-end py-2">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for j in jornadas_pendientes %}
+            <tr class="jornada-row" data-href="{% url 'jornada_detail' j.id %}?next={% url 'employee_workload' %}" style="cursor:pointer;">
+              <td class="px-3 fw-semibold">
+                {{ j.contrato.empleado.nombre }} {{ j.contrato.empleado.apellido_paterno }}
+                <div class="text-muted" style="font-size:0.72rem;">{{ j.contrato.empleado.get_cargo_display }}</div>
+              </td>
+              <td class="small">{{ j.proyecto.nombre }}</td>
+              <td class="small">{{ j.fecha|date:"d/m/Y" }}</td>
+              <td class="text-center">
+                {% if j.dias == 0.5 %}<span class="badge bg-info text-dark">½ día</span>
+                {% else %}<span class="badge bg-primary">1 día</span>{% endif %}
+              </td>
+              <td class="text-end fw-semibold">{{ j.monto|floatformat:2 }}</td>
+              <td class="text-center">
+                {% if j.estado == 'aprobada' %}
+                  <span class="badge bg-success small">aprobada</span>
+                {% elif j.estado == 'pendiente' %}
+                  <span class="badge bg-warning text-dark small">pendiente</span>
+                {% else %}
+                  <span class="badge bg-danger small">rechazada</span>
+                {% endif %}
+              </td>
+              <td class="text-end">
+                {% if j.estado == 'pendiente' %}
+                  <div class="d-flex gap-1 justify-content-end">
+                    <form method="POST" action="{% url 'aprobar_jornada' j.id %}">
+                      {% csrf_token %}
+                      <input type="hidden" name="next" value="{% url 'employee_workload' %}?filter_empleado={{ filter_empleado }}&filter_proyecto={{ filter_proyecto }}&filter_estado={{ filter_estado }}&fecha_ini={{ fecha_ini }}&fecha_fin={{ fecha_fin }}">
+                      <button type="submit" class="btn btn-success btn-sm">Aprobar</button>
+                    </form>
+                    <button class="btn btn-danger btn-sm"
+                            data-bs-toggle="modal" data-bs-target="#modalRechazar"
+                            data-id="{{ j.id }}"
+                            data-nombre="{{ j.contrato.empleado.nombre }} {{ j.contrato.empleado.apellido_paterno }}"
+                            data-fecha="{{ j.fecha|date:'d/m/Y' }}">
+                      Rechazar
+                    </button>
+                  </div>
+                {% else %}
+                  <a href="{% url 'jornada_detail' j.id %}?next={% url 'employee_workload' %}"
+                     class="btn btn-outline-secondary btn-sm"
+                     onclick="event.stopPropagation()">Ver detalle</a>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="7" class="text-center text-muted py-4 small">
+                <i class="bi bi-search fs-3 d-block mb-2"></i>
+                No hay jornadas con los filtros seleccionados.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </div>
 
-      <!-- KPIs -->
-      <div class="row g-3 mb-3">
-        <div class="col-6 col-md-4">
-          <div class="card kpi-card yellow border-0 shadow-sm h-100">
-            <div class="card-body py-3 px-3">
-              <div class="kpi-value text-warning">{{ total_pendientes }}</div>
-              <div class="kpi-label">Jornadas por aprobar</div>
-            </div>
-          </div>
-        </div>
-      </div>
+    </div>
+  </div>
 
-      <!-- Acceso rápido a revisión por proyecto -->
-      {% if proyectos_con_pendientes %}
-      <div class="mb-3">
-        <div class="d-flex align-items-center gap-2 flex-wrap">
-          <span class="text-muted small fw-semibold">Ir a revisión:</span>
-          {% for p in proyectos_con_pendientes %}
-          <a href="{% url 'revisar_jornadas_proyecto' p.id %}?next={% url 'employee_workload' %}"
-             class="badge text-decoration-none d-inline-flex align-items-center gap-1"
-             style="background:#fff3cd; color:#664d03; border:1px solid #ffda6a; font-size:0.78rem; font-weight:500; padding:.3em .6em; border-radius:.4rem;">
-            <i class="bi bi-clipboard2-check"></i>
-            {{ p.nombre|truncatechars:28 }}
-            <span class="badge bg-warning text-dark ms-1" style="font-size:0.7rem;">{{ p.n_pendientes }}</span>
-          </a>
-          {% endfor %}
-        </div>
-      </div>
+  <!-- PAGINACIÓN -->
+  <nav class="mt-3">
+    <ul class="pagination pagination-sm justify-content-center mb-0">
+      {% if jornadas_pendientes.has_previous %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ jornadas_pendientes.previous_page_number }}&per_page={{ per_page }}&filter_empleado={{ filter_empleado }}&filter_proyecto={{ filter_proyecto }}&filter_estado={{ filter_estado }}&fecha_ini={{ fecha_ini }}&fecha_fin={{ fecha_fin }}">Anterior</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Anterior</span></li>
       {% endif %}
-      <!-- TABLA -->
-      <div class="card border-0 shadow-sm mb-3">
-        <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center">
-          <span class="fw-semibold small">Detalle de Jornadas</span>
-          {% if total_pendientes %}
-          <form method="POST" action="{% url 'aprobar_todas_jornadas' %}"
-                onsubmit="return confirm('¿Aprobar todas las jornadas pendientes{% if filter_empleado %} de este empleado{% endif %}?')">
-            {% csrf_token %}
-            <input type="hidden" name="filter_empleado" value="{{ filter_empleado }}">
-            <button type="submit" class="btn btn-outline-success btn-sm">
-              <i class="bi bi-check2-all me-1"></i>Aprobación automatica
-            </button>
-          </form>
-          {% endif %}
-        </div>
-        <div class="card-body p-0">
-          <div class="table-responsive" style="overflow:visible;">
-            <table class="table table-sm table-hover align-middle small">
-              <thead class="table-light small text-uppercase fw-semibold">
-                <tr>
-                  <th class="px-3 py-2">Empleado</th>
-                  <th class="py-2">Proyecto</th>
-                  <th class="py-2">Fecha</th>
-                  <th class="text-center py-2">Días</th>
-                  <th class="py-2">Observación</th>
-                  <th class="text-end py-2" style="width:60px;">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {% for j in jornadas_pendientes %}
-                <tr data-href="{% url 'jornada_detail' j.id %}?next={% url 'employee_workload' %}">
-                  <td class="px-3 fw-semibold">
-                    {{ j.contrato.empleado.nombre }} {{ j.contrato.empleado.apellido_paterno }}
-                    <div class="text-muted" style="font-size:0.72rem;">{{ j.contrato.empleado.get_cargo_display }}</div>
-                  </td>
-                  <td>
-                    <a href="{% url 'project_view' j.proyecto.id %}" class="text-decoration-none small">
-                      {{ j.proyecto.nombre }}
-                    </a>
-                    <a href="{% url 'revisar_jornadas_proyecto' j.proyecto.id %}?next={% url 'employee_workload' %}"
-                       class="ms-1 text-warning" title="Revisar jornadas del proyecto"
-                       style="font-size:0.8rem;">
-                      <i class="bi bi-clipboard2-check"></i>
-                    </a>
-                  </td>
-                  <td class="small">{{ j.fecha|date:"d/m/Y" }}</td>
-                  <td class="text-center">
-                    {% if j.dias == 0.5 %}
-                      <span class="badge bg-info text-dark">½ día</span>
-                    {% else %}
-                      <span class="badge bg-primary">1 día</span>
-                    {% endif %}
-                  </td>
-                  <td class="text-muted small">{{ j.observacion|default:"—"|truncatechars:50 }}</td>
-                  <td class="text-end">
-                    <div class="dropdown">
-                      <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
-                      <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-                        <li>
-                          <a class="dropdown-item" href="{% url 'jornada_detail' j.id %}?next={% url 'employee_workload' %}">
-                            <i class="bi bi-eye me-2 text-muted"></i>Ver / Editar
-                          </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                          <form method="POST" action="{% url 'aprobar_jornada' j.id %}">
-                            {% csrf_token %}
-                            <input type="hidden" name="next"
-                              value="{% url 'employee_workload' %}{% if filter_empleado %}?filter_empleado={{ filter_empleado }}{% endif %}">
-                            <button type="submit" class="dropdown-item text-success">
-                              <i class="bi bi-check-lg me-2 text-muted"></i>Aprobar
-                            </button>
-                          </form>
-                        </li>
-                        <li>
-                          <button class="dropdown-item text-danger"
-                                  data-bs-toggle="modal" data-bs-target="#modalRechazar"
-                                  data-id="{{ j.id }}"
-                                  data-nombre="{{ j.contrato.empleado.nombre }} {{ j.contrato.empleado.apellido_paterno }}"
-                                  data-fecha="{{ j.fecha|date:'d/m/Y' }}">
-                            <i class="bi bi-x-lg me-2 text-muted"></i>Rechazar
-                          </button>
-                        </li>
-                      </ul>
-                    </div>
-                  </td>
-                </tr>
-                {% empty %}
-                <tr>
-                  <td colspan="6" class="text-center text-muted py-4 small">
-                    <i class="bi bi-check2-circle fs-3 d-block mb-2 text-success"></i>
-                    No hay jornadas pendientes{% if filter_empleado %} para este empleado{% endif %}.
-                  </td>
-                </tr>
-                {% endfor %}
-              </tbody>
-            </table>
-          </div>
-          {% if paginator.num_pages > 1 %}
-          <div class="card-footer bg-white py-2 d-flex justify-content-between align-items-center flex-wrap gap-2 border-top">
-            <small class="text-muted">
-              Mostrando {{ jornadas_pendientes.start_index }}–{{ jornadas_pendientes.end_index }} de {{ total_pendientes }} jornada{{ total_pendientes|pluralize:"s" }}
-            </small>
-            <nav>
-              <ul class="pagination pagination-sm mb-0 justify-content-center">
-                {% if jornadas_pendientes.has_previous %}
-                <li class="page-item">
-                  <a class="page-link" href="?{% if filter_empleado %}filter_empleado={{ filter_empleado }}&{% endif %}per_page={{ per_page }}&page={{ jornadas_pendientes.previous_page_number }}">Anterior</a>
-                </li>
-                {% else %}
-                <li class="page-item disabled"><span class="page-link">Anterior</span></li>
-                {% endif %}
-                {% for num in paginator.page_range %}
-                  {% if num == jornadas_pendientes.number %}
-                  <li class="page-item active"><span class="page-link">{{ num }}</span></li>
-                  {% elif num == 1 or num == paginator.num_pages or num >= jornadas_pendientes.number|add:"-2" and num <= jornadas_pendientes.number|add:"2" %}
-                  <li class="page-item">
-                    <a class="page-link" href="?{% if filter_empleado %}filter_empleado={{ filter_empleado }}&{% endif %}per_page={{ per_page }}&page={{ num }}">{{ num }}</a>
-                  </li>
-                  {% endif %}
-                {% endfor %}
-                {% if jornadas_pendientes.has_next %}
-                <li class="page-item">
-                  <a class="page-link" href="?{% if filter_empleado %}filter_empleado={{ filter_empleado }}&{% endif %}per_page={{ per_page }}&page={{ jornadas_pendientes.next_page_number }}">Siguiente</a>
-                </li>
-                {% else %}
-                <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
-                {% endif %}
-              </ul>
-            </nav>
-          </div>
-          {% endif %}
-        </div>
-      </div>
+      {% for num in paginator.page_range %}
+        {% if num == jornadas_pendientes.number %}
+        <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+        {% elif num > jornadas_pendientes.number|add:'-3' and num < jornadas_pendientes.number|add:'3' %}
+        <li class="page-item">
+          <a class="page-link" href="?page={{ num }}&per_page={{ per_page }}&filter_empleado={{ filter_empleado }}&filter_proyecto={{ filter_proyecto }}&filter_estado={{ filter_estado }}&fecha_ini={{ fecha_ini }}&fecha_fin={{ fecha_fin }}">{{ num }}</a>
+        </li>
+        {% endif %}
+      {% endfor %}
+      {% if jornadas_pendientes.has_next %}
+      <li class="page-item">
+        <a class="page-link" href="?page={{ jornadas_pendientes.next_page_number }}&per_page={{ per_page }}&filter_empleado={{ filter_empleado }}&filter_proyecto={{ filter_proyecto }}&filter_estado={{ filter_estado }}&fecha_ini={{ fecha_ini }}&fecha_fin={{ fecha_fin }}">Siguiente</a>
+      </li>
+      {% else %}
+      <li class="page-item disabled"><span class="page-link">Siguiente</span></li>
+      {% endif %}
+    </ul>
+  </nav>
 
+  <div id="seccionCalendario" style="display:none;">
   <!-- ══ CALENDARIO DE JORNADAS ══ -->
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-header bg-light py-2 d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -542,6 +619,8 @@
 
 </div>
 
+  </div><!-- /seccionCalendario -->
+
 <!-- Modal: Rechazar jornada -->
 <div class="modal fade" id="modalRechazar" tabindex="-1">
   <div class="modal-dialog">
@@ -604,11 +683,30 @@
 
 {% block extra_js %}
 <script>
+  function toggleCalendario() {
+    const sec = document.getElementById('seccionCalendario');
+    const btn = document.getElementById('btnToggleCal');
+    const visible = sec.style.display !== 'none';
+    sec.style.display = visible ? 'none' : '';
+    btn.innerHTML = visible
+      ? '<i class="bi bi-calendar3 me-1"></i>Ver Calendario'
+      : '<i class="bi bi-calendar3 me-1"></i>Ocultar Calendario';
+    btn.classList.toggle('btn-outline-secondary', visible);
+    btn.classList.toggle('btn-secondary', !visible);
+  }
+
   document.getElementById('modalRechazar').addEventListener('show.bs.modal', function (e) {
     const btn = e.relatedTarget;
     document.getElementById('formRechazar').action = `/jornadas/${btn.getAttribute('data-id')}/rechazar/`;
     document.getElementById('rechazarDescripcion').textContent =
       `Jornada de ${btn.getAttribute('data-nombre')} — ${btn.getAttribute('data-fecha')}`;
+  });
+
+  document.querySelectorAll('.jornada-row').forEach(function(row) {
+    row.addEventListener('click', function(e) {
+      if (e.target.closest('form') || e.target.closest('button') || e.target.closest('a')) return;
+      window.location.href = this.dataset.href;
+    });
   });
 </script>
 {% endblock %}

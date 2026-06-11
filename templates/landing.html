@@ -300,6 +300,7 @@
         <li class="nav-item"><a class="nav-link" href="#ventajasSection">Ventajas</a></li>
         <li class="nav-item"><a class="nav-link" href="#sucursalesSection">Sucursales</a></li>
         <li class="nav-item"><a class="nav-link" href="#contactoSection">Contacto</a></li>
+        <li class="nav-item"><a class="nav-link" href="{% url 'consulta_proyecto' %}" style="color:var(--sobotec-dorado) !important;font-weight:600;"><i class="bi bi-search me-1"></i>Estado de Proyecto</a></li>
         <li class="nav-item ms-lg-2">
           {% if user.is_authenticated %}
           <a href="{% url 'dashboard' %}" class="btn-ingresar btn">
@@ -592,6 +593,56 @@
              alt="Contacto SOBOTEC"
              class="img-fluid rounded-4 shadow-lg"
              style="max-height:340px;object-fit:cover;" />
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════════════ CONSULTA PROYECTO ════════════ -->
+<section id="consultaSection" class="py-5 bg-light">
+  <div class="container">
+    <div class="row align-items-center g-5">
+      <div class="col-md-6">
+        <span class="badge px-3 py-2 mb-3 d-inline-block" style="background:rgba(27,77,144,0.1);color:var(--sobotec-azul);font-size:0.75rem;letter-spacing:1px;">SEGUIMIENTO EN LÍNEA</span>
+        <h2 class="section-title mb-3">¿Ya tienes un proyecto con nosotros?</h2>
+        <p class="text-muted mb-4">Consulta el estado de avance de tu instalación en tiempo real: puntos de instalación, fechas de contrato, estado de pagos y garantía, sin necesidad de crear una cuenta.</p>
+        <a href="{% url 'consulta_proyecto' %}" class="btn px-4 py-2 fw-bold"
+           style="background:linear-gradient(90deg,var(--sobotec-azul-dark),var(--sobotec-azul));color:#fff;border-radius:10px;font-size:.95rem;text-decoration:none;">
+          <i class="bi bi-search me-2"></i>Consultar estado de mi proyecto
+        </a>
+      </div>
+      <div class="col-md-6">
+        <div class="card border-0 shadow-sm rounded-4 p-4" style="border-left:4px solid var(--sobotec-azul) !important;">
+          <div class="d-flex flex-column gap-3">
+            <div class="d-flex align-items-center gap-3">
+              <div style="width:40px;height:40px;background:rgba(27,77,144,0.1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="bi bi-shield-check" style="color:var(--sobotec-azul);font-size:1.1rem;"></i>
+              </div>
+              <div>
+                <div class="fw-semibold small">Sin registro requerido</div>
+                <div class="text-muted" style="font-size:.82rem;">Solo necesitas el código de proyecto y tu CI/NIT.</div>
+              </div>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+              <div style="width:40px;height:40px;background:rgba(212,184,74,0.12);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="bi bi-arrow-repeat" style="color:#b8962a;font-size:1.1rem;"></i>
+              </div>
+              <div>
+                <div class="fw-semibold small">Información en tiempo real</div>
+                <div class="text-muted" style="font-size:.82rem;">Avance de sedes, estado de contrato y garantía actualizada al momento.</div>
+              </div>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+              <div style="width:40px;height:40px;background:rgba(25,135,84,0.1);border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="bi bi-geo-alt" style="color:#198754;font-size:1.1rem;"></i>
+              </div>
+              <div>
+                <div class="fw-semibold small">Puntos de instalación</div>
+                <div class="text-muted" style="font-size:.82rem;">Ve el progreso por sede con porcentaje de checklist completado.</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

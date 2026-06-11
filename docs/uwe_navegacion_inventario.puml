@@ -1,0 +1,103 @@
+@startuml SOBOTEC_Nav_Inventario
+title Modelo de Navegación UWE — Módulo: Inventario (SOBOTEC S.R.L.)
+
+!theme plain
+hide circle
+left to right direction
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 9
+skinparam classFontName Arial
+skinparam classHeaderFontSize 10
+skinparam classHeaderFontStyle bold
+skinparam arrowColor #444444
+skinparam arrowFontSize 8
+skinparam nodesep 18
+skinparam ranksep 32
+skinparam padding 3
+skinparam shadowing false
+
+skinparam class {
+  BackgroundColor<<index>>           #D5F5E3
+  BorderColor<<index>>               #1E8449
+  BackgroundColor<<navigationClass>> #D6EAF8
+  BorderColor<<navigationClass>>     #1A5276
+  BackgroundColor<<process>>         #FDEBD0
+  BorderColor<<process>>             #784212
+  BackgroundColor<<menu>>            #E8DAEF
+  BorderColor<<menu>>                #6C3483
+}
+
+' ─── ENTRADA ───
+class "Menú\nPrincipal" <<menu>>
+
+' ─── PROVEEDORES ───
+class "Lista\nProveedores" <<index>>
+class "Detalle\nProveedor" <<navigationClass>>
+class "Form.\nProveedor" <<process>>
+
+' ─── INSUMOS ───
+class "Lista\nInsumos" <<index>>
+class "Ver\nInsumo" <<navigationClass>>
+class "Form.\nInsumo" <<process>>
+
+' ─── COMPRAS ───
+class "Lista\nCompras" <<index>>
+class "Detalle\nCompra" <<navigationClass>>
+class "Form.\nCompra" <<process>>
+
+' ─── ASIGNACIÓN A PROYECTO ───
+class "Insumos del\nProyecto" <<navigationClass>>
+class "Form. Insumo\ndel Proyecto" <<process>>
+
+' ─── REPORTE ───
+class "Reporte\nInventario" <<navigationClass>>
+
+' ═══════════════════════════════════════
+' NAVEGACIÓN
+' ═══════════════════════════════════════
+
+' --- Accesos desde el menú ---
+"Menú\nPrincipal"         --> "Lista\nProveedores"
+"Menú\nPrincipal"         --> "Lista\nInsumos"
+"Menú\nPrincipal"         --> "Lista\nCompras"
+"Menú\nPrincipal"         --> "Reporte\nInventario"
+
+' --- Proveedores ---
+"Lista\nProveedores"      --> "Detalle\nProveedor"
+"Lista\nProveedores"      --> "Form.\nProveedor"
+"Detalle\nProveedor"      --> "Form.\nProveedor"
+
+' --- Insumos ---
+"Lista\nInsumos"          --> "Ver\nInsumo"
+"Lista\nInsumos"          --> "Form.\nInsumo"
+"Ver\nInsumo"             --> "Form.\nInsumo"
+"Ver\nInsumo"             --> "Insumos del\nProyecto"
+"Insumos del\nProyecto"   --> "Form. Insumo\ndel Proyecto"
+
+' --- Compras ---
+"Lista\nCompras"          --> "Detalle\nCompra"
+"Lista\nCompras"          --> "Form.\nCompra"
+"Detalle\nCompra"         --> "Form.\nCompra"
+
+' ─── NOTAS DE ROLES ───
+note bottom of "Form.\nInsumo"
+  Administrador y Gerente
+end note
+
+note bottom of "Form.\nCompra"
+  Administrador, Gerente
+  e Instalador
+end note
+
+note bottom of "Form.\nProveedor"
+  Administrador y Gerente
+end note
+
+note bottom of "Insumos del\nProyecto"
+  Acceso también desde
+  Ver Proyecto en el
+  módulo Proyectos
+end note
+
+@enduml

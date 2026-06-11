@@ -953,6 +953,50 @@
                   {% if saldo_cliente <= 0 %}<i class="bi bi-check-circle-fill ms-1"></i>{% endif %}
                 </span>
               </div>
+
+              {% if contrato_proyecto %}
+              <hr class="my-2">
+              <div class="info-row">
+                <span class="info-label">Estado del contrato:</span>
+                <span>
+                  {% if estado_multa_contrato == 'critico' %}
+                    <span class="badge bg-danger"><i class="bi bi-exclamation-octagon-fill me-1"></i>Tope de multa alcanzado</span>
+                  {% elif estado_multa_contrato == 'en_multa' %}
+                    {% if project.estado_proyecto == 'completado' %}
+                      <span class="badge bg-warning text-dark"><i class="bi bi-clock-history me-1"></i>Entregado con retraso</span>
+                    {% else %}
+                      <span class="badge bg-danger"><i class="bi bi-clock-history me-1"></i>Vencido</span>
+                    {% endif %}
+                  {% else %}
+                    {% if project.estado_proyecto == 'completado' %}
+                      <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Entregado en plazo</span>
+                    {% else %}
+                      <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>En plazo</span>
+                    {% endif %}
+                  {% endif %}
+                </span>
+              </div>
+              {% if dias_retraso_contrato > 0 %}
+              <div class="info-row">
+                <span class="info-label">Días de retraso:</span>
+                <span class="fw-semibold text-danger">{{ dias_retraso_contrato }} día{{ dias_retraso_contrato|pluralize:"s" }}
+                  <span class="text-muted fw-normal small">(plazo: {{ contrato_proyecto.fecha_fin|date:"d/m/Y" }}{% if project.fecha_fin %} — entregado: {{ project.fecha_fin|date:"d/m/Y" }}{% endif %})</span>
+                </span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Multa aplicada:</span>
+                <span class="fw-bold text-danger">
+                  Bs. {{ multa_contrato|floatformat:2 }}
+                  {% if contrato_proyecto.multa_tope_alcanzado %}
+                    <span class="badge bg-danger ms-1" style="font-size:.65rem;">tope {{ contrato_proyecto.porcentaje_multa_maxima }}%</span>
+                  {% else %}
+                    <span class="text-muted fw-normal small">({{ contrato_proyecto.porcentaje_multa_diaria }}% diario × {{ dias_retraso_contrato }}d)</span>
+                  {% endif %}
+                </span>
+              </div>
+              {% endif %}
+              {% endif %}
+
               <div class="mt-3 d-flex gap-2">
                 <a href="{% url 'payments' %}?proyecto_id={{ project.id }}" class="btn btn-sm btn-outline-secondary">
                   <i class="bi bi-clock-history me-1"></i>Historial

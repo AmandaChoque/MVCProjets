@@ -1,0 +1,619 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Consulta de Proyecto | SOBOTEC S.R.L.</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet" />
+  <style>
+    :root {
+      --sobotec-azul:       #1B4D90;
+      --sobotec-azul-dark:  #0F2D5A;
+      --sobotec-azul-mid:   #2563C4;
+      --sobotec-dorado:     #D4B84A;
+      --sobotec-dorado-luz: #F0D878;
+      --nav-height: 76px;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      padding-top: var(--nav-height);
+      background: #f4f6fb;
+      min-height: 100vh;
+    }
+
+    /* ── NAVBAR ── */
+    .navbar {
+      min-height: var(--nav-height);
+      background: linear-gradient(90deg, var(--sobotec-azul-dark), var(--sobotec-azul));
+      box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+    }
+    .navbar-brand {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--sobotec-dorado) !important;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .navbar-brand img { width: 42px; height: 42px; object-fit: contain; border-radius: 8px; }
+    .btn-ingresar {
+      background: var(--sobotec-dorado);
+      color: var(--sobotec-azul-dark) !important;
+      font-weight: 700;
+      border: none;
+      border-radius: 8px;
+      padding: 8px 20px;
+    }
+    .btn-ingresar:hover { background: var(--sobotec-dorado-luz); }
+
+    /* ── HERO ── */
+    .consulta-hero {
+      background: linear-gradient(135deg, var(--sobotec-azul-dark) 0%, var(--sobotec-azul-mid) 100%);
+      padding: 52px 0 40px;
+      color: #fff;
+    }
+    .consulta-hero h1 { font-size: 2rem; font-weight: 800; }
+    .consulta-hero p { opacity: .8; }
+
+    /* ── FORM CARD ── */
+    .form-card {
+      border: none;
+      border-radius: 18px;
+      box-shadow: 0 8px 32px rgba(27,77,144,0.12);
+      overflow: hidden;
+    }
+    .form-card .card-header {
+      background: linear-gradient(90deg, var(--sobotec-azul-dark), var(--sobotec-azul));
+      color: #fff;
+      border: none;
+      padding: 18px 28px;
+    }
+    .form-control:focus, .form-select:focus {
+      border-color: var(--sobotec-azul-mid);
+      box-shadow: 0 0 0 .2rem rgba(37,99,196,.18);
+    }
+    .btn-consultar {
+      background: linear-gradient(90deg, var(--sobotec-azul-dark), var(--sobotec-azul));
+      color: #fff;
+      font-weight: 700;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 32px;
+      font-size: 1rem;
+      transition: all .2s;
+    }
+    .btn-consultar:hover {
+      background: linear-gradient(90deg, var(--sobotec-azul), var(--sobotec-azul-mid));
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(27,77,144,0.3);
+      color: #fff;
+    }
+
+    /* ── FICHA RESULTADO ── */
+    .ficha-card {
+      border: none;
+      border-radius: 18px;
+      box-shadow: 0 8px 32px rgba(27,77,144,0.13);
+      overflow: hidden;
+    }
+    .ficha-header {
+      background: linear-gradient(90deg, var(--sobotec-azul-dark), var(--sobotec-azul));
+      color: #fff;
+      padding: 24px 32px;
+    }
+    .ficha-header .codigo-badge {
+      background: rgba(212,184,74,0.2);
+      border: 1px solid var(--sobotec-dorado);
+      color: var(--sobotec-dorado);
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      text-transform: uppercase;
+    }
+    .ficha-header h2 { font-size: 1.5rem; font-weight: 800; margin: 8px 0 4px; }
+    .ficha-header .cliente-info { opacity: .75; font-size: .9rem; }
+
+    .ficha-section {
+      padding: 20px 28px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+    .ficha-section:last-child { border-bottom: none; }
+    .ficha-section-title {
+      font-size: .7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: var(--sobotec-azul);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .info-item { display: flex; flex-direction: column; gap: 2px; }
+    .info-label { font-size: .72rem; color: #6c757d; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+    .info-value { font-size: .92rem; font-weight: 600; color: #1a1a2e; }
+
+    /* ── PROGRESO SEDES ── */
+    .sede-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #f8f9fc;
+      margin-bottom: 8px;
+    }
+    .sede-row:last-child { margin-bottom: 0; }
+    .sede-nombre { font-size: .88rem; font-weight: 600; color: #1a1a2e; flex: 1; }
+    .sede-pct { font-size: .78rem; color: #6c757d; white-space: nowrap; }
+
+    /* ── GARANTÍA ── */
+    .garantia-box {
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .garantia-box.vigente   { background: #d1fae5; border: 1px solid #6ee7b7; }
+    .garantia-box.por_vencer{ background: #fef3c7; border: 1px solid #fcd34d; }
+    .garantia-box.vencida   { background: #fee2e2; border: 1px solid #fca5a5; }
+    .garantia-box .garantia-icon { font-size: 1.8rem; }
+
+    /* ── BADGE ESTADOS ── */
+    .badge-estado-pendiente    { background: #e2e8f0; color: #475569; }
+    .badge-estado-en_progreso  { background: #dbeafe; color: #1d4ed8; }
+    .badge-estado-completado   { background: #dcfce7; color: #15803d; }
+    .badge-estado-cancelado    { background: #fee2e2; color: #b91c1c; }
+    .badge-pago-no_pagado      { background: #fee2e2; color: #b91c1c; }
+    .badge-pago-parcial        { background: #fef3c7; color: #92400e; }
+    .badge-pago-pagado         { background: #dcfce7; color: #15803d; }
+    .badge-multa-normal        { background: #dcfce7; color: #15803d; }
+    .badge-multa-en_multa      { background: #fef3c7; color: #92400e; }
+    .badge-multa-critico       { background: #fee2e2; color: #b91c1c; }
+
+    .estado-badge {
+      font-size: .78rem;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 20px;
+      display: inline-block;
+    }
+
+    /* ── FOOTER ── */
+    .footer {
+      background: var(--sobotec-azul-dark);
+      border-top: 3px solid var(--sobotec-dorado);
+      padding: 20px 0;
+      margin-top: 60px;
+    }
+
+    /* ── BOTÓN IMPRIMIR ── */
+    .btn-imprimir {
+      background: #fff;
+      color: var(--sobotec-azul-dark);
+      border: 2px solid var(--sobotec-azul);
+      font-weight: 700;
+      border-radius: 10px;
+      padding: 10px 24px;
+      font-size: .9rem;
+      transition: all .2s;
+    }
+    .btn-imprimir:hover {
+      background: var(--sobotec-azul);
+      color: #fff;
+    }
+
+    /* ── ESTILOS DE IMPRESIÓN ── */
+    @media print {
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      body { background: #fff !important; padding-top: 0 !important; font-size: 10px !important; }
+      .navbar, .consulta-hero, .form-card, .footer,
+      .btn-imprimir, .no-print { display: none !important; }
+      .container { max-width: 100% !important; padding: 0 !important; }
+      .col-lg-7 { max-width: 100% !important; flex: 0 0 100% !important; }
+      .py-5 { padding-top: 6px !important; padding-bottom: 0 !important; }
+
+      .ficha-card { box-shadow: none !important; border: 1px solid #ccc !important; border-radius: 6px !important; }
+
+      .ficha-header {
+        background: #1B4D90 !important;
+        padding: 10px 16px !important;
+      }
+      .ficha-header h2 { font-size: 1rem !important; margin: 4px 0 2px !important; }
+      .ficha-header .codigo-badge { font-size: .65rem !important; padding: 2px 8px !important; }
+      .ficha-header .cliente-info { font-size: .75rem !important; }
+
+      .ficha-section { padding: 8px 16px !important; }
+      .ficha-section-title { font-size: .62rem !important; margin-bottom: 6px !important; }
+
+      .info-grid { grid-template-columns: repeat(4, 1fr) !important; gap: 6px !important; }
+      .info-label { font-size: .62rem !important; }
+      .info-value { font-size: .78rem !important; }
+      .estado-badge { font-size: .65rem !important; padding: 2px 8px !important; }
+
+      .sede-row { padding: 5px 8px !important; margin-bottom: 4px !important; border-radius: 5px !important; }
+      .sede-nombre { font-size: .78rem !important; }
+      .sede-nombre span:first-child { font-size: .78rem !important; }
+      .sede-nombre .d-block { font-size: .65rem !important; }
+      .sede-pct { font-size: .72rem !important; }
+
+      .progress { height: 5px !important; }
+      .mb-3 { margin-bottom: 6px !important; }
+
+      .garantia-box { padding: 8px 12px !important; border-radius: 6px !important; }
+      .garantia-box .garantia-icon { font-size: 1.2rem !important; }
+      .garantia-box .fw-bold { font-size: .78rem !important; }
+      .garantia-box .text-muted { font-size: .7rem !important; }
+
+      .alert { padding: 5px 10px !important; font-size: .72rem !important; margin-top: 5px !important; }
+
+      .print-header {
+        display: flex !important;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 16px 10px;
+        border-bottom: 2px solid #1B4D90;
+        margin-bottom: 8px;
+      }
+      .print-header .print-title { font-size: .95rem !important; }
+      .print-header .print-date { font-size: .7rem !important; }
+
+      @page { margin: 10mm 12mm; size: A4 portrait; }
+    }
+    .print-header { display: none; }
+  </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar navbar-expand-lg fixed-top">
+  <div class="container">
+    <a class="navbar-brand" href="/">
+      <img src="{% static 'common/logo.png' %}" alt="Logo SOBOTEC" />
+      SOBOTEC S.R.L.
+    </a>
+    <div class="ms-auto d-flex align-items-center gap-3">
+      <a href="/" class="text-white text-decoration-none small opacity-75">
+        <i class="bi bi-arrow-left me-1"></i>Volver al inicio
+      </a>
+      {% if user.is_authenticated %}
+      <a href="{% url 'dashboard' %}" class="btn-ingresar btn btn-sm">
+        <i class="bi bi-grid-3x3-gap-fill me-1"></i>Dashboard
+      </a>
+      {% else %}
+      <a href="{% url 'signin' %}" class="btn-ingresar btn btn-sm">
+        <i class="bi bi-box-arrow-in-right me-1"></i>Iniciar Sesión
+      </a>
+      {% endif %}
+    </div>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="consulta-hero">
+  <div class="container text-center">
+    <div class="mb-3">
+      <span style="background:rgba(212,184,74,0.2);border:1px solid var(--sobotec-dorado);color:var(--sobotec-dorado);font-size:.72rem;font-weight:700;letter-spacing:1.5px;padding:5px 14px;border-radius:20px;text-transform:uppercase;">
+        Consulta de Estado
+      </span>
+    </div>
+    <h1><i class="bi bi-search me-2"></i>Estado de tu Proyecto</h1>
+    <p class="mb-0">Ingresa el código de tu proyecto y tu número de CI/NIT para ver el avance en tiempo real.</p>
+  </div>
+</div>
+
+<!-- CONTENIDO -->
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-7">
+
+      <!-- FORMULARIO -->
+      <div class="card form-card mb-4">
+        <div class="card-header">
+          <h6 class="mb-0 fw-bold"><i class="bi bi-search me-2"></i>Consultar mi proyecto</h6>
+        </div>
+        <div class="card-body p-4">
+          <form method="post" novalidate>
+            {% csrf_token %}
+            <div class="row g-3">
+              <div class="col-sm-6">
+                <label class="form-label fw-semibold small">Código del Proyecto</label>
+                <input type="text" name="codigo" class="form-control"
+                       placeholder="Ej: SOB-001"
+                       value="{{ request.POST.codigo|default:'' }}"
+                       maxlength="20" autocomplete="off" />
+                <div class="form-text text-muted">Proporcionado por SOBOTEC al iniciar el proyecto.</div>
+              </div>
+              <div class="col-sm-6">
+                <label class="form-label fw-semibold small">CI / NIT del Cliente</label>
+                <input type="text" name="nit_ci" class="form-control"
+                       placeholder="Ej: 12345678"
+                       value="{{ request.POST.nit_ci|default:'' }}"
+                       maxlength="20" autocomplete="off" />
+                <div class="form-text text-muted">El CI o NIT registrado en el contrato.</div>
+              </div>
+            </div>
+            <div class="d-grid mt-4">
+              <button type="submit" class="btn btn-consultar">
+                <i class="bi bi-search me-2"></i>Ver estado del proyecto
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- ERROR -->
+      {% if error %}
+      <div class="alert alert-warning d-flex align-items-start gap-3 rounded-3 border-0 shadow-sm" role="alert"
+           style="background:#fff8ed;border-left:4px solid #f59e0b !important;border-left-width:4px !important;">
+        <i class="bi bi-exclamation-triangle-fill text-warning fs-5 mt-1"></i>
+        <div>
+          <strong>No encontrado</strong><br>
+          <span class="text-muted small">{{ error }}</span>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- FICHA RESULTADO -->
+      {% if resultado %}
+      <!-- Botón imprimir (no aparece al imprimir) -->
+      <div class="d-flex justify-content-end mb-3 no-print">
+        <button onclick="window.print()" class="btn-imprimir btn">
+          <i class="bi bi-printer me-2"></i>Imprimir / Guardar PDF
+        </button>
+      </div>
+
+      {% with p=resultado.proyecto c=resultado.contrato g=resultado.garantia sedes=resultado.sedes %}
+      <div class="ficha-card">
+
+        <!-- Encabezado solo visible al imprimir -->
+        <div class="print-header px-4">
+          <div>
+            <div class="print-title">SOBOTEC S.R.L. — Ficha de Estado de Proyecto</div>
+            <div class="print-date">Emitido el: {% now "d/m/Y H:i" %}</div>
+          </div>
+          <div style="font-size:.78rem;color:#6c757d;text-align:right;">
+            sobotec@gmail.com · +591 75210441<br>La Paz, Bolivia
+          </div>
+        </div>
+
+        <!-- Encabezado -->
+        <div class="ficha-header">
+          <span class="codigo-badge">{{ p.codigo }}</span>
+          <h2>{{ p.nombre }}</h2>
+          <div class="cliente-info">
+            <i class="bi bi-person-fill me-1"></i>
+            {% if p.cliente.tipo_contratante == 'entidad_publica' %}
+              {{ p.cliente.nombre_entidad }}
+            {% else %}
+              {{ p.cliente.nombre }} {{ p.cliente.apellido_paterno }}
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Estado general -->
+        <div class="ficha-section">
+          <div class="ficha-section-title">
+            <i class="bi bi-info-circle-fill"></i> Información del proyecto
+          </div>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Estado</span>
+              <span>
+                <span class="estado-badge badge-estado-{{ p.estado_proyecto }}">
+                  {{ p.get_estado_proyecto_display }}
+                </span>
+              </span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Tipo</span>
+              <span class="info-value">{{ p.get_tipo_proyecto_display }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Estado de pago</span>
+              <span>
+                <span class="estado-badge badge-pago-{{ p.estado_pago }}">
+                  {{ p.get_estado_pago_display }}
+                </span>
+              </span>
+            </div>
+            {% if p.fecha_inicio %}
+            <div class="info-item">
+              <span class="info-label">Inicio de obras</span>
+              <span class="info-value">{{ p.fecha_inicio|date:"d/m/Y" }}</span>
+            </div>
+            {% endif %}
+            {% if p.fecha_fin %}
+            <div class="info-item">
+              <span class="info-label">Finalización real</span>
+              <span class="info-value">{{ p.fecha_fin|date:"d/m/Y" }}</span>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Contrato -->
+        {% if c %}
+        <div class="ficha-section">
+          <div class="ficha-section-title">
+            <i class="bi bi-file-earmark-text-fill"></i> Contrato
+          </div>
+          <div class="info-grid">
+            <div class="info-item">
+              <span class="info-label">Inicio contrato</span>
+              <span class="info-value">{{ c.fecha_inicio|date:"d/m/Y" }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Fecha límite</span>
+              <span class="info-value">{{ c.fecha_fin|date:"d/m/Y" }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Monto acordado</span>
+              <span class="info-value">Bs {{ c.monto_acordado|floatformat:2 }}</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">Estado contrato</span>
+              <span>
+                <span class="estado-badge badge-multa-{{ c.estado_multa }}">
+                  {% if c.estado_multa == 'normal' %}Sin multa
+                  {% elif c.estado_multa == 'en_multa' %}En multa
+                  {% else %}Crítico{% endif %}
+                </span>
+              </span>
+            </div>
+          </div>
+          {% if c.estado_multa != 'normal' %}
+          <div class="alert alert-warning mt-3 mb-0 py-2 px-3 small rounded-3 border-0"
+               style="background:#fef3c7;">
+            <i class="bi bi-exclamation-triangle-fill me-1 text-warning"></i>
+            El proyecto presenta <strong>{{ c.dias_retraso }} día{% if c.dias_retraso != 1 %}s{% endif %} de retraso</strong>.
+            Contacta a SOBOTEC para más información.
+          </div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Progreso de sedes -->
+        {% if sedes %}
+        <div class="ficha-section">
+          <div class="ficha-section-title">
+            <i class="bi bi-geo-alt-fill"></i> Puntos de instalación
+            <span class="ms-auto fw-normal" style="color:#6c757d;font-size:.78rem;text-transform:none;letter-spacing:0;">
+              {{ resultado.sedes_completadas }} de {{ resultado.total_sedes }} completados
+            </span>
+          </div>
+
+          {% if resultado.total_sedes > 0 %}
+          <div class="mb-3">
+            <div class="d-flex justify-content-between small text-muted mb-1">
+              <span>Avance global (checklist)</span>
+              <span>{{ resultado.pct_global }}%</span>
+            </div>
+            <div class="progress" style="height:8px;border-radius:8px;background:#e9ecef;">
+              <div class="progress-bar"
+                   style="width:{{ resultado.pct_global }}%;background:linear-gradient(90deg,var(--sobotec-azul),var(--sobotec-azul-mid));border-radius:8px;min-width:{% if resultado.pct_global > 0 %}4px{% else %}0{% endif %};">
+              </div>
+            </div>
+          </div>
+          {% endif %}
+
+          {% for sede in sedes %}
+          <div class="sede-row">
+            <div style="flex-shrink:0;">
+              {% if sede.estado == 'completado' %}
+                <i class="bi bi-check-circle-fill text-success"></i>
+              {% elif sede.estado == 'en_progreso' %}
+                <i class="bi bi-arrow-repeat" style="color:var(--sobotec-azul-mid);"></i>
+              {% else %}
+                <i class="bi bi-circle text-muted"></i>
+              {% endif %}
+            </div>
+            <div class="sede-nombre">
+              {% if sede.direccion %}
+                <span>{{ sede.direccion }}</span>
+                <span class="d-block" style="font-size:.75rem;color:#6c757d;font-weight:400;">Ref: {{ sede.nombre }}</span>
+              {% else %}
+                <span>{{ sede.nombre }}</span>
+              {% endif %}
+            </div>
+            <span class="estado-badge badge-estado-{{ sede.estado }} py-1" style="flex-shrink:0;">
+              {{ sede.get_estado_display }}
+            </span>
+            <span class="sede-pct" style="flex-shrink:0;">{{ sede.porcentaje_checklist }}%</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Garantía -->
+        {% if g %}
+        <div class="ficha-section">
+          <div class="ficha-section-title">
+            <i class="bi bi-shield-fill-check"></i> Garantía post-instalación
+          </div>
+          <div class="garantia-box {{ g.estado }}">
+            <div class="garantia-icon">
+              {% if g.estado == 'vigente' %}<i class="bi bi-shield-fill-check text-success"></i>
+              {% elif g.estado == 'por_vencer' %}<i class="bi bi-shield-fill-exclamation" style="color:#d97706;"></i>
+              {% else %}<i class="bi bi-shield-fill-x text-danger"></i>{% endif %}
+            </div>
+            <div>
+              <div class="fw-bold small">
+                {% if g.estado == 'vigente' %}Garantía vigente
+                {% elif g.estado == 'por_vencer' %}Garantía por vencer
+                {% else %}Garantía vencida{% endif %}
+              </div>
+              <div class="text-muted" style="font-size:.82rem;">
+                Válida hasta: <strong>{{ g.fecha_vencimiento|date:"d/m/Y" }}</strong>
+                {% if g.dias_restantes > 0 %}
+                  · {{ g.dias_restantes }} día{% if g.dias_restantes != 1 %}s{% endif %} restantes
+                {% endif %}
+              </div>
+              {% if g.estado == 'vigente' or g.estado == 'por_vencer' %}
+              <div class="mt-1" style="font-size:.78rem;color:#4b5563;">
+                Si tienes algún problema con el sistema instalado, contáctanos — está cubierto por garantía.
+              </div>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Pie de ficha -->
+        <div class="ficha-section" style="background:#f8f9fc;">
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <div class="text-muted" style="font-size:.78rem;">
+              <i class="bi bi-clock me-1"></i>Información actualizada en tiempo real.
+              Para consultas comunícate con SOBOTEC.
+            </div>
+            <a href="tel:+59175210441" class="btn btn-sm fw-semibold"
+               style="background:var(--sobotec-azul);color:#fff;border-radius:8px;">
+              <i class="bi bi-telephone me-1"></i>+591 75210441
+            </a>
+          </div>
+        </div>
+
+      </div>
+      {% endwith %}
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="container">
+    <div class="row align-items-center g-3">
+      <div class="col-md-6 d-flex align-items-center gap-3">
+        <img src="{% static 'common/logo.png' %}" alt="Logo"
+             style="width:32px;height:32px;object-fit:contain;border-radius:6px;">
+        <span style="color:var(--sobotec-dorado);font-weight:700;letter-spacing:1px;">SOBOTEC S.R.L.</span>
+        <span style="color:rgba(255,255,255,0.4);font-size:.78rem;">Ingeniería en Seguridad Electrónica</span>
+      </div>
+      <div class="col-md-6 text-md-end">
+        <span style="color:rgba(255,255,255,0.35);font-size:.78rem;">
+          &copy; {% now "Y" %} SOBOTEC S.R.L. — Bolivia · Todos los derechos reservados
+        </span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

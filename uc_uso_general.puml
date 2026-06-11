@@ -40,14 +40,16 @@ rectangle "Sistema Web SOBOTEC S.R.L." {
     usecase "Módulo de\nProyectos" as UC1
     usecase "Módulo de\nPersonal" as UC2
     usecase "Módulo de\nInventario" as UC3
+    usecase "Consultar Estado\nde Proyecto\n(público)" as UC4
 }
 
 '══════════════════════════════
 ' ACTORES DERECHA
 '══════════════════════════════
 
-actor "Supervisor" as SUP
+actor "Instalador" as INST
 actor "Técnico" as TEC
+actor "Cliente\n(externo)" as CLI
 
 '══════════════════════════════
 ' RELACIONES
@@ -63,9 +65,16 @@ GER --> UC2
 SEC --> UC1
 SEC --> UC2
 
-UC1 <-- SUP
-UC3 <-- SUP
+UC1 <-- INST
+UC3 <-- INST
 
 UC1 <-- TEC
+
+CLI --> UC4
+
+note bottom of UC4
+  Sin login requerido.
+  Acceso con código de proyecto + CI/NIT.
+end note
 
 @enduml

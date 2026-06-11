@@ -1,0 +1,145 @@
+@startuml SOBOTEC_NavModel_Parte2
+title Modelo de Navegación UWE — Parte 2: Personal e Inventario (SOBOTEC S.R.L.)
+
+!theme plain
+hide circle
+left to right direction
+
+skinparam classAttributeIconSize 0
+skinparam classFontSize 9
+skinparam classFontName Arial
+skinparam classHeaderFontSize 10
+skinparam classHeaderFontStyle bold
+skinparam arrowColor #444444
+skinparam arrowFontSize 8
+skinparam nodesep 20
+skinparam ranksep 35
+skinparam padding 3
+skinparam shadowing false
+
+skinparam class {
+  BackgroundColor<<index>>           #D5F5E3
+  BorderColor<<index>>               #1E8449
+  BackgroundColor<<navigationClass>> #D6EAF8
+  BorderColor<<navigationClass>>     #1A5276
+  BackgroundColor<<process>>         #FDEBD0
+  BorderColor<<process>>             #784212
+  BackgroundColor<<menu>>            #E8DAEF
+  BorderColor<<menu>>                #6C3483
+}
+
+' ─── ENTRADA ───
+class "Menú Lateral" <<menu>>
+
+' ══════════════════════════════
+' MÓDULO PERSONAL
+' ══════════════════════════════
+
+class "Lista\nEmpleados" <<index>>
+class "Detalle\nEmpleado" <<navigationClass>>
+class "Form. Empleado" <<process>>
+
+class "Lista\nContratos" <<index>>
+class "Detalle\nContrato" <<navigationClass>>
+class "Form. Contrato" <<process>>
+
+class "Lista\nJornadas" <<index>>
+class "Detalle\nJornada" <<navigationClass>>
+class "Form. Jornada" <<process>>
+class "Revisión\nJornadas" <<navigationClass>>
+
+class "Lista\nPagos Empleado" <<index>>
+class "Detalle\nPago Empleado" <<navigationClass>>
+class "Form. Pago" <<process>>
+
+class "Calendario\nJornadas" <<navigationClass>>
+
+' ─── VISTAS DE CAMPO ───
+class "Mi Trabajo\n(Dashboard)" <<navigationClass>>
+class "Mis Cobros" <<navigationClass>>
+
+' ─── REPORTE PERSONAL ───
+class "Reporte\nPersonal" <<navigationClass>>
+
+' ══════════════════════════════
+' MÓDULO INVENTARIO
+' ══════════════════════════════
+
+class "Lista\nProveedores" <<index>>
+class "Detalle\nProveedor" <<navigationClass>>
+class "Form. Proveedor" <<process>>
+
+class "Lista\nInsumos" <<index>>
+class "Detalle\nInsumo" <<navigationClass>>
+class "Form. Insumo" <<process>>
+
+class "Lista\nCompras" <<index>>
+class "Detalle\nCompra" <<navigationClass>>
+class "Form. Compra" <<process>>
+
+class "Insumos\ndel Proyecto" <<navigationClass>>
+
+class "Reporte\nInventario" <<navigationClass>>
+
+' ════ NAVEGACIÓN — PERSONAL ════
+
+"Menú Lateral"          --> "Lista\nEmpleados"
+"Menú Lateral"          --> "Lista\nPagos Empleado"
+"Menú Lateral"          --> "Calendario\nJornadas"
+"Menú Lateral"          --> "Mi Trabajo\n(Dashboard)"
+"Menú Lateral"          --> "Mis Cobros"
+"Menú Lateral"          --> "Reporte\nPersonal"
+
+"Lista\nEmpleados"      --> "Detalle\nEmpleado"
+"Detalle\nEmpleado"     --> "Form. Empleado"
+"Detalle\nEmpleado"     --> "Lista\nContratos"
+"Lista\nContratos"      --> "Detalle\nContrato"
+"Detalle\nContrato"     --> "Form. Contrato"
+"Detalle\nContrato"     --> "Lista\nJornadas"
+"Detalle\nContrato"     --> "Lista\nPagos Empleado"
+"Lista\nJornadas"       --> "Detalle\nJornada"
+"Detalle\nJornada"      --> "Form. Jornada"
+"Lista\nPagos Empleado" --> "Detalle\nPago Empleado"
+"Detalle\nPago Empleado"--> "Form. Pago"
+
+"Menú Lateral"          --> "Revisión\nJornadas"
+
+' ════ NAVEGACIÓN — INVENTARIO ════
+
+"Menú Lateral"          --> "Lista\nProveedores"
+"Menú Lateral"          --> "Lista\nInsumos"
+"Menú Lateral"          --> "Lista\nCompras"
+"Menú Lateral"          --> "Reporte\nInventario"
+
+"Lista\nProveedores"    --> "Detalle\nProveedor"
+"Detalle\nProveedor"    --> "Form. Proveedor"
+
+"Lista\nInsumos"        --> "Detalle\nInsumo"
+"Detalle\nInsumo"       --> "Form. Insumo"
+"Detalle\nInsumo"       --> "Insumos\ndel Proyecto"
+
+"Lista\nCompras"        --> "Detalle\nCompra"
+"Detalle\nCompra"       --> "Form. Compra"
+
+note bottom of "Mi Trabajo\n(Dashboard)"
+  Instalador y Técnico de Soporte
+end note
+
+note bottom of "Mis Cobros"
+  Instalador y Técnico de Soporte
+end note
+
+note bottom of "Form. Empleado"
+  Solo Administrador
+end note
+
+note bottom of "Form. Insumo"
+  Administrador y Gerente
+end note
+
+note bottom of "Form. Compra"
+  Administrador, Gerente
+  e Instalador
+end note
+
+@enduml
