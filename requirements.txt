@@ -31,7 +31,7 @@ pyHanko==0.32.0
 pyhanko-certvalidator==0.29.0
 pyparsing==3.3.2
 pypdf==6.6.2
-python-bidi==0.6.7
+python-bidi==0.4.2
 python-dateutil==2.9.0.post0
 PyYAML==6.0.3
 reportlab==4.4.9
