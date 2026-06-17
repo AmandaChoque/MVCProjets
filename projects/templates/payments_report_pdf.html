@@ -41,6 +41,11 @@
       margin-top: 2px;
       color: #333;
     }
+    .summary .sub {
+      font-size: 8px;
+      color: #888;
+      margin-top: 1px;
+    }
 
     table.main {
       width: 100%;
@@ -72,35 +77,48 @@
       background-color: #e8edf5;
       color: #0F2D5A;
     }
+
     .badge {
-      padding: 2px 7px;
+      padding: 2px 6px;
       border-radius: 3px;
-      font-size: 8px;
+      font-size: 7.5px;
       font-weight: bold;
-      background-color: #e9e9e9;
-      color: #333;
+      color: #fff;
     }
-    .text-right { text-align: right; }
+    .badge-success    { background-color: #198754; }
+    .badge-primary    { background-color: #0d6efd; }
+    .badge-warning    { background-color: #ffc107; color: #333; }
+    .badge-secondary  { background-color: #6c757d; }
+    .badge-danger     { background-color: #dc3545; }
+    .badge-info       { background-color: #0dcaf0; color: #333; }
+
+    .text-right  { text-align: right; }
+    .text-center { text-align: center; }
+    .text-muted  { color: #888; }
+    .text-danger { color: #dc3545; }
+    .text-success { color: #198754; }
+
     .footer {
-      margin-top: 18px;
-      font-size: 9px;
+      margin-top: 14px;
+      font-size: 8px;
       color: #888;
       text-align: right;
       border-top: 1px solid #D4B84A;
-      padding-top: 6px;
+      padding-top: 5px;
     }
   </style>
 </head>
 <body>
 
+  <!-- Encabezado -->
   <table width="100%" style="border-collapse:collapse; margin-bottom:10px; background-color:#0F2D5A;">
     <tr>
       <td style="padding:0; width:5px; background-color:#D4B84A;"></td>
-      <td style="padding:3px 10px; vertical-align:middle;">
+      <td style="padding:4px 10px; vertical-align:middle;">
         <div style="font-size:8px; font-weight:bold; color:#D4B84A; text-transform:uppercase; letter-spacing:0.1em; margin-bottom:1px;">SOBOTEC S.R.L. — Sistema de Gestión de Proyectos</div>
-        <div style="font-size:12px; font-weight:bold; color:#ffffff;">Reporte de Pagos por Proyecto</div>
+        <div style="font-size:13px; font-weight:bold; color:#ffffff;">Reporte de Pagos por Proyecto</div>
       </td>
-      <td style="padding:3px 10px; vertical-align:middle; text-align:right; white-space:nowrap; width:130px;">
+      <td style="padding:4px 10px; vertical-align:middle; text-align:right; white-space:nowrap; width:130px;">
         <div style="font-size:7px; color:#D4B84A; text-transform:uppercase; letter-spacing:0.06em;">Generado el</div>
         <div style="font-size:10px; font-weight:bold; color:#ffffff;">{{ now|date:"d/m/Y" }}</div>
         <div style="font-size:9px; color:#a0b8d8;">{{ now|date:"H:i" }} hrs</div>
@@ -108,6 +126,7 @@
     </tr>
   </table>
 
+  <!-- Filtros aplicados -->
   <table width="100%" style="border-collapse:collapse; margin-bottom:8px; background-color:#f1f3f6; border:1px solid #dde2ed;">
     <tr>
       <td style="padding:3px 10px; font-size:8px; color:#444;">
@@ -116,45 +135,48 @@
         <b style="color:#0F2D5A;">Filtros:</b>
         {% if project_name %} Proyecto: <b>{{ project_name }}</b>{% endif %}
         {% if start_date %} &nbsp;|&nbsp; Período: <b>{{ start_date }} — {{ end_date|default:"hoy" }}</b>{% endif %}
-        {% if filter_tipo %} &nbsp;|&nbsp; Tipo pago: <b>{{ filter_tipo }}</b>{% endif %}
+        {% if filter_tipo %} &nbsp;|&nbsp; Método pago: <b>{{ filter_tipo }}</b>{% endif %}
         {% if filter_estado %} &nbsp;|&nbsp; Confirmación: <b>{{ filter_estado }}</b>{% endif %}
-        {% if not project_name and not start_date and not filter_tipo and not filter_estado %} <i style="color:#888;">Sin filtros aplicados</i>{% endif %}
+        {% if not project_name and not start_date and not filter_tipo and not filter_estado %}<i style="color:#888;">Sin filtros aplicados</i>{% endif %}
       </td>
     </tr>
   </table>
 
+  <!-- KPIs -->
   <table class="summary">
     <tr>
       <td>
         <div class="label">Total Proyectos</div>
-        <div class="value">{{ proyectos|length }}</div>
+        <div class="value">{{ total_proyectos }}</div>
+        <div class="sub">Sin cobro / Parcial / Pagado: {{ count_no_pagados }} / {{ count_parciales }} / {{ count_pagados }}</div>
+      </td>
+      <td>
+        <div class="label">Total Acordado (Bs.)</div>
+        <div class="value">{{ total_acordado_global|floatformat:2 }}</div>
       </td>
       <td>
         <div class="label">Total Cobrado (Bs.)</div>
-        <div class="value">{{ total_cobrado_global|floatformat:2 }}</div>
+        <div class="value" style="color:#198754;">{{ total_cobrado_global|floatformat:2 }}</div>
       </td>
       <td>
         <div class="label">Saldo Pendiente (Bs.)</div>
-        <div class="value">{{ total_saldo_global|floatformat:2 }}</div>
-      </td>
-      <td>
-        <div class="label">Sin cobro / Parcial / Pagado</div>
-        <div class="value">{{ count_no_pagados }} / {{ count_parciales }} / {{ count_pagados }}</div>
+        <div class="value {% if total_saldo_global > 0 %}text-danger{% else %}text-success{% endif %}">{{ total_saldo_global|floatformat:2 }}</div>
       </td>
     </tr>
   </table>
 
+  <!-- Tabla principal -->
   <table class="main">
     <colgroup>
       <col style="width:6%;">
-      <col style="width:16%;">
-      <col style="width:13%;">
-      <col style="width:9%;">
+      <col style="width:20%;">
+      <col style="width:14%;">
+      <col style="width:10%;">
       <col style="width:10%;">
       <col style="width:13%;">
-      <col style="width:12%;">
-      <col style="width:14%;">
-      <col style="width:14%;">
+      <col style="width:13%;">
+      <col style="width:10%;">
+      <col style="width:4%;">
     </colgroup>
     <thead>
       <tr>
@@ -162,24 +184,50 @@
         <th>Proyecto</th>
         <th>Contratante</th>
         <th>Estado</th>
-        <th>Estado Pago</th>
-        <th style="text-align:right;">Acordado</th>
-        <th style="text-align:right;">Cobrado</th>
-        <th style="text-align:right;">Saldo</th>
-        <th style="text-align:center;"># Pag.</th>
+        <th>Pago</th>
+        <th style="text-align:right;">Acordado (Bs.)</th>
+        <th style="text-align:right;">Cobrado (Bs.)</th>
+        <th style="text-align:right;">Saldo (Bs.)</th>
+        <th style="text-align:center;">#</th>
       </tr>
     </thead>
     <tbody>
       {% for p in proyectos %}
       <tr>
-        <td style="color:#888;">{{ p.codigo }}</td>
+        <td class="text-muted">{{ p.codigo }}</td>
         <td><strong>{{ p.nombre }}</strong></td>
         <td>{% if p.cliente %}{{ p.cliente.nombre }} {{ p.cliente.apellido_paterno }}{% else %}—{% endif %}</td>
-        <td>{{ p.get_estado_proyecto_display }}</td>
-        <td>{{ p.get_estado_pago_display }}</td>
+        <td>
+          {% if p.estado_proyecto == 'completado' %}
+            <span class="badge badge-success">Completado</span>
+          {% elif p.estado_proyecto == 'en_progreso' %}
+            <span class="badge badge-primary">En Progreso</span>
+          {% elif p.estado_proyecto == 'cancelado' %}
+            <span class="badge badge-secondary">Cancelado</span>
+          {% else %}
+            <span class="badge badge-warning">Pendiente</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if p.estado_pago == 'pagado' %}
+            <span class="badge badge-success">Pagado</span>
+          {% elif p.estado_pago == 'parcial' %}
+            <span class="badge badge-info">Parcial</span>
+          {% else %}
+            <span class="badge badge-danger">No Pagado</span>
+          {% endif %}
+        </td>
         <td style="text-align:right;">{{ p.monto_ref_proyecto|floatformat:2 }}</td>
-        <td style="text-align:right;"><strong>{{ p.cobrado_proyecto|floatformat:2 }}</strong></td>
-        <td style="text-align:right;">{{ p.saldo_proyecto|floatformat:2 }}</td>
+        <td style="text-align:right;"><strong class="text-success">{{ p.cobrado_proyecto|floatformat:2 }}</strong></td>
+        <td style="text-align:right;">
+          {% if p.saldo_proyecto > 0 %}
+            <span class="text-danger">{{ p.saldo_proyecto|floatformat:2 }}</span>
+          {% elif p.saldo_proyecto < 0 %}
+            <span style="color:#fd7e14;">{{ p.saldo_proyecto|floatformat:2 }}</span>
+          {% else %}
+            <span class="text-success">0.00</span>
+          {% endif %}
+        </td>
         <td style="text-align:center;"><strong>{{ p.num_pagos }}</strong></td>
       </tr>
       {% empty %}
@@ -194,14 +242,18 @@
     <tfoot>
       <tr>
         <td colspan="5" class="text-right">TOTALES:</td>
-        <td style="text-align:right;"></td>
-        <td style="text-align:right;">{{ total_cobrado_global|floatformat:2 }}</td>
-        <td style="text-align:right;">{{ total_saldo_global|floatformat:2 }}</td>
+        <td style="text-align:right;">{{ total_acordado_global|floatformat:2 }}</td>
+        <td style="text-align:right;" class="text-success">{{ total_cobrado_global|floatformat:2 }}</td>
+        <td style="text-align:right;" class="{% if total_saldo_global > 0 %}text-danger{% else %}text-success{% endif %}">{{ total_saldo_global|floatformat:2 }}</td>
         <td></td>
       </tr>
     </tfoot>
     {% endif %}
   </table>
+
+  <div class="footer">
+    SOBOTEC S.R.L. — Reporte generado el {{ now|date:"d/m/Y" }} a las {{ now|date:"H:i" }} hrs &nbsp;|&nbsp; {{ generado_por }}
+  </div>
 
 </body>
 </html>

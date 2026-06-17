@@ -129,12 +129,12 @@
       return;
     }
     const unit = stocks[`unit_${id}`] || 'u.';
-    let html = '<table class="table table-sm mb-0 small">';
+    let html = '<div class="table-responsive"><table class="table table-sm mb-0 small">';
     html += '<thead><tr><th>Cantidad</th><th class="text-end">Precio unit.</th><th class="text-end">Subtotal</th></tr></thead><tbody>';
     for (const f of resultado.filas) {
       html += `<tr><td>${f.cantidad} ${unit}</td><td class="text-end">Bs. ${f.precio.toFixed(2)}</td><td class="text-end">Bs. ${f.subtotal.toFixed(2)}</td></tr>`;
     }
-    html += `</tbody><tfoot><tr><td colspan="2" class="fw-semibold text-end">Total</td><td class="text-end fw-semibold text-primary">Bs. ${resultado.total.toFixed(2)}</td></tr></tfoot></table>`;
+    html += `</tbody><tfoot><tr><td colspan="2" class="fw-semibold text-end">Total</td><td class="text-end fw-semibold text-primary">Bs. ${resultado.total.toFixed(2)}</td></tr></tfoot></table></div>`;
     desgloseDiv.innerHTML = html;
   }
 

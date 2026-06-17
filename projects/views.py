@@ -2493,9 +2493,10 @@ def filter_payments_by_project_name(request):
     kpi_agg = PagoProyecto.objects.filter(
         activo=True, estado='pagado', proyecto__in=proyectos_qs
     ).aggregate(t=Sum('monto'), td=Sum('descuento'))
-    total_cobrado_global = float(kpi_agg['t'] or 0) + float(kpi_agg['td'] or 0)
-    monto_total_global   = float(proyectos_qs.aggregate(t=Sum('monto_total'))['t'] or 0)
-    total_saldo_global   = round(monto_total_global - total_cobrado_global, 2)
+    total_cobrado_global  = float(kpi_agg['t'] or 0) + float(kpi_agg['td'] or 0)
+    monto_total_global    = float(proyectos_qs.aggregate(t=Sum('monto_total'))['t'] or 0)
+    total_saldo_global    = round(monto_total_global - total_cobrado_global, 2)
+    total_acordado_global = round(monto_total_global, 2)
 
     # PDF/Excel: lista completa; HTML: paginada
     if 'pdf' in request.GET or 'excel' in request.GET:
@@ -2550,8 +2551,9 @@ def filter_payments_by_project_name(request):
         'count_no_pagados':     count_no_pagados,
         'count_parciales':      count_parciales,
         'count_pagados':        count_pagados,
-        'total_cobrado_global': round(total_cobrado_global, 2),
-        'total_saldo_global':   total_saldo_global,
+        'total_cobrado_global':  round(total_cobrado_global, 2),
+        'total_saldo_global':    total_saldo_global,
+        'total_acordado_global': total_acordado_global,
         'payments_page':        payments_page,
         'per_page':             per_page,
         'now':                  timezone.now(),

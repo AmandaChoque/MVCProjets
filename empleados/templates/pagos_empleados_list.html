@@ -117,7 +117,7 @@
   <!-- Tabla historial de pagos -->
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body p-0">
-      <div class="table-responsive" style="overflow:visible;">
+      <div class="table-responsive">
         <table class="table table-sm table-hover align-middle small">
           <thead class="table-light small text-uppercase fw-semibold">
             <tr>
@@ -163,7 +163,7 @@
               <td class="text-end">
                 {% if es_admin %}
                 <div class="dropdown">
-                  <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
+                  <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown" data-bs-strategy="fixed">⋮</button>
                   <ul class="dropdown-menu dropdown-menu-end shadow-sm">
                     <li>
                       <a class="dropdown-item" href="{% url 'pago_empleado_detail' pago.id %}?next={% url 'pagos_empleados_list' %}">
@@ -346,7 +346,7 @@
   <!-- Tabla empleados -->
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body p-0">
-      <div class="table-responsive" style="overflow:visible;">
+      <div class="table-responsive">
         <table class="table table-sm table-hover align-middle small">
           <thead class="table-light small text-uppercase fw-semibold">
             <tr>
@@ -435,7 +435,7 @@
               <td class="text-end">
                 {% if es_admin and emp.contrato_activo %}
                 <div class="dropdown">
-                  <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
+                  <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown" data-bs-strategy="fixed">⋮</button>
                   <ul class="dropdown-menu dropdown-menu-end shadow-sm">
                     <li>
                       <a class="dropdown-item" href="{% url 'create_pago_empleado' emp.contrato_activo.id %}">

@@ -74,7 +74,7 @@
   <!-- TABLA -->
   <div class="card border-0 shadow-sm mb-3">
     <div class="card-body p-0">
-      <div class="table-responsive" style="overflow:visible;">
+      <div class="table-responsive">
     <table class="table table-sm table-hover align-middle small">
       <thead class="table-light small text-uppercase fw-semibold">
         <tr>
@@ -124,7 +124,7 @@
           </td>
           <td class="text-end">
             <div class="dropdown">
-              <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown">⋮</button>
+              <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown" data-bs-strategy="fixed">⋮</button>
               <ul class="dropdown-menu dropdown-menu-end shadow-sm">
                 <li><a class="dropdown-item" href="{% url 'insumo_view' insumo.id %}">Ver detalle</a></li>
                 <li><a class="dropdown-item" href="{% url 'insumo_detail' insumo.id %}">Editar</a></li>
