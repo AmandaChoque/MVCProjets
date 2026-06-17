@@ -9,3 +9,6 @@ python manage.py collectstatic --no-input
 
 # Apply any outstanding database migrations
 python manage.py migrate
+
+# Crear superusuario inicial si no existe
+python manage.py create_initial_superuser
