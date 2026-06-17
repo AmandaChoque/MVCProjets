@@ -10,29 +10,16 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
-from logging import DEBUG
 from pathlib import Path
 import os
 import dj_database_url
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-DEBUG = True
+SECRET_KEY = os.environ.get('SECRET_KEY', default='django-insecure-clave-solo-para-desarrollo-local')
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
-
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', default='your secret key')
-
-# SECURITY WARNING: don't run with debug turned on in production!
-if not DEBUG:    # Tell Django to copy static assets into a path called `staticfiles` (this is specific to Render)
-    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-    # Enable the WhiteNoise storage backend, which compresses static files to reduce disk use
-    # and renames the files with unique names for each version to support long-term caching
-    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-# ALLOWED_HOSTS = ['51.222.14.69', 'localhost']
 ALLOWED_HOSTS = ['127.0.0.1', 'localhost']
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME') 
 if RENDER_EXTERNAL_HOSTNAME: 
@@ -88,19 +75,18 @@ WSGI_APPLICATION = 'project_management.wsgi.application'
 
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+_DATABASE_URL = os.environ.get('DATABASE_URL')
+if _DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.config(default=_DATABASE_URL, conn_max_age=600)
     }
-}
-
-# DATABASES = {
-#     'default': dj_database_url.config(
-#         default='postgresql://postgres:postgres@localhost/postgres',
-#         conn_max_age=600
-#     )
-# }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 
@@ -147,13 +133,17 @@ USE_TZ = True
 
 # Ruta absoluta donde se recopilarán los archivos estáticos
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-
 STATIC_URL = '/static/'
+STATICFILES_DIRS = [BASE_DIR / "static"]
+
+if not DEBUG:
+    STORAGES = {
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
+    }
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-# Para desarrollo local, puedes tener esta línea si tu proyecto no usa collectstatic
-STATICFILES_DIRS = [BASE_DIR / "static"]
 # STATIC_URL = 'static/'
 LOGIN_URL = '/signin/'
 # Default primary key field type
