@@ -142,10 +142,24 @@
             <ul class="list-unstyled mb-1 border rounded-2 overflow-hidden" id="lista-subitems-{{ item.id }}">
               {% for sub in item.subitems.all %}
               <li class="d-flex align-items-center gap-2 px-2 py-1 {% if not forloop.last %}border-bottom{% endif %}"
-                  style="font-size:0.85rem;">
+                  style="font-size:0.85rem;" data-subid="{{ sub.id }}">
                 <input type="checkbox" class="form-check-input" disabled
                        style="width:1.1em; height:1.1em; flex-shrink:0; opacity:.35;">
-                <span class="flex-grow-1 text-muted">{{ sub.descripcion }}</span>
+                <span class="flex-grow-1 text-muted subitem-desc">{{ sub.descripcion }}</span>
+                <div class="subitem-edit-form d-none d-flex gap-1 flex-grow-1">
+                  <input type="text" class="form-control form-control-sm subitem-edit-input"
+                         value="{{ sub.descripcion }}" maxlength="255" style="font-size:0.82rem;">
+                  <button type="button" class="btn btn-sm btn-success py-0 btn-save-subitem" data-id="{{ sub.id }}">
+                    <i class="bi bi-check-lg"></i>
+                  </button>
+                  <button type="button" class="btn btn-sm btn-light py-0 btn-cancel-subitem-edit">
+                    <i class="bi bi-x"></i>
+                  </button>
+                </div>
+                <button type="button" class="btn btn-sm btn-light text-secondary py-0 px-1 btn-edit-subitem"
+                        data-id="{{ sub.id }}" title="Editar" style="font-size:0.7rem; line-height:1;">
+                  <i class="bi bi-pencil"></i>
+                </button>
                 <form method="POST" action="{% url 'subitem_plantilla_delete' sub.id %}"
                       onsubmit="return confirm('¿Eliminar este sub-ítem?')" class="d-inline">
                   {% csrf_token %}
@@ -288,6 +302,53 @@
       form.querySelector('input[name="descripcion"]').value = '';
       document.querySelector('.btn-add-subitem-' + id).classList.remove('d-none');
     });
+  });
+
+  // ── Editar subtarea inline ────────────────────────────────────────────────
+  document.querySelectorAll('li[data-subid]').forEach(li => {
+    const btnEdit   = li.querySelector('.btn-edit-subitem');
+    const btnCancel = li.querySelector('.btn-cancel-subitem-edit');
+    const btnSave   = li.querySelector('.btn-save-subitem');
+    const input     = li.querySelector('.subitem-edit-input');
+
+    if (btnEdit) {
+      btnEdit.addEventListener('click', function() {
+        li.querySelector('.subitem-desc').classList.add('d-none');
+        li.querySelector('.subitem-edit-form').classList.remove('d-none');
+        btnEdit.classList.add('d-none');
+        input.focus(); input.select();
+      });
+    }
+    if (btnCancel) {
+      btnCancel.addEventListener('click', function() {
+        li.querySelector('.subitem-desc').classList.remove('d-none');
+        li.querySelector('.subitem-edit-form').classList.add('d-none');
+        btnEdit.classList.remove('d-none');
+      });
+    }
+    if (btnSave) {
+      btnSave.addEventListener('click', function() {
+        const id   = this.dataset.id;
+        const desc = input.value.trim();
+        if (!desc) return;
+        const form  = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/plantillas/subitems/' + id + '/editar/';
+        const c = document.createElement('input');
+        c.type = 'hidden'; c.name = 'csrfmiddlewaretoken'; c.value = CSRF;
+        const f = document.createElement('input');
+        f.type = 'hidden'; f.name = 'descripcion'; f.value = desc;
+        form.appendChild(c); form.appendChild(f);
+        document.body.appendChild(form);
+        form.submit();
+      });
+    }
+    if (input) {
+      input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter')  { e.preventDefault(); btnSave && btnSave.click(); }
+        if (e.key === 'Escape') { btnCancel && btnCancel.click(); }
+      });
+    }
   });
 
   // ── Orden automático para nueva tarea ────────────────────────────────────

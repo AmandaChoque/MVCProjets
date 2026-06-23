@@ -3004,6 +3004,20 @@ def subitem_plantilla_create(request, id_item):
 
 @login_required
 @cargo_required(*ROLES_ADMIN)
+def subitem_plantilla_edit(request, id_subitem):
+    subitem = get_object_or_404(SubItemPlantilla, pk=id_subitem)
+    id_plantilla = subitem.item.plantilla.id
+    if request.method == 'POST':
+        descripcion = request.POST.get('descripcion', '').strip()
+        if descripcion:
+            subitem.descripcion = descripcion
+            subitem.save(update_fields=['descripcion'])
+            messages.success(request, 'Subtarea actualizada.')
+    return redirect('plantilla_detail', id_plantilla=id_plantilla)
+
+
+@login_required
+@cargo_required(*ROLES_ADMIN)
 def subitem_plantilla_delete(request, id_subitem):
     """POST: elimina un sub-ítem de plantilla."""
     subitem = get_object_or_404(SubItemPlantilla, pk=id_subitem)

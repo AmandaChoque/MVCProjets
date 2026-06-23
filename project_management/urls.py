@@ -104,6 +104,7 @@ path('proyectos/<int:id_project>/eliminar/', views.project_delete, name='project
     path('plantillas/items/<int:id_item>/eliminar/', views.item_plantilla_delete, name='item_plantilla_delete'),
     path('plantillas/items/<int:id_item>/editar/', views.item_plantilla_edit, name='item_plantilla_edit'),
     path('plantillas/items/<int:id_item>/subitems/nuevo/', views.subitem_plantilla_create, name='subitem_plantilla_create'),
+    path('plantillas/subitems/<int:id_subitem>/editar/', views.subitem_plantilla_edit, name='subitem_plantilla_edit'),
     path('plantillas/subitems/<int:id_subitem>/eliminar/', views.subitem_plantilla_delete, name='subitem_plantilla_delete'),
     path('plantillas/<int:id_plantilla>/items/reordenar/', views.items_plantilla_reorder, name='items_plantilla_reorder'),
 
