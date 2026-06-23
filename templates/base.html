@@ -520,6 +520,35 @@
         {% endif %}
 
 
+        <!-- Opciones de usuario (visible solo en móvil, dentro del sidebar) -->
+        <li class="nav-item d-lg-none mt-3 pt-3 border-top">
+          <span class="nav-link text-light fw-semibold py-1" style="font-size:0.8rem; opacity:.7;">
+            <i class="bi bi-person-circle me-2"></i>{{ user.username }}
+          </span>
+        </li>
+        <li class="nav-item d-lg-none">
+          <a class="nav-link {% if '/notificaciones' in request.path %}active-link{% endif %}"
+             href="{% url 'notificaciones_list' %}">
+            <i class="bi bi-bell me-2"></i>Notificaciones
+            {% if notif_no_leidas > 0 %}
+            <span class="badge bg-danger ms-1" style="font-size:.65rem;">{{ notif_no_leidas }}</span>
+            {% endif %}
+          </a>
+        </li>
+        <li class="nav-item d-lg-none">
+          <a class="nav-link" href="{% url 'cambiar_contrasena' %}">
+            <i class="bi bi-key me-2"></i>Cambiar contraseña
+          </a>
+        </li>
+        <li class="nav-item d-lg-none">
+          <form method="POST" action="{% url 'signout' %}">
+            {% csrf_token %}
+            <button type="submit" class="nav-link text-danger w-100 text-start border-0 bg-transparent">
+              <i class="bi bi-box-arrow-right me-2"></i>Cerrar sesión
+            </button>
+          </form>
+        </li>
+
         {% else %}
         <li class="nav-item">
           <a class="nav-link" href="{% url 'signin' %}">
