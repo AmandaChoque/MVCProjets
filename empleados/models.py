@@ -119,7 +119,7 @@ class PagoEmpleado(AuditModel):
         related_name='pagos', verbose_name="Contrato"
     )
     concepto  = models.CharField(max_length=20, choices=CONCEPTO_CHOICES, verbose_name="Concepto")
-    estado    = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='pagado', verbose_name="Estado")
+    estado    = models.CharField(max_length=10, choices=ESTADO_CHOICES, default='pendiente', verbose_name="Estado")
 
     class Meta:
         verbose_name = 'Pago a Empleado'

@@ -42,7 +42,7 @@
       <small class="text-muted"><i class="bi bi-geo-alt me-1"></i>{{ sede.direccion }}</small>
       {% if sede.descripcion %}<div class="text-muted small mt-1">{{ sede.descripcion }}</div>{% endif %}
     </div>
-    {% if es_admin %}
+    {% if es_admin and sede.proyecto.estado_proyecto != 'completado' %}
     <div class="d-flex gap-2">
       <a href="{% url 'sede_detail' sede.id %}" class="btn btn-outline-primary btn-sm">
         <i class="bi bi-pencil me-1"></i>Editar
@@ -81,7 +81,7 @@
       <!-- CABECERA TAREAS -->
       <div class="d-flex justify-content-between align-items-center mb-3">
         <h6 class="mb-0 fw-semibold text-muted"><i class="bi bi-check2-square me-2"></i>Checklist de tareas</h6>
-        {% if es_admin %}
+        {% if es_admin and sede.proyecto.estado_proyecto != 'completado' %}
         <button class="btn btn-sm btn-primary py-0" data-bs-toggle="collapse" data-bs-target="#panelNuevaTareaGeneral">
           <i class="bi bi-plus-lg"></i> Nueva tarea
         </button>
@@ -89,7 +89,7 @@
       </div>
 
       <div class="card border-0 shadow-sm rounded-3 mb-4">
-        {% if es_admin %}
+        {% if es_admin and sede.proyecto.estado_proyecto != 'completado' %}
         <div class="collapse" id="panelNuevaTareaGeneral">
           <div class="card-body border-bottom bg-light py-2">
             <!-- Tabs -->
@@ -153,8 +153,9 @@
                 {% endif %}
                 <input type="checkbox" class="form-check-input fs-5 tarea-check"
                        data-id="{{ tarea.id }}" {% if tarea.completado %}checked{% endif %}
-                       {% if subtareas_activas %}disabled title="Se completa automáticamente con las subtareas"{% endif %}
-                       style="width:1.3em; height:1.3em; {% if not subtareas_activas %}cursor:pointer;{% endif %}">
+                       {% if subtareas_activas or sede.proyecto.estado_proyecto == 'completado' %}disabled{% endif %}
+                       {% if subtareas_activas %}title="Se completa automáticamente con las subtareas"{% endif %}
+                       style="width:1.3em; height:1.3em; {% if not subtareas_activas and sede.proyecto.estado_proyecto != 'completado' %}cursor:pointer;{% endif %}">
                 <div class="flex-grow-1">
                   <div class="d-flex align-items-center gap-2">
                     <span class="tarea-desc">{{ tarea.descripcion }}</span>
@@ -191,7 +192,7 @@
                   </div>
                   {% endif %}
                 </div>
-                {% if es_admin %}
+                {% if es_admin and sede.proyecto.estado_proyecto != 'completado' %}
                 <button class="btn btn-sm btn-light text-secondary py-0 btn-edit-tarea" data-id="{{ tarea.id }}"><i class="bi bi-pencil"></i></button>
                 <button class="btn btn-sm btn-light text-danger py-0 btn-delete-tarea" data-id="{{ tarea.id }}"><i class="bi bi-x"></i></button>
                 {% endif %}
@@ -207,7 +208,8 @@
                       id="subtarea-{{ sub.id }}" data-id="{{ sub.id }}" data-tarea-id="{{ tarea.id }}">
                     <input type="checkbox" class="form-check-input subtarea-check"
                            data-id="{{ sub.id }}" {% if sub.completado %}checked{% endif %}
-                           style="width:1.1em; height:1.1em; cursor:pointer; flex-shrink:0;">
+                           {% if sede.proyecto.estado_proyecto == 'completado' %}disabled{% endif %}
+                           style="width:1.1em; height:1.1em; {% if sede.proyecto.estado_proyecto != 'completado' %}cursor:pointer;{% endif %} flex-shrink:0;">
                     <span class="subtarea-desc flex-grow-1" style="font-size:0.85rem;">{{ sub.descripcion }}</span>
                     <div class="subtarea-edit-form d-none d-flex gap-1 flex-grow-1">
                       <input type="text" class="form-control form-control-sm subtarea-edit-input"
@@ -224,7 +226,7 @@
                       {{ sub.completado_por.get_full_name|default:sub.completado_por.username }}
                     </span>
                     {% endif %}
-                    {% if es_admin_o_gerente %}
+                    {% if es_admin_o_gerente and sede.proyecto.estado_proyecto != 'completado' %}
                     <button class="btn btn-sm btn-light text-secondary py-0 px-1 btn-edit-subtarea"
                             data-id="{{ sub.id }}" style="font-size:0.7rem; line-height:1;">
                       <i class="bi bi-pencil"></i>
@@ -238,7 +240,7 @@
                   {% endif %}
                   {% endfor %}
                 </ul>
-                {% if es_campo %}
+                {% if es_campo and sede.proyecto.estado_proyecto != 'completado' %}
                 <form class="form-nueva-subtarea d-flex gap-1 mt-1" data-tarea-id="{{ tarea.id }}">
                   {% csrf_token %}
                   <input type="text" name="descripcion" class="form-control form-control-sm"
@@ -249,7 +251,7 @@
                 </form>
                 {% endif %}
               </div>
-              {% elif es_campo %}
+              {% elif es_campo and sede.proyecto.estado_proyecto != 'completado' %}
               <!-- Sin subtareas: botón para agregar la primera -->
               <div class="ms-4 mt-1">
                 <form class="form-nueva-subtarea d-none d-flex gap-1" data-tarea-id="{{ tarea.id }}" id="form-sub-{{ tarea.id }}">
@@ -281,9 +283,11 @@
       <div class="card border-0 shadow-sm rounded-3">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <h6 class="mb-0 fw-semibold"><i class="bi bi-camera me-2"></i>Fotos de instalación</h6>
+          {% if sede.proyecto.estado_proyecto != 'completado' %}
           <button class="btn btn-sm btn-primary py-0" data-bs-toggle="collapse" data-bs-target="#panelFoto">
             <i class="bi bi-plus-lg"></i> Foto
           </button>
+          {% endif %}
         </div>
         <div class="collapse" id="panelFoto">
           <div class="card-body border-bottom bg-light py-2">
@@ -416,6 +420,40 @@
   </div>
 </div>
 
+<!-- Modal evidencia fotográfica al completar tarea -->
+<div class="modal fade" id="modalEvidenciaFoto" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title fw-semibold">
+          <i class="bi bi-camera me-2"></i>Evidencia fotográfica
+        </h6>
+        <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+      </div>
+      <form method="POST" action="{% url 'foto_upload' sede.id %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="modal-body py-3">
+          <p class="text-muted small mb-3">Todas las tareas de esta sede están completas. Sube una foto como evidencia del trabajo terminado (opcional).</p>
+          <div class="mb-2">
+            <input type="file" name="foto" class="form-control form-control-sm" accept="image/*">
+          </div>
+          <div>
+            <input type="text" name="descripcion" class="form-control form-control-sm" placeholder="Descripción breve (opcional)">
+          </div>
+        </div>
+        <div class="modal-footer py-2 d-flex justify-content-between">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+            <i class="bi bi-x me-1"></i>Omitir
+          </button>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-upload me-1"></i>Subir foto
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <!-- Modal foto ampliada -->
 <div class="modal fade" id="modalFoto" tabindex="-1">
   <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -474,11 +512,14 @@
 
 <script>
 const CSRF = document.querySelector('[name=csrfmiddlewaretoken]').value;
+const PROYECTO_COMPLETADO = '{{ sede.proyecto.estado_proyecto }}' === 'completado';
 const EQUIPO = {{ equipo_json|safe }};
 const PARTICIPANTES_MAP = {{ participantes_map_json|safe }};
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+let _lastPorcentaje = {{ sede.porcentaje_checklist }};
 function updateBarraSede(pct) {
+  _lastPorcentaje = pct;
   const label = document.getElementById('pct-label');
   const bar   = document.getElementById('pct-bar');
   if (label) label.textContent = pct + '%';
@@ -532,6 +573,15 @@ function abrirModalParticipantes(tareaId, usuarioId, equipo, li, toggleData) {
   bsModal.show();
 }
 
+const modalEvidenciaEl = document.getElementById('modalEvidenciaFoto');
+const bsModalEvidencia = modalEvidenciaEl ? new bootstrap.Modal(modalEvidenciaEl) : null;
+
+function mostrarModalEvidencia(porcentaje) {
+  if (porcentaje >= 100 && !PROYECTO_COMPLETADO && bsModalEvidencia) {
+    setTimeout(function() { bsModalEvidencia.show(); }, 400);
+  }
+}
+
 function guardarParticipantes(ids) {
   fetch(`/tareas/${_modalTareaId}/participantes/`, {
     method: 'POST',
@@ -547,6 +597,7 @@ function guardarParticipantes(ids) {
       if (res.sin_contrato && res.sin_contrato.length > 0) {
         mostrarAlertaSinContrato(res.sin_contrato);
       }
+      mostrarModalEvidencia(_lastPorcentaje);
     }
   });
   if (document.activeElement) document.activeElement.blur();

@@ -1057,6 +1057,15 @@ def create_jornada(request, id_contrato):
                 return redirect('instalador_dashboard')
             return redirect('contrato_empleado_detail', id_contrato=contrato.id)
 
+    from projects.models import AsignacionProyecto
+    asignaciones_map = {
+        a['proyecto_id']: a['fecha_inicio_plan'].isoformat()
+        for a in AsignacionProyecto.objects.filter(
+            empleado=contrato.empleado, activo=True,
+            fecha_inicio_plan__isnull=False,
+        ).values('proyecto_id', 'fecha_inicio_plan')
+    }
+
     hoy_cj = timezone.localdate()
     contrato_vencido = not contrato.activo or contrato.fecha_fin < hoy_cj
     return render(request, 'create_jornada.html', {
@@ -1066,6 +1075,7 @@ def create_jornada(request, id_contrato):
         'saldo_pendiente': saldo_pendiente,
         'from_dashboard': not es_admin,
         'companeros_por_proyecto_json': json.dumps(companeros_por_proyecto),
+        'asignaciones_map_json': json.dumps(asignaciones_map),
         'contrato_vencido': contrato_vencido,
     })
 

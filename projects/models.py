@@ -1022,14 +1022,17 @@ def crear_jornada_al_completar_tarea(sender, instance, **kwargs):
     if fecha < contrato.fecha_inicio or fecha > contrato.fecha_fin:
         return
 
+    sede_nombre = instance.sede.nombre or instance.sede.direccion
+    observacion = f'Tarea completada: {instance.descripcion} (Sede: {sede_nombre})'
+
     JornadaEmpleado.objects.get_or_create(
         contrato=contrato,
         proyecto=proyecto,
         fecha=fecha,
         defaults={
             'dias': Decimal('1.0'),
-            'observacion': '',
-            'estado': 'aprobada',
+            'observacion': observacion,
+            'estado': 'pendiente',
             'registrado_por': instance.completado_por,
         }
     )

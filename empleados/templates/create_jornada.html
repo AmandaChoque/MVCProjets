@@ -44,6 +44,10 @@
               <label class="form-label">Fecha <span class="text-danger">*</span></label>
               {{ form.fecha }}
               {% if form.fecha.errors %}<div class="text-danger small mt-1">{% for e in form.fecha.errors %}{{ e }}{% endfor %}</div>{% endif %}
+              <div id="alerta-asignacion" class="alert alert-warning small py-1 px-2 mt-1 d-none">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                <span id="alerta-asignacion-texto"></span>
+              </div>
             </div>
             <div class="mb-3">
               <label class="form-label">Días trabajados <span class="text-danger">*</span></label>
@@ -184,7 +188,30 @@
 <script>
 (function () {
   const DATA = {{ companeros_por_proyecto_json|safe }};
+  const ASIGNACIONES = {{ asignaciones_map_json|safe }};
   const proyectoSelect = document.getElementById('id_proyecto');
+  const fechaInput     = document.querySelector('[name="fecha"]');
+  const alertaDiv      = document.getElementById('alerta-asignacion');
+  const alertaTexto    = document.getElementById('alerta-asignacion-texto');
+
+  function verificarFechaAsignacion() {
+    if (!proyectoSelect || !fechaInput || !alertaDiv) return;
+    const pid = proyectoSelect.value;
+    const fecha = fechaInput.value;
+    if (pid && fecha && ASIGNACIONES[pid]) {
+      if (fecha < ASIGNACIONES[pid]) {
+        alertaTexto.textContent = 'Esta fecha es anterior al inicio planificado del empleado en este proyecto (' +
+          new Date(ASIGNACIONES[pid] + 'T00:00:00').toLocaleDateString('es-BO') + '). Puedes continuar si es una emergencia.';
+        alertaDiv.classList.remove('d-none');
+        return;
+      }
+    }
+    alertaDiv.classList.add('d-none');
+  }
+
+  if (proyectoSelect) proyectoSelect.addEventListener('change', verificarFechaAsignacion);
+  if (fechaInput) fechaInput.addEventListener('change', verificarFechaAsignacion);
+  verificarFechaAsignacion();
   const section        = document.getElementById('companeros-section');
   const lista          = document.getElementById('companeros-lista');
 

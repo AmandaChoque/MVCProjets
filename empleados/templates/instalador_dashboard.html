@@ -570,6 +570,39 @@
     </div>
   </div>
 </div>
+<!-- Modal evidencia fotográfica al completar sede -->
+<div class="modal fade" id="modalEvidenciaFoto" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2">
+        <h6 class="modal-title fw-semibold">
+          <i class="bi bi-camera me-2"></i>Evidencia fotográfica
+        </h6>
+        <button type="button" class="btn-close btn-close-sm" data-bs-dismiss="modal"></button>
+      </div>
+      <form id="form-evidencia-foto" method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class="modal-body py-3">
+          <p class="text-muted small mb-3">Todas las tareas de esta sede están completas. Sube una foto como evidencia del trabajo terminado (opcional).</p>
+          <div class="mb-2">
+            <input type="file" name="foto" class="form-control form-control-sm" accept="image/*">
+          </div>
+          <div>
+            <input type="text" name="descripcion" class="form-control form-control-sm" placeholder="Descripción breve (opcional)">
+          </div>
+        </div>
+        <div class="modal-footer py-2 d-flex justify-content-between">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">
+            <i class="bi bi-x me-1"></i>Omitir
+          </button>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-upload me-1"></i>Subir foto
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
@@ -623,8 +656,19 @@ document.querySelectorAll('[data-w]').forEach(function(el) {
 // ── Toggle tareas + modal participantes ──────────────────────────────────────
 const CSRF = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
 let _modalTareaId = null, _modalUsuarioId = null;
+let _lastSedeId = null, _lastPorcentaje = 0;
 const modalEl = document.getElementById('modalParticipantes');
 const bsModal = modalEl ? new bootstrap.Modal(modalEl) : null;
+const modalEvidenciaEl = document.getElementById('modalEvidenciaFoto');
+const bsModalEvidencia = modalEvidenciaEl ? new bootstrap.Modal(modalEvidenciaEl) : null;
+const formEvidencia = document.getElementById('form-evidencia-foto');
+
+function mostrarModalEvidencia() {
+  if (_lastPorcentaje >= 100 && _lastSedeId && bsModalEvidencia && formEvidencia) {
+    formEvidencia.action = `/sedes/${_lastSedeId}/fotos/subir/`;
+    setTimeout(function() { bsModalEvidencia.show(); }, 400);
+  }
+}
 
 function guardarParticipantes(ids) {
   fetch(`/tareas/${_modalTareaId}/participantes/`, {
@@ -635,6 +679,7 @@ function guardarParticipantes(ids) {
     if (res.ok) {
       if (res.jornadas_creadas?.length) mostrarToast(res.jornadas_creadas, 'success');
       if (res.sin_contrato?.length)    mostrarToast(res.sin_contrato, 'danger');
+      mostrarModalEvidencia();
     }
   });
   if (bsModal) { if (document.activeElement) document.activeElement.blur(); bsModal.hide(); }
@@ -684,6 +729,7 @@ document.querySelectorAll('.tarea-pill').forEach(btn => {
       }
       if (data.completado) {
         _modalTareaId = parseInt(id); _modalUsuarioId = data.usuario_id;
+        _lastSedeId = data.sede_id; _lastPorcentaje = data.porcentaje;
         if (data.equipo?.length > 1) {
           const box = document.getElementById('participantes-checkboxes');
           box.innerHTML = data.equipo.map(e => `
