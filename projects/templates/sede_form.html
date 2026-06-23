@@ -208,7 +208,10 @@
       const resp = await fetch(url, { headers: { 'Accept-Language': 'es' } });
       const data = await resp.json();
       if (data && data.display_name) {
-        dirField.value = data.display_name.split(', ').slice(0, 3).join(', ');
+        const parts = data.display_name.split(', ');
+        dirField.value = parts.slice(0, 3).join(', ');
+        const searchBox = document.getElementById('dir-search');
+        if (searchBox) searchBox.value = parts.slice(0, 2).join(', ');
       }
     } catch (err) {}
   }
