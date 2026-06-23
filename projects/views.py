@@ -2903,6 +2903,25 @@ def subtarea_create(request, id_tarea):
 
 
 @login_required
+@cargo_required(*ROLES_ADMIN)
+def subtarea_edit(request, id_subtarea):
+    """AJAX: actualiza la descripción de una subtarea existente."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'method not allowed'}, status=405)
+    sub = get_object_or_404(SubtareaChecklist, pk=id_subtarea, activo=True)
+    try:
+        body = json.loads(request.body)
+        descripcion = body.get('descripcion', '').strip()
+    except (ValueError, AttributeError):
+        descripcion = request.POST.get('descripcion', '').strip()
+    if not descripcion:
+        return JsonResponse({'ok': False, 'error': 'La descripción no puede estar vacía.'}, status=400)
+    sub.descripcion = descripcion
+    sub.save(update_fields=['descripcion'])
+    return JsonResponse({'ok': True, 'descripcion': sub.descripcion})
+
+
+@login_required
 @cargo_required('administrador', 'gerente', 'tecnico_soporte', 'instalador')
 def subtarea_toggle(request, id_subtarea):
     """AJAX POST: marca/desmarca una subtarea. Si todas están completas, auto-completa la tarea padre."""

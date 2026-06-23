@@ -209,12 +209,26 @@
                            data-id="{{ sub.id }}" {% if sub.completado %}checked{% endif %}
                            style="width:1.1em; height:1.1em; cursor:pointer; flex-shrink:0;">
                     <span class="subtarea-desc flex-grow-1" style="font-size:0.85rem;">{{ sub.descripcion }}</span>
+                    <div class="subtarea-edit-form d-none d-flex gap-1 flex-grow-1">
+                      <input type="text" class="form-control form-control-sm subtarea-edit-input"
+                             value="{{ sub.descripcion }}" maxlength="255" style="font-size:0.82rem;">
+                      <button type="button" class="btn btn-sm btn-success py-0 btn-save-subtarea" data-id="{{ sub.id }}">
+                        <i class="bi bi-check-lg"></i>
+                      </button>
+                      <button type="button" class="btn btn-sm btn-light py-0 btn-cancel-subtarea-edit">
+                        <i class="bi bi-x-lg"></i>
+                      </button>
+                    </div>
                     {% if sub.completado and sub.completado_por %}
                     <span class="text-muted" style="font-size:0.68rem;">
                       {{ sub.completado_por.get_full_name|default:sub.completado_por.username }}
                     </span>
                     {% endif %}
                     {% if es_admin_o_gerente %}
+                    <button class="btn btn-sm btn-light text-secondary py-0 px-1 btn-edit-subtarea"
+                            data-id="{{ sub.id }}" style="font-size:0.7rem; line-height:1;">
+                      <i class="bi bi-pencil"></i>
+                    </button>
                     <button class="btn btn-sm btn-light text-danger py-0 px-1 btn-delete-subtarea"
                             data-id="{{ sub.id }}" style="font-size:0.7rem; line-height:1;">
                       <i class="bi bi-x"></i>
@@ -868,6 +882,18 @@ function bindSubtareaForm(form) {
           <input type="checkbox" class="form-check-input subtarea-check" data-id="${data.id}"
                  style="width:1.1em;height:1.1em;cursor:pointer;flex-shrink:0;">
           <span class="subtarea-desc flex-grow-1" style="font-size:0.85rem;">${data.descripcion}</span>
+          <div class="subtarea-edit-form d-none d-flex gap-1 flex-grow-1">
+            <input type="text" class="form-control form-control-sm subtarea-edit-input"
+                   value="${data.descripcion}" maxlength="255" style="font-size:0.82rem;">
+            <button type="button" class="btn btn-sm btn-success py-0 btn-save-subtarea" data-id="${data.id}">
+              <i class="bi bi-check-lg"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-light py-0 btn-cancel-subtarea-edit">
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+          <button class="btn btn-sm btn-light text-secondary py-0 px-1 btn-edit-subtarea"
+                  data-id="${data.id}" style="font-size:0.7rem;line-height:1;"><i class="bi bi-pencil"></i></button>
           <button class="btn btn-sm btn-light text-danger py-0 px-1 btn-delete-subtarea"
                   data-id="${data.id}" style="font-size:0.7rem;line-height:1;"><i class="bi bi-x"></i></button>`;
         lista.appendChild(li);
@@ -955,6 +981,50 @@ function bindSubtareaEvents(li) {
           }
         }
       });
+    });
+  }
+
+  const btnEditSub = li.querySelector('.btn-edit-subtarea');
+  const btnSaveSub = li.querySelector('.btn-save-subtarea');
+  const btnCancelSub = li.querySelector('.btn-cancel-subtarea-edit');
+  const editInputSub = li.querySelector('.subtarea-edit-input');
+
+  if (btnEditSub) {
+    btnEditSub.addEventListener('click', function() {
+      li.querySelector('.subtarea-desc').classList.add('d-none');
+      li.querySelector('.subtarea-edit-form').classList.remove('d-none');
+      btnEditSub.classList.add('d-none');
+      editInputSub.focus(); editInputSub.select();
+    });
+  }
+  if (btnCancelSub) {
+    btnCancelSub.addEventListener('click', function() {
+      li.querySelector('.subtarea-desc').classList.remove('d-none');
+      li.querySelector('.subtarea-edit-form').classList.add('d-none');
+      if (btnEditSub) btnEditSub.classList.remove('d-none');
+    });
+  }
+  if (btnSaveSub) {
+    btnSaveSub.addEventListener('click', function() {
+      const desc = editInputSub.value.trim();
+      if (!desc) return;
+      fetch(`/subtareas/${id}/editar/`, {
+        method: 'POST',
+        headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
+        body: JSON.stringify({descripcion: desc}),
+      }).then(r => r.json()).then(data => {
+        if (!data.ok) return;
+        li.querySelector('.subtarea-desc').textContent = data.descripcion;
+        li.querySelector('.subtarea-desc').classList.remove('d-none');
+        li.querySelector('.subtarea-edit-form').classList.add('d-none');
+        if (btnEditSub) btnEditSub.classList.remove('d-none');
+      });
+    });
+  }
+  if (editInputSub) {
+    editInputSub.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter')  { e.preventDefault(); btnSaveSub && btnSaveSub.click(); }
+      if (e.key === 'Escape') { btnCancelSub && btnCancelSub.click(); }
     });
   }
 

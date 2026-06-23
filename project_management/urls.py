@@ -60,6 +60,7 @@ path('proyectos/<int:id_project>/eliminar/', views.project_delete, name='project
     path('tareas/<int:id_tarea>/editar/', views.tarea_edit, name='tarea_edit'),
     path('tareas/<int:id_tarea>/eliminar/', views.tarea_delete, name='tarea_delete'),
     path('tareas/<int:id_tarea>/subtareas/nueva/', views.subtarea_create, name='subtarea_create'),
+    path('subtareas/<int:id_subtarea>/editar/', views.subtarea_edit, name='subtarea_edit'),
     path('subtareas/<int:id_subtarea>/alternar/', views.subtarea_toggle, name='subtarea_toggle'),
     path('subtareas/<int:id_subtarea>/eliminar/', views.subtarea_delete, name='subtarea_delete'),
     path('sedes/<int:id_sede>/tareas/reordenar/', views.tareas_reorder, name='tareas_reorder'),
