@@ -440,7 +440,11 @@ def create_compra(request):
     insumos_qs = Insumo.objects.filter(activo=True)
     insumos_unidades = json.dumps({str(i.id): i.unidad_abrev for i in insumos_qs})
     insumos_unidades_display = json.dumps({str(i.id): i.get_unidad_medida_display() for i in insumos_qs})
-    ctx = {'form': CompraForm(), 'insumos_unidades': insumos_unidades, 'insumos_unidades_display': insumos_unidades_display}
+    initial = {}
+    insumo_id = request.GET.get('insumo', '').strip()
+    if insumo_id:
+        initial['insumo'] = insumo_id
+    ctx = {'form': CompraForm(initial=initial), 'insumos_unidades': insumos_unidades, 'insumos_unidades_display': insumos_unidades_display}
     if request.method == 'GET':
         return render(request, 'create_compra.html', ctx)
     form = CompraForm(request.POST)

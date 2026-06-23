@@ -656,6 +656,7 @@ def employee_report(request):
         cargo_counts[e.cargo] = cargo_counts.get(e.cargo, 0) + 1
 
     tot_devengado = sum(emp.total_ganado  for emp in empleados_list)
+    tot_pagado    = sum(emp.total_pagado for emp in empleados_list)
     tot_saldo     = sum(emp.saldo_pendiente for emp in empleados_list)
 
     # PDF/Excel: lista completa; HTML: paginada
@@ -679,6 +680,7 @@ def employee_report(request):
         'sin_contrato':   sin_contrato,
         'cargo_counts':   cargo_counts,
         'tot_devengado':  tot_devengado,
+        'tot_pagado':     tot_pagado,
         'tot_saldo':      tot_saldo,
         'empleados_page': empleados_page,
         'per_page':       per_page,

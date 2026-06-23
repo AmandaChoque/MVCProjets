@@ -7,29 +7,24 @@
     @page { size: A4 landscape; margin: 18px 22px; }
     body { font-family: Arial, sans-serif; font-size: 8.5px; color: #222; }
 
-    /* Encabezado */
-    .header-bar { width: 6px; background-color: #D4B84A; }
-    .header-main { background-color: #0F2D5A; padding: 7px 12px; vertical-align: middle; }
-    .header-right { background-color: #f1f3f6; padding: 6px 12px; vertical-align: middle; text-align: right; border: 1px solid #dde2ed; width: 130px; }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .muted { color: #777; }
 
-    /* KPIs */
-    .kpi-box { display: inline-block; background: #f1f3f6; border: 1px solid #dde2ed; padding: 5px 10px; margin-right: 6px; border-radius: 3px; vertical-align: top; }
-    .kpi-num  { font-size: 14px; font-weight: bold; color: #0F2D5A; line-height: 1.1; }
-    .kpi-lbl  { font-size: 7px; color: #777; text-transform: uppercase; letter-spacing: 0.05em; }
-
-    /* Filtros */
-    .infobar { background-color: #f1f3f6; border: 1px solid #dde2ed; padding: 3px 8px; font-size: 7.5px; color: #555; margin: 8px 0 6px 0; }
-
-    /* Tabla */
+    /* Tabla principal */
     table.rep { width: 100%; border-collapse: collapse; margin-top: 6px; }
     table.rep thead tr { background-color: #0F2D5A; }
     table.rep th { padding: 4px 6px; font-size: 7.5px; font-weight: bold; color: #D4B84A; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; }
     table.rep td { padding: 3px 6px; border-bottom: 1px solid #dde2ed; font-size: 8px; vertical-align: middle; }
-    table.rep tr:nth-child(even) td { background-color: #f1f3f6; }
+    table.rep tr:nth-child(even) td { background-color: #f8f9fb; }
     table.rep tfoot td { font-weight: bold; border-top: 2px solid #0F2D5A; background-color: #e8edf5; color: #0F2D5A; padding: 4px 6px; font-size: 8.5px; }
-    .text-right { text-align: right; }
-    .text-center { text-align: center; }
-    .muted { color: #777; }
+
+    .badge { padding: 1px 5px; border-radius: 3px; font-size: 7px; font-weight: bold; }
+    .badge-green { background-color: #d4edda; color: #155724; }
+    .badge-red { background-color: #f8d7da; color: #721c24; }
+    .badge-blue { background-color: #d1ecf1; color: #0c5460; }
+    .badge-orange { background-color: #fff3cd; color: #856404; }
+    .badge-gray { background-color: #e2e3e5; color: #383d41; }
 
     .footer { border-top: 1px solid #dde2ed; margin-top: 12px; padding-top: 4px; font-size: 7px; color: #aaa; text-align: center; }
   </style>
@@ -37,56 +32,58 @@
 <body>
 
   <!-- Encabezado -->
-  <table width="100%" style="border-collapse:collapse; margin-bottom:8px; background-color:#0F2D5A;">
+  <table width="100%" style="border-collapse:collapse; margin-bottom:10px;">
     <tr>
-      <td class="header-bar" style="width:6px; background-color:#D4B84A;"></td>
-      <td class="header-main">
-        <div style="font-size:7px; color:#D4B84A; text-transform:uppercase; letter-spacing:0.1em; font-weight:bold; margin-bottom:1px;">SOBOTEC S.R.L. — Sistemas de Seguridad</div>
-        <div style="font-size:14px; font-weight:bold; color:#ffffff;">Reporte de Empleados</div>
-        <div style="font-size:8px; color:#a0b8d8;">
+      <td style="width:6px; background-color:#D4B84A;"></td>
+      <td style="background-color:#0F2D5A; padding:8px 14px; vertical-align:middle;">
+        <div style="font-size:7px; color:#D4B84A; text-transform:uppercase; letter-spacing:0.1em; font-weight:bold; margin-bottom:2px;">SOBOTEC S.R.L. — Sistemas de Seguridad</div>
+        <div style="font-size:15px; font-weight:bold; color:#ffffff;">Reporte de Empleados</div>
+        <div style="font-size:8px; color:#a0b8d8; margin-top:2px;">
           {% if filter_cargo %}Cargo: {{ filter_cargo }} &nbsp;|&nbsp; {% endif %}
           {% if search_nombre %}Búsqueda: {{ search_nombre }} &nbsp;|&nbsp; {% endif %}
           Total: {{ total_empleados }} empleado{{ total_empleados|pluralize }}
         </div>
       </td>
-      <td class="header-right">
+      <td style="background-color:#f1f3f6; padding:8px 14px; vertical-align:middle; text-align:right; border:1px solid #dde2ed; width:120px;">
         <div style="font-size:7px; color:#888; text-transform:uppercase; letter-spacing:0.05em;">Generado el</div>
-        <div style="font-size:11px; font-weight:bold; color:#0F2D5A;">{{ now|date:"d/m/Y" }}</div>
+        <div style="font-size:12px; font-weight:bold; color:#0F2D5A;">{{ now|date:"d/m/Y" }}</div>
         <div style="font-size:8px; color:#888;">{{ now|date:"H:i" }} hrs</div>
       </td>
     </tr>
   </table>
 
-  <!-- KPIs -->
-  <div style="margin-bottom:8px;">
-    <div class="kpi-box">
-      <div class="kpi-num">{{ total_empleados }}</div>
-      <div class="kpi-lbl">Total empleados</div>
-    </div>
-    <div class="kpi-box">
-      <div class="kpi-num" style="color:#2e7d32;">{{ con_contrato }}</div>
-      <div class="kpi-lbl">Con contrato activo</div>
-    </div>
-    <div class="kpi-box">
-      <div class="kpi-num" style="color:#e65100;">{{ sin_contrato }}</div>
-      <div class="kpi-lbl">Sin contrato</div>
-    </div>
-    <div class="kpi-box">
-      <div class="kpi-num" style="color:#0F2D5A;">Bs. {{ tot_devengado|floatformat:2 }}</div>
-      <div class="kpi-lbl">Total devengado</div>
-    </div>
-    <div class="kpi-box">
-      <div class="kpi-num" style="color:#c62828;">Bs. {{ tot_saldo|floatformat:2 }}</div>
-      <div class="kpi-lbl">Saldo pendiente total</div>
-    </div>
-  </div>
+  <!-- KPIs en tabla horizontal -->
+  <table width="100%" style="border-collapse:collapse; margin-bottom:10px;">
+    <tr>
+      <td style="background:#f1f3f6; border:1px solid #dde2ed; padding:6px 12px; text-align:center; width:20%;">
+        <div style="font-size:16px; font-weight:bold; color:#0F2D5A;">{{ total_empleados }}</div>
+        <div style="font-size:7px; color:#777; text-transform:uppercase; letter-spacing:0.05em;">Total empleados</div>
+      </td>
+      <td style="background:#f1f3f6; border:1px solid #dde2ed; padding:6px 12px; text-align:center; width:20%;">
+        <div style="font-size:16px; font-weight:bold; color:#2e7d32;">{{ con_contrato }}</div>
+        <div style="font-size:7px; color:#777; text-transform:uppercase; letter-spacing:0.05em;">Con contrato activo</div>
+      </td>
+      <td style="background:#f1f3f6; border:1px solid #dde2ed; padding:6px 12px; text-align:center; width:20%;">
+        <div style="font-size:16px; font-weight:bold; color:#e65100;">{{ sin_contrato }}</div>
+        <div style="font-size:7px; color:#777; text-transform:uppercase; letter-spacing:0.05em;">Sin contrato</div>
+      </td>
+      <td style="background:#f1f3f6; border:1px solid #dde2ed; padding:6px 12px; text-align:center; width:20%;">
+        <div style="font-size:14px; font-weight:bold; color:#0F2D5A;">Bs. {{ tot_devengado|floatformat:2 }}</div>
+        <div style="font-size:7px; color:#777; text-transform:uppercase; letter-spacing:0.05em;">Total devengado</div>
+      </td>
+      <td style="background:#f1f3f6; border:1px solid #dde2ed; padding:6px 12px; text-align:center; width:20%;">
+        <div style="font-size:14px; font-weight:bold; color:#c62828;">Bs. {{ tot_saldo|floatformat:2 }}</div>
+        <div style="font-size:7px; color:#777; text-transform:uppercase; letter-spacing:0.05em;">Saldo pendiente</div>
+      </td>
+    </tr>
+  </table>
 
   <!-- Info generado por -->
-  <div class="infobar">
+  <div style="background-color:#f1f3f6; border:1px solid #dde2ed; padding:3px 10px; font-size:7.5px; color:#555; margin-bottom:8px;">
     <b style="color:#0F2D5A;">Generado por:</b> {{ generado_por }}
   </div>
 
-  <!-- Tabla -->
+  <!-- Tabla de empleados -->
   <table class="rep">
     <thead>
       <tr>
@@ -95,11 +92,13 @@
         <th>CI</th>
         <th>Cargo</th>
         <th>Celular</th>
-        <th>Modalidad</th>
-        <th class="text-right">Total acordado (Bs.)</th>
-        <th class="text-center">Inicio Contrato</th>
-        <th class="text-center">Fin Contrato</th>
-        <th class="text-right">Saldo Pendiente (Bs.)</th>
+        <th class="text-center">Días lab.</th>
+        <th class="text-right">Acordado (Bs.)</th>
+        <th class="text-center">Inicio</th>
+        <th class="text-center">Fin</th>
+        <th class="text-center">Estado</th>
+        <th class="text-right">Pagado (Bs.)</th>
+        <th class="text-right">Saldo (Bs.)</th>
       </tr>
     </thead>
     <tbody>
@@ -108,23 +107,54 @@
         <td class="text-center muted">{{ forloop.counter }}</td>
         <td><b>{{ emp.nombre }} {{ emp.apellido_paterno }} {{ emp.apellido_materno|default:"" }}</b></td>
         <td class="muted">{{ emp.carnet_identidad }}</td>
-        <td>{{ emp.get_cargo_display }}</td>
+        <td>
+          {% if emp.cargo == 'instalador' %}
+            <span class="badge badge-blue">{{ emp.get_cargo_display }}</span>
+          {% elif emp.cargo == 'tecnico_soporte' %}
+            <span class="badge badge-gray">{{ emp.get_cargo_display }}</span>
+          {% elif emp.cargo == 'administrador' %}
+            <span class="badge badge-green">{{ emp.get_cargo_display }}</span>
+          {% elif emp.cargo == 'gerente' %}
+            <span class="badge badge-orange">{{ emp.get_cargo_display }}</span>
+          {% else %}
+            <span class="badge badge-gray">{{ emp.get_cargo_display }}</span>
+          {% endif %}
+        </td>
         <td class="muted">{{ emp.numero_celular|default:"—" }}</td>
-        <td class="text-center">{% if emp.contrato_activo %}{{ emp.contrato_activo.dias_laborales }} días{% else %}<span class="muted">—</span>{% endif %}</td>
+        <td class="text-center">{% if emp.contrato_activo %}{{ emp.contrato_activo.dias_laborales }}{% else %}<span class="muted">—</span>{% endif %}</td>
         <td class="text-right">{% if emp.contrato_activo %}{{ emp.contrato_activo.monto_acordado|floatformat:2 }}{% else %}—{% endif %}</td>
         <td class="text-center muted">{% if emp.contrato_activo %}{{ emp.contrato_activo.fecha_inicio|date:"d/m/Y" }}{% else %}—{% endif %}</td>
         <td class="text-center muted">{% if emp.contrato_activo %}{{ emp.contrato_activo.fecha_fin|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+        <td class="text-center">
+          {% if emp.contrato_activo %}
+            {% if emp.contrato_activo.estado_contrato == 'vigente' %}
+              <span class="badge badge-green">Vigente</span>
+            {% elif emp.contrato_activo.estado_contrato == 'vencido' %}
+              <span class="badge badge-red">Vencido</span>
+            {% else %}
+              <span class="badge badge-gray">{{ emp.contrato_activo.estado_contrato }}</span>
+            {% endif %}
+          {% else %}
+            <span class="badge badge-red">Sin contrato</span>
+          {% endif %}
+        </td>
+        <td class="text-right">
+          {% if emp.contrato_activo %}{{ emp.total_pagado|floatformat:2 }}{% else %}—{% endif %}
+        </td>
         <td class="text-right" style="{% if emp.saldo_pendiente > 0 %}color:#c62828;{% else %}color:#2e7d32;{% endif %} font-weight:bold;">
           {{ emp.saldo_pendiente|floatformat:2 }}
         </td>
       </tr>
       {% empty %}
-      <tr><td colspan="11" class="text-center muted" style="padding:8px;">Sin resultados.</td></tr>
+      <tr><td colspan="12" class="text-center muted" style="padding:10px;">Sin resultados.</td></tr>
       {% endfor %}
     </tbody>
     <tfoot>
       <tr>
-        <td colspan="8" class="text-right">TOTAL</td>
+        <td colspan="6"></td>
+        <td class="text-right">{{ tot_devengado|floatformat:2 }}</td>
+        <td colspan="3"></td>
+        <td class="text-right">{{ tot_pagado|floatformat:2 }}</td>
         <td class="text-right" style="color:#c62828;">{{ tot_saldo|floatformat:2 }}</td>
       </tr>
     </tfoot>
