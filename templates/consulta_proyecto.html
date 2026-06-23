@@ -570,6 +570,46 @@
               {% endif %}
             </div>
           </div>
+
+          {% if resultado.incidencias %}
+          <div class="mt-3">
+            <div class="fw-semibold small mb-2" style="color:#4b5563;">
+              <i class="bi bi-tools me-1"></i>Incidencias reportadas ({{ resultado.incidencias|length }})
+            </div>
+            {% for inc in resultado.incidencias %}
+            <div class="d-flex align-items-start gap-2 py-2 {% if not forloop.last %}border-bottom{% endif %}" style="font-size:.82rem;">
+              <div class="mt-1">
+                {% if inc.estado == 'resuelto' %}
+                  <i class="bi bi-check-circle-fill text-success"></i>
+                {% elif inc.estado == 'en_reparacion' %}
+                  <i class="bi bi-tools text-primary"></i>
+                {% else %}
+                  <i class="bi bi-clock text-warning"></i>
+                {% endif %}
+              </div>
+              <div class="flex-grow-1">
+                <div>{{ inc.descripcion }}</div>
+                <div class="text-muted" style="font-size:.75rem;">
+                  Reportado: {{ inc.fecha_reporte|date:"d/m/Y" }}
+                  {% if inc.estado == 'resuelto' and inc.fecha_reparacion %}
+                    · Resuelto: {{ inc.fecha_reparacion|date:"d/m/Y" }}
+                  {% endif %}
+                </div>
+              </div>
+              <div>
+                {% if inc.estado == 'resuelto' %}
+                  <span class="badge" style="background:#d1fae5;color:#065f46;font-size:.7rem;">Resuelto</span>
+                {% elif inc.estado == 'en_reparacion' %}
+                  <span class="badge" style="background:#dbeafe;color:#1e40af;font-size:.7rem;">En reparación</span>
+                {% else %}
+                  <span class="badge" style="background:#fef3c7;color:#92400e;font-size:.7rem;">Pendiente</span>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+
         </div>
         {% endif %}
 

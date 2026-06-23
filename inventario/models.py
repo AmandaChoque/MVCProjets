@@ -1,6 +1,6 @@
 from django.db import models
 from django.db.models import Q, Sum
-from django.db.models.signals import post_save, post_delete
+from django.db.models.signals import pre_save, post_save, post_delete
 from django.dispatch import receiver
 from django.utils import timezone
 from decimal import Decimal
@@ -289,22 +289,64 @@ def calcular_costo_fifo(insumo, cantidad, excluir_requiere_pk=None):
 
 # ── Señales: recalcular stock automáticamente ─────────────────────────────────
 
+@receiver(pre_save, sender=Compra)
+def compra_track_previous_insumo(sender, instance, **kwargs):
+    if instance.pk:
+        try:
+            old = Compra.objects.get(pk=instance.pk)
+            instance._previous_insumo_id = old.insumo_id
+        except Compra.DoesNotExist:
+            instance._previous_insumo_id = None
+    else:
+        instance._previous_insumo_id = None
+
+
 @receiver(post_save, sender=Compra)
 @receiver(post_delete, sender=Compra)
 def compra_recalculate_stock(sender, instance, **kwargs):
-    if instance.insumo is None:
-        return
-    insumo = instance.insumo
-    insumo._recalculate_stock()
-    # Actualizar costo_unitario al último precio de compra registrado
-    ultima_compra = Compra.objects.filter(insumo=insumo, activo=True).order_by('-fecha', '-created').first()
-    if ultima_compra:
-        Insumo.objects.filter(pk=insumo.pk).update(ultimo_precio_compra=ultima_compra.costo_unitario)
+    if instance.insumo is not None:
+        insumo = instance.insumo
+        insumo._recalculate_stock()
+        ultima_compra = Compra.objects.filter(insumo=insumo, activo=True).order_by('-fecha', '-created').first()
+        if ultima_compra:
+            Insumo.objects.filter(pk=insumo.pk).update(ultimo_precio_compra=ultima_compra.costo_unitario)
+
+    prev_id = getattr(instance, '_previous_insumo_id', None)
+    if prev_id and prev_id != (instance.insumo_id if instance.insumo else None):
+        try:
+            prev_insumo = Insumo.objects.get(pk=prev_id)
+            prev_insumo._recalculate_stock()
+            ultima = Compra.objects.filter(insumo=prev_insumo, activo=True).order_by('-fecha', '-created').first()
+            if ultima:
+                Insumo.objects.filter(pk=prev_id).update(ultimo_precio_compra=ultima.costo_unitario)
+            else:
+                Insumo.objects.filter(pk=prev_id).update(ultimo_precio_compra=0)
+        except Insumo.DoesNotExist:
+            pass
+
+
+@receiver(pre_save, sender=Requiere)
+def requiere_track_previous_insumo(sender, instance, **kwargs):
+    if instance.pk:
+        try:
+            old = Requiere.objects.get(pk=instance.pk)
+            instance._previous_insumo_id = old.insumo_id
+        except Requiere.DoesNotExist:
+            instance._previous_insumo_id = None
+    else:
+        instance._previous_insumo_id = None
 
 
 @receiver(post_save, sender=Requiere)
 @receiver(post_delete, sender=Requiere)
 def requiere_recalculate_stock(sender, instance, **kwargs):
-    if instance.insumo is None:
-        return
+    if instance.insumo is not None:
+        instance.insumo._recalculate_stock()
+
+    prev_id = getattr(instance, '_previous_insumo_id', None)
+    if prev_id and prev_id != (instance.insumo_id if instance.insumo else None):
+        try:
+            Insumo.objects.get(pk=prev_id)._recalculate_stock()
+        except Insumo.DoesNotExist:
+            pass
     instance.insumo._recalculate_stock()

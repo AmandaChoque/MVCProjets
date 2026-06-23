@@ -4024,10 +4024,18 @@ def consulta_proyecto(request):
                 sedes_completadas = sum(1 for s in sedes if s.estado == 'completado')
                 pct_global = round(sum(s.porcentaje_checklist for s in sedes) / total_sedes) if total_sedes else 0
 
+                incidencias = []
+                if garantia:
+                    incidencias = list(
+                        garantia.incidencias.filter(activo=True)
+                        .order_by('-fecha_reporte')
+                    )
+
                 resultado = {
                     'proyecto': proyecto,
                     'contrato': contrato,
                     'garantia': garantia,
+                    'incidencias': incidencias,
                     'sedes': sedes,
                     'total_sedes': total_sedes,
                     'sedes_completadas': sedes_completadas,
