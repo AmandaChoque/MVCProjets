@@ -299,7 +299,7 @@ class FotoSedeForm(forms.ModelForm):
         model = FotoSede
         fields = ['foto', 'descripcion']
         widgets = {
-            'foto':        forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': 'image/*', 'capture': 'environment'}),
+            'foto':        forms.ClearableFileInput(attrs={'class': 'form-control', 'accept': 'image/*'}),
             'descripcion': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Cámara exterior instalada, NVR configurado...'}),
         }
 
