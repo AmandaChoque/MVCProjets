@@ -1010,10 +1010,11 @@ function bindSubtareaEvents(li) {
       if (!desc) return;
       fetch(`/subtareas/${id}/editar/`, {
         method: 'POST',
-        headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
-        body: JSON.stringify({descripcion: desc}),
+        headers: {'X-CSRFToken': CSRF, 'X-Requested-With': 'XMLHttpRequest',
+                  'Content-Type': 'application/x-www-form-urlencoded'},
+        body: `descripcion=${encodeURIComponent(desc)}`,
       }).then(r => r.json()).then(data => {
-        if (!data.ok) return;
+        if (!data.ok) { alert(data.error || 'Error.'); return; }
         li.querySelector('.subtarea-desc').textContent = data.descripcion;
         li.querySelector('.subtarea-desc').classList.remove('d-none');
         li.querySelector('.subtarea-edit-form').classList.add('d-none');
