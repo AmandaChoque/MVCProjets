@@ -10,7 +10,9 @@
     <!-- Fila 1: título + botón -->
     <div class="d-flex justify-content-between align-items-center mb-2">
       <h4 class="fw-bold text-sobotec mb-0">Catálogo de Insumos</h4>
+      {% if es_admin_o_gerente %}
       <a href="{% url 'create_insumo' %}" class="btn btn-primary btn-sm">+ Nuevo Insumo</a>
+      {% endif %}
     </div>
 
     <!-- Fila 2: per_page + contador -->
@@ -127,6 +129,7 @@
               <button class="btn btn-sm btn-light" type="button" data-bs-toggle="dropdown" data-bs-strategy="fixed">⋮</button>
               <ul class="dropdown-menu dropdown-menu-end shadow-sm">
                 <li><a class="dropdown-item" href="{% url 'insumo_view' insumo.id %}">Ver detalle</a></li>
+                {% if es_admin_o_gerente %}
                 <li><a class="dropdown-item" href="{% url 'insumo_detail' insumo.id %}">Editar</a></li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
@@ -138,6 +141,7 @@
                     Inhabilitar
                   </button>
                 </li>
+                {% endif %}
               </ul>
             </div>
           </td>

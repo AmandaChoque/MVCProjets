@@ -533,7 +533,7 @@
         <button type="button" class="btn btn-sm p-0 tarea-pill border-0 bg-transparent" data-id="{{ tarea.id }}">
           <i class="bi bi-circle text-muted fs-6"></i>
         </button>
-        <span class="small tarea-desc">{{ tarea.descripcion }}</span>
+        <a href="{% url 'sede_view' tarea.sede.id %}" class="small tarea-desc text-decoration-none text-dark">{{ tarea.descripcion }}</a>
       </div>
       {% endfor %}
     </div>
