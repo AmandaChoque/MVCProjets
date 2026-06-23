@@ -333,9 +333,7 @@ class PagoEmpleadoForm(forms.ModelForm):
 
     def clean_monto(self):
         valor = str(self.cleaned_data.get('monto', '')).strip()
-        if not re.fullmatch(DECIMAL_REGEX, valor):
-            raise forms.ValidationError('Formato inválido. Use punto como separador decimal (ej: 1500 o 1500.50).')
-        resultado = Decimal(valor)
+        resultado = parse_decimal(valor)
         if resultado <= 0:
             raise forms.ValidationError('El monto debe ser mayor a cero.')
         return resultado
