@@ -821,10 +821,13 @@ if (btnAplicar) {
         li.className = 'list-group-item tarea-item';
         li.id = `tarea-${t.id}`;
         li.dataset.id = t.id;
+        const hasSubs = t.subtareas && t.subtareas.length > 0;
         li.innerHTML = `
           <div class="d-flex align-items-center gap-3">
             <i class="bi bi-grip-vertical text-muted drag-handle" style="cursor:grab;font-size:1.1rem;"></i>
-            <input type="checkbox" class="form-check-input fs-5 tarea-check" data-id="${t.id}" style="width:1.3em;height:1.3em;cursor:pointer;">
+            <input type="checkbox" class="form-check-input fs-5 tarea-check" data-id="${t.id}"
+                   ${hasSubs ? 'disabled title="Se completa automáticamente con las subtareas"' : ''}
+                   style="width:1.3em;height:1.3em;${hasSubs ? '' : 'cursor:pointer;'}">
             <div class="flex-grow-1">
               <span class="tarea-desc">${t.descripcion}</span>
               <div class="tarea-edit-form d-none d-flex gap-1 mt-1">
@@ -836,7 +839,54 @@ if (btnAplicar) {
             <button class="btn btn-sm btn-light text-secondary py-0 btn-edit-tarea" data-id="${t.id}"><i class="bi bi-pencil"></i></button>
             <button class="btn btn-sm btn-light text-danger py-0 btn-delete-tarea" data-id="${t.id}"><i class="bi bi-x"></i></button>
           </div>`;
-        addSubtareaSection(li, t.id);
+        if (hasSubs) {
+          const subDiv = document.createElement('div');
+          subDiv.className = 'collapse show ms-4 mt-1';
+          subDiv.id = `subtareas-${t.id}`;
+          const subUl = document.createElement('ul');
+          subUl.className = 'list-unstyled mb-1 border rounded-2 overflow-hidden';
+          subUl.id = `lista-subtareas-${t.id}`;
+          t.subtareas.forEach(s => {
+            const subLi = document.createElement('li');
+            subLi.className = 'subtarea-item subtarea-check-item d-flex align-items-center gap-2 px-2 py-1';
+            subLi.id = `subtarea-${s.id}`;
+            subLi.dataset.id = s.id;
+            subLi.dataset.tareaId = t.id;
+            subLi.innerHTML = `
+              <input type="checkbox" class="form-check-input subtarea-check" data-id="${s.id}"
+                     style="width:1.1em;height:1.1em;cursor:pointer;flex-shrink:0;">
+              <span class="subtarea-desc flex-grow-1" style="font-size:0.85rem;">${s.descripcion}</span>
+              <div class="subtarea-edit-form d-none d-flex gap-1 flex-grow-1">
+                <input type="text" class="form-control form-control-sm subtarea-edit-input"
+                       value="${s.descripcion}" maxlength="255" style="font-size:0.82rem;">
+                <button type="button" class="btn btn-sm btn-success py-0 btn-save-subtarea" data-id="${s.id}">
+                  <i class="bi bi-check-lg"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-light py-0 btn-cancel-subtarea-edit">
+                  <i class="bi bi-x-lg"></i>
+                </button>
+              </div>
+              <button class="btn btn-sm btn-light text-secondary py-0 px-1 btn-edit-subtarea"
+                      data-id="${s.id}" style="font-size:0.7rem;line-height:1;"><i class="bi bi-pencil"></i></button>
+              <button class="btn btn-sm btn-light text-danger py-0 px-1 btn-delete-subtarea"
+                      data-id="${s.id}" style="font-size:0.7rem;line-height:1;"><i class="bi bi-x"></i></button>`;
+            subUl.appendChild(subLi);
+            bindSubtareaEvents(subLi);
+          });
+          subDiv.appendChild(subUl);
+          const formSub = document.createElement('form');
+          formSub.className = 'form-nueva-subtarea d-flex gap-1 mt-1';
+          formSub.dataset.tareaId = t.id;
+          formSub.innerHTML = `
+            <input type="text" name="descripcion" class="form-control form-control-sm"
+                   placeholder="Nueva subtarea..." style="font-size:0.82rem;">
+            <button type="submit" class="btn btn-sm btn-outline-primary py-0"><i class="bi bi-plus-lg"></i></button>`;
+          subDiv.appendChild(formSub);
+          li.appendChild(subDiv);
+          bindSubtareaForm(formSub);
+        } else {
+          addSubtareaSection(li, t.id);
+        }
         if (listaGeneral) listaGeneral.appendChild(li);
         bindTareaEvents(li);
       });
