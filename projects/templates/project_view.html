@@ -1299,6 +1299,7 @@
       var bounds = sedesData.map(function(s) { return [s.lat, s.lng]; });
       mapProject.fitBounds(bounds, { padding: [30, 30], maxZoom: 16 });
     }
+    setTimeout(function() { mapProject.invalidateSize(); }, 200);
   }
 
   document.querySelector('[data-bs-target="#tab-planificacion"]').addEventListener('shown.bs.tab', initMapProject);
