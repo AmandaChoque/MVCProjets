@@ -2841,9 +2841,10 @@ def item_plantilla_edit(request, id_item):
     item = get_object_or_404(ItemPlantilla, pk=id_item)
     id_plantilla = item.plantilla.id
     if request.method == 'POST':
-        form = ItemPlantillaForm(request.POST, instance=item)
-        if form.is_valid():
-            form.save()
+        descripcion = request.POST.get('descripcion', '').strip()
+        if descripcion:
+            item.descripcion = descripcion
+            item.save(update_fields=['descripcion'])
             messages.success(request, 'Tarea actualizada.')
     return redirect('plantilla_detail', id_plantilla=id_plantilla)
 
