@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load dias_display %}
 {% block content %}
 <div class="container-fluid px-4 py-4">
 
@@ -73,7 +74,7 @@
             {% for j in jornadas_hoy %}
             <div class="d-flex align-items-center gap-2 {% if not forloop.last %}mb-2 pb-2 border-bottom{% endif %}">
               <div class="flex-grow-1 fw-semibold small">{{ j.proyecto.nombre }}</div>
-              <span class="badge bg-secondary fw-normal">{% if j.dias == 1.0 %}Día completo{% else %}½ día{% endif %}</span>
+              <span class="badge bg-secondary fw-normal">{{ j.dias|dias_label }}</span>
               {% if j.estado == 'aprobada' %}
                 <span class="badge bg-success">Aprobada</span>
               {% elif j.estado == 'rechazada' %}
@@ -121,22 +122,22 @@
           <!-- Días -->
           <div class="d-flex justify-content-between align-items-end mb-1">
             <span class="text-muted small">Días aprobados</span>
-            <span class="fw-semibold">{{ resumen_pago.total_dias }}</span>
+            <span class="fw-semibold">{{ resumen_pago.total_dias|dias_label }}</span>
           </div>
           <div class="d-flex justify-content-between align-items-end mb-1 ps-2">
             <span class="text-muted small"><i class="bi bi-check2 me-1 text-success"></i>Ya pagados</span>
-            <span class="fw-semibold text-success">{{ resumen_pago.dias_pagados }}</span>
+            <span class="fw-semibold text-success">{{ resumen_pago.dias_pagados|dias_label }}</span>
           </div>
           <div class="d-flex justify-content-between align-items-end mb-1 ps-2">
             <span class="text-muted small"><i class="bi bi-hourglass-split me-1 text-warning"></i>Por cobrar</span>
             <span class="fw-semibold {% if resumen_pago.dias_por_cobrar > 0 %}text-warning{% else %}text-muted{% endif %}">
-              {{ resumen_pago.dias_por_cobrar }}
+              {{ resumen_pago.dias_por_cobrar|dias_label }}
             </span>
           </div>
           {% if resumen_pago.dias_pend > 0 %}
           <div class="d-flex justify-content-between align-items-end mb-1 ps-2">
             <span class="text-muted small"><i class="bi bi-clock me-1 text-secondary"></i>En revisión</span>
-            <span class="fw-semibold text-secondary">{{ resumen_pago.dias_pend }}</span>
+            <span class="fw-semibold text-secondary">{{ resumen_pago.dias_pend|dias_label }}</span>
           </div>
           {% endif %}
           <!-- Montos -->
@@ -226,7 +227,7 @@
             <div class="d-flex justify-content-between small mb-1">
               <span class="text-muted">Jornadas registradas</span>
               <span class="fw-semibold {% if pct_dias_trabajados >= 100 %}text-danger{% elif pct_dias_trabajados >= 85 %}text-warning{% else %}text-muted{% endif %}">
-                {{ resumen_pago.total_dias|default:"0" }} / {{ contrato_para_jornada.dias_laborales }} días
+                {{ resumen_pago.total_dias|default:0|dias_label }} / {{ contrato_para_jornada.dias_laborales }} días
               </span>
             </div>
             <div class="progress" style="height:5px; border-radius:3px;">
@@ -350,7 +351,7 @@
                 {% elif estado == 'por_vencer' %}text-warning
                 {% elif estado == 'completada' %}text-success
                 {% else %}text-primary{% endif %}">
-                {{ asig.dias_reales }} / {{ asig.dias_planificados }} días
+                {{ asig.dias_reales|dias_label }} / {{ asig.dias_planificados }} días
               </span>
             </div>
             <div class="progress" style="height:6px; border-radius:4px;">
@@ -453,11 +454,7 @@
                 {% endif %}
               </td>
               <td class="text-center">
-                {% if j.dias == 1.0 %}
-                  <span class="badge bg-primary fw-normal">Día completo</span>
-                {% else %}
-                  <span class="badge bg-secondary fw-normal">½ día</span>
-                {% endif %}
+                <span class="badge {% if j.dias == 1.0 %}bg-primary{% else %}bg-secondary{% endif %} fw-normal">{{ j.dias|dias_label }}</span>
               </td>
               <td class="text-muted" style="max-width:220px;">
                 <span class="d-block">{{ j.observacion|default:"—"|truncatechars:50 }}</span>

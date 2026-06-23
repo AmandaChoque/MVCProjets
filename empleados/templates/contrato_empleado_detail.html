@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load dias_display %}
 
 {% block extra_css %}
 <style>
@@ -77,7 +78,7 @@
       <div class="card kpi-card blue border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
           {% if contrato.empleado.cargo == 'instalador' or contrato.empleado.cargo == 'tecnico_soporte' %}
-          <div class="kpi-value text-primary">{{ total_dias }}</div>
+          <div class="kpi-value text-primary">{{ total_dias|dias_label }}</div>
           <div class="kpi-label">Días trabajados</div>
           {% else %}
           <div class="kpi-value text-primary" style="font-size:1rem;">Mensual</div>
@@ -123,7 +124,7 @@
     <div class="d-flex justify-content-between align-items-center mb-1 small">
       <span class="fw-semibold">Avance de jornadas</span>
       <span class="text-muted">
-        {{ total_dias }} / {{ contrato.dias_laborales }} días
+        {{ total_dias|dias_label }} / {{ contrato.dias_laborales }} días
         <span class="badge bg-secondary ms-1">Por jornada</span>
       </span>
     </div>
@@ -137,7 +138,7 @@
       </div>
     </div>
     {% if pct_dias >= 100 %}
-    <div class="mt-1 text-danger small"><i class="bi bi-exclamation-triangle me-1"></i>Se superaron los días laborales acordados ({{ total_dias }} / {{ contrato.dias_laborales }}).</div>
+    <div class="mt-1 text-danger small"><i class="bi bi-exclamation-triangle me-1"></i>Se superaron los días laborales acordados ({{ total_dias|dias_label }} / {{ contrato.dias_laborales }}).</div>
     {% elif pct_dias >= 85 %}
     <div class="mt-1 text-warning small"><i class="bi bi-clock me-1"></i>Quedan pocos días disponibles en el contrato.</div>
     {% endif %}
@@ -260,11 +261,7 @@
                   <td class="px-3">{{ j.fecha|date:"d/m/Y" }}</td>
                   <td class="text-truncate" style="max-width:140px;">{{ j.proyecto.nombre }}</td>
                   <td class="text-center">
-                    {% if j.dias == 1.0 %}
-                      <span class="badge bg-primary">Completo</span>
-                    {% else %}
-                      <span class="badge bg-secondary">Medio</span>
-                    {% endif %}
+                    <span class="badge {% if j.dias == 1.0 %}bg-primary{% else %}bg-secondary{% endif %}">{{ j.dias|dias_label }}</span>
                   </td>
                   <td class="text-center">
                     {% if j.estado == 'pendiente' %}
@@ -337,7 +334,7 @@
              title="{{ dia.date|date:'d/m/Y' }}{% if dia.jornada %} · {{ dia.jornada.dias }}d · {{ dia.jornada.proyecto.nombre }} · {{ dia.jornada.get_estado_display }}{% if dia.jornada.pago %} · Pago: {{ dia.jornada.pago.get_concepto_display }}{% endif %}{% endif %}{% if dia.tareas %} · {{ dia.tareas }} tarea{{ dia.tareas|pluralize:'s' }}{% endif %}">
           <span class="jcal-num">{{ dia.day }}</span>
           {% if dia.jornada %}
-          <span class="jcal-dias">{% if dia.jornada.dias == 1.0 %}1d{% else %}½d{% endif %}</span>
+          <span class="jcal-dias">{{ dia.jornada.dias|dias_label }}</span>
           {% endif %}
           {% if dia.tareas > 0 %}<span class="tarea-dot"></span>{% endif %}
         </div>

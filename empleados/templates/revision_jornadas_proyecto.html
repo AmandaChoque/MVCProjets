@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load dias_display %}
 {% block content %}
 <main class="container-fluid px-4 py-4">
 
@@ -89,11 +90,7 @@
             <tr data-href="{% url 'jornada_detail' j.id %}?next={% url 'revisar_jornadas_proyecto' proyecto.id %}">
               <td class="px-3 fw-semibold">{{ j.fecha|date:"d/m/Y" }}</td>
               <td>
-                {% if j.dias == 1.0 %}
-                  <span class="badge bg-primary">Día completo</span>
-                {% else %}
-                  <span class="badge bg-secondary">Medio día</span>
-                {% endif %}
+                <span class="badge {% if j.dias == 1.0 %}bg-primary{% else %}bg-secondary{% endif %}">{{ j.dias|dias_label }}</span>
               </td>
               <td class="text-muted">{{ j.observacion|default:"—" }}</td>
               <td>

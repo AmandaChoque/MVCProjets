@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load dias_display %}
 
 {% block content %}
 <main class="container-fluid px-4 py-4">
@@ -26,7 +27,7 @@
     <div class="col-6 col-md-3">
       <div class="card kpi-card blue border-0 shadow-sm h-100">
         <div class="card-body py-3 px-3">
-          <div class="kpi-value text-primary">{{ resumen.total_dias }}</div>
+          <div class="kpi-value text-primary">{{ resumen.total_dias|dias_label }}</div>
           <div class="kpi-label">Días trabajados</div>
         </div>
       </div>
@@ -110,7 +111,7 @@
                     <td>{{ j.fecha|date:"d/m/Y" }}</td>
                     <td>{{ j.proyecto.nombre }}</td>
                     <td class="text-center">
-                      {% if j.dias == 1.0 %}Día completo{% else %}Medio día{% endif %}
+                      {{ j.dias|dias_label }}
                     </td>
                     <td class="text-end fw-semibold">{{ j.monto|floatformat:2 }}</td>
                   </tr>

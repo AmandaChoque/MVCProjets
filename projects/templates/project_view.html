@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load dias_display %}
 {% block extra_css %}
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <style>
@@ -339,7 +340,7 @@
                       <span class="fw-semibold">{{ item.asignacion.dias_planificados }}</span>
                     {% else %}<span class="text-muted">—</span>{% endif %}
                   </td>
-                  <td class="text-center fw-semibold">{{ item.dias_aprobados }}</td>
+                  <td class="text-center fw-semibold">{{ item.dias_aprobados|dias_label }}</td>
                   <td class="text-center">
                     {% if item.asignacion.eficiencia_pct is not None %}
                       {% if item.asignacion.eficiencia_pct >= 100 %}
@@ -746,7 +747,7 @@
                       <i class="bi bi-person me-1"></i>{{ item.empleado.nombre }} {{ item.empleado.apellido_paterno }}
                       {% if item.monto_diario %}<span class="text-muted"> &mdash; Bs.{{ item.monto_diario|floatformat:2 }}/día</span>{% endif %}
                     </td>
-                    <td class="text-end text-muted border-0 py-1">{{ item.dias_aprobados }}d &rarr; Bs.{{ item.costo|floatformat:2 }}</td>
+                    <td class="text-end text-muted border-0 py-1">{{ item.dias_aprobados|dias_label }} &rarr; Bs.{{ item.costo|floatformat:2 }}</td>
                   </tr>{% endif %}{% endfor %}
                   {% if costo_garantia %}
                   <tr>

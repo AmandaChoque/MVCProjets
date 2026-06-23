@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load dias_display %}
 {% block content %}
 
 <div class="container-fluid px-4 py-4">
@@ -414,7 +415,7 @@
               <!-- Jornadas x cobrar -->
               <td class="text-center">
                 {% if emp.jornadas_xcobrar > 0 %}
-                  <span class="badge bg-warning text-dark" title="{{ emp.dias_xcobrar }} día(s) aprobado(s) sin pago">
+                  <span class="badge bg-warning text-dark" title="{{ emp.dias_xcobrar|dias_label }} aprobado(s) sin pago">
                     {{ emp.jornadas_xcobrar }} jornada{{ emp.jornadas_xcobrar|pluralize }}
                   </span>
                 {% else %}

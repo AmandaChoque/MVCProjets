@@ -1,4 +1,6 @@
-{% extends 'base.html' %} {% block content %}
+{% extends 'base.html' %}
+{% load dias_display %}
+{% block content %}
 <main class="container-fluid px-4 py-4">
   <div class="mb-3">
     <a href="{% url 'employees' %}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Volver</a>
@@ -125,7 +127,7 @@
                     {{ item.contrato.fecha_inicio|date:"d/m/Y" }}<br>{{ item.contrato.fecha_fin|date:"d/m/Y" }}
                   </td>
                   {% if employee.cargo == 'instalador' or employee.cargo == 'tecnico_soporte' %}
-                  <td class="text-center fw-semibold">{{ item.total_dias }}</td>
+                  <td class="text-center fw-semibold">{{ item.total_dias|dias_label }}</td>
                   {% endif %}
                   <td class="text-end text-info fw-semibold">{{ item.total_pagado|floatformat:2 }}</td>
                   <td class="text-end px-3 fw-semibold {% if item.saldo_jornadas > 0 %}text-danger{% else %}text-success{% endif %}">
