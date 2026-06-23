@@ -163,11 +163,11 @@
       latInput.value = lat.toFixed(7);
       lngInput.value = lng.toFixed(7);
     }
-    // Al arrastrar el pin también actualiza los campos
     marker.on('dragend', function(e) {
       const pos = e.target.getLatLng();
       latInput.value = pos.lat.toFixed(7);
       lngInput.value = pos.lng.toFixed(7);
+      reverseGeocode(pos.lat, pos.lng);
     });
   }
 
@@ -176,9 +176,9 @@
     setPin(parseFloat(latInput.value), parseFloat(lngInput.value), false);
   }
 
-  // Clic en el mapa → pone pin y actualiza campos
   map.on('click', function(e) {
     setPin(e.latlng.lat, e.latlng.lng);
+    reverseGeocode(e.latlng.lat, e.latlng.lng);
   });
 
   // Escribir en los campos → mueve el pin en el mapa
@@ -198,6 +198,20 @@
     latInput.value = '';
     lngInput.value = '';
   });
+
+  // ── Reverse geocoding: obtener dirección a partir de coordenadas ─────────
+  async function reverseGeocode(lat, lng) {
+    const dirField = document.getElementById('id_direccion');
+    if (!dirField) return;
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=es`;
+      const resp = await fetch(url, { headers: { 'Accept-Language': 'es' } });
+      const data = await resp.json();
+      if (data && data.display_name) {
+        dirField.value = data.display_name.split(', ').slice(0, 3).join(', ');
+      }
+    } catch (err) {}
+  }
 
   // ── Buscador de direcciones (Nominatim / OpenStreetMap) ──────────────────
   const searchInput   = document.getElementById('dir-search');
@@ -235,9 +249,8 @@
       setPin(lat, lng);
       map.setView([lat, lng], 17);
 
-      // Rellenar campo dirección si está vacío
       const dirField = document.getElementById('id_direccion');
-      if (dirField && !dirField.value.trim()) {
+      if (dirField) {
         dirField.value = item.display_name.split(', ').slice(0, 3).join(', ');
       }
 
