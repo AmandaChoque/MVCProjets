@@ -37,6 +37,8 @@ INSTALLED_APPS = [
     'empleados',
     'projects',
     'inventario',
+    'cloudinary_storage',
+    'cloudinary',
 ]
 
 MIDDLEWARE = [
@@ -138,8 +140,13 @@ STATICFILES_DIRS = [BASE_DIR / "static"]
 
 if not DEBUG:
     STORAGES = {
-        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "default": {"BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage"},
         "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+    }
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME', ''),
+        'API_KEY': os.environ.get('CLOUDINARY_API_KEY', ''),
+        'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET', ''),
     }
 
 MEDIA_URL = '/media/'
@@ -155,7 +162,7 @@ LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/'
 
 # Session configuration
-SESSION_COOKIE_AGE = 1800  # 30 minutes in seconds (30 * 60)
+SESSION_COOKIE_AGE = 1800  # 30 minutos en segundos (30 * 60)
 SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Cerrar sesión al cerrar el navegador
 SESSION_SAVE_EVERY_REQUEST = True  # Save session on every request to reset timeout
 

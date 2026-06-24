@@ -46,5 +46,7 @@ tzlocal==5.3.1
 uritools==6.0.1
 urllib3==2.6.3
 webencodings==0.5.1
+cloudinary==1.41.0
+django-cloudinary-storage==0.3.0
 whitenoise==6.11.0
 xhtml2pdf==0.2.17
